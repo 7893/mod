@@ -7,5 +7,6 @@ backend-check:
 	cd backend && .venv/bin/python -m pytest -p no:cacheprovider -q
 
 frontend-check:
+	python3 scripts/project/lint_frontend_arbitrary_values.py
 	cd frontend && pnpm run typecheck
 	cd frontend && pnpm run build

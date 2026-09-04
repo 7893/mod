@@ -66,5 +66,8 @@ jobs:
       - name: Validate commit messages
         run: python3 scripts/project/validate_commit_message.py --base "${{ steps.comparison.outputs.base }}"
 
+      - name: Lint frontend arbitrary values
+        run: python3 scripts/project/lint_frontend_arbitrary_values.py
+
       - name: Run repository checks
         run: make check

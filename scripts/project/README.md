@@ -9,3 +9,4 @@
   `MOD_SCREENSHOT_PATH` 指定地址与输出路径。
 - `scan_secrets.py`：只读扫描暂存区或指定 Git 范围的新增行，供 pre-commit 与 CI 共用。
 - `validate_commit_message.py`：校验本地 commit message 文件或 CI Git 范围中的提交主题。
+- `lint_frontend_arbitrary_values.py`：扫描 `frontend/src/**/*.vue` 中禁止的 Tailwind 任意值（字号/颜色/间距等），供 `make check` 与 CI 共用。
