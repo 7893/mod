@@ -43,6 +43,11 @@ from .engine_context import (
     load_simulation_baseline,
 )
 from .expense_playbook import ExpensePlaybook
+from .lifecycle_advancer import (
+    LifecycleAdvancer,
+    LifecycleThresholds,
+    OrgMetricsSnapshot,
+)
 from .footprint_models import (
     DocumentFootprint,
     DocumentLineFootprint,
@@ -92,7 +97,10 @@ __all__ = [
     "IntegrationFootprint",
     "InterfaceDebuggingEventFootprint",
     "InterfaceDebuggingPlaybook",
+    "LifecycleAdvancer",
+    "LifecycleThresholds",
     "LinkFootprint",
+    "OrgMetricsSnapshot",
     "OrgUnitStatusUpdateFootprint",
     "PoolOnboardingEventFootprint",
     "PoolOnboardingPlaybook",
