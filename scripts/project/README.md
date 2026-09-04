@@ -10,3 +10,4 @@
 - `scan_secrets.py`：只读扫描暂存区或指定 Git 范围的新增行，供 pre-commit 与 CI 共用。
 - `validate_commit_message.py`：校验本地 commit message 文件或 CI Git 范围中的提交主题。
 - `lint_frontend_arbitrary_values.py`：扫描 `frontend/src/**/*.vue` 中禁止的 Tailwind 任意值（字号/颜色/间距等），供 `make check` 与 CI 共用。
+- `check_doc_sync.py`：检查核心模块改动是否同步更新 `docs/CURRENT-STATE.md`，输出非阻断性 CI 软警告。
