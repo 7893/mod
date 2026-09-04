@@ -11,7 +11,7 @@
 3. `../CONTRIBUTING.md`：接手、开发、验证、文档和提交流程。
 4. `CURRENT-STATE.md`：当前运行、数据、质量与操作边界的唯一事实入口。
 5. `../PROJECT-LAYOUT.md`：JPA 与 USA 的目录和主机边界。
-6. `KNOWN-ISSUES.md`：已发现但未修复的业务、数据、系统与清理类问题登记册。
+6. `KNOWN-ISSUES.md`：已发现但未修复的业务、数据、系统与清理类问题登记册（新需求/任务用 GitHub Issues 登记，已发现问题的登记见 KNOWN-ISSUES.md）。
 
 ## 现行维护规范
 
