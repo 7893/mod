@@ -52,7 +52,7 @@ def get_settings() -> Settings:
         db_port=int(os.getenv("MOD_DB_PORT") or os.getenv("MOD_V2_DB_PORT", "3306")),
         db_name=os.getenv("MOD_DB_NAME", "mod_s"),
         db_name_v2=os.getenv("MOD_DB_NAME_V2") or os.getenv("MOD_V2_DB_NAME", "mod_s_v2"),
-        db_user=os.getenv("MOD_DB_USER") or os.getenv("MOD_V2_DB_USER") or os.getenv("MOD_BI_DB_USER", "mod_v2_reader"),
+        db_user=os.getenv("MOD_DB_USER") or os.getenv("MOD_V2_DB_USER") or os.getenv("MOD_BI_DB_USER", ""),
         db_password=os.getenv("MOD_DB_PASSWORD") or os.getenv("MOD_V2_DB_PASSWORD") or os.getenv("MOD_BI_DB_PASSWORD", ""),
         db_pool_size=int(os.getenv("MOD_DB_POOL_SIZE", "10")),
         db_max_overflow=int(os.getenv("MOD_DB_MAX_OVERFLOW", "20")),
