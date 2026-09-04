@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime
 from typing import Any
 
@@ -127,30 +128,32 @@ class HeatWaveMLAdapter:
                 "message": "数据库连接不可用",
             }
         try:
-            # 优先查询 HeatWave 原生目录表 ML_SCHEMA_*.MODEL_CATALOG
+            # 优先查询 HeatWave 原生目录表 ML_SCHEMA_*.MODEL_CATALOG。
+            # schema 名从环境变量读取，未配置或格式非法时跳过原生目录查询。
             row = None
-            try:
-                row = self.conn.execute(
-                    text(
-                        """
-                        SELECT
-                            model_id,
-                            model_handle,
-                            model_type,
-                            task,
-                            model_metadata,
-                            build_timestamp,
-                            target_column_name
-                        FROM ML_SCHEMA_dbadminb3cf3f7a.MODEL_CATALOG
-                        WHERE model_handle = :name
-                        ORDER BY model_id DESC
-                        LIMIT 1
-                        """
-                    ),
-                    {"name": model_name},
-                ).mappings().first()
-            except Exception:
-                row = None
+            if self._ml_schema and re.fullmatch(r"[A-Za-z0-9_]+", self._ml_schema):
+                try:
+                    row = self.conn.execute(
+                        text(
+                            f"""
+                            SELECT
+                                model_id,
+                                model_handle,
+                                model_type,
+                                task,
+                                model_metadata,
+                                build_timestamp,
+                                target_column_name
+                            FROM {self._ml_schema}.MODEL_CATALOG
+                            WHERE model_handle = :name
+                            ORDER BY model_id DESC
+                            LIMIT 1
+                            """
+                        ),
+                        {"name": model_name},
+                    ).mappings().first()
+                except Exception:
+                    row = None
 
             if row:
                 meta = row.get("model_metadata")
