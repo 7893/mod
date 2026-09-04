@@ -69,5 +69,8 @@ jobs:
       - name: Lint frontend arbitrary values
         run: python3 scripts/project/lint_frontend_arbitrary_values.py
 
+      - name: Check CURRENT-STATE sync notice
+        run: python3 scripts/project/check_doc_sync.py --base "${{ steps.comparison.outputs.base }}"
+
       - name: Run repository checks
         run: make check

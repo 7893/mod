@@ -375,16 +375,12 @@
 - 处理：启用 GitHub Issues 作为需求与任务的正式登记入口。在 `.github/ISSUE_TEMPLATE/` 建立 `feature_request.md`（新需求）与 `task.md`（任务待办）模板，包含标题、背景与业务价值、技术范围与验收要点；并在 `README.md` 与 `docs/INDEX.md` 明确增加指引：新需求/任务用 GitHub Issues 登记，已发现问题的登记见 KNOWN-ISSUES.md。存量 KNOWN-ISSUES 保持原位供追溯。
 
 ### KI-025 · 文档与代码事实的同步无机制强制（仅靠规范与自觉）
-- 状态：OPEN
+- 状态：DONE（2026-09-04）
 - 现象：`ENFORCEMENT.md` 与 `DOCUMENTATION-LIFECYCLE.md` 要求“改动改变事实（数据规模、架构、
-  路径、部署状态）时必须同步 `CURRENT-STATE.md`，否则视为未完成”，但**无任何机制检查此项**——
+  路径、部署状态）时必须同步 `CURRENT-STATE.md`，否则视为未完成”，但此前**无任何机制检查此项**——
   提交时不校验文档是否随代码同步。当前文档能跟上，主要靠人盯 + AI 自觉，非机制保证。
-- 影响：这是体系目前最大的“须知而非闸门”缺口。换一个不上心的执行者，CURRENT-STATE 等活文档会掉队，
+- 影响：这是体系此前最大的“须知而非闸门”缺口。换一个不上心的执行者，CURRENT-STATE 等活文档会掉队，
   而下一个 AI 以文档为事实来源，会被过时文档误导（参见 KI-004 数据规模漂移即此类）。
 - 现实上限：机器无法判断“某次改动是否改变了事实”，故无法完全自动强制；只能做到“半机制”。
-- 待处理（半机制方案，择一或组合）：
-  1. CI 软警告：PR 改动 `backend/app/`、schema 或部署配置但未触碰 `CURRENT-STATE.md` 时，给出提醒
-     （警告而非硬拦，避免误伤无关改动）。
-  2. pre-commit 提示：改核心代码时提示复查 CURRENT-STATE。
-  3. 在 `DOCUMENTATION-LIFECYCLE.md` 醒目标注“此项属判断范畴，机制只能提醒，最终靠人/AI 判断兜底”。
+- 处理结果：落地方案 1（CI 软警告半机制）。新增 `scripts/project/check_doc_sync.py` 并在 CI（`.github/workflows/quality.yml`）中接入；当变更涉及 `backend/app/`、schema 或 `deploy/` 但未修改 `docs/CURRENT-STATE.md` 时，通过 `::warning` 输出 GitHub 警告注解提醒复查，警告不阻断构建，实现半机制化闭环。
 - 关联：这是“用概率性的 AI 生产确定性系统”这一根本矛盾在文档层的残留——形式可机制守住，语义同步靠判断。
