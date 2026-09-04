@@ -1,0 +1,190 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   PART 20: B–F 页面第二轮视觉层级
+   ───────────────────────────────────────────────────────────────────────────── */
+.panel[data-zone] {
+  position: relative;
+}
+
+/* C：八个批次压缩成连续态势带，宽屏8列，常规笔记本平滑转为4列，避免卡片文字被压碎 */
+.batch-cards-row {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.batch-summary-card {
+  padding: clamp(12px, 0.8vw, 16px);
+  gap: var(--space-2);
+  background: linear-gradient(155deg, var(--c-bg-secondary), rgba(17, 28, 46, 0.88));
+}
+
+.batch-summary-card .b-head {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.batch-summary-card .b-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.batch-summary-card .b-metrics > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.rollout-top-row > [data-zone="C3"] {
+  background:
+    radial-gradient(circle at 70% 20%, rgba(74, 158, 255, 0.1), transparent 35%),
+    var(--c-bg-secondary);
+}
+
+.ledger-panel {
+  border-top: 1px solid rgba(74, 158, 255, 0.18);
+}
+
+.data-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--c-bg-secondary);
+}
+
+/* D：全链路是页面主视觉，其他模块围绕质效和异常展开。 */
+.flow-chain[data-zone="D2"] {
+  min-height: 104px;
+  background:
+    linear-gradient(90deg, rgba(45, 212, 160, 0.05), rgba(74, 158, 255, 0.08)),
+    var(--c-bg-secondary);
+  border: 1px solid rgba(74, 158, 255, 0.12);
+}
+
+.flow-chain[data-zone="D2"] .flow-step {
+  min-width: 132px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(17, 28, 46, 0.72);
+}
+
+.flow-chain[data-zone="D2"] .f-arrow {
+  width: clamp(18px, 1.4vw, 28px);
+  flex-shrink: 1;
+}
+
+.operations-grid-layout {
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    "d3 d4"
+    "d5 d6"
+    "d7 d7";
+}
+
+.operations-grid-layout > [data-zone="D3"] { grid-area: d3; }
+.operations-grid-layout > [data-zone="D4"] { grid-area: d4; }
+.operations-grid-layout > [data-zone="D5"] { grid-area: d5; }
+.operations-grid-layout > [data-zone="D6"] { grid-area: d6; }
+.operations-grid-layout > [data-zone="D7"] { grid-area: d7; }
+
+.operations-grid-layout > [data-zone="D4"] {
+  border-top-color: rgba(45, 212, 160, 0.28);
+}
+
+/* E：风险构成为锚点，问题类型获得更多横向空间。 */
+.issues-grid-layout {
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.55fr);
+  grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.85fr);
+  grid-template-areas:
+    "e2 e3"
+    "e4 e4"
+    "e5 e5";
+}
+
+.issues-grid-layout > [data-zone="E3"] { grid-area: e3; }
+.issues-grid-layout > [data-zone="E2"] { grid-area: e2; }
+.issues-grid-layout > [data-zone="E4"] { grid-area: e4; }
+.issues-grid-layout > [data-zone="E5"] { grid-area: e5; }
+
+.issues-grid-layout > [data-zone="E3"] {
+  border-top-color: rgba(239, 80, 80, 0.3);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(239, 80, 80, 0.07), transparent 42%),
+    var(--c-bg-secondary);
+}
+
+/* F：AI聚合研判为主角，模型契约和治理信息降为支撑区。 */
+.cf-ai-section[data-zone="F3"] {
+  border-color: rgba(212, 165, 116, 0.2);
+  background:
+    radial-gradient(circle at 85% 0%, rgba(212, 165, 116, 0.08), transparent 32%),
+    linear-gradient(145deg, var(--c-bg-secondary), rgba(17, 28, 46, 0.9));
+}
+
+.cf-ai-section[data-zone="F3"] .cf-ai-title-group h3 {
+  font-size: clamp(18px, 1.2vw, 24px);
+}
+
+.cf-ai-section[data-zone="F3"] .cf-ai-body {
+  min-height: 110px;
+}
+
+.automl-gate-banner[data-zone="F2"] {
+  padding-block: var(--space-3);
+  background: rgba(224, 160, 32, 0.055);
+}
+
+.insights-grid-layout {
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    "f4 f5"
+    "f6 f7"
+    "f8 f8";
+}
+
+.insights-grid-layout > [data-zone="F4"] { grid-area: f4; }
+.insights-grid-layout > [data-zone="F5"] { grid-area: f5; }
+.insights-grid-layout > [data-zone="F6"] { grid-area: f6; }
+.insights-grid-layout > [data-zone="F7"] { grid-area: f7; }
+.insights-grid-layout > [data-zone="F8"] { grid-area: f8; }
+
+.aux-link__chevron {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--c-text-dim);
+}
+
+.insights-grid-layout .model-contract-card {
+  padding: var(--space-4);
+  background: rgba(17, 28, 46, 0.66);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   密度契约·多段页面高度分配
+   C/F 不是单一主网格，而是多段纵向堆叠，需显式指定哪几段吸收剩余高度，
+   否则整页内容堆在顶部、底部留白。批次带/横幅等信息段保持自然高度。
+   ───────────────────────────────────────────────────────────────────────────── */
+.screen-page[data-zone="C"] > .batch-cards-row {
+  flex: 0 0 auto;
+}
+
+.screen-page[data-zone="C"] > .rollout-top-row {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.screen-page[data-zone="C"] > .ledger-panel {
+  flex: 1.3 1 0;
+  min-height: 0;
+}
+
+.screen-page[data-zone="F"] > .cf-ai-section[data-zone="F3"] {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* F3 AI 研判报告可能很长，套内部滚动，绝不撑破固定画布挤走 F4–F8。 */
+.cf-ai-section[data-zone="F3"] .cf-ai-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}

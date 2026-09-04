@@ -1,0 +1,291 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   PART 18: 滚动条与选择框
+   ───────────────────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--c-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--c-text-dim);
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%235a7090' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px !important;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--c-accent) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PART 19: 全站页面打磨与防覆盖规范
+   所有内容区域必须可收缩；空间不足时换行、重排或在区域内部滚动。
+   ───────────────────────────────────────────────────────────────────────────── */
+.screen-page {
+  width: 100%;
+  min-width: 0;
+  gap: clamp(14px, 1.05vw, 22px);
+}
+
+.screen-page > *,
+.rollout-top-row > *,
+.operations-grid-layout > *,
+.issues-grid-layout > *,
+.insights-grid-layout > *,
+.panel,
+.panel-body {
+  min-width: 0;
+}
+
+/* 页首指标带：标题占左侧一栏，指标铺满右侧全部剩余宽度。
+   原先指标是靠右挤成一团的，标题和指标之间留下一大片空白，
+   在 1920 宽的大屏上尤其空。现在指标等分整行并用竖线分组。 */
+.screen-hero[data-zone] {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(0, 2.2fr);
+  gap: clamp(16px, 1.6vw, 32px);
+  align-items: center;
+  padding: clamp(14px, 1vw, 20px) clamp(20px, 1.7vw, 34px);
+  padding-left: clamp(58px, 4vw, 76px);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 82% 10%, rgba(74, 158, 255, 0.09), transparent 34%),
+    linear-gradient(110deg, var(--c-bg-secondary), rgba(17, 28, 46, 0.88));
+  border: 1px solid rgba(74, 158, 255, 0.08);
+}
+
+.hero-left,
+.hero-title-group,
+.hero-kpi-row,
+.hero-kpi {
+  min-width: 0;
+}
+
+.hero-title-group h2 {
+  font-size: clamp(20px, 1.35vw, 26px);
+  letter-spacing: 0.02em;
+}
+
+.hero-title-group p {
+  max-width: 62ch;
+  overflow-wrap: anywhere;
+}
+
+.hero-kpi-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0;
+  justify-self: stretch;
+  width: 100%;
+}
+
+/* 指标改左对齐并等分：靠右堆叠时数字宽度不一，基线看着是歪的。 */
+.hero-kpi-row > .hero-kpi {
+  align-items: flex-start;
+  min-width: 0;
+  padding: 0 clamp(12px, 1.1vw, 24px);
+}
+
+.hero-kpi-row > .hero-kpi + .hero-kpi {
+  border-left: 1px solid var(--c-border-subtle);
+}
+
+.hero-kpi strong {
+  max-width: 100%;
+  font-size: clamp(22px, 1.6vw, 32px);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.hero-kpi span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.panel {
+  overflow: hidden;
+  background: linear-gradient(145deg, var(--c-bg-secondary), rgba(12, 20, 34, 0.82));
+  border: 1px solid rgba(148, 168, 192, 0.07);
+}
+
+.panel-head {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.panel-head-left,
+.panel-head-right {
+  min-width: 0;
+}
+
+.panel-head-left h3 {
+  overflow-wrap: anywhere;
+}
+
+.data-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.data-table { min-width: 1120px; }
+
+.batch-cards-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(12px, 0.85vw, 18px);
+  padding-top: 32px;
+}
+
+.batch-summary-card {
+  overflow: hidden;
+}
+
+.b-head,
+.bi-head,
+.stg-title,
+.mc-head {
+  gap: var(--space-3);
+}
+
+.b-status,
+.bi-unresolved,
+.status-pill {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.rollout-top-row {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(14px, 1.05vw, 22px);
+}
+
+/* 搜索框 + 两个下拉不换行：原先搜索框独占 260px 基准宽度，
+   把两个筛选挤到了第二行，面板头看起来是断开的两截。 */
+.table-tools {
+  max-width: 100%;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
+.search-box {
+  min-width: 0;
+  flex: 0 1 240px;
+}
+
+/* 改成 nowrap 之后下拉必须禁止收缩，否则会被搜索框挤成空白窄条。 */
+.table-tools select {
+  flex-shrink: 0;
+  min-width: 108px;
+}
+
+.search-box input {
+  width: 100%;
+  min-width: 0;
+}
+
+.ledger-panel .panel-head-right {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.flow-chain {
+  min-width: 0;
+  padding-left: 64px;
+  gap: clamp(14px, 1.2vw, 24px);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.flow-step,
+.f-arrow {
+  flex: 0 0 auto;
+}
+
+.operations-grid-layout,
+.issues-grid-layout,
+.insights-grid-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(14px, 1.05vw, 22px);
+}
+
+.bar-row {
+  grid-template-columns: minmax(92px, 160px) minmax(70px, 1fr) minmax(52px, 78px);
+}
+
+.v-metric-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dual-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stage-summary-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* E5 的两张阶段卡内容都是单行指标，收紧内边距，
+   否则整块会把页面顶出一屏、底部指标被裁掉。 */
+.stage-sum-card {
+  padding: var(--space-3);
+}
+
+.automl-gate-banner {
+  min-width: 0;
+  padding-left: 58px;
+}
+
+.gate-info,
+.cf-ai-title-group,
+.cf-ai-body,
+.cf-content-box,
+.model-contract-card,
+.mc-spec {
+  min-width: 0;
+}
+
+.cf-ai-header,
+.cf-meta {
+  flex-wrap: wrap;
+}
+
+.cf-ai-section[data-zone]::before {
+  top: 14px;
+}
+
+.cf-ai-section[data-zone] .cf-ai-header {
+  padding-left: 58px;
+}
+
+.cf-prose {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.edit-drawer {
+  width: min(400px, 100vw);
+  max-width: 100%;
+}

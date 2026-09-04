@@ -1,0 +1,428 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   PART 5A: 驾驶舱 A1 顶部指标带
+   核心指标 | 当前数据总量 | 今日增量(SSE 实时) | 风险常驻角标
+   从 dashboard-layout.css 拆出，两者均需控制在单文件 400 行以内。
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.cockpit-top-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 2.5fr) minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: clamp(10px, 1vw, 22px);
+  padding: clamp(8px, 0.7vw, 12px) clamp(14px, 1vw, 20px);
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-lg);
+}
+
+/* 指标分组：小标题 + 指标行，分组之间用竖线分隔，读者能一眼看出信息被切成几块 */
+.kpi-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  position: relative;
+}
+
+/* 分组之间用实体左边框切开 */
+.kpi-cluster + .kpi-cluster {
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  padding-left: clamp(12px, 1vw, 22px);
+}
+
+.kpi-cluster__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kpi-cluster__tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(79, 140, 255, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(79, 140, 255, 0.35);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.kpi-cluster__tag--live {
+  background: rgba(45, 212, 160, 0.15);
+  color: #34d399;
+  border-color: rgba(45, 212, 160, 0.35);
+}
+
+.kpi-cluster__tag--risk {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.kpi-cluster__badge {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--c-text-dim);
+  white-space: nowrap;
+}
+
+.kpi-cluster__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+}
+
+.kpi-cluster__items {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: clamp(8px, 0.8vw, 20px);
+  min-width: 0;
+  flex: 1;
+}
+
+.kpi-cluster__items--totals {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: clamp(6px, 0.6vw, 14px);
+}
+
+/* 单个指标块：标签顶对齐 / 数值底对齐，
+   这样即便某些指标没有脚注，整排的标签线和数值基线也仍然对齐。 */
+.metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metric__label {
+  margin-bottom: auto;
+  font-size: var(--text-xxs);
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+.metric__value {
+  display: flex;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: var(--text-stat);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: #f8fafc;
+  white-space: nowrap;
+}
+
+.metric__value.accent { color: #38bdf8; }
+.metric__value.success { color: #34d399; }
+.metric__value.gold { color: #fbbf24; }
+
+.metric__value small {
+  margin-left: 2px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.metric__sign {
+  margin-right: 1px;
+  font-size: 0.7em;
+  opacity: 0.85;
+}
+
+.metric__foot {
+  font-size: var(--text-xxs);
+  color: var(--c-text-dim);
+  white-space: nowrap;
+}
+
+/* 核心指标组字号提一级，确立整屏第一视觉层级 */
+.kpi-cluster--primary .metric__value {
+  font-size: var(--text-kpi);
+}
+
+/* 今日增量组：数值随 SSE 实时跳动，用等宽字保证跳动时宽度不抖 */
+.kpi-cluster--live .metric__value {
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-cluster--risk {
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+/* 风险常驻角标：全屏唯一使用呼吸动效的元素，始终可见，
+   不需要点开风险面板即可感知风险 */
+.risk-live-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  background: var(--c-risk-glow-soft);
+  border: 1px solid rgba(239, 80, 80, 0.35);
+  border-radius: var(--radius-md);
+  transition: background var(--duration-fast);
+}
+
+.kpi-cluster--risk:hover .risk-live-badge {
+  background: rgba(239, 80, 80, 0.22);
+}
+
+.risk-live-badge__dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--c-danger);
+  animation: risk-breathe 2s ease-in-out infinite;
+}
+
+.risk-live-badge__body {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.risk-live-badge__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-metric);
+  font-weight: 700;
+  color: var(--c-danger);
+}
+
+.risk-live-badge__label {
+  font-size: var(--text-xxs);
+  color: var(--c-text-secondary);
+  white-space: nowrap;
+}
+
+.risk-live-badge__chevron {
+  color: var(--c-text-dim);
+  flex-shrink: 0;
+}
+
+.projection-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xxs);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--c-text-muted);
+}
+
+.projection-indicator__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c-text-dim);
+}
+
+.projection-indicator--connected .projection-indicator__dot {
+  background: var(--c-success);
+  box-shadow: 0 0 8px rgba(45, 212, 160, 0.65);
+}
+
+.projection-indicator b {
+  margin-left: var(--space-2);
+  color: var(--c-success);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.projection-pulse-enter-active,
+.projection-pulse-leave-active {
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.projection-pulse-enter-from,
+.projection-pulse-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+/* 实时增量单位提示条 */
+.live-ticker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 4px 8px;
+  margin-top: auto;
+  border-radius: var(--radius-sm);
+  background: rgba(14, 28, 48, 0.55);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  color: var(--c-text-muted);
+  overflow: hidden;
+  white-space: nowrap;
+  transition: all var(--duration-fast);
+}
+
+.live-ticker--active {
+  background: rgba(14, 38, 62, 0.85);
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+.live-ticker__beacon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+  animation: live-ping 1.4s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes live-ping {
+  0% { transform: scale(0.9); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+  100% { transform: scale(0.9); opacity: 1; }
+}
+
+.live-ticker__prov {
+  color: #38bdf8;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.live-ticker__unit {
+  color: var(--c-text-primary);
+  font-weight: 500;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+}
+
+.live-ticker__action {
+  color: #34d399;
+  font-weight: 600;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.live-ticker__idle-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--c-text-dim);
+  flex-shrink: 0;
+}
+
+.live-ticker__idle-text {
+  color: var(--c-text-dim);
+  font-size: 10px;
+}
+
+/* 块三：运行态势卡片 */
+.risk-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--c-risk-glow-soft);
+  border: 1px solid rgba(239, 80, 80, 0.35);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+
+.risk-card-content:hover {
+  background: rgba(239, 80, 80, 0.22);
+  border-color: rgba(239, 80, 80, 0.6);
+}
+
+.risk-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.risk-dot-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-danger);
+  animation: risk-breathe 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.risk-main-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.risk-val {
+  font-family: var(--font-mono);
+  font-size: var(--text-metric);
+  font-weight: 700;
+  color: var(--c-danger);
+  line-height: 1.1;
+}
+
+.risk-txt {
+  font-size: 10px;
+  color: var(--c-text-secondary);
+  white-space: nowrap;
+}
+
+.risk-divider {
+  width: 1px;
+  height: 26px;
+  background: rgba(239, 80, 80, 0.2);
+  flex-shrink: 0;
+}
+
+.risk-subs {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.risk-sub-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.sub-lbl {
+  font-size: 10px;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+.sub-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-text-primary);
+  white-space: nowrap;
+}
+
+.sub-val.success {
+  color: var(--c-success);
+}
+
+.risk-chevron {
+  color: var(--c-text-dim);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+

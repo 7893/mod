@@ -1,0 +1,265 @@
+{
+  "metadata": {
+    "generator_version": "2.5.0",
+    "schema_version": "V2.5-Final",
+    "generated_at": "2026-08-31T02:21:50.583136",
+    "random_seed": 42,
+    "demo_date": "2026-08-30",
+    "total_tables": 17,
+    "total_records": 1685923
+  },
+  "tables": {
+    "rollout_batch": {
+      "rows": 8,
+      "size": 411,
+      "hash": "b47386c8014b3e69d0d2b565bcf57f0f4172c70bebb29ca8a18809c8327a66d9",
+      "columns": [
+        "id",
+        "name",
+        "start_date",
+        "end_date",
+        "status"
+      ]
+    },
+    "org_unit": {
+      "rows": 1497,
+      "size": 121480,
+      "hash": "63fc2d969a59e04e4cdf7bab295347525f09c73d0844a416229a54cfbeb92da3",
+      "columns": [
+        "id",
+        "name",
+        "batch_id",
+        "status",
+        "region",
+        "start_date",
+        "end_date"
+      ]
+    },
+    "sys_user": {
+      "rows": 12087,
+      "size": 573602,
+      "hash": "6e037fc93a94f371d37be4e322fc2282f17f5c1aed3c9ad67150bf56aeea0c4f",
+      "columns": [
+        "id",
+        "name",
+        "org_id",
+        "role",
+        "job"
+      ]
+    },
+    "training": {
+      "rows": 3427,
+      "size": 289684,
+      "hash": "b85d7fdf5394df936c481d856a1f71f6c8b9a8677459fb3a73af79081a7e8c28",
+      "columns": [
+        "id",
+        "org_id",
+        "batch_id",
+        "type",
+        "date",
+        "mode",
+        "expected",
+        "actual",
+        "absent",
+        "passed",
+        "makeup",
+        "cert_count"
+      ]
+    },
+    "construction_task": {
+      "rows": 44877,
+      "size": 5532775,
+      "hash": "10c7ef53b70647163e503009fbb8d75541cc050e5e089f1b612df2e8fc743e15",
+      "columns": [
+        "id",
+        "org_id",
+        "name",
+        "type",
+        "owner",
+        "plan_time",
+        "actual_time",
+        "status",
+        "progress",
+        "update_time"
+      ]
+    },
+    "business_document": {
+      "rows": 199612,
+      "size": 24367426,
+      "hash": "1b2702afb8f6e30378dbe340e4751cd890d3f735a49be72ce3414551bbfbd967",
+      "columns": [
+        "id",
+        "org_id",
+        "type",
+        "doc_no",
+        "applicant",
+        "nature",
+        "amount",
+        "submit_time",
+        "approve_time",
+        "status"
+      ]
+    },
+    "business_document_line": {
+      "rows": 498855,
+      "size": 19820442,
+      "hash": "067c668708dfb582357be378acd652f4ecbf620a12ca2effebe88dff42aeb292",
+      "columns": [
+        "id",
+        "doc_id",
+        "item_name",
+        "amount",
+        "quantity"
+      ]
+    },
+    "accounting_voucher": {
+      "rows": 161270,
+      "size": 16096711,
+      "hash": "f7be6733525591adc29d1d41e63a5f8e0d24cb2d38ef3f7ca89d9c86610d888e",
+      "columns": [
+        "id",
+        "org_id",
+        "voucher_no",
+        "type",
+        "gen_time",
+        "int_time",
+        "status",
+        "debit",
+        "credit"
+      ]
+    },
+    "accounting_voucher_line": {
+      "rows": 322540,
+      "size": 14437601,
+      "hash": "052d3db5db12af4057fda28ccb1d2e6b718a1bf203fe28dfac29db32a0c39935",
+      "columns": [
+        "id",
+        "voucher_id",
+        "subject_code",
+        "subject_name",
+        "debit",
+        "credit"
+      ]
+    },
+    "document_voucher_link": {
+      "rows": 182201,
+      "size": 2506119,
+      "hash": "f1759d511588719c864ca367d0fa58a90900e543385f88b4d1199bd0277ace96",
+      "columns": [
+        "doc_id",
+        "voucher_id"
+      ]
+    },
+    "integration_result": {
+      "rows": 150233,
+      "size": 8769148,
+      "hash": "f969713d50c46f9e2b517aad90cf63e06abd563795009e95e9910e925a9a86b7",
+      "columns": [
+        "id",
+        "voucher_id",
+        "status",
+        "retry_count",
+        "error_code",
+        "error_message",
+        "integration_time"
+      ]
+    },
+    "dual_run_result": {
+      "rows": 2859,
+      "size": 224134,
+      "hash": "a530e5b25f25354b49bb120cb0d72e2019161b7213608d7ba3df13d1d5e53c81",
+      "columns": [
+        "id",
+        "org_id",
+        "check_type",
+        "v1_amount",
+        "v2_amount",
+        "diff_amount",
+        "result",
+        "check_date"
+      ]
+    },
+    "data_readiness": {
+      "rows": 1497,
+      "size": 126818,
+      "hash": "7eb0acdc3a756780a01fd0ffee6dde2d1b4318c762fc8371e179452122cafbfe",
+      "columns": [
+        "org_id",
+        "batch_id",
+        "static_total",
+        "static_completed",
+        "static_rate",
+        "opening_total",
+        "opening_completed",
+        "opening_rate",
+        "opening_diff_amount",
+        "dynamic_total",
+        "dynamic_completed",
+        "dynamic_sync_success",
+        "dynamic_sync_fail",
+        "dynamic_sync_pending",
+        "dynamic_rate",
+        "last_sync_time",
+        "overall_status"
+      ]
+    },
+    "rollout_status_snapshot": {
+      "rows": 74850,
+      "size": 2039276,
+      "hash": "2062bea946f955914fa8d3ea9dca29ee877e55d50e9a21912daa321a6ac28970",
+      "columns": [
+        "org_id",
+        "snapshot_date",
+        "status"
+      ]
+    },
+    "issue_metric_snapshot": {
+      "rows": 15030,
+      "size": 780501,
+      "hash": "2b57f9f7ecf8dd5464ecff952c021f5db1b6aac9446bb39e3555add4764bdf79",
+      "columns": [
+        "org_id",
+        "batch_id",
+        "date",
+        "stage",
+        "bug",
+        "req",
+        "conf",
+        "data",
+        "integ",
+        "op",
+        "total",
+        "resolved",
+        "unresolved"
+      ]
+    },
+    "risk_metric_snapshot": {
+      "rows": 15030,
+      "size": 597464,
+      "hash": "d6b3d3339e1085fa17566e1770705ab9ba06ae05ce54abc647daef11d564d774",
+      "columns": [
+        "org_id",
+        "batch_id",
+        "date",
+        "stage",
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "metric_snapshot": {
+      "rows": 50,
+      "size": 2317,
+      "hash": "98bf0df98c8972ee73a3d5ce87a35d8c93bbf35d22693500b26de18855532dd3",
+      "columns": [
+        "snapshot_date",
+        "target_units",
+        "online_units",
+        "dual_run_units",
+        "online_rate",
+        "voucher_generate_success_rate",
+        "integration_success_rate"
+      ]
+    }
+  }
+}

@@ -1,0 +1,19 @@
+[Unit]
+Description=MOD Dashboard API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ubuntu/mod/backend
+EnvironmentFile=/home/ubuntu/mod/.env.systemd
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ubuntu/mod/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8100 --proxy-headers
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

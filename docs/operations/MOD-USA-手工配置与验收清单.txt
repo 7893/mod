@@ -1,0 +1,143 @@
+MOD USA 手工配置与验收清单
+更新时间：2026-08-30
+状态：历史已停用
+适用范围：仅用于追溯 2026-08-30 的 DataEase/NocoDB 实验路线
+
+重要警告：DataEase、NocoDB、Docker、mod_s、/home/ubuntu/mod/.env 和本文所述容器均不属于当前
+运行架构，USA 项目目录也已收敛为纯部署目录。禁止执行本文任何命令或连接步骤。当前事实以
+../CURRENT-STATE.md、USA-DEPLOYMENT-LAYOUT.md 和 ../../CONTRIBUTING.md 为准。
+
+一、当前已经完成的工作
+
+1. 美国 MySQL HeatWave 已建立独立业务库 mod_s，未改动 modo_db。
+2. mod_s 已建立 24 张业务表和 6 个分析视图。
+3. 已导入 2,034,212 条模拟数据，24 张表逐表行数与清单完全一致。
+4. 凭证借贷平衡校验通过，不平衡凭证数为 0。
+5. 已建立两个最小权限账号：
+   - mod_bi_reader：供 DataEase 使用，只读 mod_s。
+   - mod_table_editor：供 NocoDB 使用，仅能查询基础表，并对 6 张过程管理表执行查询、新增、修改；无删除权限。
+6. USA 已部署 DataEase CE v2.10.26 和 NocoDB CE 2026.08.1。
+7. DataEase 和 NocoDB 均只监听 USA 的 127.0.0.1，不直接暴露公网。
+8. DataEase 本地实验环境中的仪表板、数据集和布局已迁移到 USA。
+9. USA 当前页面状态：
+   - DataEase：http://127.0.0.1:8180，HTTP 200。
+   - NocoDB：http://127.0.0.1:8181，HTTP 200。
+10. DataEase、NocoDB、MySQL 元数据库、APISIX、etcd、同步任务容器均已启动；初次部署发现的目录权限问题已经修复。
+
+二、你需要手工完成的事情
+
+建议在 MBP 上操作，不需要安装任何软件，只用系统自带 SSH 和浏览器。
+
+（一）进入 USA DataEase
+
+1. 在 MBP 终端建立隧道：
+
+   ssh -N -L 127.0.0.1:8180:127.0.0.1:8180 usa
+
+2. 保持该终端窗口不关闭，在浏览器打开：
+
+   http://127.0.0.1:8180
+
+3. 使用 DataEase 管理员账号登录。
+   - 用户名：admin
+   - 当前密码保存在 JPA：/home/ubuntu/mod/archive/component-labs/dataease-lab/automation/login.mjs
+   - 不要在聊天、截图或文档中复制密码。
+
+（二）把 DataEase 数据源改为美国 mod_s
+
+1. 进入“数据源”页面。
+2. 找到现有数据源“MOD BI Lab”。
+3. 点击其编辑入口，不要删除数据源，也不要新建同名数据源。
+4. 在另一个终端查看只读账号连接参数：
+
+   ssh usa "grep -E '^MOD_(DB_HOST|DB_PORT|DB_NAME|BI_DB_USER|BI_DB_PASSWORD)=' /home/ubuntu/mod/.env"
+
+5. 按下面对应关系填写：
+   - 主机名/IP：MOD_DB_HOST
+   - 端口：MOD_DB_PORT
+   - 数据库名称：MOD_DB_NAME（应为 mod_s）
+   - 用户名：MOD_BI_DB_USER（应为 mod_bi_reader）
+   - 密码：MOD_BI_DB_PASSWORD
+   - 额外 JDBC 参数：allowPublicKeyRetrieval=true&useSSL=false
+6. 点击“校验”。只有显示连接成功后才点击“保存”。
+7. 不修改数据集字段、不删除数据集、不改变仪表板布局。
+
+（三）检查 DataEase 已迁移内容
+
+1. 数据集页面应看到以下 5 个数据集：
+   - MOD-单位建设推广
+   - MOD-每日上线趋势
+   - MOD-问题风险
+   - MOD-业务运营
+   - MOD-科目分析
+2. 打开“MOD驾驶舱”目录中的“MOD建设推广运营驾驶舱”。
+3. 点击刷新或“更新图表数据”。
+4. 应看到 7 个组件正常出数，不能出现数据源失效、字段缺失或 SQL 错误。
+5. 暂时不要调整视觉效果和业务口径；先确认全链路正常。
+
+（四）进入 USA NocoDB
+
+1. 另开一个 MBP 终端建立隧道：
+
+   ssh -N -L 127.0.0.1:8181:127.0.0.1:8181 usa
+
+2. 保持终端窗口不关闭，在浏览器打开：
+
+   http://127.0.0.1:8181
+
+3. 若出现首次初始化页面，创建你自己掌握的管理员账号和强密码。
+4. 管理员密码由你保存，不要写入项目仓库或聊天记录。
+
+（五）让 NocoDB 连接美国 mod_s
+
+1. 选择“Connect External Data”或“连接外部数据源”。
+2. 数据库类型选择 MySQL。
+3. 在另一个终端查看编辑账号参数：
+
+   ssh usa "grep -E '^MOD_(DB_HOST|DB_PORT|DB_NAME|TABLE_DB_USER|TABLE_DB_PASSWORD)=' /home/ubuntu/mod/.env"
+
+4. 按下面对应关系填写：
+   - Host：MOD_DB_HOST
+   - Port：MOD_DB_PORT
+   - Database：MOD_DB_NAME（应为 mod_s）
+   - Username：MOD_TABLE_DB_USER（应为 mod_table_editor）
+   - Password：MOD_TABLE_DB_PASSWORD
+5. 测试连接成功后保存。
+6. 该账号允许维护的 6 张过程管理表为：
+   - rollout_unit_status
+   - construction_task
+   - data_readiness
+   - opening_data_result
+   - project_issue
+   - project_risk
+7. 不要尝试删除表、改表结构或连接 modo_db。
+
+三、手工完成后的最小验证
+
+1. DataEase：打开驾驶舱，确认 7 个组件全部出数。
+2. DataEase：确认数据源状态显示成功。
+3. NocoDB：能打开上述 6 张可维护表。
+4. NocoDB：先只查看，不要立即修改正式演示数据。
+5. 完成后告诉我“DataEase 已保存、NocoDB 已连接”，我再做只读审阅：
+   - 核对 DataEase 实际连接的是 mod_s，而不是旧实验库或 modo_db。
+   - 核对 5 个数据集、7 个组件的查询结果。
+   - 核对 NocoDB 账号只有计划内权限。
+   - 核对 24 张表总数、2,034,212 条记录和凭证平衡。
+   - 核对 USA 容器健康、资源占用和端口没有影响现有 MODO。
+
+四、重要边界
+
+1. 不删除数据库、账号、表、数据源、数据集或容器。
+2. 不修改 modo_db，不修改现有 MODO 服务和 Nginx。
+3. 目前不做公网发布、不改域名、不改 Nginx。
+4. 目前不改前端视觉效果和业务口径。
+5. 如果任何一步显示失败，停止操作，截图错误信息交给我审阅，不要反复重建。
+
+五、服务器文件位置
+
+USA 业务项目：/home/ubuntu/mod
+USA 业务数据：/home/ubuntu/mod-sim-data
+USA 运行配置：/home/ubuntu/mod/.env（权限 600）
+USA DataEase：/home/ubuntu/mod/components/dataease
+USA NocoDB：/home/ubuntu/mod/components/nocodb
+JPA 本地实验：/home/ubuntu/mod/archive/component-labs/dataease-lab 和 /home/ubuntu/mod/archive/component-labs/nocodb-lab

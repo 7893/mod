@@ -1,0 +1,63 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   PART 17: 顶栏响应式
+
+   仅顶栏（.command-header）在缩放画布之外、按真实视口自适应；
+   画布内的所有窗体一律保持 1920×980 设计布局，由等比缩放兜住分辨率差异，
+   因此这里不再有任何针对画布内网格的 max-width 重排（那会按真实视口误触发）。
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1600px) {
+  .sync-time,
+  .status-divider {
+    display: none;
+  }
+
+  .command-header {
+    gap: 8px;
+  }
+
+  .header-center {
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 1400px) {
+  .header-main-title {
+    font-size: 18px;
+  }
+
+  .nav-tab {
+    padding: 5px 6px;
+    font-size: 12px;
+  }
+
+  .link-state span:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .command-header {
+    height: auto;
+    padding-block: 8px;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .header-left,
+  .header-center,
+  .header-right {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .header-status {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 960px) {
+  .nav-tab span,
+  .status-divider,
+  .link-state span:last-child { display: none; }
+  .nav-tab { justify-content: center; min-width: 38px; }
+}
