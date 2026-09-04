@@ -363,3 +363,33 @@
   1. **DataView 统一迁移与旧组件清零**：`frontend/src/views/DataView.vue` 全面改用 `CockpitPanel` + `MetricGrid` + 纯 Tailwind，全站组件范式彻底统一；旧存量组件 `frontend/src/components/Panel.vue` 已彻底物理删除。
   2. **Arbitrary value 治理与边界落定**：`OperationsView.vue` 中散写的 `grid-cols-[100px_1fr_80px]` 沉淀入 `theme.css`（`--grid-template-columns-ops-volume`），`min-w-[180px]` 规范化为标准 `min-w-44`；并在 `FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md` 契约三中正式明确 arbitrary value 的允许/禁止边界（禁止用于字号、颜色、间距；受控允许图表/弹性容器的防塌陷物理上下界 guardrails）。
 - 关联：KI-008（六屏迁移，已全量完成）、KI-018（前端契约自动校验）。
+
+
+## 流程与机制缺口
+
+### KI-024 · 缺少新需求/任务的正式登记入口
+- 状态：OPEN
+- 现象：`KNOWN-ISSUES.md` 记录“已发现的问题/缺陷”，`docs/decisions/` 记录“已做的决策”，
+  但“新需求/新功能/待办任务”没有对称的正式登记处——目前散落在对话中，易丢失、不可追溯。
+  `docs/tasks/` 是已停用协作流程的残留，不承担此职责。
+- 影响：需求与问题不对称；新想法没有沉淀容器，违背“想清楚的东西必须记录下来让人/AI 遵循”的原则。
+- 待处理（择一或组合）：
+  1. 启用 **GitHub Issues** 作为需求/任务入口（公开仓库已具备），用 label 区分 feature/bug/task，
+     可与 PR、CI 联动；可考虑将 KNOWN-ISSUES 逐步迁入或与之并行。
+  2. 或在 `docs/` 建 `BACKLOG.md` 与 KNOWN-ISSUES 并列，登记需求条目。
+- 建议：优先用 GitHub Issues（上公开仓库后白得的能力，天然适合需求/任务/讨论）。
+
+### KI-025 · 文档与代码事实的同步无机制强制（仅靠规范与自觉）
+- 状态：OPEN
+- 现象：`ENFORCEMENT.md` 与 `DOCUMENTATION-LIFECYCLE.md` 要求“改动改变事实（数据规模、架构、
+  路径、部署状态）时必须同步 `CURRENT-STATE.md`，否则视为未完成”，但**无任何机制检查此项**——
+  提交时不校验文档是否随代码同步。当前文档能跟上，主要靠人盯 + AI 自觉，非机制保证。
+- 影响：这是体系目前最大的“须知而非闸门”缺口。换一个不上心的执行者，CURRENT-STATE 等活文档会掉队，
+  而下一个 AI 以文档为事实来源，会被过时文档误导（参见 KI-004 数据规模漂移即此类）。
+- 现实上限：机器无法判断“某次改动是否改变了事实”，故无法完全自动强制；只能做到“半机制”。
+- 待处理（半机制方案，择一或组合）：
+  1. CI 软警告：PR 改动 `backend/app/`、schema 或部署配置但未触碰 `CURRENT-STATE.md` 时，给出提醒
+     （警告而非硬拦，避免误伤无关改动）。
+  2. pre-commit 提示：改核心代码时提示复查 CURRENT-STATE。
+  3. 在 `DOCUMENTATION-LIFECYCLE.md` 醒目标注“此项属判断范畴，机制只能提醒，最终靠人/AI 判断兜底”。
+- 关联：这是“用概率性的 AI 生产确定性系统”这一根本矛盾在文档层的残留——形式可机制守住，语义同步靠判断。
