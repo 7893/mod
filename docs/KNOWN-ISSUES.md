@@ -69,12 +69,11 @@
 - 待处理：确认生产实际策略，统一文档与配置口径。
 
 ### KI-007 · 本地已修复内容尚未部署到 USA
-- 状态：IN-PROGRESS（前端已部署，后端待评估）
-- 进展（2026-09-04）：六屏 CockpitPanel 迁移的前端已构建并部署到 USA（JPA build → rsync dist），
-  部署前备份 `frontend/dist.bak-20260904-160238`，验收通过（主页 200、新资源 200、防索引头在、API 正常）。
-  仅更新前端静态文件，未动后端/数据库/服务/nginx。
-- 待处理：确认后端侧（时区统一、快照口径、区域一致性等本地修复）是否需同步部署到 USA；
-  部署需按 ENFORCEMENT 闸门 D 授权并验收。
+- 状态：IN-PROGRESS（前端已全自动 CD，后端待评估）
+- 进展（2026-09-04）：前端到 USA 已由 CI/CD 流水线全自动部署（push main → CI 通过 →
+  `deploy.yml` 自动构建并 rsync 前端 dist，部署前自动备份）。前端修复自动上线，不再需要手动部署。
+- 待处理：后端侧修复（时区统一、区域一致性 SQL、快照口径等）未纳入自动化部署；
+  是否需要同步到 USA 后端、以何种方式（受 ENFORCEMENT 后端变更授权约束），待评估。
 
 ## 前端与构建
 
@@ -115,7 +114,7 @@
   归档已使其退出活跃代码路径与 pre-commit 扫描范围。
 - 待处理（可选）：若未来需要彻底抹除，需重写 Git 历史（如 git filter-repo），属高风险操作，另行授权。
 
-### KI-015 · AutoML 就绪状态与模型质量分带有硬编码兜底，可能展示未生成的结果
+### KI-023 · AutoML 就绪状态与模型质量分带有硬编码兜底，可能展示未生成的结果
 - 状态：OPEN
 - 现象：`GET /api/v2/insights/status` 在 HeatWave 适配器报告 `ready` 时，无条件写入
   `automlStatusDisplay="已就绪"`、`trainingAuthorized=True` 与"实时提供日增单据与批次延期风险预测"文案；
@@ -135,12 +134,10 @@
 ## 机制待补
 
 ### KI-012 · CI 侧闸门缺失（本地 hook 可被绕过）
-- 状态：DONE（2026-09-04，本地 workflow 已落地，远端启用后生效）
-- 现象：已启用本地 pre-commit（`core.hooksPath=.githooks`），但可被 `git commit --no-verify` 绕过；
-  仓库无 CI（`.github/workflows` 不存在）。
-- 依据：`docs/development/SECRET-SCAN-HOOK-DESIGN.md` 与 CI 的关系章节。
-- 处理：新增 `.github/workflows/quality.yml`，在拉取请求和推送时复用凭据扫描器、提交信息校验器并
-  运行 `make check`；workflow 使用只读仓库权限，不含部署步骤或生产凭据。
+- 状态：DONE（2026-09-04，已在公开仓库 GitHub Actions 生效并多次跑绿）
+- 现象（原）：本地 pre-commit 可被 `git commit --no-verify` 绕过，仓库无 CI。
+- 处理：`.github/workflows/quality.yml` 在 push/PR 触发，执行凭据扫描 + 提交信息校验 + `make check`，
+  作为不可绕过的第二道；仓库已公开，CI 实际运行并通过。
 
 ### KI-013 · 声明式权限仅覆盖单一 CLI（绑定停用流程部分已消除）
 - 状态：DONE（2026-09-04）
@@ -283,7 +280,7 @@
 
 
 ### KI-018 · 前端契约缺自动校验（Tailwind 任意值漏网）
-- 状态：OPEN
+- 状态：IN-PROGRESS（边界已定义，自动 lint 待做）
 - 现象：`FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md` 契约三禁止脱离 Token 的任意值
   （如 `text-[10px]`、`bg-[#xxxxxx]`），但当前闸门（`make check` 的 typecheck/build）无法识别这类违规——
   语法合法、可正常构建，因此靠人工 review 才能发现。
