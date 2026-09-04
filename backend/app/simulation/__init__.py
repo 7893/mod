@@ -42,6 +42,10 @@ from .engine_context import (
     load_construction_baseline,
     load_simulation_baseline,
 )
+from .evolution_coordinator import (
+    ContradictionMeshingReport,
+    EvolutionCoordinator,
+)
 from .expense_playbook import ExpensePlaybook
 from .lifecycle_advancer import (
     LifecycleAdvancer,
@@ -81,6 +85,7 @@ __all__ = [
     "BusinessEventChain",
     "ConstructionBaseline",
     "ConstructionTaskFootprint",
+    "ContradictionMeshingReport",
     "DataReadinessEventFootprint",
     "DataReadinessPlaybook",
     "DataReadinessRecordFootprint",
@@ -91,6 +96,7 @@ __all__ = [
     "DualRunResultRecordFootprint",
     "EventFootprint",
     "EventStatus",
+    "EvolutionCoordinator",
     "ExpensePlaybook",
     "GrowthTarget",
     "IdAllocator",
