@@ -21,13 +21,13 @@
 
 ## 二、CI/CD 密钥：GitHub Secrets
 
-- CI（GitHub Actions）当前只做质量检查（凭据扫描、提交校验、`make check`），
-  **不连数据库、不部署，因此无需任何 Secret**。
-- 若将来 CI/CD 需要密钥（如部署、外部 API），一律存入 **GitHub 仓库 Secrets**（加密管理），
-  在 workflow 中以 `${{ secrets.NAME }}` 引用，**绝不写进 workflow 文件或代码**。
-- 不建议在公开仓库配置连向生产（USA）的部署密钥（SSH 私钥、服务器地址等），
-  避免把生产访问权托管给第三方；部署继续走人工授权流程。
-- workflow 权限遵循最小化（当前 `contents: read`）；确需写权限的作业单独隔离并说明。
+- CI（GitHub Actions）做质量检查（凭据扫描、提交校验、`make check`），不需要任何 Secret。
+- 前端 CD 已启用：`deploy.yml` 在 CI 通过后自动构建并 rsync 前端 dist 到 USA，使用仓库 Secrets
+  `USA_SSH_KEY`、`USA_HOST`、`USA_USER`。仅部署前端，部署前自动备份，不碰后端/数据库/服务/Nginx。
+- 密钥经 GitHub Secrets 加密管理，在 workflow 中以 `${{ secrets.NAME }}` 引用，绝不写进 workflow 或代码；
+  CD 仅在 push `main` 后经 `workflow_run` 触发（不在 PR 触发），以降低公开仓库的自动触发攻击面。
+- 风险认知：前端 CD 将 USA 访问凭据托管于 GitHub Secrets，属已接受的权衡；后端/服务/Nginx/数据库
+  变更不纳入自动化，仍须人工授权执行。
 
 ## 三、公开发布前的敏感信息净化
 

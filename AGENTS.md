@@ -68,7 +68,9 @@ to `scripts/project/` only after it is documented and reviewed. Existing domain 
 
 - Never commit `.env` files, credentials, private keys, wallets, database dumps, generated CSV data, or CLI logs.
 - Do not modify frozen data under `artifacts/v2-sim-data/`.
-- Database writes, USA deployment, service control, Nginx changes, and cloud resource changes require explicit scope.
+- Frontend deployment to USA is automated: pushing to `main` runs CI, and on success the deploy workflow
+  builds and rsyncs the frontend `dist` to USA (frontend-only, with backup). No manual step is required.
+- Database writes, backend/service control, Nginx changes, and cloud resource changes still require explicit scope.
 - Do not modify or remove files belonging to `/home/ubuntu/modo` or other projects.
 
 ## Git
