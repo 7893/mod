@@ -10,7 +10,7 @@
 2. `../ENFORCEMENT.md`：红线在动作点的强制执行方式（闸门，而非仅须知）。
 3. `../CONTRIBUTING.md`：接手、开发、验证、文档和提交流程。
 4. `CURRENT-STATE.md`：当前运行、数据、质量与操作边界的唯一事实入口。
-5. `../PROJECT-LAYOUT.md`：JPA 与 USA 的目录和主机边界。
+5. `../PROJECT-LAYOUT.md`：项目目录和运行主机边界。
 6. `KNOWN-ISSUES.md`：已发现但未修复的业务、数据、系统与清理类问题登记册（新需求/任务用 GitHub Issues 登记，已发现问题的登记见 KNOWN-ISSUES.md）。
 
 ## 现行维护规范
@@ -31,7 +31,7 @@
 - `development/BUSINESS-SIMULATION-ENGINE.md`：业务驱动拟真引擎设计规范（设计草案，尚未实现）。
 - `27-全生命周期批次工序推进与全要素动态模拟业务规范.md`：全生命周期8批次工序流水线、第八批未启动储备池与全要素因果约束。
 - `28-AI驱动的高仿真业务模拟与时钟节律实施规范.md`：AI赋能的真实业务语义、香港时区作息突发、体量二八定律与异常自愈闭环。
-- `operations/USA-DEPLOYMENT-LAYOUT.md`：USA 纯部署目录白名单与验收要求。
+- `operations/USA-DEPLOYMENT-LAYOUT.md`：迁移前旧部署目录形态（已失效，仅作历史；当前架构见 `CURRENT-STATE.md`）。
 
 ## 需求与设计
 

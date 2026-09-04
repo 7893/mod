@@ -53,8 +53,8 @@ to `scripts/project/` only after it is documented and reviewed. Existing domain 
   reason. Generated data, generated clients, vendored code, and third-party component bundles are exempt.
 - Tests mirror the maintained domain they cover. Documentation belongs under `docs/development/`, `docs/operations/`,
   or another existing subject directory, never beside unrelated source.
-- JPA `/home/ubuntu/mod` is the source-of-truth workspace. USA `/home/ubuntu/mod` is deployment-only and may contain
-  only runtime environment, backend runtime, built frontend assets, and deployment configuration.
+- The primary run host `/home/ubuntu/mod` is the source-of-truth workspace and also serves production from the
+  same machine. There is no separate deployment-only host.
 
 ## Documentation
 
@@ -68,8 +68,8 @@ to `scripts/project/` only after it is documented and reviewed. Existing domain 
 
 - Never commit `.env` files, credentials, private keys, wallets, database dumps, generated CSV data, or CLI logs.
 - Do not modify frozen data under `artifacts/v2-sim-data/`.
-- Frontend deployment to USA is automated: pushing to `main` runs CI, and on success the deploy workflow
-  builds and rsyncs the frontend `dist` to USA (frontend-only, with backup). No manual step is required.
+- Production runs on the same host as the workspace. Building the frontend and reloading services affects
+  production directly; treat frontend builds, service control, and Nginx changes as production changes.
 - Database writes, backend/service control, Nginx changes, and cloud resource changes still require explicit scope.
 - Do not modify or remove files belonging to `/home/ubuntu/modo` or other projects.
 

@@ -4,7 +4,7 @@ Updated: 2026-09-02
 Status: Current
 Scope: Humans and all coding agents working in `/home/ubuntu/mod`
 
-This repository is maintained locally on JPA. USA is a deployment target, not a development workspace.
+This repository is maintained on the primary run host, which also serves production from the same machine. There is no separate deployment host.
 
 ## Start here
 
@@ -35,7 +35,7 @@ under `archive/legacy-collaboration/` and must not be used as an active workflow
 ## Change boundaries
 
 Read-only inspection within the project is the default. Explicit authorization is required before database writes,
-USA deployment or service control, Nginx changes, cloud resource changes, destructive cleanup, or publishing anything
+production service control, Nginx changes, cloud resource changes, destructive cleanup, or publishing anything
 outside this local repository. Never modify `/home/ubuntu/modo` or another project.
 
 ## Commit contract
