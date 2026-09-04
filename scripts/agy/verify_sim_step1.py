@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -39,11 +39,11 @@ def load_env():
 
 def get_connection():
     return pymysql.connect(
-        host=os.getenv("MOD_V2_DB_HOST", "127.0.0.1"),
-        port=int(os.getenv("MOD_V2_DB_PORT", "3307")),
-        user=os.getenv("MOD_V2_DB_USER", "mod_v2_writer"),
-        password=os.getenv("MOD_V2_DB_PASSWORD"),  # secret-scan: allow
-        database=os.getenv("MOD_V2_DB_NAME", "mod_s_v2"),
+        host=os.getenv("MOD_DB_HOST") or os.getenv("MOD_V2_DB_HOST", "127.0.0.1"),
+        port=int(os.getenv("MOD_DB_PORT") or os.getenv("MOD_V2_DB_PORT", "3306")),
+        user=os.getenv("MOD_DB_USER") or os.getenv("MOD_V2_DB_USER", "mod_v2_writer"),
+        password=os.getenv("MOD_DB_PASSWORD") or os.getenv("MOD_V2_DB_PASSWORD", ""),  # secret-scan: allow
+        database=os.getenv("MOD_DB_NAME_V2") or os.getenv("MOD_V2_DB_NAME", "mod_s_v2"),
         autocommit=False,
         charset="utf8mb4",
     )
@@ -85,7 +85,9 @@ def run_verification():
     print("\n[Step 3/5] Testing transactional atomic rollback...")
     allocator = IdAllocator(baseline.next_ids)
     playbook = ExpensePlaybook(baseline=baseline, id_allocator=allocator, seed=2026)
-    dummy_event = playbook.generate_event(target_date=datetime(2026, 9, 4, 8, 30))
+    next_day = baseline.latest_business_date.date() + timedelta(days=1)
+    target_dt = datetime.combine(next_day, time(8, 30))
+    dummy_event = playbook.generate_event(target_date=target_dt)
 
     # Tamper with an ID inside integration to violate foreign key or unique constraint intentionally
     dummy_event.integration.voucher_id = -999999  # Non-existent FK voucher_id
@@ -109,14 +111,13 @@ def run_verification():
         assert vch_exists == 0, "Partial voucher was written!"
         print("  Passed: 0 partial records found. Full transaction rollback verified.")
 
-    # 4. Small batch real write (100 events on 2026-09-04)
-    print("\n[Step 4/5] Executing controlled write of 100 expense reimbursement events...")
+    # 4. Small batch real write (100 events)
+    print(f"\n[Step 4/5] Executing controlled write of 100 expense reimbursement events on {next_day}...")
     # Re-fetch fresh IDs from DB
     baseline = load_simulation_baseline(conn)
     allocator = IdAllocator(baseline.next_ids)
     playbook = ExpensePlaybook(baseline=baseline, id_allocator=allocator, seed=8888)
 
-    target_dt = datetime(2026, 9, 4, 8, 30)
     events = playbook.generate_batch(count=100, target_date=target_dt)
     print(f"  Generated {len(events)} events for target date {target_dt.date()}")
 
@@ -204,11 +205,11 @@ def run_verification():
         print(f"  Integration results distribution: {int_dist}")
         assert int_dist.get("SUCCESS", 0) > 85, f"Unexpected low success rate: {int_dist}"
 
-        # Check daily_stats for 2026-09-04
-        cur.execute("SELECT * FROM daily_stats WHERE stat_date = '2026-09-04';")
+        # Check daily_stats for target_dt
+        cur.execute("SELECT * FROM daily_stats WHERE stat_date = %s;", (str(target_dt.date()),))
         stat_row = cur.fetchone()
-        print(f"  daily_stats 2026-09-04 row: {stat_row}")
-        assert stat_row is not None, "daily_stats for 2026-09-04 was not created!"
+        print(f"  daily_stats {target_dt.date()} row: {stat_row}")
+        assert stat_row is not None, f"daily_stats for {target_dt.date()} was not created!"
 
         # Full KI-017 Global Regression Queries
         print("\n--- KI-017 Global Regression Checks ---")
