@@ -166,7 +166,7 @@
      变量名以占位符形式列全；确认活跃代码无遗漏的硬编码值。
 2. 文档与注释中的明文敏感信息 —— 环境变量覆盖不到，须逐处脱敏改写
    - 内网 IP 内网数据库地址（脱敏）：出现在 `database/`、`generator/`、`docs/18`、`docs/tasks/` 等。
-   - USA 公网 IP（如 `USA公网地址（脱敏）`、`155.248.x`）：出现在 `docs/18`、`docs/20` 及归档 benchmark。
+   - USA 公网 IP（如 `USA公网地址（脱敏）`）：出现在 `docs/18`、`docs/20` 及归档 benchmark。
    - OCI OCID（tenancy/user）：`docs/18` 等。
    - Cloudflare Account ID、真实域名（现行 生产域名（脱敏），历史 `历史域名（脱敏）`、`历史域名（脱敏）`）：
      `AGENTS.md`、`README.md`、`deploy/nginx/` 等。
