@@ -15,9 +15,9 @@ from .dashboard_sections import build_construction_summary, build_entities, buil
 
 FALLBACK_SNAPSHOT_PATHS = [
     os.getenv("MOD_FALLBACK_SNAPSHOT_PATH", ""),
-    "/home/ubuntu/mod/frontend/src/data/v2-sim-snapshot.json",
+    # Backend-bundled snapshot (relative to this file) — works in any environment/CI.
     os.path.join(os.path.dirname(__file__), "..", "v2-sim-snapshot.json"),
-    os.path.join(os.path.dirname(__file__), "..", "..", "v2-sim-snapshot.json"),
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "src", "data", "v2-sim-snapshot.json"),
     "v2-sim-snapshot.json",
 ]
 
