@@ -1,0 +1,40 @@
+# git-cliff configuration — generate CHANGELOG.md from Conventional Commits.
+# Changelog starts at tag v0.1.0 (2026-09-04). Generated in CI; no local toolchain required.
+
+[changelog]
+header = """
+# Changelog
+
+All notable changes are generated from Conventional Commits since v0.1.0.
+"""
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits %}
+- {{ commit.message | upper_first }}{% endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+commit_parsers = [
+  { message = "^feat", group = "Features" },
+  { message = "^fix", group = "Bug Fixes" },
+  { message = "^docs", group = "Documentation" },
+  { message = "^refactor", group = "Refactoring" },
+  { message = "^perf", group = "Performance" },
+  { message = "^test", group = "Tests" },
+  { message = "^build", group = "Build" },
+  { message = "^ci", group = "CI" },
+  { message = "^chore", group = "Chores" },
+  { message = "^style", group = "Styling" },
+  { message = "^revert", group = "Reverts" },
+  { message = ".*", skip = true },
+]
+filter_commits = true
+tag_pattern = "v[0-9]*"
+topo_order = false
+sort_commits = "oldest"

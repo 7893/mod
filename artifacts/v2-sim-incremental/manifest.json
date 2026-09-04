@@ -1,0 +1,93 @@
+{
+  "metadata": {
+    "generated_at": "2026-08-31T22:08:04.824380",
+    "total_records": 5010
+  },
+  "tables": {
+    "rollout_batch": {
+      "rows": 1,
+      "size": 32,
+      "hash": "36833398d3d74d4a725a006498a03bf66aae6092503615e3a2f1f19fbbf66e38"
+    },
+    "org_unit": {
+      "rows": 503,
+      "size": 38809,
+      "hash": "d1ed50026134b1e8589642cb1947a1f2a7a97ff82b0946b27a24fc26144c754c"
+    },
+    "sys_user": {
+      "rows": 503,
+      "size": 17630,
+      "hash": "6baca53317f91a7241d4554e92e00d0195ddec3776996f4adb58ef4e4cfd0dee"
+    },
+    "training": {
+      "rows": 503,
+      "size": 27245,
+      "hash": "a9eb0b0f7cd7da2f59117c22d8f9648b3cee2482cc041e9c22cc3f1cdb3e7991"
+    },
+    "construction_task": {
+      "rows": 503,
+      "size": 41826,
+      "hash": "19e98855ff9877a8ceefc11bd550309e7988546f911e9b2ce838e746520f54f6"
+    },
+    "business_document": {
+      "rows": 370,
+      "size": 28514,
+      "hash": "724a9db284903e8088352d4ee6567726e15c7173b8a4324822ab74e786452b55"
+    },
+    "business_document_line": {
+      "rows": 740,
+      "size": 20702,
+      "hash": "d8b49f61fb381d554d709382d64458b357292e239a1e28cbbf743c764b25bede"
+    },
+    "accounting_voucher": {
+      "rows": 370,
+      "size": 28075,
+      "hash": "4cd38b054a5b76e31bfec78bfa5aa3f517dbb071a799a88d4c5c9db3b4826d90"
+    },
+    "accounting_voucher_line": {
+      "rows": 740,
+      "size": 25104,
+      "hash": "5a79d8fa58d2de35816d70e2723ab3fb76a7101b7de12b019dd3db892b9d18a0"
+    },
+    "document_voucher_link": {
+      "rows": 370,
+      "size": 5569,
+      "hash": "879a6028b32576afa99e7e01e6d4c5c697eecdaf7628525b6c6c6248efe4818c"
+    },
+    "integration_result": {
+      "rows": 370,
+      "size": 14136,
+      "hash": "e7e1a6c0c9ac79c023fc0c87a8948e7cc79b06d3ce8abd9b2d960e9968ec9b75"
+    },
+    "dual_run_result": {
+      "rows": 38,
+      "size": 2000,
+      "hash": "046279cbf92ff99283ae223be7067303f3aa416c67963f63fd60bc858adc2074"
+    },
+    "data_readiness": {
+      "rows": 1,
+      "size": 32,
+      "hash": "36833398d3d74d4a725a006498a03bf66aae6092503615e3a2f1f19fbbf66e38"
+    },
+    "rollout_status_snapshot": {
+      "rows": 1,
+      "size": 32,
+      "hash": "36833398d3d74d4a725a006498a03bf66aae6092503615e3a2f1f19fbbf66e38"
+    },
+    "issue_metric_snapshot": {
+      "rows": 1,
+      "size": 32,
+      "hash": "36833398d3d74d4a725a006498a03bf66aae6092503615e3a2f1f19fbbf66e38"
+    },
+    "risk_metric_snapshot": {
+      "rows": 1,
+      "size": 32,
+      "hash": "36833398d3d74d4a725a006498a03bf66aae6092503615e3a2f1f19fbbf66e38"
+    },
+    "metric_snapshot": {
+      "rows": 1,
+      "size": 32,
+      "hash": "36833398d3d74d4a725a006498a03bf66aae6092503615e3a2f1f19fbbf66e38"
+    }
+  }
+}

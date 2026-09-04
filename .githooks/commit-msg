@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#
+# MOD commit-message gate. Shared policy implementation lives in scripts/project.
+#
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+python3 scripts/project/validate_commit_message.py "$1"

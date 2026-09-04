@@ -1,0 +1,108 @@
+# Secrets: keep local values out of version control, retain the template.
+.env
+.env.*
+!.env.example
+!frontend/.env.example
+
+# Credentials and private configuration
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.wallet
+*.tfstate
+*.tfstate.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.venv/
+backend/.venv/
+
+# Frontend build and dependency output
+frontend/dist/
+frontend/node_modules/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.vite/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+frontend/src/**/*.js
+frontend/src/**/*.bak
+frontend/src/**/*.patch
+frontend/dashboard-integrated.png
+
+# Generated/frozen data stays on disk and is verified by its manifests.
+artifacts/**/*.csv
+artifacts/**/*.jsonl
+artifacts/**/.incremental_state
+artifacts/**/checkpoint.json
+
+# Raw source material and historical workbench assets are local references.
+references/project-source/
+archive/workbench/
+archive/usa-history/
+archive/*.tar.gz
+
+# Runtime and editor output
+*.log
+*.pid
+*.sock
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.fleet/
+.cache/
+tmp/
+output/
+scripts/*/tmp/
+scripts/*/output/
+
+# Dispatcher lock (legacy collaboration state machine, now archived)
+**/.dispatcher.lock
+
+# OS / editor extras
+*.orig
+.venv*/
+node_modules/
+
+
+# --- Public-repo hardening (route A: clean new git history) ---
+# Archive is local-only recycle bin; keep on disk, never publish (contains legacy plaintext).
+archive/
+
+# Real deploy configs carry real domains/cert paths; publish *.example templates only.
+deploy/nginx/*.conf
+
+# Legacy DB/generator scripts carry internal host details; keep local, do not publish.
+database/
+generator/
+
+# Historical process docs may carry legacy real hosts/OCIDs; keep local, do not publish.
+docs/history/

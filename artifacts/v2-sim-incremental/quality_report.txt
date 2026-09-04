@@ -1,0 +1,5 @@
+Incremental Quality Report
+Total Tables Checked: 17
+Foreign Keys Validated: OK
+Debit/Credit Balance: OK
+Total Incremental Records: 5010

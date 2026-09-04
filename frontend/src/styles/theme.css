@@ -1,0 +1,45 @@
+/*
+ * 前端设计契约 · 集中 Token 定义（Tailwind 4 @theme）
+ *
+ * 依据 docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md 的三层契约：
+ * 骨架、颜色、间距、字号、圆角、阴影集中在此定义，模板只引用 token 名，
+ * 不得散写任意值（如 bg-[#070a0f]、text-[11px]）。新增值必须先在此沉淀为 token。
+ *
+ * 使用方式（Tailwind 4）：token 名自动生成对应工具类，例如
+ *   --grid-template-columns-cockpit  ->  class="grid-cols-cockpit"
+ *   --color-surface-base             ->  class="bg-surface-base"
+ *   --text-cockpit-sm                ->  class="text-cockpit-sm"
+ */
+
+@theme {
+  /* 骨架契约：驾驶舱固定分区，受保护结构，改比例即结构变更 */
+  --grid-template-columns-cockpit: 390px 1fr 370px;   /* 三栏：左固定 中弹性 右固定 */
+  --grid-template-rows-cockpit-side: 1.15fr 1fr;       /* 左右列上下两格比例 */
+  --grid-template-columns-construction: minmax(0, 1fr) minmax(0, 1fr) 360px;
+  --grid-template-rows-construction: minmax(0, 1fr) minmax(0, 1.15fr);
+  --grid-template-columns-rollout-mid: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 0.95fr);
+  --grid-template-columns-operations: repeat(2, minmax(0, 1fr));
+  --grid-template-rows-operations: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.85fr);
+  --grid-template-columns-issues-top: minmax(0, 1.35fr) minmax(0, 0.95fr);
+  --grid-template-columns-insights: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  --grid-template-rows-insights: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  --grid-template-columns-ops-volume: 100px 1fr 80px;
+
+  /* 大屏固定设计基准（配合整体缩放适配，不用逐屏断点补丁） */
+  --spacing-canvas-w: 1920px;
+  --spacing-canvas-h: 1080px;
+
+  /* 表面色（obsidian slate 基调，中性灰阶承载） */
+  --color-surface-base: #070a0f;          /* 大屏最底色 */
+  --color-surface-panel: rgb(15 23 42 / 0.60);   /* 面板底 slate-900/60 */
+  --color-surface-hairline: rgb(255 255 255 / 0.10); /* 描边 white/10 */
+  --color-surface-veil-06: rgb(255 255 255 / 0.06);  /* 弱分隔 */
+  --color-surface-veil-03: rgb(255 255 255 / 0.03);  /* 更弱底纹 */
+
+  /* 仪表字号阶梯（等宽/紧凑信息密度） */
+  --text-cockpit-xs: 10px;
+  --text-cockpit-sm: 11px;
+  --text-cockpit-md: 13px;
+  --text-cockpit-lg: 15px;
+  --text-cockpit-metric: 18px;   /* 关键指标数字 */
+}

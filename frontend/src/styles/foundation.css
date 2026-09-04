@@ -1,0 +1,532 @@
+/* ============================================================================
+   MOD V2 集团级数智运营中控中心 - 设计系统
+   ============================================================================
+   设计原则：大气宏大、克制专业、深海蓝基调、数据层级分明
+   主适配：1920x1080 大屏一屏展示，避免滚动
+   ============================================================================ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PART 1: 设计令牌 (Design Tokens)
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* 现代黑曜石碳素色彩系统 (Modern Obsidian Slate) */
+  --c-bg-base: #070a0f;
+  --c-bg-primary: #0b0f19;
+  --c-bg-secondary: rgba(15, 23, 42, 0.65);
+  --c-bg-elevated: rgba(30, 41, 59, 0.45);
+  --c-bg-hover: rgba(51, 65, 85, 0.35);
+  
+  /* 微米级极细钛金发丝线 (Hairline Metallic Seams) */
+  --c-border: rgba(255, 255, 255, 0.08);
+  --c-border-subtle: rgba(255, 255, 255, 0.04);
+  --c-border-accent: rgba(255, 255, 255, 0.14);
+  
+  /* 高纯度黑白灰排版 */
+  --c-text-primary: #f8fafc;
+  --c-text-secondary: #94a3b8;
+  --c-text-muted: #64748b;
+  --c-text-dim: #475569;
+  
+  /* 功能色 - 现代克制科技风 */
+  --c-accent: #38bdf8;
+  --c-accent-dim: #0284c7;
+  --c-accent-glow: rgba(56, 189, 248, 0.12);
+  --c-success: #34d399;
+  --c-success-dim: #059669;
+  --c-warning: #fbbf24;
+  --c-warning-dim: #d97706;
+  --c-danger: #f43f5e;
+  --c-danger-dim: #e11d48;
+  --c-gold: #fbbf24;
+  --c-gold-dim: #d97706;
+
+  /* 风险强调（仅用于风险预警/告警场景，不与常规状态色混用） */
+  --c-risk-glow: rgba(244, 63, 94, 0.25);
+  --c-risk-glow-soft: rgba(244, 63, 94, 0.08);
+
+  /* 排版 */
+  --font-sans: "Inter", "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Consolas", monospace;
+  
+  /* 核心数字字号：与布局的 clamp/vw 使用同一套缩放逻辑，
+     避免 1920 调好的比例在 2560/4K 拼接屏上显得过小、在 1366 上溢出。 */
+  --text-hero: clamp(38px, 2.9vw, 60px);
+  --text-kpi: clamp(26px, 1.95vw, 40px);
+  --text-stat: clamp(20px, 1.45vw, 29px);
+  --text-metric: clamp(19px, 1.25vw, 26px);
+  --text-lg: clamp(16px, 0.95vw, 19px);
+  --text-md: clamp(14px, 0.8vw, 16px);
+  --text-base: clamp(13px, 0.72vw, 15px);
+  --text-sm: clamp(12px, 0.68vw, 14px);
+  --text-xs: clamp(11px, 0.62vw, 13px);
+  --text-xxs: clamp(10px, 0.56vw, 12px);
+  --leading-relaxed: 1.7;
+  
+  /* 间距 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* 面板统一节奏：卡片内边距与栅格间距集中控制，避免各页面各写一套 clamp。 */
+  --panel-pad: clamp(12px, 0.95vw, 20px);
+  --grid-gap: clamp(10px, 0.85vw, 16px);
+  
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  
+  /* 动效 */
+  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+}
+
+/* 风险呼吸动效：仅用于最高优先级的风险提示（如高风险计数、告警角标） */
+@keyframes risk-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 var(--c-risk-glow); }
+  50% { box-shadow: 0 0 0 6px rgba(239, 80, 80, 0); }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PART 2: 重置与基础
+   ───────────────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #app {
+  margin: 0;
+  padding: 0;
+  height: 100dvh;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--c-text-primary);
+  background: var(--c-bg-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: none; background: none; }
+a { color: inherit; text-decoration: none; }
+b, strong { font-weight: 600; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PART 3: 中控中心外壳
+   ───────────────────────────────────────────────────────────────────────────── */
+/* 外壳锁定为一屏高。此前用 min-height 意味着高度没有上界，
+   驾驶舱页里 .dashboard-cockpit 的 flex: 1 就失去了约束对象，
+   区块会一路撑出视口底部。改为确定高度后由 .command-main 分配剩余空间。 */
+.command-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: linear-gradient(180deg, var(--c-bg-base) 0%, var(--c-bg-primary) 100%);
+}
+
+/* 顶部导航栏 */
+.command-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: clamp(8px, 1vw, 20px);
+  height: 56px;
+  padding: 0 clamp(12px, 1.25vw, 24px);
+  background: rgba(7, 10, 15, 0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 100;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* 左侧导航区 */
+.header-left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+/* 中央主标题区 */
+.header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 clamp(12px, 1.2vw, 28px);
+  position: relative;
+  user-select: none;
+}
+
+.header-main-title {
+  margin: 0;
+  font-size: clamp(18px, 1.35vw, 23px);
+  font-weight: 700;
+  letter-spacing: clamp(1.5px, 0.25vw, 3px);
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 45%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 16px rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+
+.header-title-decor {
+  width: 100%;
+  height: 1.5px;
+  margin-top: 4px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 20%, rgba(56, 189, 248, 0.5) 50%, rgba(255, 255, 255, 0.1) 80%, transparent 100%);
+  border-radius: 1px;
+}
+
+/* 右侧导航与状态区 */
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(6px, 0.8vw, 14px);
+  min-width: 0;
+}
+
+/* 导航选项 */
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(2px, 0.25vw, 6px);
+  min-width: 0;
+}
+
+.nav-tab {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 0.4vw, 6px);
+  padding: 6px clamp(8px, 0.7vw, 14px);
+  font-size: clamp(12px, 0.75vw, 13.5px);
+  font-weight: 500;
+  color: var(--c-text-muted);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+  position: relative;
+  white-space: nowrap;
+}
+
+.nav-tab:hover {
+  color: var(--c-text-secondary);
+  background: color-mix(in srgb, var(--c-accent) 8%, transparent);
+}
+
+.nav-tab.active {
+  color: var(--c-text-primary);
+  background: color-mix(in srgb, var(--c-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--c-accent) 38%, transparent);
+}
+
+.nav-tab svg {
+  opacity: 0.7;
+}
+
+.nav-tab.active svg {
+  opacity: 1;
+  color: var(--c-accent);
+}
+
+.risk-badge {
+  font-style: normal;
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  padding: 1px 5px;
+  background: var(--c-danger);
+  color: #fff;
+  border-radius: 10px;
+  margin-left: 2px;
+}
+
+/* 右侧状态区 */
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 0.6vw, 12px);
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.clock-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--c-text-muted);
+}
+
+.status-item b {
+  font-family: var(--font-mono);
+  color: var(--c-text-secondary);
+}
+
+.status-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--c-border-subtle);
+  margin-left: auto;
+}
+
+.link-state {
+  padding: var(--space-1) var(--space-3);
+  background: rgba(45, 212, 160, 0.1);
+  border-radius: var(--radius-sm);
+  color: var(--c-success);
+}
+
+.link-state.error {
+  background: rgba(239, 80, 80, 0.1);
+  color: var(--c-danger);
+}
+
+.link-state.sync {
+  background: rgba(224, 160, 32, 0.1);
+  color: var(--c-warning);
+}
+
+.link-dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.sync-time svg {
+  opacity: 0.6;
+}
+
+.sync-time.spin svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.header-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--c-text-muted);
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast);
+}
+
+.header-btn:hover {
+  color: var(--c-text-primary);
+  border-color: var(--c-border);
+  background: var(--c-bg-hover);
+}
+
+.header-btn.spin svg {
+  animation: spin 1s linear infinite;
+}
+
+/* 连接警告 */
+.connection-alert {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(224, 160, 32, 0.1);
+  border-bottom: 1px solid rgba(224, 160, 32, 0.2);
+  font-size: var(--text-sm);
+  color: var(--c-warning);
+}
+
+.connection-alert button {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  background: rgba(224, 160, 32, 0.15);
+  border: 1px solid var(--c-warning);
+  color: #fff;
+  border-radius: var(--radius-sm);
+}
+
+/* 主内容区 */
+/* 主内容区撑满外壳剩余高度，并向下传递确定高度：
+   驾驶舱页据此铺满一屏，不再依赖 calc(100dvh - 129px) 这类魔法数字
+   （该数字在增删顶栏/底栏时必然失准）。 */
+/* 主内容区吃掉外壳剩余高度并向下传递：驾驶舱页据此铺满一屏，
+   内容更长的子页（台账、研判等）则在此处纵向滚动。 */
+.command-main {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 统一缩放画布：固定 1920×980，居中，transform-origin 居中等比缩放。
+   所有页面内容都落在这张画布内，分辨率差异由缩放兜住。 */
+.screen-scale-box {
+  flex-shrink: 0;
+  transform-origin: center center;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.screen-scale-box > * {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+/* 底部声明 */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PART 4: 面板组件（减少边框，通过明暗分区）
+   ───────────────────────────────────────────────────────────────────────────── */
+.panel {
+  background: var(--c-bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel.bordered {
+  border: 1px solid var(--c-border-subtle);
+}
+
+.panel.compact {
+  padding: var(--space-3);
+}
+
+/* 风险语义变体：仅用于风险预警类面板，左侧红色强调条 + 轻微底色，与常规面板区分层级 */
+.panel--risk {
+  border-left: 3px solid var(--c-danger);
+  background: linear-gradient(90deg, var(--c-risk-glow-soft) 0%, var(--c-bg-secondary) 12%);
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  gap: var(--space-3);
+}
+
+.panel-head-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* 页面区域坐标（A1、B4 这类）：唯一用途就是沟通时快速指认区块——
+   "把 A2 放到 A3 右边"、"B4 调大一点"。因此必须一眼可读，
+   不能为了"干净"把它淡到看不见。做法是给一个低饱和描边胶囊：
+   与业务色完全区分，不抢内容，但清晰可辨。
+   编号规则：每屏一个字母（A 总览 / B 建设 / C 上线 / D 运营 / E 问题 / F 研判 / G 台账），
+   屏内区块自 1 起顺序编号。 */
+.zone-badge,
+.zone-region::before,
+.screen-hero[data-zone]::before,
+.flow-chain[data-zone]::before,
+.batch-cards-row[data-zone]::before,
+.automl-gate-banner[data-zone]::before,
+.cf-ai-section[data-zone]::before {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 17px;
+  padding: 0 5px;
+  border: 1px solid rgba(122, 162, 214, 0.42);
+  border-radius: 3px;
+  background: rgba(10, 18, 32, 0.82);
+  color: #9dbbe0;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.8px;
+  opacity: 1;
+}
+
+.zone-region,
+.screen-hero[data-zone],
+.flow-chain[data-zone],
+.batch-cards-row[data-zone],
+.automl-gate-banner[data-zone],
+.cf-ai-section[data-zone] {
+  position: relative;
+}
+
+/* Panel 的角标绝对定位到面板右上角，与其他区块保持完全一致。
+   此前它排在 panel-head-right 的 flex 流里，遇到带搜索框/筛选器的面板
+   （如 C6 单位台账）会被挤到第二行，看起来像是在标注按钮。 */
+.panel {
+  position: relative;
+}
+
+.panel > .zone-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* 角标停靠在区块右上角，远离标题和数值的阅读动线。 */
+.zone-region::before,
+.screen-hero[data-zone]::before,
+.flow-chain[data-zone]::before,
+.batch-cards-row[data-zone]::before,
+.automl-gate-banner[data-zone]::before,
+.cf-ai-section[data-zone]::before {
+  content: attr(data-zone);
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.panel-head-left h3 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--c-text-primary);
+}
+
+.panel-head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.panel-body {
+  flex: 1;
+  position: relative;
+}
+
