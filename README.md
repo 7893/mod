@@ -37,6 +37,7 @@ MOD 是一个**下一代 AI 驱动开发**的领导驾驶舱与大屏可视化�
 - `PROJECT-LAYOUT.md`：目录结构、环境边界和统一路径规则。
 - `docs/CURRENT-STATE.md`：当前运行、数据与改进状态的唯一事实入口。
 - `docs/INDEX.md`：现行规范与全部历史资料索引。
+- `docs/KNOWN-ISSUES.md`：已发现问题的登记册（新需求/任务用 GitHub Issues 登记，已发现问题的登记见 KNOWN-ISSUES.md）。
 - `docs/history/21-V2数据与项目目录现状基线.md`：V2 冻结基线历史记录。
 - `artifacts/v2-sim-data/`：V2 封版数据。
 - `docs/tasks/`：当前和历史任务书；任务书文件本身不等于操作授权。
