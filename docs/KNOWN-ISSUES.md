@@ -151,7 +151,11 @@
 ## 公开发布准备
 
 ### KI-014 · 上 GitHub 公开仓库前的净化工程
-- 状态：OPEN
+- 状态：DONE（2026-09-04，已按路线 A 变体完成并公开）
+- 完成方式：净化活跃区全部敏感值（IP/OCID/CF账号/密码/域名脱敏或改环境变量）；`archive/`、
+  `database/`、`generator/`、`docs/history/`、真实 nginx conf 等经 `.gitignore` 排除；旧 `.git`
+  历史打包备份至 `archive/`（本地留存），`git init` 重建干净历史；公开仓库 github.com/7893/mod，
+  多轮全量机密扫描确认零泄露。
 - 目标：将本仓库发布为 GitHub 公开仓库，并启用 GitHub Actions CI。
 - 前提判断：当前**不具备**公开条件；版本库（含 Git 历史）存在多类敏感信息，直接公开会泄露。
 
