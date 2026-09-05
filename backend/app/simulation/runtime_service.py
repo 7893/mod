@@ -266,9 +266,12 @@ class SimulatorRuntimeService:
 
         host = os.getenv("MOD_DB_HOST") or os.getenv("MOD_V2_DB_HOST", "127.0.0.1")
         port = int(os.getenv("MOD_DB_PORT") or os.getenv("MOD_V2_DB_PORT", "3306"))
-        user = os.getenv("MOD_DB_USER") or os.getenv("MOD_V2_DB_USER", "mod_v2_writer")
+        user = os.getenv("MOD_DB_USER") or os.getenv("MOD_V2_DB_USER", "")
         password = os.getenv("MOD_DB_PASSWORD") or os.getenv("MOD_V2_DB_PASSWORD", "")
         database = os.getenv("MOD_DB_NAME") or os.getenv("MOD_V2_DB_NAME", "mod_s_v2")
+
+        if not user:
+            raise ValueError("Database user not configured in environment (MOD_DB_USER / MOD_V2_DB_USER)")
 
         return pymysql.connect(
             host=host,
