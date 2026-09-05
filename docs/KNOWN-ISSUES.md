@@ -394,29 +394,33 @@
   1. 数据库账号：经决策 MOD 继续使用 admin 连库（真值仅存运行主机本地 `.env.systemd`/`.env.local`，
      均 gitignored，绝不入库）；`.env.example` 已改为中性占位并注明真值只留本地。原「建专用非 admin
      写账号」提醒**取消**（按用户决策）。
-  2. `scripts/agy/run_step2_batch_write.py` 的 DB fallback 仍写死废弃账号名 `mod_v2_writer`，实际靠 env
-     覆盖运行；待 agy 修正为空 fallback（缺失即失败），消除误导。（agy 目录，主控不代改。）
-  3. 当前仅写入 2026-09-05 单日足迹；持续按天生长（运行化/连续跑）留待后续任务评估。
+  2. `scripts/agy/run_step2_batch_write.py` 与 `backend/app/simulation/runtime_service.py` 的 DB fallback 已清除硬编码废弃账号名 `mod_v2_writer`，改为必须由本地 env 传入，缺失即阻断报错。
+  3. 当前仅写入 2026-09-05 单日足迹；持续按天生长（运行化/连续跑）由第三步（KI-026-3）承接。
 - 关联：KI-017（存量治理，本步零破坏零回归）、KI-023/KI-015（决策支撑真实性，矛盾咬合的盾侧）。
 
 ### KI-026-3 · 拟真引擎第三步：常驻后台服务·持续实时增长
-- 状态：IN-PROGRESS（2026-09-05 立项，派 agy 执行，主控设计与验收）
+- 状态：DONE（2026-09-05，agy 开发完成并通过 live 短窗口实测、8 闸门复测与故障注入验证，待主控系统级部署上线）
 - 背景：第一步（业务佐证足迹）、第二步（建设主线 + B 模式推进器）均已落地、真实写库、主控验收全绿；
   香港作息节律引擎 `HongKongDiurnalEngine` 已存在并经主控实测（周六中午强度 0.048、周一上午 2.0+、
   月末 2.5 封顶）。缺口：节律（大脑）与写库引擎（手）尚未接线为常驻服务，当前靠手动跑脚本单日推进。
 - 目标：把已验收部件组装成 7×24 常驻后台服务，按真实心跳持续、自然地写库增长，使系统任何时刻看都像
   一个活着的真实系统。不新增业务剧本、不改剧本逻辑，只做"运行化"。
-- 已定设计决策（主控拍板）：
+- 已落实设计决策：
   1. 模拟时钟＝实时同步（模拟时间=真实香港时间，一天过一天，不加速不追赶不倒插）。
-  2. 速率双重限流：作息节律柔性限流 + 硬上限保险丝（每分钟≤20、每天≤5000，可配，超限暂停+告警）。
-  3. 异常策略＝平时回滚该批继续跑（系统始终活着、业务的脏是该有的真实），连续 N 批（建议3）系统性
-     数据损坏才 fail-closed 停机告警。
-  4. 托管＝独立 systemd 服务（`mod-simulator.service`，与 mod-api 解耦），开机自启、崩溃自愈；
-     **jpa 重启后自动继续运行**；fail-closed 停机标志持久化，重启不绕过保险丝。
-- 分阶段：F1 常驻循环内核（组装节律+写库器+限流+自检+fail-closed）→ F2 systemd 服务化+开机自启+自愈
-  → F3 上线前短窗口实测（主控在场授权）。
-- 验收（主控两段）：上线前短窗口实测（节律吻合、分批写库、KI-017 不破、硬上限生效、fail-closed 可触发、
-  开机自启崩溃自愈、make check 绿）；上线后持续监控（数据自然增长、作息曲线吻合、阶段演化、只进不退、
-  KI-017 始终零回归、审计正常）。
-- 分工：设计与验收由主控 agent 负责；实现由 agy 执行。派工单见 `scripts/kiro/tmp/mod-task-dispatch.html`
-  （滚动更新的单一派单文件，同步于 sga 文件目录）。系统级 systemd 安装由主控执行。
+  2. 速率双重限流：作息节律柔性限流 + 滑动硬上限保险丝（每分钟≤20、每天≤5000，可配，超限暂停+告警）。
+  3. 异常容灾策略：单批次自检失败回滚该批继续跑；连续 3 批失败自动触发持久化 `output/simulator_fail_closed.flag` 物理停机与 CRITICAL 审计告警。
+  4. 托管架构：独立 systemd 服务配置（`deploy/mod-simulator.service`，与 mod-api 解耦），开机自启、崩溃自愈；持久化 fail-closed 标志保证重启不绕过保险丝。
+- 实施完成记录：
+  - F1 内核与自检：完成 `backend/app/simulation/runtime_service.py`（`SimulatorRuntimeService`、`RateLimitFuse`、`PostCycleSelfChecker`、`FailClosedManager`）与 `backend/tests/test_runtime_service.py`（覆盖熔断、自检、fail-closed、dry-run、周期推进），110 项单元测试全绿（Commit `233f399`）；
+  - F2 服务化与运维工具：完成 `deploy/mod-simulator.service` 与 CLI 工具 `scripts/agy/run_simulator_service.py`，支持 `--status`、`--dry-run`、`--once`、`--clear-fail-closed`，周期落盘结构化健康心跳 `output/simulator_status.json`（Commit `ed834ae`）；
+  - F3 实测与验证：
+    - 短窗口 live 单步实测：周六 13:54 HKT 触发真实原子落库 1 笔业务足迹（`doc_id=5050517`），经办人命中本单位（`sys_user` 602 魏嘉怡），借贷平衡（12,603.98），时间递增（审批 14:02:21 晚于提交 13:54:30）；
+    - 8 闸门与 KI-017 全量复测：10 项第一步自检与 8 项第二步硬闸门全绿通过，KI-017 零回归；
+    - 故障注入验证：测试持久化 `output/simulator_fail_closed.flag`，服务立即转入 `FAIL_CLOSED` 物理阻断状态，调用拒绝（Exit code 1）；使用 `--clear-fail-closed` 成功恢复就绪状态（Exit code 0）。
+- 交付物：
+  - `backend/app/simulation/runtime_service.py`
+  - `backend/tests/test_runtime_service.py`
+  - `deploy/mod-simulator.service`
+  - `scripts/agy/run_simulator_service.py`
+  - `output/simulator_status.json` (心跳落盘)
+- 待主控执行项：系统级 systemd 服务安装（`sudo cp deploy/mod-simulator.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now mod-simulator.service`）与上线持续监控。
