@@ -22,12 +22,9 @@
 ## 二、CI/CD 密钥：GitHub Secrets
 
 - CI（GitHub Actions）做质量检查（凭据扫描、提交校验、`make check`），不需要任何 Secret。
-- 前端 CD 已启用：`deploy.yml` 在 CI 通过后自动构建并 rsync 前端 dist 到 USA，使用仓库 Secrets
-  `USA_SSH_KEY`、`USA_HOST`、`USA_USER`。仅部署前端，部署前自动备份，不碰后端/数据库/服务/Nginx。
-- 密钥经 GitHub Secrets 加密管理，在 workflow 中以 `${{ secrets.NAME }}` 引用，绝不写进 workflow 或代码；
-  CD 仅在 push `main` 后经 `workflow_run` 触发（不在 PR 触发），以降低公开仓库的自动触发攻击面。
-- 风险认知：前端 CD 将 USA 访问凭据托管于 GitHub Secrets，属已接受的权衡；后端/服务/Nginx/数据库
-  变更不纳入自动化，仍须人工授权执行。
+- 无跨主机自动部署：生产与源码工作区同机（见 ADR-0006），前端 `dist` 由运行主机本地构建、本机 Nginx
+  直接提供，不存在把部署凭据托管给 CI 的环节。此前的跨主机前端 CD（`deploy.yml` 及其 Secrets）已废止删除。
+- CI 不持有任何生产访问凭据；数据库、服务、Nginx 变更一律在运行主机本地、经显式授权执行。
 
 ## 三、公开发布前的敏感信息净化
 
