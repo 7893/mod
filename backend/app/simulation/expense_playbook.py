@@ -63,20 +63,24 @@ class ExpensePlaybook:
             base_day = baseline_dt.date() + timedelta(days=1)
             target_date = datetime.combine(base_day, time(8, 30))
 
-        if target_date <= baseline_dt:
-            raise ValueError(
-                f"target_date ({target_date}) must be strictly later than stock baseline date ({baseline_dt})"
-            )
+        if target_date.tzinfo is not None:
+            target_date = target_date.replace(tzinfo=None)
 
-        # Generate realistic working hour within target date (08:30 - 17:30)
-        hour = self.rng.choices(
-            [9, 10, 11, 14, 15, 16, 17],
-            weights=[0.20, 0.25, 0.15, 0.15, 0.15, 0.08, 0.02],
-            k=1,
-        )[0]
-        minute = self.rng.randint(0, 59)
-        second = self.rng.randint(0, 59)
-        submit_time = datetime(target_date.year, target_date.month, target_date.day, hour, minute, second)
+        # Generate realistic working hour within target date or honor passed time
+        if target_date.hour != 0 or target_date.minute != 0 or target_date.second != 0:
+            submit_time = target_date
+        else:
+            hour = self.rng.choices(
+                [9, 10, 11, 14, 15, 16, 17],
+                weights=[0.20, 0.25, 0.15, 0.15, 0.15, 0.08, 0.02],
+                k=1,
+            )[0]
+            minute = self.rng.randint(0, 59)
+            second = self.rng.randint(0, 59)
+            submit_time = datetime(target_date.year, target_date.month, target_date.day, hour, minute, second)
+
+        if submit_time <= baseline_dt:
+            submit_time = baseline_dt + timedelta(seconds=self.rng.randint(60, 3600))
 
         # Strictly ordered future stages
         approve_delta = timedelta(seconds=self.rng.randint(180, 5400))  # 3 min ~ 1.5 hr
