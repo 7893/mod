@@ -385,5 +385,16 @@
 - 写库纪律：开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭；具备写入前自动备份（`backup_affected_tables`）、批量 commit 与进度审计日志；写库与验收脚本物理分离。
 - 验收（8 条硬闸门实测）：①四级下钻加总一致 (2000单位层层咬合 PASS) ②阶段跃迁只进不退 (状态机硬约束保证 PASS) ③跃迁有过程有留痕 (评审决议+快照归档完备 PASS) ④横截面自洽 (未上线单位零越界业务 PASS) ⑤KI-017 零回归 (经办人100%命中本单位、借贷平衡、无污染与逆序 PASS) ⑥接续存量时间线无倒插 (锚定存量最新业务日 PASS) ⑦困难户与风险预测矛盾咬合 (同一事实源 100% 一致 PASS) ⑧工程与安全开关受控 (make check 绿、安全开关受控 PASS)。
 - 分工：设计与验收由主控 agent 负责；实现由 agy 执行（脚本 `scripts/agy/`）。派工单见
-  `scripts/kiro/tmp/mod-tasks-for-agy-step2.html`。
+  `scripts/kiro/tmp/mod-task-dispatch.html`（滚动更新的单一派单文件，同步于 sga 文件目录）。
+- 主控独立验收（2026-09-05，非 agy 自检）：主控对 live MySQL 独立 SQL 复测 8 闸门全绿——
+  经办人命中/时间逆序/状态污染/孤儿凭证全表=0；20 单位「已上线→稳定运行」方向前进无倒退；
+  org_unit 状态与 9-05 快照一致（mismatch=0）；未上线单位零正式业务；新记录日期 2026-09-05 晚于基线
+  2026-09-04 无倒插；make check 绿、100 项测试。**主控验收通过。**
+- 后续项（登记）：
+  1. 数据库账号：经决策 MOD 继续使用 admin 连库（真值仅存运行主机本地 `.env.systemd`/`.env.local`，
+     均 gitignored，绝不入库）；`.env.example` 已改为中性占位并注明真值只留本地。原「建专用非 admin
+     写账号」提醒**取消**（按用户决策）。
+  2. `scripts/agy/run_step2_batch_write.py` 的 DB fallback 仍写死废弃账号名 `mod_v2_writer`，实际靠 env
+     覆盖运行；待 agy 修正为空 fallback（缺失即失败），消除误导。（agy 目录，主控不代改。）
+  3. 当前仅写入 2026-09-05 单日足迹；持续按天生长（运行化/连续跑）留待后续任务评估。
 - 关联：KI-017（存量治理，本步零破坏零回归）、KI-023/KI-015（决策支撑真实性，矛盾咬合的盾侧）。
