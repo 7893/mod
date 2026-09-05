@@ -23,8 +23,7 @@
 │       └── styles/         # 基础、组件、页面和响应式样式
 ├── deploy/                 # systemd 与 Nginx 部署配置
 ├── scripts/                # 按 CLI 所有者隔离的脚本
-├── database/               # 数据库工具；历史写入工具不得擅自运行
-├── generator/              # 封版数据生成工具
+├── database/               # 只读验收工具（历史批量导入/生成脚本已退役至 archive）
 ├── tools/                  # 经维护的领域工具
 ├── artifacts/              # 本地数据资产，不进入部署目录
 ├── references/             # 原始参考材料
