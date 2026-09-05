@@ -25,7 +25,8 @@
   自动续期并重载 Nginx。
 - MOD 不使用 Docker、DataEase、NocoDB 或 Cloudflare Worker 作为现行运行组件。
 - `archive/legacy-cloudflare-worker/` 是未接入现行链路的历史实验原型，不部署。
-- 后端包含可选的 Cloudflare Workers AI REST 适配器，但默认关闭；它不依赖上述历史 Worker。
+- 后端包含可选的 Cloudflare Workers AI REST 适配器，代码默认关闭（`MOD_CF_AI_ENABLED` 未设置时不启用）；
+  当前生产运行主机已显式启用（`MOD_CF_AI_ENABLED=true` + 凭据齐备），仅用于驾驶舱文案摘要生成，只读不写库；它不依赖上述历史 Worker。
 - 时区契约：后端与 UTC 侧一律使用 UTC；面向用户的展示时区由 `MOD_DISPLAY_TIMEZONE` 决定，
   默认 `Asia/Hong_Kong`，唯一定义在 `backend/app/config.py`。快照 `meta.displayTimezone`、实时投影
   作息节律与前端时钟均派生自该来源，不得各自写死。已知偏差：`v2_connection` 的会话时区固定
@@ -63,7 +64,8 @@
   - 上线状态（2026-09-05，主控授权）：服务已系统级安装并 `enable --now`，`MOD_SIMULATION_ENGINE_ENABLED=true` 开启真实写库，常驻运行中；开机自启、崩溃自愈、jpa 重启自动继续；库按实时香港时钟自然增长、KI-017 全表零回归；主控每日巡检。
 - V1 回退代码仍保留，但不作为后续功能目标。
 - HeatWave AutoML 特征表已建立；训练/评分仍未完成。
-- Cloudflare AI 默认未启用，不应把未生成的预测展示为真实结果。
+- Cloudflare AI 已在生产启用（用于文案摘要，只读）；但无论 AI 是否启用，都不应把未生成的预测或
+  未经真实评估的模型质量展示为真实结果（见 KI-023）。
 - 本地接口与前端已将建设、问题、单位与运营屏统一到数据库当前快照口径；缺失指标展示为 `—` 或明确的
   “未提供”，不再以冻结基线数值替代实时结果。已随 JPA 生产构建生效。
 - 本地已修复省级单据新增与总览不一致问题：在线查询按快照日前最近完整业务日聚合，fallback 已从
