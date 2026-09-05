@@ -88,7 +88,7 @@ class ConstructionWriter:
         port = int(os.environ.get("MOD_DB_PORT", "3306"))
         user = os.environ.get("MOD_DB_USER", "")
         password = os.environ.get("MOD_DB_PASSWORD", "")
-        database = os.environ.get("MOD_DB_NAME", "mod_s_v2")
+        database = os.environ.get("MOD_DB_NAME", "mod")
 
         return pymysql.connect(
             host=host,

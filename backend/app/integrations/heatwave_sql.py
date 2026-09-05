@@ -3,11 +3,11 @@
 MODEL_REGRESSION = "MOD_REGRESSION_MODEL"
 MODEL_CLASSIFIER = "MOD_RISK_CLASSIFIER"
 
-# 训练特征表名（在 mod_s_v2 数据库内）
+# 训练特征表名（在 mod 数据库内）
 FEAT_TABLE_REGRESSION = "ml_feat_doc_delta"
 FEAT_TABLE_CLASSIFIER = "ml_feat_risk"
 
-# 评分结果表名（在 mod_s_v2 数据库内）
+# 评分结果表名（在 mod 数据库内）
 SCORE_TABLE_REGRESSION = "ml_score_doc_delta"
 SCORE_TABLE_CLASSIFIER = "ml_score_risk"
 
@@ -170,7 +170,7 @@ LEFT JOIN (
 
 _TRAIN_REGRESSION_SQL = f"""
 CALL sys.ML_TRAIN(
-    'mod_s_v2.{FEAT_TABLE_REGRESSION}',
+    '`mod`.{FEAT_TABLE_REGRESSION}',
     'daily_doc_delta',
     JSON_OBJECT('task', 'regression'),
     @regression_model_handle
@@ -179,7 +179,7 @@ CALL sys.ML_TRAIN(
 
 _TRAIN_CLASSIFIER_SQL = f"""
 CALL sys.ML_TRAIN(
-    'mod_s_v2.{FEAT_TABLE_CLASSIFIER}',
+    '`mod`.{FEAT_TABLE_CLASSIFIER}',
     'risk_flag',
     JSON_OBJECT('task', 'classification'),
     @classifier_model_handle

@@ -1,6 +1,6 @@
 # KI-027 · 版本/模式标记深度整治（唯一正统，去 v1/v2/v3、去 s_v2）
 
-- 状态：IN-PROGRESS（2026-09-05 立项，主控执行）
+- 状态：DONE（2026-09-05，三批全部完成并验证）
 - 更新日期：2026-09-05
 - 关联链接：[已知问题看板](../KNOWN-ISSUES.md)、[ADR-0006](../decisions/0006-single-host-consolidation.md)
 
@@ -26,4 +26,21 @@
 - 第三批（库名，最高风险）：停模拟器 → 备份 → `RENAME TABLE` 搬到新库 `mod` → 改所有连接与硬编码 → 重启 → KI-017 验证 → 删空旧库。
 
 ## 进度
-- （执行中，逐批回填）
+- 第一批（完成，commit 1082ed3）：删 v1 死代码（`api.py`+`schemas.py`）；模块去 `_v2`
+  （`api_v2.py→api.py`、`schemas_v2.py→schemas.py`、`dashboard_v2.py→dashboard.py`、`test_v2_api.py→test_api.py`）；
+  环境变量统一 `MOD_DB_*`，去 `MOD_V2_DB_*` fallback、`mod_s` 幽灵默认与 `db_name_v2`/`database_url_v2` 双轨；
+  合并 db.py 双 engine 为单一 `connection`。110 测试绿、后端验证正常。
+- 第二批（完成，commit 4f14488）：API 路由 `/api/v2`→`/api`（后端 2 个 prefix + 前端 3 处 + Nginx SSE 精确 location
+  同步切换）；health 响应去 `version` 字段；`data_version` 去 `v2.0-` 前缀。前后端/SSE 全部 200，旧路径 404。
+- 第三批（完成，2026-09-05）：库名 `mod_s_v2`→`mod`。停模拟器 → 全库备份（184MB 留底）→ 同实例
+  `RENAME TABLE` 搬 25 表到新库 → 改 config/3 writer 默认值、`.env.systemd`/`.env.local`/`.env.example` 的
+  `MOD_DB_NAME`、heatwave_sql 跨库限定名（加反引号，因 `mod` 是 MySQL 保留字）→ 重启 mod-api + mod-simulator
+  验证 → KI-017 全表零回归、数据完整（2000 单位/26713 人）、模拟器恢复写入 → 删空的旧库 mod_s_v2。
+- **整治完成：全局唯一正统，无 v1/v2/v3，库名 `mod`、API `/api`、模块无 `_v2`、环境变量 `MOD_DB_*`。**
+- 注意事项（留档）：`mod` 是 MySQL 保留字，SQL 中显式引用库名须用反引号 `` `mod` ``；连接参数（database='mod'）不受影响。
+- 待 agy 处理（不代改他人目录）：`scripts/agy/` 下脚本仍硬编码旧库名 `mod_s_v2` 与 `MOD_V2_DB_NAME`
+  （`phase1~4_*`、`run_step2_batch_write`、`dry_run_*` 的 `ALLOWED_DB_NAME`/默认值）。phase1~4 是 KI-017
+  一次性历史脚本已执行完；但 `run_step2_batch_write`/`dry_run_*` 若将来再跑，会因库名守卫指向已改名的
+  `mod_s_v2` 而失败——待 agy 统一改为 `mod` + `MOD_DB_NAME`。
+- 本地验收工具已更新：`database/verify_mod_s_v2_readonly.py` → `database/verify_mod_readonly.py`，
+  库名引用改 `mod`、变量改 `MOD_DB_NAME`（gitignored，本地工具）。
