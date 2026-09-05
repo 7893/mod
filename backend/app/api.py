@@ -196,18 +196,38 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
             reg_info = models_info.get("regression", {})
             cls_info = models_info.get("classifier", {})
 
-            # 真实性判定：只有当模型返回了真实评估质量分时，才视为"已就绪、可展示预测能力"。
-            # 无真实质量分（quality=None）说明训练/评分未真正完成，不得谎报"已就绪/实时预测"。
+            # 真实性判定（两层）：
+            # 1) 有无真实评估分（quality is not None）——无则"训练/评分未完成"。
+            # 2) 真实分是否达到"有意义"阈值——回归 R² 须 > 0（至少优于用均值瞎猜），
+            #    分类 accuracy 须在 (0, 1) 且非退化；否则视为"验证未达标"，不得对外称"可提供预测"。
             reg_quality = reg_info.get("quality")
             cls_quality = cls_info.get("quality")
-            has_real_quality = reg_quality is not None or cls_quality is not None
 
-            if has_real_quality:
+            def _model_effective(task: str, q) -> bool:
+                if q is None:
+                    return False
+                if task == "regression":
+                    return q > 0.0  # 负或零 R² 说明无预测能力
+                # classification: 退化的 1.0（数据过度可分）与 <=0.5 均不作为可信预测对外展示
+                return 0.5 < q < 1.0
+
+            reg_ok = _model_effective("regression", reg_quality)
+            cls_ok = _model_effective("classification", cls_quality)
+            has_real_quality = reg_quality is not None or cls_quality is not None
+            any_effective = reg_ok or cls_ok
+
+            if any_effective:
                 base_insights["automlStatus"] = "READY"
                 base_insights["automlStatusDisplay"] = "已就绪"
                 base_insights["trainingAuthorized"] = True
-                base_insights["notice"] = "Oracle HeatWave AutoML 库内模型已完成训练与评估，提供日增单据与批次延期风险预测。"
-                base_insights["summary"] = "Oracle MySQL HeatWave AutoML 库内预测已激活。"
+                base_insights["notice"] = "Oracle HeatWave AutoML 库内模型已完成训练与独立测试集验证，提供通过验证的预测。"
+                base_insights["summary"] = "Oracle MySQL HeatWave AutoML 库内预测已激活（仅展示通过验证的模型）。"
+            elif has_real_quality:
+                base_insights["automlStatus"] = "VALIDATION_FAILED"
+                base_insights["automlStatusDisplay"] = "已训练，验证未达标"
+                base_insights["trainingAuthorized"] = False
+                base_insights["notice"] = "模型已在独立测试集上评估，但真实泛化指标未达可信阈值（回归 R²≤0 或分类退化），暂不作为可信预测对外提供。"
+                base_insights["summary"] = "模型已训练并经测试集验证，但泛化能力未达标，暂不展示为可信预测。"
             else:
                 base_insights["automlStatus"] = "NOT_EVALUATED"
                 base_insights["automlStatusDisplay"] = "训练/评分未完成"
@@ -218,11 +238,11 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
             target_models = base_insights.get("targetModels", [])
             for tm in target_models:
                 if tm.get("type") == "REGRESSION":
-                    tm["status"] = "READY" if reg_quality is not None else "NOT_EVALUATED"
+                    tm["status"] = "READY" if reg_ok else ("VALIDATION_FAILED" if reg_quality is not None else "NOT_EVALUATED")
                     tm["algorithm"] = reg_info.get("algorithm", "HeatWave AutoML LinearRegression")
                     tm["quality"] = reg_quality  # 真实值或 None（前端显示"—"），不再硬编码
                 elif tm.get("type") == "CLASSIFICATION":
-                    tm["status"] = "READY" if cls_quality is not None else "NOT_EVALUATED"
+                    tm["status"] = "READY" if cls_ok else ("VALIDATION_FAILED" if cls_quality is not None else "NOT_EVALUATED")
                     tm["algorithm"] = cls_info.get("algorithm", "HeatWave AutoML DecisionTreeClassifier")
                     tm["quality"] = cls_quality  # 真实值或 None，不再硬编码
 

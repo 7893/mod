@@ -59,8 +59,10 @@ const insights = computed(() => {
   // 真实性：以真实评估质量分是否存在为准，而非仅凭 status；无真实质量分不谎报"已就绪"
   const regQuality = hw.models?.regression?.quality ?? null
   const clsQuality = hw.models?.classifier?.quality ?? null
-  const hasRealQuality = regQuality != null || clsQuality != null
-  const isReady = hasRealQuality && (hw.status === 'ready' || data.automlStatus === 'READY')
+  // 有效性阈值（与后端一致）：回归 R²>0 才有意义；分类 accuracy 落在 (0.5,1) 才可信（退化的 1.0 不采信）
+  const regEffective = regQuality != null && regQuality > 0
+  const clsEffective = clsQuality != null && clsQuality > 0.5 && clsQuality < 1.0
+  const isReady = (data.automlStatus === 'READY') && (regEffective || clsEffective)
 
   const rawPredictions = data.predictions || []
   const riskUnits = rawPredictions.filter((p: any) => p.model === 'MOD_RISK_CLASSIFIER' && p.riskFlag === 1).slice(0, 5)
@@ -80,7 +82,7 @@ const insights = computed(() => {
         type: 'REGRESSION',
         algorithm: hw.models?.regression?.algorithm || 'HeatWave AutoML LinearRegression',
         target: 'daily_doc_delta (当日新增单据)',
-        status: regQuality != null ? '已就绪' : '待启用',
+        status: regEffective ? '已就绪' : (regQuality != null ? '验证未达标' : '待启用'),
         quality: regQuality,
         features: ['上线状态', '上线天数', '前30天单据总量', '前30天凭证总量', '集成失败数'],
         description: '基于前 9 个月业务数据库内训练，预测后续批次各单位单据峰值与系统容量水位。',
@@ -91,7 +93,7 @@ const insights = computed(() => {
         type: 'CLASSIFICATION',
         algorithm: hw.models?.classifier?.algorithm || 'HeatWave AutoML DecisionTreeClassifier',
         target: 'risk_flag (0:正常 / 1:高危延期)',
-        status: clsQuality != null ? '已就绪' : '待启用',
+        status: clsEffective ? '已就绪' : (clsQuality != null ? '验证未达标' : '待启用'),
         quality: clsQuality,
         features: ['建设完成度', '未解决问题数', '高风险事项数', '单据完成率', '凭证集成成功率'],
         description: '基于建设进度、期初数据准备度与缺陷密度，库内识别潜在延期风险单位并输出督导建议。',
