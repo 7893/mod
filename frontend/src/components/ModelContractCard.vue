@@ -9,7 +9,7 @@ defineProps<{
     status: string
     features: string[]
     description: string
-    quality?: number
+    quality?: number | null
   }
   emptyLabel: string
   ready: boolean
@@ -50,6 +50,10 @@ defineProps<{
           {{ (model.quality * 100).toFixed(1) }}%
           <span class="text-slate-400 font-normal">({{ model.target.includes('daily') ? 'R² 拟合优度' : '分类准确率' }})</span>
         </b>
+      </div>
+      <div v-else class="flex items-center justify-between gap-2">
+        <span class="flex-shrink-0">模型性能：</span>
+        <b class="font-mono text-slate-400 truncate text-right">—（训练/评分未完成）</b>
       </div>
       <div class="pt-1 border-t border-surface-veil-06">
         <span class="block mb-1 text-slate-500">特征维度：</span>

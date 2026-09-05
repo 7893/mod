@@ -155,6 +155,7 @@ export interface InsightModelTarget {
   algorithm: string
   target: string
   status: string
+  quality?: number | null
   features: string[]
   description: string
 }
