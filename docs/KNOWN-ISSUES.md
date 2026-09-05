@@ -424,3 +424,13 @@
   - `scripts/agy/run_simulator_service.py`
   - `output/simulator_status.json` (心跳落盘)
 - 待主控执行项：系统级 systemd 服务安装（`sudo cp deploy/mod-simulator.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now mod-simulator.service`）与上线持续监控。
+- 主控上线完成（2026-09-05）：代码逐段验收 5 决策全部落实、make check 绿（110 测试）；按两段流程上线——
+  先装服务保持开关关闭空跑 dry-run 观察节律正常、库不动，再置 `MOD_SIMULATION_ENGINE_ENABLED=true`
+  重启开真实写库。实测：服务 `enabled`（开机自启）+`active`+`Restart=always`（崩溃自愈），jpa 重启
+  自动继续；库按实时香港时钟自然增长（周六下午低强度、约每分钟 1 笔）、最新记录时间戳跟随真实时钟、
+  KI-017 全表零回归、限流与 fail-closed 正常。**拟真引擎常驻服务已正式上线运行。**
+- 运维约定：模拟器长期常驻；主控每日巡检一次（数据增长、作息曲线、阶段演化、KI-017 零回归、审计与
+  fail-closed 状态），异常即报。
+- 后续待办（治本）：验收/自测脚本（`verify_sim_step1.py`、服务 `--once` 等）历史上会真实落库造成重复
+  污染（已由主控多次备份并级联清理，仅保留 2026-09-04 正式验收批）；待 agy 改为一律 dry-run 或写后
+  回滚，验收脚本绝不持久落库。
