@@ -12,7 +12,6 @@ ZERO writes are executed against the database (Read-Only Dry-Run).
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
 import os
 import sys
 
@@ -26,7 +25,7 @@ sys.path.insert(0, BACKEND_DIR)
 from app.simulation.construction_models import ORG_LIFECYCLE_STAGES  # noqa: E402
 from app.simulation.engine_context import load_construction_baseline  # noqa: E402
 from app.simulation.evolution_coordinator import EvolutionCoordinator  # noqa: E402
-from app.simulation.lifecycle_advancer import LifecycleAdvancer, LifecycleThresholds, OrgMetricsSnapshot  # noqa: E402
+from app.simulation.lifecycle_advancer import LifecycleAdvancer, LifecycleThresholds  # noqa: E402
 
 
 def get_db_connection() -> pymysql.Connection:
@@ -301,6 +300,7 @@ def run_full_dry_run_audit():
         else:
             print(" [ERROR] ONE OR MORE GATES FAILED VERIFICATION.")
         print("=" * 80)
+        return all_passed
 
     finally:
         cursor.close()
