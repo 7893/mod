@@ -195,7 +195,7 @@ CALL sys.ML_PREDICT_TABLE(
     '{FEAT_TABLE_REGRESSION}',
     @regression_model_handle,
     '{SCORE_TABLE_REGRESSION}',
-    JSON_OBJECT('run_confirmed', 1)
+    NULL
 )
 """
 
@@ -204,7 +204,7 @@ CALL sys.ML_PREDICT_TABLE(
     '{FEAT_TABLE_CLASSIFIER}',
     @classifier_model_handle,
     '{SCORE_TABLE_CLASSIFIER}',
-    JSON_OBJECT('run_confirmed', 1)
+    NULL
 )
 """
 

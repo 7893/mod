@@ -44,10 +44,10 @@ defineProps<{
         <span class="flex-shrink-0">目标：</span>
         <code class="font-mono text-emerald-400 truncate text-right">{{ model.target }}</code>
       </div>
-      <div v-if="model.quality" class="flex items-center justify-between gap-2">
+      <div v-if="model.quality != null" class="flex items-center justify-between gap-2">
         <span class="flex-shrink-0">模型性能：</span>
         <b class="font-mono text-sky-400 truncate text-right">
-          {{ (model.quality * 100).toFixed(1) }}%
+          {{ model.target.includes('daily') ? model.quality.toFixed(4) : `${(model.quality * 100).toFixed(1)}%` }}
           <span class="text-slate-400 font-normal">({{ model.target.includes('daily') ? 'R² 拟合优度' : '分类准确率' }})</span>
         </b>
       </div>
