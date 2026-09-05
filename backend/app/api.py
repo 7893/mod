@@ -18,7 +18,7 @@ from .services.dashboard import (
     normalize_region,
 )
 
-router = APIRouter(prefix="/api/v2")
+router = APIRouter(prefix="/api")
 
 _snapshot_cache: dict | None = None
 _snapshot_cached_at = 0.0
@@ -35,20 +35,18 @@ def health(conn: Connection | None = Depends(connection)) -> dict:
     if conn is None:
         return {
             "status": "degraded",
-            "version": "v2",
             "notice": "Database not reachable; operating in verified fallback snapshot mode",
         }
     try:
         row = conn.execute(text("SELECT DATABASE() db, @@session.time_zone tz, NOW() now_cst")).mappings().one()
         return {
             "status": "ok",
-            "version": "v2",
             "database": row["db"],
             "session_timezone": row["tz"],
             "now_cst": str(row["now_cst"]),
         }
     except Exception as e:
-        return {"status": "degraded", "version": "v2", "error": str(e)}
+        return {"status": "degraded", "error": str(e)}
 
 
 
@@ -60,7 +58,7 @@ def refresh_meta(conn: Connection | None = Depends(connection)) -> dict:
     # In fallback mode, conn will be None or dashboard_snapshot handles fallback internally.
     # To determine status correctly, we can rely on conn.
     status = "ok" if conn is not None else "fallback"
-    data_version = "v2.0-live" if conn is not None else "v2.0-frozen"
+    data_version = "live" if conn is not None else "frozen"
 
     if conn is not None:
         try:
@@ -68,7 +66,7 @@ def refresh_meta(conn: Connection | None = Depends(connection)) -> dict:
             conn.execute(text("SELECT 1")).scalar()
         except Exception:
             status = "fallback"
-            data_version = "v2.0-frozen"
+            data_version = "frozen"
 
     return {
         "data_version": data_version,

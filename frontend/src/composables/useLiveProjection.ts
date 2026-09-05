@@ -45,7 +45,7 @@ export function useLiveProjection(onEvent: ProjectionHandler) {
 
   const connect = () => {
     if (eventSource) return
-    eventSource = new EventSource(`${import.meta.env.BASE_URL}api/v2/live-projection/events`)
+    eventSource = new EventSource(`${import.meta.env.BASE_URL}api/live-projection/events`)
     eventSource.onopen = () => { connected.value = true }
     eventSource.onerror = () => { connected.value = false }
     eventSource.onmessage = (message) => {

@@ -163,7 +163,7 @@ def test_v2_snapshot_file_integrity():
 
 def test_v2_api_routes():
     """
-    Test FastAPI /api/v2 endpoints contract.
+    Test FastAPI /api endpoints contract.
     Operates in fallback snapshot mode in local dev/test environment.
     """
     # Root
@@ -173,14 +173,14 @@ def test_v2_api_routes():
     assert res.headers["x-robots-tag"] == "noindex, nofollow, noarchive, nosnippet, noimageindex"
 
     # Refresh Meta
-    res = client.get("/api/v2/dashboard/refresh-meta")
+    res = client.get("/api/dashboard/refresh-meta")
     assert res.status_code == 200
     data = res.json()
-    assert data["data_version"] == "v2.0-frozen"
+    assert data["data_version"] == "frozen"
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", data["as_of_date"])
 
     # Overview
-    res = client.get("/api/v2/dashboard/overview")
+    res = client.get("/api/dashboard/overview")
     assert res.status_code == 200
     ov = res.json()
     assert isinstance(ov["orgTotal"], int) and ov["orgTotal"] > 0
@@ -189,7 +189,7 @@ def test_v2_api_routes():
     assert 0.0 <= ov["voucherSuccessPct"] <= 100.0
 
     # Snapshot
-    res = client.get("/api/v2/dashboard/snapshot")
+    res = client.get("/api/dashboard/snapshot")
     assert res.status_code == 200
     snap = res.json()
     assert "overview" in snap
@@ -201,42 +201,42 @@ def test_v2_api_routes():
     assert "operations" in snap
 
     # Rollout
-    res = client.get("/api/v2/dashboard/rollout")
+    res = client.get("/api/dashboard/rollout")
     assert res.status_code == 200
     assert len(res.json()) == 8
 
     # Regions (34 provinces with todayAdded)
-    res = client.get("/api/v2/dashboard/regions")
+    res = client.get("/api/dashboard/regions")
     assert res.status_code == 200
     reg_list = res.json()
     assert len(reg_list) == 34
     assert sum(r["todayAdded"] for r in reg_list) >= 0
 
     # Organizations (paginated)
-    res = client.get("/api/v2/organizations?page=1&page_size=10")
+    res = client.get("/api/organizations?page=1&page_size=10")
     assert res.status_code == 200
     pg = res.json()
     assert isinstance(pg["total"], int) and pg["total"] > 0
     assert len(pg["items"]) == 10
 
     # Issues summary
-    res = client.get("/api/v2/issues/summary")
+    res = client.get("/api/issues/summary")
     assert res.status_code == 200
     assert isinstance(res.json()["totalUnresolved"], int) and res.json()["totalUnresolved"] >= 0
 
     # Construction summary
-    res = client.get("/api/v2/construction/summary")
+    res = client.get("/api/construction/summary")
     assert res.status_code == 200
     assert isinstance(res.json()["totalTasks"], int) and res.json()["totalTasks"] >= 0
 
     # Insights status
-    res = client.get("/api/v2/insights/status")
+    res = client.get("/api/insights/status")
     assert res.status_code == 200
     assert res.json()["automlStatus"] == "UNAVAILABLE_AWAITING_TRAINING"
     assert res.json()["trainingAuthorized"] is False
 
     # Operations summary (standardized camelCase keys)
-    res = client.get("/api/v2/operations/summary")
+    res = client.get("/api/operations/summary")
     assert res.status_code == 200
     ops = res.json()
     for key in (
@@ -248,7 +248,7 @@ def test_v2_api_routes():
         assert isinstance(ops[key], int) and ops[key] >= 0
 
     # Read-only presentation projection status
-    res = client.get("/api/v2/live-projection/status")
+    res = client.get("/api/live-projection/status")
     assert res.status_code == 200
     projection = res.json()
     assert projection["mode"] == "display_projection"
@@ -265,7 +265,7 @@ def test_v2_overview_r5_r6_contract():
     - R6: Document additions date (2026-08-29) must not be confused with global snapshot date (2026-08-30).
           Both API and snapshot must return addedAsOfDate per metric and for all 34 provinces.
     """
-    res = client.get("/api/v2/dashboard/overview")
+    res = client.get("/api/dashboard/overview")
     assert res.status_code == 200
     ov = res.json()
 
@@ -300,7 +300,7 @@ def test_v2_overview_r5_r6_contract():
     assert ov["docsAddedAsOfDate"] != ov["asOfDate"]
 
     # 2. Provincial additions date contract
-    reg_res = client.get("/api/v2/dashboard/regions")
+    reg_res = client.get("/api/dashboard/regions")
     assert reg_res.status_code == 200
     regions = reg_res.json()
     assert len(regions) == 34
@@ -321,7 +321,7 @@ def test_v2_snapshot_internal_consistency_contract():
     assert total_prov_docs_today == overview["docsTodayAdded"]
 
     # R6: document additions date must remain distinct from the total baseline date.
-    api_ov = client.get("/api/v2/dashboard/overview").json()
+    api_ov = client.get("/api/dashboard/overview").json()
     assert api_ov["docsAddedAsOfDate"] != api_ov["asOfDate"]
 
 
@@ -337,7 +337,7 @@ def test_v2_refresh_meta_total_rows():
     Ensure that /dashboard/refresh-meta returns total_rows matching snapshot.fullRows,
     even in fallback mode.
     """
-    res = client.get("/api/v2/dashboard/refresh-meta")
+    res = client.get("/api/dashboard/refresh-meta")
     assert res.status_code == 200
     data = res.json()
     assert "total_rows" in data
@@ -345,4 +345,4 @@ def test_v2_refresh_meta_total_rows():
     snap = load_fallback_snapshot()
     assert data["total_rows"] == snap["meta"]["fullRows"]
     assert data["status"] == "fallback"
-    assert data["data_version"] == "v2.0-frozen"
+    assert data["data_version"] == "frozen"

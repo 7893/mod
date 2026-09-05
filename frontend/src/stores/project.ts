@@ -358,7 +358,7 @@ export const useProjectStore = defineStore('project', () => {
   async function refresh(silent = false) {
     if (!silent) loading.value = true
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}api/v2/dashboard/snapshot`, {
+      const response = await fetch(`${import.meta.env.BASE_URL}api/dashboard/snapshot`, {
         cache: 'no-store',
       })
       if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
