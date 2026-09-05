@@ -1,0 +1,19 @@
+[Unit]
+Description=MOD Realistic Business Simulation Engine Service
+After=network-online.target mod-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ubuntu/mod
+EnvironmentFile=/home/ubuntu/mod/.env.systemd
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ubuntu/mod/backend/.venv/bin/python /home/ubuntu/mod/scripts/agy/run_simulator_service.py
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target
