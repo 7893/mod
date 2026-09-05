@@ -17,14 +17,13 @@
 
 ## 活跃问题（OPEN / IN-PROGRESS）
 
-| 编号 | 标题 | 状态 | 优先级 | 链接 |
-|---|---|---|---|---|
-| KI-015 | risk_flag 分类模型在训练集上自评分，准确率不可信 | OPEN | P1 | [详情](issues/KI-015-risk-flag-model-self-scoring.md) |
+无（当前全量已知问题已全部闭环）。
 
 ## 已关闭问题（DONE）
 
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
+| KI-015 | risk_flag 分类模型在训练集上自评分，准确率不可信（真训练评估与每日重训交付） | DONE | P1 | [详情](issues/KI-015-risk-flag-model-self-scoring.md) |
 | KI-027 | 版本/模式标记深度整治（唯一正统，去 v1/v2/v3、去 s_v2） | DONE | P1 | [详情](issues/KI-027-version-mode-marker-cleanup.md) |
 | KI-019 | 文档组织治理（历史归拢 + 编号 + issue 分级 + 立规） | DONE | P2 | [详情](issues/KI-019-documentation-governance.md) |
 | KI-001 | 省级今日新增恒为 0，与总览不一致 | DONE | P1 | [详情](issues/KI-001-provincial-today-added-zero.md) |

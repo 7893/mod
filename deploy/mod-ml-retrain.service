@@ -1,0 +1,18 @@
+[Unit]
+Description=MOD HeatWave AutoML Daily Retraining and Verification Service
+After=network-online.target mod-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/ubuntu/mod
+EnvironmentFile=/home/ubuntu/mod/.env.systemd
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ubuntu/mod/backend/.venv/bin/python /home/ubuntu/mod/scripts/agy/run_ml_retrain.py --once --run-type scheduled
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
