@@ -63,9 +63,9 @@
   - 服务化与运维管理：提供独立 systemd 配置文件（`deploy/mod-simulator.service`，与 `mod-api.service` 解耦）和 CLI 运维管理工具（`scripts/agy/run_simulator_service.py`），支持 `--status`、`--dry-run`、`--once`、`--clear-fail-closed`；每周期落盘结构化健康心跳（`output/simulator_status.json`）；安全开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭；短窗口实测与 8 闸门复测全绿。
   - 上线状态（2026-09-05，主控授权）：服务已系统级安装并 `enable --now`，`MOD_SIMULATION_ENGINE_ENABLED=true` 开启真实写库，常驻运行中；开机自启、崩溃自愈、运行主机重启自动继续；库按实时香港时钟自然增长、KI-017 全表零回归；主控每日巡检。
 - V1 回退代码仍保留，但不作为后续功能目标。
-- HeatWave AutoML 特征表已建立；训练/评分仍未完成。
+- HeatWave AutoML 已完成真训练与独立切分评估（KI-015 闭环）：风险分类模型按单位随机切分（80% 训练 / 20% 测试，无时序泄漏），单据量回归模型严格按时序先后切分（早期 80% 训练 / 晚期 20% 测试，无未来泄漏）；独立测试集真实质量分已落库入 `mod`.ml_model_metadata 与 `mod`.ml_training_log；前端与接口 /api/insights/status 真实对接展示；每日 00:00 (HKT) 自动重训定时服务已就位（deploy/mod-ml-retrain.service + timer 与 scripts/agy/run_ml_retrain.py）。
 - Cloudflare AI 已在生产启用（用于文案摘要，只读）；但无论 AI 是否启用，都不应把未生成的预测或
-  未经真实评估的模型质量展示为真实结果（见 [KI-023](issues/KI-023-automl-hardcoded-fallback.md)）。
+  未经真实评估的模型质量展示为真实结果（见 [KI-023](issues/KI-023-automl-hardcoded-fallback.md)，已闭环）。
 - 本地接口与前端已将建设、问题、单位与运营屏统一到数据库当前快照口径；缺失指标展示为 `—` 或明确的
   “未提供”，不再以冻结基线数值替代实时结果。已随运行主机生产构建生效。
 - 本地已修复省级单据新增与总览不一致问题：在线查询按快照日前最近完整业务日聚合，fallback 已从

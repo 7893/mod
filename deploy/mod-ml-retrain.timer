@@ -1,0 +1,10 @@
+[Unit]
+Description=MOD HeatWave AutoML Daily Retraining Timer (HKT 00:00)
+PartOf=mod-ml-retrain.service
+
+[Timer]
+OnCalendar=*-*-* 00:00:00 Asia/Hong_Kong
+Persistent=true
+
+[Install]
+WantedBy=timers.target
