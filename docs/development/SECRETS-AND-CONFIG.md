@@ -40,7 +40,7 @@
    （公开域名等本就对外的信息可保留，按需判断。）
 3. **Git 历史**：历史提交中的敏感信息 `.env` 与 Secrets 都管不到，须单独处理——
    要么新建仓库以净化后的当前状态为起点、不导入旧历史；
-   要么以 `git filter-repo` 重写历史（高风险，见 `KNOWN-ISSUES.md` KI-014）。
+   要么以 `git filter-repo` 重写历史（高风险，见 [KI-014](../issues/KI-014-public-repository-sanitization.md)）。
 
 归档区（`archive/`）内的历史脚本可能含明文值：公开前需将其排除出公开范围，或一并脱敏；
 不得默认“归档了就安全”。
@@ -56,5 +56,5 @@
 
 - 凭据不进代码/日志/历史的通则、数据分级：`DATA-AND-SECURITY-STANDARD.md`。
 - 配置不硬编码、新增变量同步：`DEVELOPMENT-STANDARD.md`。
-- 公开准备任务清单：`KNOWN-ISSUES.md` KI-014。
+- 公开准备任务清单：[KI-014](../issues/KI-014-public-repository-sanitization.md)。
 - 执行强制与闸门：`ENFORCEMENT.md`。
