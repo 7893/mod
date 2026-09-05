@@ -50,6 +50,7 @@
 - 驾驶舱包含默认启用的进程内只读实时投影，通过 SSE 展示受约束的单据、凭证和集成增量；该投影明确
   标记为演示动态，不写数据库，也不启用业务模拟器。
 - 拟真引擎第一步（技术验证载体）已落地（`backend/app/simulation/`）：实现费用报销剧本（`ExpensePlaybook`）多表完整足迹生成与安全写库器（`SimulationWriter`），单事务原子落库 6 张表（`business_document`、`business_document_line`、`accounting_voucher`、`accounting_voucher_line`、`document_voucher_link`、`integration_result`）并级联同步 `daily_stats`；以存量治理成果为硬约束（时间线接续存量最新日期只向前生长、经办人 100% 命中本单位名录、仅限已上线单位门禁、只增不删、零 schema 变更、运行审计留痕）；开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭（`false`）；已通过 100 笔小试落库实测，KI-017 零回归。
+- 拟真引擎第二步（建设管控主线 + B模式生命周期推进器）已落地（`backend/app/simulation/`）：实现 7 类建设管控剧本生成器（入池、数据准备、培训认证、接口联调、双轨核对、跃迁评审、批次推进，`construction_playbooks.py`）、6 阶段生命周期状态机推进器（`lifecycle_advancer.py`，严格遵循“只进不退、持续达标 N 天、过程留痕快照”三条铁律）、快慢电影演进协调器与矛盾咬合自检机制（`evolution_coordinator.py`，~4% 自然涌现困难户与决策支撑风险视角 100% 咬合自洽）、建设安全事务写库器与自动快照备份（`construction_writer.py`）；开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭（`false`）；已通过全量 8 条硬闸门 dry-run 审计验证，KI-017 零回归。
 - V1 回退代码仍保留，但不作为后续功能目标。
 - HeatWave AutoML 特征表已建立；训练/评分仍未完成。
 - Cloudflare AI 默认未启用，不应把未生成的预测展示为真实结果。

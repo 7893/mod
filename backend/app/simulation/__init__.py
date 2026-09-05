@@ -74,6 +74,11 @@ from .models import (
     ScenarioType,
     TimePatternSystem,
 )
+from .construction_writer import (
+    ConstructionWriteResult,
+    ConstructionWriter,
+    is_construction_writer_enabled,
+)
 from .simulation_writer import SimulationWriter, WriteResult, is_simulation_engine_enabled
 
 __all__ = [
@@ -85,6 +90,8 @@ __all__ = [
     "BusinessEventChain",
     "ConstructionBaseline",
     "ConstructionTaskFootprint",
+    "ConstructionWriteResult",
+    "ConstructionWriter",
     "ContradictionMeshingReport",
     "DataReadinessEventFootprint",
     "DataReadinessPlaybook",
@@ -127,6 +134,7 @@ __all__ = [
     "VoucherFootprint",
     "VoucherLineFootprint",
     "WriteResult",
+    "is_construction_writer_enabled",
     "is_simulation_engine_enabled",
     "load_construction_baseline",
     "load_simulation_baseline",
