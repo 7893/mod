@@ -20,12 +20,12 @@
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
 | KI-015 | risk_flag 分类模型在训练集上自评分，准确率不可信 | OPEN | P1 | [详情](issues/KI-015-risk-flag-model-self-scoring.md) |
-| KI-019 | 文档组织治理（历史归拢 + 编号 + issue 分级 + 立规） | IN-PROGRESS | P2 | [详情](issues/KI-019-documentation-governance.md) |
 
 ## 已关闭问题（DONE）
 
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
+| KI-019 | 文档组织治理（历史归拢 + 编号 + issue 分级 + 立规） | DONE | P2 | [详情](issues/KI-019-documentation-governance.md) |
 | KI-001 | 省级今日新增恒为 0，与总览不一致 | DONE | P1 | [详情](issues/KI-001-provincial-today-added-zero.md) |
 | KI-002 | 单据发生日期与快照基线日期塌缩为同一天 | DONE | P2 | [详情](issues/KI-002-docs-added-asof-date-collapse.md) |
 | KI-003 | fallback 快照文件由缺陷 SQL 生成，内含上述不一致 | DONE | P2 | [详情](issues/KI-003-fallback-snapshot-inconsistency.md) |
