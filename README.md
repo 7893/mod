@@ -59,7 +59,7 @@ MOD 是一个**下一代 AI 驱动开发**的领导驾驶舱与大屏可视化�
 
 ## 本地开发
 
-开发环境为 JPA，生产演示环境为 USA：
+生产运行与源码工作区在同一台运行主机（见 `docs/decisions/0006-single-host-consolidation.md`）：
 
 ```bash
 cd /home/ubuntu/mod/frontend
@@ -88,5 +88,5 @@ make check
 当前运行事实和操作边界以 `docs/CURRENT-STATE.md` 为准。`docs/history/07-当前部署与运维基线.md`
 和 `docs/history/21-V2数据与项目目录现状基线.md` 均作为历史基线保留。
 
-JPA `/home/ubuntu/mod` 是唯一源码和 Git 工作区；USA 同名目录是纯部署目录。后续维护必须遵守
+运行主机的 `/home/ubuntu/mod` 是唯一源码和 Git 工作区，同机承载生产运行；不再有独立的纯部署主机。后续维护必须遵守
 `CONTRIBUTING.md` 和 `docs/development/` 下的现行规范。历史本地协作状态机保留但不再使用。

@@ -24,12 +24,12 @@
 - 异常日志记录类型和安全上下文，不输出认证头、完整 URL 查询、连接串或业务明细。
 - `.env.example` 只描述变量名和安全占位符，不复制真实环境值。
 
-## USA 与外部平台
+## 生产运行与外部平台
 
-- USA `/home/ubuntu/mod` 遵守 `docs/operations/USA-DEPLOYMENT-LAYOUT.md` 白名单，不保存源码工作台、工具、
-  测试、历史数据或 CLI 临时文件。
-- 历史 Cloudflare Worker 不属于运行架构，不得部署。Cloudflare Workers AI 适配器默认关闭，启用需要
-  明确授权、最小权限凭据、聚合数据白名单、调用限额、缓存和失败降级。
+- 生产运行在运行主机上，与源码工作区同机（见 ADR-0006）；工作区不因"部署"而有内容白名单限制，
+  但生产敏感操作（服务启停、Nginx、数据库写）一律需显式授权。
+- 历史 Cloudflare Worker 不属于运行架构，不得部署。Cloudflare Workers AI 适配器仅用于只读文案生成，
+  启用需要最小权限凭据、聚合数据白名单、调用限额、缓存和失败降级。
 - 搜索引擎禁止索引是生产不变量：robots、HTML meta、Nginx 与 API 响应头不得被后续改动移除。
 
 ## 删除与恢复

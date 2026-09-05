@@ -43,7 +43,7 @@
 | 1 | **数据库写权限（用于模型创建）** | OCI MySQL (`mod_s_v2`) | 创建 AutoML 模型训练表、执行 `CALL sys.ML_TRAIN(...)` 生成模型对象。写入仅限专属模型空间。 | **高**（需用户显式批准） |
 | 2 | **AutoML 训练计算资源** | OCI HeatWave Cluster | 启动 HeatWave 内存集群执行 168 万条数据特征工程与超参数搜索。 | **中**（涉及云资源开销） |
 | 3 | **Cloudflare Workers AI 部署** | Cloudflare 边缘环境 | 创建轻量研判 Worker，绑定已聚合指标只读接口与 Workers AI 模型。 | **中**（涉及云端资源创建） |
-| 4 | **USA 演示环境正式部署** | USA 主机 (`/home/ubuntu/mod`) | 将 V2 后端 API 与编译后的前端产物部署至 USA，调整 Nginx 路由。 | **高**（需用户显式批准） |
+| 4 | **生产环境正式部署** | 运行主机 (`/home/ubuntu/mod`，生产与工作区同机) | 后端 API 与前端产物由运行主机本地构建运行、本机 Nginx 提供（见 ADR-0006）。 | **高**（需用户显式批准） |
 
 ---
 
