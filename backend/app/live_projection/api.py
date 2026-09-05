@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 
 from .broker import get_live_projection_broker
 
-router = APIRouter(prefix="/api/v2/live-projection", tags=["live-projection"])
+router = APIRouter(prefix="/api/live-projection", tags=["live-projection"])
 
 
 @router.get("/events")

@@ -1,7 +1,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue"
 
 export function useAiInsights() {
-  const apiBase = `${import.meta.env.BASE_URL}api/v2`
+  const apiBase = `${import.meta.env.BASE_URL}api`
 
   // Cloudflare AI 研判状态
   type AiPhase = 'idle' | 'loading' | 'generating' | 'ok' | 'cache_hit' | 'no_cache' | 'rate_limited' | 'unavailable' | 'error'

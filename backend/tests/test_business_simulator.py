@@ -6,7 +6,7 @@
   TC-02  显式启用：MOD_SIMULATOR_ENABLED=true + MOD_DB_WRITE_URL 均设置时返回 enabled=True
   TC-03  缺少写库 URL：启用但无 MOD_DB_WRITE_URL 时 fail-closed（SimulatorConfigError）
   TC-04  只读状态：模拟器未启动时 get_simulator_instance() 返回 None，状态接口不创建引擎
-  TC-05  手动 tick 接口不存在：/api/v2/simulator/tick POST 应返回 404 或 405
+  TC-05  手动 tick 接口不存在：/api/simulator/tick POST 应返回 404 或 405
   TC-06  错误信息不泄露凭据：SimulatorConfigError 消息不含 URL、密码或主机地址
 
 所有测试均不连接真实数据库（全部使用 mock/fake）。
@@ -161,7 +161,7 @@ class TestTC04ReadOnlyStatus:
 
     def test_status_endpoint_returns_disabled_when_no_instance(self):
         """
-        通过 FastAPI TestClient 调用 GET /api/v2/simulator/status，
+        通过 FastAPI TestClient 调用 GET /api/simulator/status，
         在模拟器未启动时应返回 enabled=false。
         """
         # 使用 mock 隔离数据库依赖
@@ -186,18 +186,18 @@ class TestTC04ReadOnlyStatus:
                 test_app.include_router(router)
                 client = TestClient(test_app, raise_server_exceptions=True)
 
-                resp = client.get("/api/v2/simulator/status")
+                resp = client.get("/api/simulator/status")
                 assert resp.status_code == 200
                 data = resp.json()
                 assert data["enabled"] is False
 
 
 # ---------------------------------------------------------------------------
-# TC-05  POST /api/v2/simulator/tick 接口不存在
+# TC-05  POST /api/simulator/tick 接口不存在
 # ---------------------------------------------------------------------------
 
 class TestTC05TickEndpointRemoved:
-    """公开写入口 POST /api/v2/simulator/tick 应已被删除（404 或 405）。"""
+    """公开写入口 POST /api/simulator/tick 应已被删除（404 或 405）。"""
 
     def test_post_simulator_tick_not_found(self):
         _clean_modules("app.business_simulator", "app.api", "app.main")
@@ -217,11 +217,11 @@ class TestTC05TickEndpointRemoved:
                 test_app.include_router(router)
                 client = TestClient(test_app, raise_server_exceptions=False)
 
-                resp = client.post("/api/v2/simulator/tick")
+                resp = client.post("/api/simulator/tick")
                 # 接口已删除，期望 404（路由不存在）或 405（方法不允许）
                 assert resp.status_code in (404, 405), (
                     f"期望 404/405，但得到 {resp.status_code}。"
-                    "POST /api/v2/simulator/tick 写入口应已被删除。"
+                    "POST /api/simulator/tick 写入口应已被删除。"
                 )
 
 
