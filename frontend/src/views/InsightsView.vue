@@ -55,17 +55,22 @@ const {
 const insights = computed(() => {
   const data: any = store.snapshot.insights || {}
   const hw = data.hw_ml || {}
-  const isReady = hw.status === 'ready' || data.automlStatus === 'READY'
+
+  // 真实性：以真实评估质量分是否存在为准，而非仅凭 status；无真实质量分不谎报"已就绪"
+  const regQuality = hw.models?.regression?.quality ?? null
+  const clsQuality = hw.models?.classifier?.quality ?? null
+  const hasRealQuality = regQuality != null || clsQuality != null
+  const isReady = hasRealQuality && (hw.status === 'ready' || data.automlStatus === 'READY')
 
   const rawPredictions = data.predictions || []
   const riskUnits = rawPredictions.filter((p: any) => p.model === 'MOD_RISK_CLASSIFIER' && p.riskFlag === 1).slice(0, 5)
 
   return {
-    automlStatusDisplay: isReady ? '已就绪 (In-DB Ready)' : (hw.message || '未激活'),
+    automlStatusDisplay: isReady ? '已就绪 (In-DB Ready)' : '训练/评分未完成',
     totalTrainingRows: (store.snapshot?.meta as any)?.fullRows || 1685923,
     notice: isReady
-      ? 'Oracle HeatWave AutoML 库内机器学习模型已就绪，上层接入 Cloudflare Workers AI 进行管理态势智能解说。'
-      : (hw.message || '智能模型加载中…'),
+      ? 'Oracle HeatWave AutoML 库内机器学习模型已完成训练与评估，上层接入 Cloudflare Workers AI 进行管理态势智能解说。'
+      : 'HeatWave AutoML 特征表已就绪，模型训练与评估尚未完成，暂不提供可信预测质量。',
     isReady,
     riskUnits,
     targetModels: [
@@ -75,8 +80,8 @@ const insights = computed(() => {
         type: 'REGRESSION',
         algorithm: hw.models?.regression?.algorithm || 'HeatWave AutoML LinearRegression',
         target: 'daily_doc_delta (当日新增单据)',
-        status: isReady ? '已就绪' : '待启用',
-        quality: hw.models?.regression?.quality || 0.942,
+        status: regQuality != null ? '已就绪' : '待启用',
+        quality: regQuality,
         features: ['上线状态', '上线天数', '前30天单据总量', '前30天凭证总量', '集成失败数'],
         description: '基于前 9 个月业务数据库内训练，预测后续批次各单位单据峰值与系统容量水位。',
       },
@@ -86,8 +91,8 @@ const insights = computed(() => {
         type: 'CLASSIFICATION',
         algorithm: hw.models?.classifier?.algorithm || 'HeatWave AutoML DecisionTreeClassifier',
         target: 'risk_flag (0:正常 / 1:高危延期)',
-        status: isReady ? '已就绪' : '待启用',
-        quality: hw.models?.classifier?.quality || 0.915,
+        status: clsQuality != null ? '已就绪' : '待启用',
+        quality: clsQuality,
         features: ['建设完成度', '未解决问题数', '高风险事项数', '单据完成率', '凭证集成成功率'],
         description: '基于建设进度、期初数据准备度与缺陷密度，库内识别潜在延期风险单位并输出督导建议。',
       },

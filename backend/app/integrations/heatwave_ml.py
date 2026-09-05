@@ -172,8 +172,8 @@ class HeatWaveMLAdapter:
                     or ("LinearRegression" if "REGRESSION" in model_name else "DecisionTreeClassifier")
                 )
                 quality = meta.get("model_quality") or meta.get("training_score")
-                if quality is None:
-                    quality = 0.942 if "REGRESSION" in model_name else 0.915
+                # 真实性：无真实评估分时不伪造，置 None，由上层如实呈现"未评估"
+                quality_val = float(quality) if quality is not None else None
 
                 return {
                     "model": model_name,
@@ -182,7 +182,7 @@ class HeatWaveMLAdapter:
                     "task_type": str(row.get("task") or meta.get("task") or ""),
                     "algorithm": str(algorithm_val),
                     "target_column": str(row.get("target_column_name") or ""),
-                    "quality": float(quality),
+                    "quality": quality_val,
                     "trained_at": str(row["build_timestamp"] or datetime.now().strftime("%Y-%m-%d")),
                 }
 
@@ -211,13 +211,13 @@ class HeatWaveMLAdapter:
             if not row:
                 return {
                     "model": model_name,
-                    "status": "ready",
+                    "status": "not_evaluated",
                     "model_id": "hw-auto",
                     "task_type": "regression" if "REGRESSION" in model_name else "classification",
                     "algorithm": "LinearRegression" if "REGRESSION" in model_name else "DecisionTreeClassifier",
                     "target_column": "daily_doc_delta" if "REGRESSION" in model_name else "risk_flag",
-                    "quality": 0.942 if "REGRESSION" in model_name else 0.915,
-                    "trained_at": datetime.now().strftime("%Y-%m-%d"),
+                    "quality": None,
+                    "trained_at": None,
                 }
 
             return {
@@ -227,19 +227,19 @@ class HeatWaveMLAdapter:
                 "task_type": str(row.get("task_type") or ""),
                 "algorithm": str(row.get("algorithm") or ""),
                 "target_column": str(row.get("target_column_name") or ""),
-                "quality": float(row["model_quality"]) if row["model_quality"] is not None else 0.92,
+                "quality": float(row["model_quality"]) if row["model_quality"] is not None else None,
                 "trained_at": str(row["build_timestamp"]),
             }
         except Exception:
             return {
                 "model": model_name,
-                "status": "ready",
+                "status": "not_evaluated",
                 "model_id": "hw-fallback",
                 "task_type": "regression" if "REGRESSION" in model_name else "classification",
                 "algorithm": "LinearRegression" if "REGRESSION" in model_name else "DecisionTreeClassifier",
                 "target_column": "daily_doc_delta" if "REGRESSION" in model_name else "risk_flag",
-                "quality": 0.942 if "REGRESSION" in model_name else 0.915,
-                "trained_at": datetime.now().strftime("%Y-%m-%d"),
+                "quality": None,
+                "trained_at": None,
             }
 
     def get_status(self) -> dict:
