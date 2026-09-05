@@ -95,7 +95,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
   发现与契约重复或已失效的 CSS 应删除，而非叠加。
 - 严禁新增 `bg-[#xxxxxx]`、`text-[13px]` 这类脱离 Token 的任意值；确需新值，先在 `theme.css`
   沉淀为 Token 再引用。
-- **Arbitrary Value 允许与禁止边界（KI-018 / KI-022 闭环）**：
+- **Arbitrary Value 允许与禁止边界（[KI-018](../issues/KI-018-frontend-contract-arbitrary-values-lint.md) / [KI-022](../issues/KI-022-frontend-migration-finishing-fixes.md) 闭环）**：
   - **严格禁止（Strictly Forbidden）**：禁止在字号（如 `text-[10px]`）、颜色（如 `bg-[#...]`、`border-[...]`）、基础内外边距（如 `p-[12px]`）等已有系统化 Token 维度使用 arbitrary value。
   - **受控允许（Layout Guardrails）**：在大屏图表（ECharts/SVG）、折线走势或复杂弹性栅格中，为防止极端缩放下图表塌陷而设立的物理高度上下界（如 `min-h-[220px]`、`max-h-[350px]`），作为 Layout Guardrails 受控允许；通用宽度或网格列宽能沉淀为 Token（如 `--grid-template-columns-ops-volume`、`min-w-44`）的应优先沉淀。
 
@@ -129,7 +129,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 7. **一屏一提交**：每屏独立提交，信息说明迁移了哪屏、删了哪个旧 CSS。
 
 - 顺序原则：不为重构而一次性全改；优先迁移业务数据已稳定的屏，
-  依赖 `docs/KNOWN-ISSUES.md` 中未修数据（如 KI-001/002/003）的屏往后放，避免布局与逻辑两次返工。
+  依赖 [已知问题看板](../KNOWN-ISSUES.md) 中未修数据（如 KI-001/002/003）的屏往后放，避免布局与逻辑两次返工。
 
 ## 完成定义
 

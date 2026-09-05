@@ -4,7 +4,7 @@ Comprehensive Phase E Dry-Run Self-Test & 8-Gate Verification Script.
 
 Evaluates the Step 2 construction simulation engine (playbooks, state machine advancer,
 evolution coordinator) and audits the live MySQL database against the 8 acceptance gates
-defined in docs/development/BUSINESS-SIMULATION-ENGINE.md and docs/KNOWN-ISSUES.md (KI-026).
+defined in docs/development/BUSINESS-SIMULATION-ENGINE.md and docs/issues/KI-026-simulation-mainline.md (KI-026).
 
 ZERO writes are executed against the database (Read-Only Dry-Run).
 """

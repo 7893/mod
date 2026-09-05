@@ -11,10 +11,11 @@
 3. `../CONTRIBUTING.md`：接手、开发、验证、文档和提交流程。
 4. `CURRENT-STATE.md`：当前运行、数据、质量与操作边界的唯一事实入口。
 5. `../PROJECT-LAYOUT.md`：项目目录和运行主机边界。
-6. `KNOWN-ISSUES.md`：已发现但未修复的业务、数据、系统与清理类问题登记册（新需求/任务用 GitHub Issues 登记，已发现问题的登记见 KNOWN-ISSUES.md）。
+6. `KNOWN-ISSUES.md`：已知问题看板（已发现问题的看板列表，各 issue 详情见 `issues/`；新需求/任务用 GitHub Issues 登记）。
 
 ## 现行维护规范
 
+- `issues/`：已知问题独立文档目录（各问题完整上下文、分析与处理记录）。
 - `development/PROJECT-ORGANIZATION.md`：源码分层、文件规模和目录职责。
 - `development/DEVELOPMENT-STANDARD.md`：后端、前端、配置、依赖和兼容性要求。
 - `development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md`：前端六屏规划与骨架、物料、Token 三层契约约束。
