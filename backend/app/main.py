@@ -9,7 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .api_v2 import router as router_v2
+from .api import router as router_v2
 from .live_projection import get_live_projection_broker
 from .live_projection.api import router as live_projection_router
 

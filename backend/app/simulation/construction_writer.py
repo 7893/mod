@@ -73,7 +73,7 @@ class ConstructionWriter:
         if self._external_conn:
             return self._external_conn
 
-        if not os.environ.get("MOD_DB_HOST") and not os.environ.get("MOD_V2_DB_HOST"):
+        if not os.environ.get("MOD_DB_HOST"):
             try:
                 from dotenv import load_dotenv
 
@@ -84,11 +84,11 @@ class ConstructionWriter:
             except Exception:
                 pass
 
-        host = os.environ.get("MOD_DB_HOST") or os.environ.get("MOD_V2_DB_HOST", "127.0.0.1")
-        port = int(os.environ.get("MOD_DB_PORT") or os.environ.get("MOD_V2_DB_PORT", "3306"))
-        user = os.environ.get("MOD_DB_USER") or os.environ.get("MOD_V2_DB_USER", "mod_v2_writer")
-        password = os.environ.get("MOD_DB_PASSWORD") or os.getenv("MOD_V2_DB_PASSWORD", "")
-        database = os.environ.get("MOD_DB_NAME_V2") or os.getenv("MOD_V2_DB_NAME", "mod_s_v2")
+        host = os.environ.get("MOD_DB_HOST", "127.0.0.1")
+        port = int(os.environ.get("MOD_DB_PORT", "3306"))
+        user = os.environ.get("MOD_DB_USER", "")
+        password = os.environ.get("MOD_DB_PASSWORD", "")
+        database = os.environ.get("MOD_DB_NAME", "mod_s_v2")
 
         return pymysql.connect(
             host=host,

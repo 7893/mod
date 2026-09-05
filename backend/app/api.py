@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from threading import Lock
 from time import monotonic
 
@@ -7,348 +8,434 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
-from .config import get_settings
 from .db import connection
-from .schemas import Page
+from .ml_adapter import HeatWaveMLAdapter, CloudflareAIAdapter
+from .schemas import PageV2
+from .services.dashboard import (
+    build_dashboard_snapshot_v2,
+    load_fallback_snapshot as load_fallback_snapshot,
+    normalize_operations_dict,
+    normalize_region,
+)
 
-router = APIRouter(prefix="/api/v1")
+router = APIRouter(prefix="/api/v2")
+
 _snapshot_cache: dict | None = None
 _snapshot_cached_at = 0.0
 _snapshot_lock = Lock()
-_SNAPSHOT_TTL_SECONDS = 300
+_SNAPSHOT_TTL_SECONDS = 60
 
-
-def numeric(value):
-    """Return JSON numbers instead of Decimal strings from MySQL aggregates."""
-    if value is None or isinstance(value, (int, float)):
-        return value
-    number = float(value)
-    return int(number) if number.is_integer() else number
-
-
-def mappings(conn: Connection, sql: str, params: dict | None = None) -> list[dict]:
-    return [dict(row) for row in conn.execute(text(sql), params or {}).mappings()]
-
+_meta_cache: dict | None = None
+_meta_cached_at = 0.0
+_meta_lock = Lock()
+_META_TTL_SECONDS = 60
 
 @router.get("/health")
-def health(conn: Connection = Depends(connection)) -> dict:
-    row = conn.execute(text("SELECT DATABASE() db, @@session.time_zone tz, UTC_TIMESTAMP() now_utc")).mappings().one()
-    return {"status": "ok", "database": row["db"], "session_timezone": row["tz"], "now_utc": row["now_utc"]}
+def health(conn: Connection | None = Depends(connection)) -> dict:
+    if conn is None:
+        return {
+            "status": "degraded",
+            "version": "v2",
+            "notice": "Database not reachable; operating in verified fallback snapshot mode",
+        }
+    try:
+        row = conn.execute(text("SELECT DATABASE() db, @@session.time_zone tz, NOW() now_cst")).mappings().one()
+        return {
+            "status": "ok",
+            "version": "v2",
+            "database": row["db"],
+            "session_timezone": row["tz"],
+            "now_cst": str(row["now_cst"]),
+        }
+    except Exception as e:
+        return {"status": "degraded", "version": "v2", "error": str(e)}
 
 
-@router.get("/dashboard/overview")
-def overview(conn: Connection = Depends(connection)) -> dict:
-    sql = """
-    SELECT
-      (SELECT COUNT(*) FROM org_unit) org_total,
-      (SELECT COUNT(*) FROM rollout_unit_status WHERE status IN ('已上线','稳定运行')) launched,
-      (SELECT COUNT(*) FROM rollout_unit_status WHERE status='双轨运行中') dual_run,
-      (SELECT ROUND(100 * SUM(status='已完成') / COUNT(*), 1) FROM construction_task) construction_pct,
-      (SELECT ROUND(100 * SUM(status IN ('生成成功','已集成')) / COUNT(*), 2) FROM accounting_voucher) voucher_success_pct,
-      ((SELECT COUNT(*) FROM project_issue WHERE leadership_attention=1 AND status<>'已关闭') +
-       (SELECT COUNT(*) FROM project_risk WHERE leadership_attention=1 AND status<>'已关闭')) leadership_attention,
-      (SELECT COUNT(DISTINCT region_code) FROM org_unit) regions
-    """
-    result = dict(conn.execute(text(sql)).mappings().one())
-    result["construction_pct"] = numeric(result["construction_pct"])
-    result["voucher_success_pct"] = numeric(result["voucher_success_pct"])
-    result["launched_pct"] = round(result["launched"] * 100 / result["org_total"], 1)
-    return result
 
+@router.get("/dashboard/refresh-meta")
+def refresh_meta(conn: Connection | None = Depends(connection)) -> dict:
+    snap = dashboard_snapshot(conn)
+    meta = snap.get("meta", {})
+    
+    # In fallback mode, conn will be None or dashboard_snapshot handles fallback internally.
+    # To determine status correctly, we can rely on conn.
+    status = "ok" if conn is not None else "fallback"
+    data_version = "v2.0-live" if conn is not None else "v2.0-frozen"
 
-def build_dashboard_snapshot(conn: Connection) -> dict:
-    overview_row = dict(conn.execute(text("""
-      SELECT
-        (SELECT COUNT(*) FROM org_unit) org_total,
-        (SELECT COUNT(*) FROM rollout_unit_status WHERE status IN ('已上线','稳定运行')) launched,
-        (SELECT COUNT(*) FROM rollout_unit_status WHERE status='双轨运行中') dual_run,
-        (SELECT ROUND(100 * SUM(status='已完成') / COUNT(*), 1) FROM construction_task) construction_pct,
-        (SELECT COUNT(*) FROM accounting_voucher) voucher_total,
-        (SELECT ROUND(100 * SUM(status IN ('生成成功','已集成')) / COUNT(*), 2)
-           FROM accounting_voucher) voucher_success_pct,
-        ((SELECT COUNT(*) FROM project_issue WHERE leadership_attention=1 AND status<>'已关闭') +
-         (SELECT COUNT(*) FROM project_risk WHERE leadership_attention=1 AND status<>'已关闭'))
-           leadership_attention,
-        (SELECT COUNT(DISTINCT region_code) FROM org_unit) regions
-    """)).mappings().one())
-    overview_row["launched_pct"] = round(
-        overview_row["launched"] * 100 / overview_row["org_total"], 1
-    )
-    overview_row["construction_pct"] = numeric(overview_row["construction_pct"])
-    overview_row["voucher_success_pct"] = numeric(overview_row["voucher_success_pct"])
-
-    rollout_rows = mappings(conn, """
-      SELECT b.name name, COUNT(*) total,
-             ROUND(100 * SUM(s.status IN ('已上线','稳定运行')) / COUNT(*), 1) launched_pct,
-             ROUND(AVG(t.progress_pct), 1) construction_pct
-      FROM rollout_batch b
-      JOIN org_unit o ON o.batch_id=b.batch_id
-      JOIN rollout_unit_status s ON s.org_id=o.org_id
-      LEFT JOIN (
-        SELECT org_id, AVG(progress_pct) progress_pct FROM construction_task GROUP BY org_id
-      ) t ON t.org_id=o.org_id
-      GROUP BY b.batch_id,b.name ORDER BY b.batch_id
-    """)
-
-    trend_rows = mappings(conn, """
-      SELECT DATE_FORMAT(date, '%m-%d') date,
-             SUM(status IN ('已上线','稳定运行')) launched
-      FROM rollout_status_snapshot
-      GROUP BY date ORDER BY date DESC LIMIT 7
-    """)
-    trend_rows.reverse()
-
-    entity_rows = mappings(conn, """
-      SELECT o.org_id id,o.area province,o.org_name name,b.name batch,
-             u.display_name owner,
-             CASE
-               WHEN s.status IN ('已上线','稳定运行') THEN '已上线'
-               WHEN s.status IN ('双轨运行中','具备双轨条件') THEN '双轨运行'
-               WHEN s.status IN ('未启动','准备中','暂缓','不具备条件') THEN '准备中'
-               ELSE '建设中'
-             END status,
-             ROUND(COALESCE(t.construction,0),1) construction,
-             ROUND(COALESCE(d.opening_data,0),1) opening_data,
-             ROUND(COALESCE(v.voucher_rate,0),2) voucher_rate,
-             DATE_FORMAT(s.updated_at_utc,'%Y-%m-%d %H:%i') updated_at
-      FROM org_unit o
-      JOIN rollout_batch b ON b.batch_id=o.batch_id
-      JOIN sys_user u ON u.user_id=o.owner_id
-      JOIN rollout_unit_status s ON s.org_id=o.org_id
-      LEFT JOIN (
-        SELECT org_id,AVG(progress_pct) construction FROM construction_task GROUP BY org_id
-      ) t ON t.org_id=o.org_id
-      LEFT JOIN (
-        SELECT org_id,AVG(completeness_pct) opening_data
-        FROM data_readiness WHERE data_class='期初数据' GROUP BY org_id
-      ) d ON d.org_id=o.org_id
-      LEFT JOIN (
-        SELECT org_id,100 * AVG(status IN ('生成成功','已集成')) voucher_rate
-        FROM accounting_voucher GROUP BY org_id
-      ) v ON v.org_id=o.org_id
-      ORDER BY o.org_id
-    """)
-    entities = [{
-        "id": row["id"], "province": row["province"], "name": row["name"],
-        "batch": row["batch"], "owner": row["owner"], "status": row["status"],
-        "construction": numeric(row["construction"]),
-        "openingData": numeric(row["opening_data"]),
-        "voucherRate": numeric(row["voucher_rate"]), "updatedAt": row["updated_at"],
-    } for row in entity_rows]
-
-    issue_rows = mappings(conn, """
-      SELECT * FROM (
-        SELECT '问题' type,i.level,i.title,o.area area,u.display_name owner,
-               DATE_FORMAT(i.due,'%Y-%m-%d') due,i.status,i.leadership_attention,
-               o.org_name
-        FROM project_issue i JOIN org_unit o USING(org_id)
-        LEFT JOIN sys_user u ON u.user_id=i.owner_id
-        UNION ALL
-        SELECT '风险',r.level,r.title,o.area,u.display_name,
-               DATE_FORMAT(r.due,'%Y-%m-%d'),r.status,r.leadership_attention,o.org_name
-        FROM project_risk r JOIN org_unit o USING(org_id)
-        LEFT JOIN sys_user u ON u.user_id=r.owner_id
-      ) x
-      ORDER BY status='已关闭',leadership_attention DESC,FIELD(level,'高','中','低'),due
-    """)
-    issues = [{
-        "type": row["type"], "level": row["level"], "title": row["title"],
-        "area": row["area"], "owner": row["owner"], "due": row["due"],
-        "status": row["status"], "leadershipAttention": bool(row["leadership_attention"]),
-        "orgName": row["org_name"],
-    } for row in issue_rows]
-
-    operation_tables = [
-        "business_document", "business_document_line", "accounting_voucher",
-        "accounting_voucher_line", "document_voucher_link", "integration_result",
-        "dual_run_result",
-    ]
-    operations = {
-        table: conn.execute(text(f"SELECT COUNT(*) FROM `{table}`")).scalar_one()
-        for table in operation_tables
-    }
-    all_tables = [
-        "region", "rollout_batch", "calendar_date", "sys_user", "org_unit",
-        "rollout_unit_status", "construction_task", "rollout_status_snapshot",
-        "data_readiness", "opening_data_result", "business_document",
-        "business_document_line", "accounting_voucher", "accounting_voucher_line",
-        "document_voucher_link", "integration_result", "dual_run_result", "project_issue",
-        "project_risk", "metric_snapshot", "source_record", "import_job", "import_error",
-        "change_log",
-    ]
-    full_rows = sum(
-        conn.execute(text(f"SELECT COUNT(*) FROM `{table}`")).scalar_one()
-        for table in all_tables
-    )
-    quality = dict(conn.execute(text("""
-      SELECT
-        (SELECT COUNT(*) FROM (
-          SELECT voucher_id FROM accounting_voucher_line GROUP BY voucher_id
-          HAVING ROUND(SUM(debit_amount-credit_amount),2)<>0
-        ) balance_errors) voucher_balance_errors,
-        (SELECT COUNT(*) FROM document_voucher_link l
-          JOIN business_document d ON d.document_id=l.document_id
-          JOIN accounting_voucher v ON v.voucher_id=l.voucher_id
-          JOIN integration_result i ON i.voucher_id=v.voucher_id
-          WHERE l.relation_type='主关联' AND (
-            d.submitted_at_utc > d.approved_at_utc OR
-            d.approved_at_utc > v.generated_at_utc OR
-            v.generated_at_utc > i.completed_at_utc
-          )) time_order_errors,
-        (SELECT COUNT(*) FROM document_voucher_link l
-          LEFT JOIN business_document d ON d.document_id=l.document_id
-          LEFT JOIN accounting_voucher v ON v.voucher_id=l.voucher_id
-          WHERE d.document_id IS NULL OR v.voucher_id IS NULL) orphan_link_errors,
-        (SELECT COUNT(*) FROM (
-          SELECT org_id FROM rollout_status_snapshot GROUP BY org_id HAVING COUNT(DISTINCT status)>=2
-        ) progressing) organizations_with_status_progression
-    """)).mappings().one())
-    period = conn.execute(text(
-        "SELECT DATE_FORMAT(MIN(full_date),'%Y-%m-%d'),"
-        "DATE_FORMAT(MAX(full_date),'%Y-%m-%d') FROM calendar_date"
-    )).one()
+    if conn is not None:
+        try:
+            # Just a quick check to see if DB is really alive
+            conn.execute(text("SELECT 1")).scalar()
+        except Exception:
+            status = "fallback"
+            data_version = "v2.0-frozen"
 
     return {
-        "meta": {
-            "mode": "S", "notice": "全部为虚构模拟数据", "seed": 20260830,
-            "fullRows": full_rows, "sampleRows": full_rows,
-            "period": [period[0], period[1]], "sourceTimezone": "UTC",
-            "displayTimezone": get_settings().display_timezone,
-        },
-        "overview": {
-            "orgTotal": overview_row["org_total"], "launched": overview_row["launched"],
-            "launchedPct": overview_row["launched_pct"], "dual": overview_row["dual_run"],
-            "constructionPct": overview_row["construction_pct"],
-            "voucherTotal": overview_row["voucher_total"],
-            "voucherSuccessPct": overview_row["voucher_success_pct"],
-            "leadershipAttention": overview_row["leadership_attention"],
-            "regions": overview_row["regions"],
-        },
-        "rollout": [{**row,
-                     "launchedPct": numeric(row["launched_pct"]),
-                     "constructionPct": numeric(row["construction_pct"])}
-                    for row in rollout_rows],
-        "trend": trend_rows,
-        "entities": entities,
-        "issues": issues,
-        "operations": operations,
-        "quality": quality,
+        "data_version": data_version,
+        "as_of_date": meta.get("asOfDate", "2026-08-30"),
+        "last_updated_at": meta.get("generatedAt", datetime.now().isoformat()),
+        "total_rows": meta.get("fullRows", 1685923),
+        "status": status,
+        "seed": meta.get("seed", 42),
     }
 
 
 @router.get("/dashboard/snapshot")
-def dashboard_snapshot(conn: Connection = Depends(connection)) -> dict:
+def dashboard_snapshot(conn: Connection | None = Depends(connection)) -> dict:
     global _snapshot_cache, _snapshot_cached_at
     now = monotonic()
     with _snapshot_lock:
         if _snapshot_cache is not None and now - _snapshot_cached_at < _SNAPSHOT_TTL_SECONDS:
             return _snapshot_cache
-        _snapshot_cache = build_dashboard_snapshot(conn)
+        _snapshot_cache = build_dashboard_snapshot_v2(conn)
         _snapshot_cached_at = monotonic()
         return _snapshot_cache
 
 
+@router.get("/dashboard/overview")
+def overview(conn: Connection | None = Depends(connection)) -> dict:
+    snap = dashboard_snapshot(conn)
+    return snap.get("overview", {})
+
+
 @router.get("/dashboard/rollout")
-def rollout(conn: Connection = Depends(connection)) -> list[dict]:
-    return mappings(conn, """
-      SELECT b.batch_id, b.name, COUNT(*) total,
-             SUM(s.status IN ('已上线','稳定运行')) launched,
-             ROUND(100 * SUM(s.status IN ('已上线','稳定运行')) / COUNT(*), 1) launched_pct,
-             ROUND(AVG(t.progress_pct), 1) construction_pct
-      FROM rollout_batch b
-      JOIN org_unit o ON o.batch_id=b.batch_id
-      JOIN rollout_unit_status s ON s.org_id=o.org_id
-      LEFT JOIN (SELECT org_id, AVG(progress_pct) progress_pct FROM construction_task GROUP BY org_id) t
-        ON t.org_id=o.org_id
-      GROUP BY b.batch_id, b.name ORDER BY b.batch_id
-    """)
+def rollout(conn: Connection | None = Depends(connection)) -> list[dict]:
+    snap = dashboard_snapshot(conn)
+    return snap.get("rollout", [])
 
 
 @router.get("/dashboard/trend")
-def trend(days: int = Query(30, ge=7, le=180), conn: Connection = Depends(connection)) -> list[dict]:
-    return mappings(conn, """
-      SELECT date, SUM(status IN ('已上线','稳定运行')) launched,
-             SUM(status='双轨运行中') dual_run
-      FROM rollout_status_snapshot
-      WHERE date >= (SELECT DATE_SUB(MAX(date), INTERVAL :days DAY) FROM rollout_status_snapshot)
-      GROUP BY date ORDER BY date
-    """, {"days": days - 1})
+def trend(days: int = Query(7, ge=7, le=180), conn: Connection | None = Depends(connection)) -> list[dict]:
+    snap = dashboard_snapshot(conn)
+    trend_data = snap.get("trend", [])
+    if days and len(trend_data) > days:
+        return trend_data[-days:]
+    return trend_data
 
 
 @router.get("/dashboard/regions")
-def regions(conn: Connection = Depends(connection)) -> list[dict]:
-    return mappings(conn, """
-      SELECT o.region_code, o.area, COUNT(*) total,
-             SUM(s.status IN ('已上线','稳定运行')) launched,
-             SUM(s.status='双轨运行中') dual_run,
-             ROUND(AVG(t.progress_pct),1) construction_pct
-      FROM org_unit o JOIN rollout_unit_status s ON s.org_id=o.org_id
-      LEFT JOIN (SELECT org_id, AVG(progress_pct) progress_pct FROM construction_task GROUP BY org_id) t
-        ON t.org_id=o.org_id
-      GROUP BY o.region_code, o.area ORDER BY o.region_code
-    """)
+def regions(conn: Connection | None = Depends(connection)) -> list[dict]:
+    snap = dashboard_snapshot(conn)
+    return snap.get("provinces", [])
 
 
-@router.get("/organizations", response_model=Page)
+@router.get("/organizations", response_model=PageV2)
 def organizations(
-    page: int = Query(1, ge=1), page_size: int = Query(50, ge=1, le=500),
-    region_code: str | None = None, status: str | None = None, keyword: str | None = None,
-    conn: Connection = Depends(connection),
-) -> Page:
-    where, params = ["1=1"], {}
-    if region_code:
-        where.append("o.region_code=:region_code")
-        params["region_code"] = region_code
-    if status:
-        where.append("s.status=:status")
-        params["status"] = status
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=500),
+    region: str | None = None,
+    status: str | None = None,
+    keyword: str | None = None,
+    conn: Connection | None = Depends(connection),
+) -> PageV2:
+    snap = dashboard_snapshot(conn)
+    entities = snap.get("entities", [])
+
+    filtered = entities
+    if region and region != "全部":
+        norm_r = normalize_region(region)
+        filtered = [e for e in filtered if e["province"] == norm_r or e["region"] == region]
+    if status and status != "全部":
+        filtered = [e for e in filtered if e["status"] == status or e.get("rawStatus") == status]
     if keyword:
-        where.append("(o.org_name LIKE :keyword OR o.org_code LIKE :keyword OR u.display_name LIKE :keyword)")
-        params["keyword"] = f"%{keyword}%"
-    clause = " AND ".join(where)
-    total = conn.execute(text(f"SELECT COUNT(*) FROM org_unit o JOIN rollout_unit_status s USING(org_id) LEFT JOIN sys_user u ON u.user_id=o.owner_id WHERE {clause}"), params).scalar_one()
-    params.update(limit=page_size, offset=(page - 1) * page_size)
-    items = mappings(conn, f"""
-      SELECT o.org_id, o.org_code, o.org_name, o.region_code, o.area, b.name,
-             u.display_name owner, s.status, s.plan_date, s.actual_date, s.updated_at_utc,
-             ROUND(AVG(t.progress_pct),1) construction_pct
-      FROM org_unit o JOIN rollout_unit_status s USING(org_id)
-      JOIN rollout_batch b USING(batch_id) LEFT JOIN sys_user u ON u.user_id=o.owner_id
-      LEFT JOIN construction_task t ON t.org_id=o.org_id
-      WHERE {clause}
-      GROUP BY o.org_id, o.org_code, o.org_name, o.region_code, o.area, b.name,
-               u.display_name, s.status, s.plan_date, s.actual_date, s.updated_at_utc
-      ORDER BY o.org_id LIMIT :limit OFFSET :offset
-    """, params)
-    return Page(items=items, total=total, page=page, page_size=page_size)
+        kw = keyword.lower()
+        filtered = [
+            e for e in filtered
+            if kw in e["name"].lower() or kw in e["owner"].lower() or kw in e["province"].lower()
+        ]
+
+    total = len(filtered)
+    start = (page - 1) * page_size
+    items = filtered[start:start + page_size]
+    return PageV2(items=items, total=total, page=page, page_size=page_size)
 
 
-@router.get("/issues")
-def issues(limit: int = Query(50, ge=1, le=500), conn: Connection = Depends(connection)) -> list[dict]:
-    return mappings(conn, """
-      SELECT * FROM (
-        SELECT '问题' type, i.issue_id item_id, i.org_id, o.org_name, o.area,
-               i.title, i.level, i.status, u.display_name owner, i.due, i.leadership_attention
-        FROM project_issue i JOIN org_unit o USING(org_id) LEFT JOIN sys_user u ON u.user_id=i.owner_id
-        UNION ALL
-        SELECT '风险', r.risk_id, r.org_id, o.org_name, o.area,
-               r.title, r.level, r.status, u.display_name, r.due, r.leadership_attention
-        FROM project_risk r JOIN org_unit o USING(org_id) LEFT JOIN sys_user u ON u.user_id=r.owner_id
-      ) x ORDER BY status='已关闭', leadership_attention DESC, FIELD(level,'高','中','低'), due LIMIT :limit
-    """, {"limit": limit})
+@router.get("/issues/summary")
+def issues_summary(conn: Connection | None = Depends(connection)) -> dict:
+    snap = dashboard_snapshot(conn)
+    return snap.get("issuesSummary", {})
+
+
+@router.get("/construction/summary")
+def construction_summary(conn: Connection | None = Depends(connection)) -> dict:
+    snap = dashboard_snapshot(conn)
+    return snap.get("construction", {})
+
+
+
+@router.get("/insights/status")
+def insights_status(conn: Connection | None = Depends(connection)) -> dict:
+    """
+    返回 HeatWave 状态、Cloudflare AI 配置状态、基础研判元数据及预测状态。
+
+    此端点绝不调用任何外部模型，也不触发 Cloudflare AI 请求。
+    仅汇报各子系统的配置与运行状态，供前端轮询或监控使用。
+    """
+    try:
+        hw_ml = HeatWaveMLAdapter(conn)
+        cf_ai = CloudflareAIAdapter()
+
+        hw_status = hw_ml.get_status()   # 只读 HeatWave 元数据，无外部调用
+        predictions = hw_ml.get_predictions()
+        cf_status = cf_ai.get_status() if hasattr(cf_ai, "get_status") else {"status": "unavailable"}
+
+        snap = dashboard_snapshot(conn)
+        base_insights = dict(snap.get("insights", {}))
+
+        base_insights["hw_ml"] = hw_status
+        base_insights["predictions"] = predictions
+        base_insights["cf_ai"] = cf_status
+
+        # 为 useAiInsights.ts 设置顶层状态与额度
+        top_cf_status = cf_status.get("status", "unavailable")
+        base_insights["status"] = "ok" if top_cf_status == "ready" else top_cf_status
+        base_insights["quota_remaining"] = cf_status.get("quota", {}).get("remaining_today", 20)
+        base_insights["quota_reset_at"] = "UTC 00:00"
+
+        # 动态更新 AutoML 运行与就绪状态
+        if hw_status.get("status") == "ready":
+            models_info = hw_status.get("models", {})
+            reg_info = models_info.get("regression", {})
+            cls_info = models_info.get("classifier", {})
+
+            # 真实性判定：只有当模型返回了真实评估质量分时，才视为"已就绪、可展示预测能力"。
+            # 无真实质量分（quality=None）说明训练/评分未真正完成，不得谎报"已就绪/实时预测"。
+            reg_quality = reg_info.get("quality")
+            cls_quality = cls_info.get("quality")
+            has_real_quality = reg_quality is not None or cls_quality is not None
+
+            if has_real_quality:
+                base_insights["automlStatus"] = "READY"
+                base_insights["automlStatusDisplay"] = "已就绪"
+                base_insights["trainingAuthorized"] = True
+                base_insights["notice"] = "Oracle HeatWave AutoML 库内模型已完成训练与评估，提供日增单据与批次延期风险预测。"
+                base_insights["summary"] = "Oracle MySQL HeatWave AutoML 库内预测已激活。"
+            else:
+                base_insights["automlStatus"] = "NOT_EVALUATED"
+                base_insights["automlStatusDisplay"] = "训练/评分未完成"
+                base_insights["trainingAuthorized"] = False
+                base_insights["notice"] = "HeatWave AutoML 特征表已就绪，模型训练与评估尚未完成；暂不提供可信预测质量。"
+                base_insights["summary"] = "AutoML 特征已建立，训练/评分未完成，暂无可信模型质量。"
+
+            target_models = base_insights.get("targetModels", [])
+            for tm in target_models:
+                if tm.get("type") == "REGRESSION":
+                    tm["status"] = "READY" if reg_quality is not None else "NOT_EVALUATED"
+                    tm["algorithm"] = reg_info.get("algorithm", "HeatWave AutoML LinearRegression")
+                    tm["quality"] = reg_quality  # 真实值或 None（前端显示"—"），不再硬编码
+                elif tm.get("type") == "CLASSIFICATION":
+                    tm["status"] = "READY" if cls_quality is not None else "NOT_EVALUATED"
+                    tm["algorithm"] = cls_info.get("algorithm", "HeatWave AutoML DecisionTreeClassifier")
+                    tm["quality"] = cls_quality  # 真实值或 None，不再硬编码
+
+        return base_insights
+    except Exception as e:
+        snap = dashboard_snapshot(conn)
+        base_insights = dict(snap.get("insights", {}))
+        base_insights["hw_ml"] = {"status": "unavailable", "message": f"服务端错误：{e}"}
+        base_insights["cf_ai"] = {"status": "unavailable", "message": "服务端错误，状态不可用"}
+        base_insights["summary"] = f"研判引擎暂时不可用：{e}"
+        return base_insights
+
+
+@router.post("/insights/generate")
+def insights_generate(conn: Connection | None = Depends(connection)) -> dict:
+    """
+    主动触发 Cloudflare Workers AI 洞察生成。
+
+    触发规则（按优先级）：
+    - 缓存命中（相同指标指纹 + TTL 内）→ 直接返回缓存，status="cache_hit"
+    - 每日限额已耗尽 → 返回 status="rate_limited"
+    - 未启用 / 凭据缺失 / 过滤后无字段 → 安全降级
+    - 以上均通过 → 发起真实 HTTP 请求，成功后更新缓存
+
+    只有本接口会触发外部模型调用；GET /insights/status 和
+    GET /insights/latest 均不产生外部请求。
+    """
+    try:
+        cf_ai = CloudflareAIAdapter()
+        snap = dashboard_snapshot(conn)
+        overview_data: dict = snap.get("overview", {})
+        return cf_ai.generate_insights(overview_data)
+    except Exception as e:
+        return {
+            "status": "unavailable",
+            "message": f"服务端错误，CF AI 未调用：{e}",
+        }
+
+
+@router.get("/insights/latest")
+def insights_latest() -> dict:
+    """
+    返回最近一次成功调用的缓存洞察结果。
+
+    此端点绝不触发任何外部请求。
+    缓存为空时返回 {"status": "no_cache"}。
+    缓存有效（TTL 内）或已过期均照常返回，前端可根据 generated_at 判断新鲜度。
+    """
+    try:
+        cf_ai = CloudflareAIAdapter()
+        return cf_ai.get_latest_cached_insights()
+    except Exception as e:
+        return {
+            "status": "unavailable",
+            "message": f"服务端错误：{e}",
+        }
 
 
 @router.get("/operations/summary")
-def operations(conn: Connection = Depends(connection)) -> dict:
-    names = ["business_document", "business_document_line", "accounting_voucher", "accounting_voucher_line", "document_voucher_link", "integration_result", "dual_run_result"]
-    return {name: conn.execute(text(f"SELECT COUNT(*) FROM `{name}`")).scalar_one() for name in names}
+def operations_summary(conn: Connection | None = Depends(connection)) -> dict:
+    snap = dashboard_snapshot(conn)
+    return normalize_operations_dict(snap.get("operations", {}))
 
 
-@router.get("/audit")
-def audit(limit: int = Query(50, ge=1, le=500), conn: Connection = Depends(connection)) -> list[dict]:
-    return mappings(conn, """
-      SELECT c.change_id, c.changed_at_utc, o.org_name, u.display_name operator,
-             c.table_name, c.field_name, c.before_value, c.after_value
-      FROM change_log c JOIN org_unit o USING(org_id) LEFT JOIN sys_user u ON u.user_id=c.operator_id
-      ORDER BY c.changed_at_utc DESC, c.change_id DESC LIMIT :limit
-    """, {"limit": limit})
+# ===== Business Simulator APIs =====
+
+@router.get("/simulator/status")
+async def simulator_status() -> dict:
+    """
+    获取业务模拟器内存状态（只读）。
+
+    安全说明：
+    - 仅读取已有内存状态，不创建写库引擎，不初始化模拟器。
+    - 模拟器未启用时（MOD_SIMULATOR_ENABLED 未设置），返回 enabled=false。
+    - 不接受任何参数，不写库，不泄露凭据。
+    """
+    from .business_simulator import get_simulator_instance
+
+    instance = get_simulator_instance()
+    if instance is None:
+        return {
+            "enabled": False,
+            "notice": "模拟器未启用（MOD_SIMULATOR_ENABLED 未设置或不在白名单）",
+        }
+    return {
+        "enabled": True,
+        **instance.get_status(),
+    }
+
+
+
+
+
+# ===== AI Narrator APIs (解释和表达，不控制数据) =====
+
+@router.get("/narrator/summary")
+async def narrator_summary(conn: Connection | None = Depends(connection)) -> dict:
+    """
+    获取 AI 生成的驾驶舱摘要
+    
+    AI 只读取数据生成解释，不参与增长计算。
+    AI 不可用时返回模板生成的摘要。
+    """
+    from .ai_narrator import get_narrator
+
+    narrator = get_narrator()
+
+    stats = {
+        "today_docs": 0,
+        "yesterday_docs": 0,
+        "top_provinces": [],
+        "integration_success_rate": 1.0,
+        "active_scenarios": [],
+    }
+    
+    if conn:
+        # 今日单据
+        stats["today_docs"] = conn.execute(text(
+            "SELECT COUNT(*) FROM business_document WHERE DATE(submit_time) = CURDATE()"
+        )).scalar() or 0
+        
+        # 昨日单据
+        stats["yesterday_docs"] = conn.execute(text(
+            "SELECT COUNT(*) FROM business_document WHERE DATE(submit_time) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)"
+        )).scalar() or 0
+        
+        # 今日按省份统计（取前5）
+        rows = conn.execute(text("""
+            SELECT o.region, COUNT(*) as cnt 
+            FROM business_document d 
+            JOIN org_unit o ON d.org_id = o.id 
+            WHERE DATE(d.submit_time) = CURDATE()
+            GROUP BY o.region 
+            ORDER BY cnt DESC 
+            LIMIT 5
+        """)).fetchall()
+        stats["top_provinces"] = [(r[0], r[1]) for r in rows]
+        
+        # 接口成功率
+        total = conn.execute(text(
+            "SELECT COUNT(*) FROM integration_result WHERE DATE(integration_time) = CURDATE()"
+        )).scalar() or 0
+        success = conn.execute(text(
+            "SELECT COUNT(*) FROM integration_result WHERE DATE(integration_time) = CURDATE() AND status = '成功'"
+        )).scalar() or 0
+        if total > 0:
+            stats["integration_success_rate"] = success / total
+    
+    # 获取活跃情景
+    try:
+        from .business_simulator import get_simulator_instance
+        instance = get_simulator_instance()
+        if instance is not None:
+            sim_status = instance.get_status()
+            stats["active_scenarios"] = [s["type"] for s in sim_status.get("active_scenarios", [])]
+    except Exception:
+        pass
+    
+    # 生成摘要
+    result = narrator.generate_dashboard_summary(stats)
+    
+    return {
+        "summary": result.content,
+        "generated_at": result.generated_at,
+        "source": result.source,
+        "stats": stats,
+    }
+
+
+@router.post("/narrator/explain")
+async def narrator_explain(anomaly: dict) -> dict:
+    """
+    让 AI 解释异常
+    
+    请求体示例：
+    {
+        "type": "integration_failure_spike",
+        "time": "14:20",
+        "value": 0.85,
+        "baseline": 0.98
+    }
+    """
+    from .ai_narrator import get_narrator
+    
+    narrator = get_narrator()
+    result = narrator.explain_anomaly(anomaly)
+    
+    return {
+        "explanation": result.content,
+        "generated_at": result.generated_at,
+        "source": result.source,
+    }
+
+
+@router.post("/narrator/parse-scenario")
+async def narrator_parse_scenario(request: dict) -> dict:
+    """
+    把自然语言转换为模拟参数（只返回建议，不直接执行）
+    
+    请求体示例：
+    {"input": "把国庆期间业务量降到平时的30%"}
+    
+    返回的 suggestion 需要人工确认后才能应用到模拟器。
+    """
+    from .ai_narrator import get_narrator
+    
+    user_input = request.get("input", "")
+    if not user_input:
+        return {"error": "请提供 input 参数"}
+    
+    narrator = get_narrator()
+    result = narrator.parse_scenario_request(user_input)
+    
+    return result

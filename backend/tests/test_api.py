@@ -6,8 +6,8 @@ os.environ.setdefault("MOD_DB_HOST", "127.0.0.1")
 os.environ.setdefault("MOD_DB_PASSWORD", "test_password")
 
 from app.main import app
-from app.api_v2 import normalize_region, load_fallback_snapshot, normalize_operations_dict
-from app.services.dashboard_v2 import LATEST_COMPLETED_DOCUMENT_DATE_SQL, REGION_SUMMARY_SQL
+from app.api import normalize_region, load_fallback_snapshot, normalize_operations_dict
+from app.services.dashboard import LATEST_COMPLETED_DOCUMENT_DATE_SQL, REGION_SUMMARY_SQL
 
 client = TestClient(app)
 

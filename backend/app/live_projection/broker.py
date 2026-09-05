@@ -52,9 +52,9 @@ DEFAULT_UNITS_POOL = [
 
 def _load_units_pool() -> list[dict[str, Any]]:
     try:
-        from ..db import get_v2_engine
+        from ..db import get_engine
         from sqlalchemy import text
-        with get_v2_engine().connect() as conn:
+        with get_engine().connect() as conn:
             sql = """
             WITH batch_mapped AS (
                 SELECT 

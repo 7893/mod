@@ -1,20 +1,22 @@
 import os
 
 os.environ.setdefault("MOD_DB_HOST", "127.0.0.1")
-os.environ.setdefault("MOD_DB_PASSWORD", "test password")
 
 from app.config import DEFAULT_DISPLAY_TIMEZONE, get_display_timezone, get_settings
 
 
-def test_database_url_escapes_password() -> None:
+def test_database_url_escapes_password(monkeypatch) -> None:
+    monkeypatch.setenv("MOD_DB_PASSWORD", "test password")
+    monkeypatch.setenv("MOD_DB_NAME", "mod_s_v2")
     get_settings.cache_clear()
     url = get_settings().database_url
     assert "test+password" in url
-    assert "mod_s" in url
+    assert "mod_s_v2" in url
+    get_settings.cache_clear()
 
 
 def test_database_defaults_do_not_target_remote_host(monkeypatch) -> None:
-    for name in ("MOD_DB_HOST", "MOD_V2_DB_HOST", "MOD_DB_PASSWORD", "MOD_V2_DB_PASSWORD"):
+    for name in ("MOD_DB_HOST", "MOD_DB_PASSWORD"):
         monkeypatch.delenv(name, raising=False)
     get_settings.cache_clear()
     settings = get_settings()
