@@ -103,11 +103,12 @@ class PoolOnboardingPlaybook(BaseConstructionPlaybook):
             raise ValueError(f"Gate violated: org {org_id} status is '{org['status']}', expected '未启动'")
 
         owner = self._get_org_user(org_id)
-        task_id = id_allocator.next_id("construction_task") if id_allocator else 100000 + org_id
+        task_id1 = id_allocator.next_id("construction_task") if id_allocator else 100000 + org_id
+        task_id2 = id_allocator.next_id("construction_task") if id_allocator else 100000 + org_id + 1
 
         initial_tasks = [
             ConstructionTaskFootprint(
-                id=task_id,
+                id=task_id1,
                 org_id=org_id,
                 name="生产与容灾服务器资源规划",
                 type="基础环境",
@@ -119,7 +120,7 @@ class PoolOnboardingPlaybook(BaseConstructionPlaybook):
                 update_time=event_date,
             ),
             ConstructionTaskFootprint(
-                id=task_id + 1,
+                id=task_id2,
                 org_id=org_id,
                 name="组织架构及法人主体主数据同步",
                 type="组织权限",

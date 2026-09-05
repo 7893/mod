@@ -63,7 +63,7 @@ class ConstructionWriter:
         self,
         conn: Optional[Any] = None,
         audit_log_path: Optional[str] = "output/construction_audit.log",
-        backup_dir: Optional[str] = "output/backups",
+        backup_dir: Optional[str] = "scripts/agy/output/backups",
     ):
         self._external_conn = conn
         self._audit_log_path = Path(audit_log_path) if audit_log_path else None
@@ -72,6 +72,17 @@ class ConstructionWriter:
     def _get_connection(self) -> Any:
         if self._external_conn:
             return self._external_conn
+
+        if not os.environ.get("MOD_DB_HOST") and not os.environ.get("MOD_V2_DB_HOST"):
+            try:
+                from dotenv import load_dotenv
+
+                for env_file in [".env.systemd", ".env.local", ".env"]:
+                    if os.path.exists(env_file):
+                        load_dotenv(env_file)
+                        break
+            except Exception:
+                pass
 
         host = os.environ.get("MOD_DB_HOST") or os.environ.get("MOD_V2_DB_HOST", "127.0.0.1")
         port = int(os.environ.get("MOD_DB_PORT") or os.environ.get("MOD_V2_DB_PORT", "3306"))
@@ -92,7 +103,7 @@ class ConstructionWriter:
     def backup_affected_tables(self, tables: List[str]) -> str:
         """Create a safety snapshot backup of target tables before writing."""
         if not self._backup_dir:
-            self._backup_dir = Path("output/backups")
+            self._backup_dir = Path("scripts/agy/output/backups")
         self._backup_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = self._backup_dir / f"construction_backup_{timestamp}.json"
@@ -200,12 +211,20 @@ class ConstructionWriter:
         try:
             with conn.cursor() as cursor:
                 # Write in batches
-                for i in range(0, len(events), batch_size):
-                    chunk = events[i : i + batch_size]
+                total_batches = (len(events) + batch_size - 1) // batch_size if events else 1
+                for b_idx in range(total_batches):
+                    chunk = events[b_idx * batch_size : (b_idx + 1) * batch_size]
+                    batch_rows_start = sum(rows_written.values())
                     for ev in chunk:
                         self._write_single_event(cursor, ev, rows_written)
                     conn.commit()
-                    logger.info(f"[{run_id}] Committed batch {i // batch_size + 1}: {len(chunk)} events.")
+                    batch_rows_end = sum(rows_written.values())
+                    batch_rows = batch_rows_end - batch_rows_start
+                    pct = (b_idx + 1) / total_batches * 100
+                    logger.info(
+                        f"[{run_id}] Committed batch {b_idx + 1}/{total_batches} ({pct:.1f}%): "
+                        f"{len(chunk)} events, {batch_rows} rows. Total written: {batch_rows_end}."
+                    )
 
             duration = (time.perf_counter() - t0) * 1000
             audit_entry = {
@@ -229,7 +248,7 @@ class ConstructionWriter:
         except Exception as ex:
             conn.rollback()
             duration = (time.perf_counter() - t0) * 1000
-            err_msg = f"Rolled back: {ex}"
+            err_msg = f"Rolled back batch: {ex}"
             logger.error(f"[{run_id}] Write failed: {err_msg}")
             audit_entry = {
                 "run_id": run_id,
@@ -253,6 +272,36 @@ class ConstructionWriter:
         finally:
             if not self._external_conn:
                 conn.close()
+
+    def _upsert_task(
+        self,
+        cursor: Any,
+        t: Any,
+        rows_written: Dict[str, int],
+    ) -> None:
+        """Insert or update a construction task safely."""
+        cursor.execute(
+            """
+            INSERT INTO construction_task
+            (id, org_id, name, type, owner, plan_time, actual_time, status, progress, update_time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE status = VALUES(status), progress = VALUES(progress),
+                                   actual_time = VALUES(actual_time), update_time = VALUES(update_time);
+            """,
+            (
+                t.id,
+                t.org_id,
+                t.name,
+                t.type,
+                t.owner,
+                t.plan_time,
+                t.actual_time,
+                t.status,
+                t.progress,
+                t.update_time,
+            ),
+        )
+        rows_written["construction_task"] += 1
 
     def _write_single_event(
         self,
@@ -282,27 +331,7 @@ class ConstructionWriter:
 
             # Insert tasks
             for t in ev.initial_tasks:
-                cursor.execute(
-                    """
-                    INSERT INTO construction_task
-                    (id, org_id, name, type, owner, plan_time, actual_time, status, progress, update_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE status = VALUES(status), progress = VALUES(progress), update_time = VALUES(update_time);
-                    """,
-                    (
-                        t.id,
-                        t.org_id,
-                        t.name,
-                        t.type,
-                        t.owner,
-                        t.plan_time,
-                        t.actual_time,
-                        t.status,
-                        t.progress,
-                        t.update_time,
-                    ),
-                )
-                rows_written["construction_task"] += 1
+                self._upsert_task(cursor, t, rows_written)
 
         elif isinstance(ev, DataReadinessEventFootprint):
             r = ev.readiness
@@ -336,6 +365,8 @@ class ConstructionWriter:
                 ),
             )
             rows_written["data_readiness"] += cursor.rowcount
+            if getattr(ev, "associated_task", None):
+                self._upsert_task(cursor, ev.associated_task, rows_written)
 
         elif isinstance(ev, TrainingCertificationEventFootprint):
             t = ev.training
@@ -361,30 +392,11 @@ class ConstructionWriter:
                 ),
             )
             rows_written["training"] += 1
+            if getattr(ev, "associated_task", None):
+                self._upsert_task(cursor, ev.associated_task, rows_written)
 
         elif isinstance(ev, InterfaceDebuggingEventFootprint):
-            t = ev.task
-            cursor.execute(
-                """
-                INSERT INTO construction_task
-                (id, org_id, name, type, owner, plan_time, actual_time, status, progress, update_time)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE status = VALUES(status), progress = VALUES(progress), update_time = VALUES(update_time);
-                """,
-                (
-                    t.id,
-                    t.org_id,
-                    t.name,
-                    t.type,
-                    t.owner,
-                    t.plan_time,
-                    t.actual_time,
-                    t.status,
-                    t.progress,
-                    t.update_time,
-                ),
-            )
-            rows_written["construction_task"] += 1
+            self._upsert_task(cursor, ev.task, rows_written)
 
         elif isinstance(ev, DualRunCheckEventFootprint):
             dr = ev.dual_run
@@ -406,6 +418,8 @@ class ConstructionWriter:
                 ),
             )
             rows_written["dual_run_result"] += 1
+            if getattr(ev, "associated_task", None):
+                self._upsert_task(cursor, ev.associated_task, rows_written)
 
         elif isinstance(ev, TransitionReviewEventFootprint):
             # Update org_unit status
