@@ -39,8 +39,10 @@ These rules apply to the entire repository.
 
 Never create loose scripts in the repository root. An agent must not write into another agent's directory.
 Generated outputs belong in that owner's ignored `tmp/` or `output/` directory. Stable project tooling may move
-to `scripts/project/` only after it is documented and reviewed. Existing domain packages under `database/`,
-`generator/`, and `tools/` are grandfathered; do not add unrelated one-off scripts there.
+to `scripts/project/` only after it is documented and reviewed. Existing domain packages under `database/`
+and `tools/` are grandfathered; do not add unrelated one-off scripts there. `database/` now holds only the
+read-only acceptance verifier; the legacy batch generator/importer packages (formerly `generator/`) have been
+retired to the ignored `archive/legacy-db-scripts/` — data is now produced by the simulation engine, not batch scripts.
 
 ## Project organization
 
