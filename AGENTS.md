@@ -47,6 +47,13 @@ retired to the ignored `archive/legacy-db-scripts/` — data is now produced by 
 ## Project organization
 
 - Group first-party code by domain and responsibility; never create catch-all `misc`, `utils`, or loose root modules.
+- Single canonical version. This project has one evolving line, not coexisting versions. **Never append version or
+  mode suffixes (`_v2`, `_v3`, `-v2`, `V2`, `_s`, etc.) to first-party modules, files, classes, database names, table
+  names, or API routes to represent an "iteration".** Evolve the existing entity in place; iteration history lives in
+  git, not in names. To preserve an old version for rollback, move it to `archive/` with a note — do not keep parallel
+  `_v2`/`_v3` variants on the mainline. Names express responsibility, not a version number. (Exempt: external
+  dependency versions, already-frozen data assets under `artifacts/`, ADR/KI record numbers, and ordered schema
+  migration scripts — none of these are code-version suffixes.)
 - Keep HTTP route modules thin. Put snapshot construction and business rules in `backend/app/services/`, external
   platform adapters in `backend/app/integrations/`, and simulation domain models in `backend/app/simulation/`.
 - Keep compatibility shims only when an established import path must remain stable; new code imports the domain module.

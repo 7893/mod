@@ -44,3 +44,6 @@
   `mod_s_v2` 而失败——待 agy 统一改为 `mod` + `MOD_DB_NAME`。
 - 本地验收工具已更新：`database/verify_mod_s_v2_readonly.py` → `database/verify_mod_readonly.py`，
   库名引用改 `mod`、变量改 `MOD_DB_NAME`（gitignored，本地工具）。
+- 防复发约束（2026-09-05）：已在 `AGENTS.md` 项目组织节新增"单一正统命名"硬约束——禁止给一方代码/文件/类/
+  库名/表名/API 路由追加 `_v2`/`_v3`/`_s` 等版本或模式后缀来"迭代"，就地演进、迭代靠 git 历史承载；
+  保留旧版走 archive 归档而非主线并存。豁免外部依赖版本、已冻结数据资产、ADR/KI 编号、有序迁移脚本编号。
