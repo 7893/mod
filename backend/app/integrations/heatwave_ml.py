@@ -83,6 +83,9 @@ class HeatWaveMLAdapter:
         self.conn = conn
         self._execute_requested = execute
         self._hw_enabled = os.getenv("MOD_HW_ML_ENABLED", "false").lower() == "true"
+        db_user = os.getenv("MOD_DB_USER", "admin")
+        user_prefix = db_user.split("@")[0] if db_user else "admin"
+        self._ml_schema = os.getenv("MOD_HW_ML_SCHEMA") or f"ML_SCHEMA_{user_prefix}"
 
     # ------------------------------------------------------------------
     # 内部工具
@@ -118,7 +121,8 @@ class HeatWaveMLAdapter:
 
     def get_model_status(self, model_name: str) -> dict:
         """
-        查询单个模型在 HeatWave MODEL_CATALOG 或 sys.ML_MODEL_METADATA 中的状态。
+        查询单个模型在 HeatWave MODEL_CATALOG 或 mod.ml_model_metadata 中的状态。
+        严格区分"模型已训练"与"模型已验证（有测试集真实分）"，无真实质量分时不谎报 ready。
         返回规范化字典，不抛出异常。
         """
         if self.conn is None:
@@ -128,8 +132,53 @@ class HeatWaveMLAdapter:
                 "message": "数据库连接不可用",
             }
         try:
-            # 优先查询 HeatWave 原生目录表 ML_SCHEMA_*.MODEL_CATALOG。
-            # schema 名从环境变量读取，未配置或格式非法时跳过原生目录查询。
+            # 1. 优先读取业务库中具有严谨 train/test split 独立评估认证的元数据表
+            meta_rows = self._safe_query(
+                """
+                SELECT
+                    model_handle,
+                    model_name,
+                    task_type,
+                    target_column,
+                    algorithm,
+                    split_method,
+                    train_rows,
+                    test_rows,
+                    train_score,
+                    test_score,
+                    train_metrics,
+                    test_metrics,
+                    verified,
+                    status,
+                    trained_at,
+                    verified_at
+                FROM `mod`.`ml_model_metadata`
+                WHERE model_handle = :handle
+                LIMIT 1
+                """,
+                {"handle": model_name},
+            )
+            if meta_rows:
+                m = meta_rows[0]
+                is_verified = bool(m.get("verified"))
+                quality_val = float(m["test_score"]) if (is_verified and m.get("test_score") is not None) else None
+                return {
+                    "model": model_name,
+                    "status": "ready" if (is_verified and m.get("status") == "ready") else "not_evaluated",
+                    "verified": is_verified,
+                    "model_id": str(m.get("model_handle")),
+                    "task_type": str(m.get("task_type") or ""),
+                    "algorithm": str(m.get("algorithm") or ""),
+                    "target_column": str(m.get("target_column") or ""),
+                    "quality": quality_val,
+                    "train_score": float(m["train_score"]) if m.get("train_score") is not None else None,
+                    "test_score": float(m["test_score"]) if m.get("test_score") is not None else None,
+                    "split_method": m.get("split_method"),
+                    "trained_at": str(m.get("trained_at") or ""),
+                    "verified_at": str(m.get("verified_at") or ""),
+                }
+
+            # 2. 次选查询 HeatWave 原生目录表 ML_SCHEMA_*.MODEL_CATALOG。
             row = None
             if self._ml_schema and re.fullmatch(r"[A-Za-z0-9_]+", self._ml_schema):
                 try:
@@ -171,13 +220,14 @@ class HeatWaveMLAdapter:
                     or meta.get("algorithm_name")
                     or ("LinearRegression" if "REGRESSION" in model_name else "DecisionTreeClassifier")
                 )
-                quality = meta.get("model_quality") or meta.get("training_score")
-                # 真实性：无真实评估分时不伪造，置 None，由上层如实呈现"未评估"
+                is_verified = bool(meta.get("verified"))
+                quality = meta.get("test_score") or meta.get("model_quality") if is_verified else None
                 quality_val = float(quality) if quality is not None else None
 
                 return {
                     "model": model_name,
-                    "status": "ready" if str(status_val).lower() == "ready" else str(status_val),
+                    "status": "ready" if (is_verified and str(status_val).lower() == "ready") else "not_evaluated",
+                    "verified": is_verified,
                     "model_id": str(row["model_id"]),
                     "task_type": str(row.get("task") or meta.get("task") or ""),
                     "algorithm": str(algorithm_val),
@@ -186,54 +236,23 @@ class HeatWaveMLAdapter:
                     "trained_at": str(row["build_timestamp"] or datetime.now().strftime("%Y-%m-%d")),
                 }
 
-            # 备用：尝试 sys.ML_MODEL_METADATA
-            row = self.conn.execute(
-                text(
-                    """
-                    SELECT
-                        model_id,
-                        model_name,
-                        model_object,
-                        model_quality,
-                        build_timestamp,
-                        target_column_name,
-                        task_type,
-                        algorithm
-                    FROM sys.ML_MODEL_METADATA
-                    WHERE model_name = :name
-                    ORDER BY build_timestamp DESC
-                    LIMIT 1
-                    """
-                ),
-                {"name": model_name},
-            ).mappings().first()
-
-            if not row:
-                return {
-                    "model": model_name,
-                    "status": "not_evaluated",
-                    "model_id": "hw-auto",
-                    "task_type": "regression" if "REGRESSION" in model_name else "classification",
-                    "algorithm": "LinearRegression" if "REGRESSION" in model_name else "DecisionTreeClassifier",
-                    "target_column": "daily_doc_delta" if "REGRESSION" in model_name else "risk_flag",
-                    "quality": None,
-                    "trained_at": None,
-                }
-
+            # 3. 兜底回退：未评估
             return {
                 "model": model_name,
-                "status": "ready",
-                "model_id": str(row["model_id"]),
-                "task_type": str(row.get("task_type") or ""),
-                "algorithm": str(row.get("algorithm") or ""),
-                "target_column": str(row.get("target_column_name") or ""),
-                "quality": float(row["model_quality"]) if row["model_quality"] is not None else None,
-                "trained_at": str(row["build_timestamp"]),
+                "status": "not_evaluated",
+                "verified": False,
+                "model_id": "hw-auto",
+                "task_type": "regression" if "REGRESSION" in model_name else "classification",
+                "algorithm": "LinearRegression" if "REGRESSION" in model_name else "DecisionTreeClassifier",
+                "target_column": "daily_doc_delta" if "REGRESSION" in model_name else "risk_flag",
+                "quality": None,
+                "trained_at": None,
             }
         except Exception:
             return {
                 "model": model_name,
                 "status": "not_evaluated",
+                "verified": False,
                 "model_id": "hw-fallback",
                 "task_type": "regression" if "REGRESSION" in model_name else "classification",
                 "algorithm": "LinearRegression" if "REGRESSION" in model_name else "DecisionTreeClassifier",
@@ -244,7 +263,7 @@ class HeatWaveMLAdapter:
 
     def get_status(self) -> dict:
         """
-        返回两个模型的汇总状态，供 /api/v2/insights/status 使用。
+        返回两个模型的汇总状态，供 /api/insights/status 与 /api/v2/insights/status 使用。
         此方法为只读，始终安全。
         """
         reg_status = self.get_model_status(MODEL_REGRESSION)
@@ -253,9 +272,13 @@ class HeatWaveMLAdapter:
         any_ready = (
             reg_status["status"] == "ready" or cls_status["status"] == "ready"
         )
+        both_verified = (
+            bool(reg_status.get("verified")) and bool(cls_status.get("verified"))
+        )
 
         return {
             "status": "ready" if any_ready else "not_trained",
+            "verified": both_verified,
             "hw_ml_enabled": self._hw_enabled,
             "write_mode": "execute" if self._write_allowed else "plan",
             "models": {
@@ -425,8 +448,9 @@ class HeatWaveMLAdapter:
             ),
         ]:
             try:
-                # 先 load 模型到会话变量，再批量预测
+                # 先 load 模型到会话变量，清理目标表后执行批量预测
                 self.conn.execute(text(load_sql))
+                self.conn.execute(text(f"DROP TABLE IF EXISTS `{score_table}`"))
                 self.conn.execute(text(score_sql))
                 count = self._safe_scalar(f"SELECT COUNT(*) FROM `{score_table}`")
                 results[model_name] = {
@@ -489,13 +513,24 @@ class HeatWaveMLAdapter:
 
                 for r in rows:
                     pred_flag = int(r["pred_value"]) if r["pred_value"] is not None else 0
+                    risk_score = 0.85 if pred_flag == 1 else 0.15
+                    pred_json_raw = r.get("prediction_json")
+                    if pred_json_raw:
+                        try:
+                            pj = json.loads(pred_json_raw) if isinstance(pred_json_raw, str) else pred_json_raw
+                            probs = pj.get("probabilities", {})
+                            if "1" in probs and probs["1"] is not None:
+                                risk_score = round(float(probs["1"]), 4)
+                        except Exception:
+                            pass
+
                     predictions.append(
                         {
                             "orgId": r["org_id"],
                             "orgName": r.get("org_name") or f"单位 #{r['org_id']}",
                             "model": MODEL_CLASSIFIER,
                             "riskFlag": pred_flag,
-                            "riskScore": 0.85 if pred_flag == 1 else 0.15,
+                            "riskScore": risk_score,
                             "region": r.get("region"),
                             "batchId": r.get("batch_id"),
                             "constructionPct": r.get("construction_pct"),
