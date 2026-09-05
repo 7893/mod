@@ -11,13 +11,13 @@
 
 ```text
 浏览器 -> Nginx / -> Vue 静态文件
-                 -> /api/ -> FastAPI -> MySQL HeatWave mod_s_v2
+                 -> /api/ -> FastAPI -> MySQL HeatWave（库 `mod`）
 ```
 
 - 2026-09-05 全项目迁移到主运行主机（Always Free 托管环境）。生产运行与源码工作区
   统一在同一台主机，不再区分部署目标与开发机。旧运行环境不再承载 MOD 任何组件。
 - 现行入口为已配置的生产域名（见部署配置，不对外公开），DNS A/AAAA 指向当前运行主机。
-- 数据库为托管 MySQL HeatWave（库 `mod_s_v2`，Always Free 规格），连接主机、端口与凭据
+- 数据库为托管 MySQL HeatWave（库 `mod`，Always Free 规格），连接主机、端口与凭据
   仅存于运行主机的本地环境文件，不写入版本库或文档。原运行环境的旧数据库实例已删除。
 - 运行主机使用系统级 systemd 服务 `mod-api.service` 运行项目内 FastAPI 虚拟环境，监听
   `127.0.0.1:8100`，开机自启（enabled）。

@@ -42,7 +42,7 @@ def get_settings() -> Settings:
         port=int(os.getenv("MOD_PORT", "8100")),
         db_host=os.getenv("MOD_DB_HOST", "127.0.0.1"),
         db_port=int(os.getenv("MOD_DB_PORT", "3306")),
-        db_name=os.getenv("MOD_DB_NAME", "mod_s_v2"),
+        db_name=os.getenv("MOD_DB_NAME", "mod"),
         db_user=os.getenv("MOD_DB_USER", ""),
         db_password=os.getenv("MOD_DB_PASSWORD", ""),
         db_pool_size=int(os.getenv("MOD_DB_POOL_SIZE", "10")),
