@@ -165,20 +165,20 @@ class TestTC04ReadOnlyStatus:
         在模拟器未启动时应返回 enabled=false。
         """
         # 使用 mock 隔离数据库依赖
-        _clean_modules("app.business_simulator", "app.api_v2", "app.main")
+        _clean_modules("app.business_simulator", "app.api", "app.main")
 
         with patch.dict("os.environ", {
             "MOD_SIMULATOR_ENABLED": "",
             "MOD_DB_WRITE_URL": "",
         }, clear=False):
             # mock DB 连接依赖（避免连接真实数据库）
-            mock_conn = None  # v2_connection 返回 None 触发 fallback 路径
+            mock_conn = None  # connection 返回 None 触发 fallback 路径
 
-            with patch("app.db.v2_connection", return_value=mock_conn):
+            with patch("app.db.connection", return_value=mock_conn):
                 import app.business_simulator as bs_mod
                 bs_mod._simulator_instance = None  # 确保未启动
 
-                from app.api_v2 import router
+                from app.api import router
                 from fastapi import FastAPI
                 from fastapi.testclient import TestClient
 
@@ -200,16 +200,16 @@ class TestTC05TickEndpointRemoved:
     """公开写入口 POST /api/v2/simulator/tick 应已被删除（404 或 405）。"""
 
     def test_post_simulator_tick_not_found(self):
-        _clean_modules("app.business_simulator", "app.api_v2", "app.main")
+        _clean_modules("app.business_simulator", "app.api", "app.main")
 
         with patch.dict("os.environ", {
             "MOD_SIMULATOR_ENABLED": "",
         }, clear=False):
-            with patch("app.db.v2_connection", return_value=None):
+            with patch("app.db.connection", return_value=None):
                 import app.business_simulator as bs_mod
                 bs_mod._simulator_instance = None
 
-                from app.api_v2 import router
+                from app.api import router
                 from fastapi import FastAPI
                 from fastapi.testclient import TestClient
 

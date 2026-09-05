@@ -20,6 +20,7 @@
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
 | KI-015 | risk_flag 分类模型在训练集上自评分，准确率不可信 | OPEN | P1 | [详情](issues/KI-015-risk-flag-model-self-scoring.md) |
+| KI-027 | 版本/模式标记深度整治（唯一正统，去 v1/v2/v3、去 s_v2） | IN-PROGRESS | P1 | [详情](issues/KI-027-version-mode-marker-cleanup.md) |
 
 ## 已关闭问题（DONE）
 
