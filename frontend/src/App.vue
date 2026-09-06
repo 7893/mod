@@ -9,6 +9,7 @@ import {
   Fullscreen,
   Hammer,
   LayoutDashboard,
+  Minimize,
   RefreshCw,
   Rocket,
   WifiOff,
@@ -21,7 +22,7 @@ const store = useProjectStore()
 const now = ref(new Date())
 let timer = 0
 
-// 全站统一缩放骨架：唯一设计基准 1920×980（含header），全屏时 1920×1080（无header）。
+// 全站统一缩放骨架：导航始终保留，内容画布固定以 1920×980 为设计基准。
 const { scale, viewportRef, baseWidth, baseHeight } = useScaleScreen({
   baseWidth: 1920,
   baseHeight: 980,
@@ -45,23 +46,23 @@ const formattedClock = computed(() => {
 })
 
 const isFullscreen = ref(false)
-const screenHeight = computed(() => window.screen.height)
+
+const syncFullscreenState = () => {
+  isFullscreen.value = !!document.fullscreenElement
+}
 
 const toggleFullscreen = async () => {
   if (!document.fullscreenElement) {
     await document.documentElement.requestFullscreen()
-    isFullscreen.value = true
   } else {
     await document.exitFullscreen()
-    isFullscreen.value = false
   }
 }
 
 // 同步 isFullscreen 状态（ESC 退出也能感知）
 onMounted(() => {
-  document.addEventListener('fullscreenchange', () => {
-    isFullscreen.value = !!document.fullscreenElement
-  })
+  syncFullscreenState()
+  document.addEventListener('fullscreenchange', syncFullscreenState)
 })
 
 const handleManualRefresh = () => {
@@ -92,13 +93,14 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.clearInterval(timer)
+  document.removeEventListener('fullscreenchange', syncFullscreenState)
 })
 </script>
 
 <template>
   <div class="command-shell">
-    <!-- 顶部导航栏：全屏时隐藏，内容区占满整屏 -->
-    <header v-show="!isFullscreen" class="command-header">
+    <!-- 顶部导航栏：全屏模式也必须保留，保证六屏之间始终可切换 -->
+    <header class="command-header">
       <!-- 左侧：前三个菜单 -->
       <div class="header-left">
         <nav class="header-nav">
@@ -157,8 +159,9 @@ onBeforeUnmount(() => {
           <button class="header-btn" :class="{ spin: store.loading }" title="刷新数据" @click="handleManualRefresh">
             <RefreshCw :size="16" />
           </button>
-          <button class="header-btn" title="全屏展示" @click="toggleFullscreen">
-            <Fullscreen :size="16" />
+          <button class="header-btn" :title="isFullscreen ? '退出全屏' : '全屏展示'" @click="toggleFullscreen">
+            <Minimize v-if="isFullscreen" :size="16" />
+            <Fullscreen v-else :size="16" />
           </button>
         </div>
       </div>
@@ -177,7 +180,7 @@ onBeforeUnmount(() => {
         class="screen-scale-box"
         :style="{
           width: `${baseWidth}px`,
-          height: isFullscreen ? `${screenHeight}px` : `${baseHeight}px`,
+          height: `${baseHeight}px`,
           transform: `scale(${scale})`,
         }"
       >

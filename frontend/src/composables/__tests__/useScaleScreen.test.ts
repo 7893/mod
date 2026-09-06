@@ -138,18 +138,18 @@ describe('useScaleScreen', () => {
     unmount()
   })
 
-  it('uses window.screen dimensions when document is in fullscreen mode', () => {
+  it('keeps using the content viewport when document is in fullscreen mode', () => {
     const { result, unmount } = runInSetup(() =>
       useScaleScreen({
         baseWidth: 1920,
-        baseHeight: 1080,
+        baseHeight: 980,
         minScale: 0.2,
         maxScale: 2.0,
       })
     )
     const mockEl = document.createElement('div')
-    Object.defineProperty(mockEl, 'clientWidth', { value: 500, configurable: true })
-    Object.defineProperty(mockEl, 'clientHeight', { value: 300, configurable: true })
+    Object.defineProperty(mockEl, 'clientWidth', { value: 1920, configurable: true })
+    Object.defineProperty(mockEl, 'clientHeight', { value: 980, configurable: true })
     result.viewportRef.value = mockEl
 
     // Mock fullscreen
@@ -159,12 +159,11 @@ describe('useScaleScreen', () => {
       configurable: true,
       writable: true,
     })
-    Object.defineProperty(window.screen, 'width', { value: 2560, configurable: true })
-    Object.defineProperty(window.screen, 'height', { value: 1440, configurable: true })
+    Object.defineProperty(window.screen, 'width', { value: 3840, configurable: true })
+    Object.defineProperty(window.screen, 'height', { value: 2160, configurable: true })
 
     result.updateScale()
-    // 2560/1920 = 1.3333, 1440/1080 = 1.3333
-    expect(result.scale.value).toBeCloseTo(1.3333, 3)
+    expect(result.scale.value).toBe(1)
 
     // Clean up fullscreen mock
     Object.defineProperty(document, 'fullscreenElement', {
