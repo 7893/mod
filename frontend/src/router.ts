@@ -28,8 +28,8 @@ export default createRouter({
     },
     {
       path: '/d',
-      component: InsightsView,
-      meta: { title: '风险预警', screen: 'D' },
+      component: OperationsView,
+      meta: { title: '业务运营', screen: 'D' },
     },
     {
       path: '/e',
@@ -38,8 +38,8 @@ export default createRouter({
     },
     {
       path: '/f',
-      component: OperationsView,
-      meta: { title: '业务运营', screen: 'F' },
+      component: InsightsView,
+      meta: { title: '风险预警', screen: 'F' },
     },
   ],
 })
