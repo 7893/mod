@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Cpu, Sparkles } from 'lucide-vue-next'
 
-defineProps<{
+const props = defineProps<{
   model: {
     name: string
     algorithm: string
@@ -14,10 +15,22 @@ defineProps<{
   emptyLabel: string
   ready: boolean
 }>()
+
+const qualityPercent = computed(() => {
+  if (props.model.quality == null) return 0
+  return Math.max(0, Math.min(100, props.model.quality * 100))
+})
+
+const qualityLabel = computed(() => {
+  if (props.model.quality == null) return '—'
+  return props.model.target.includes('daily')
+    ? `R² ${props.model.quality.toFixed(4)}`
+    : `Acc ${(props.model.quality * 100).toFixed(1)}%`
+})
 </script>
 
 <template>
-  <div class="flex flex-col justify-between h-full min-h-0 gap-2">
+  <div class="flex flex-col h-full min-h-0 gap-2">
     <div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-1.5 min-w-0">
         <Sparkles :size="14" class="text-sky-400 flex-shrink-0" />
@@ -33,60 +46,37 @@ defineProps<{
       </span>
     </div>
 
-    <p class="text-cockpit-xs text-slate-400 leading-relaxed line-clamp-2">{{ model.description }}</p>
-
-    <div class="flex flex-col gap-1.5 p-2 rounded-xl bg-surface-veil-03 border border-surface-veil-06 text-cockpit-xs text-slate-400 flex-1 min-h-0 justify-between">
-      <div class="flex items-center justify-between gap-2">
-        <span class="flex-shrink-0">算法：</span>
-        <b class="font-mono text-slate-200 truncate text-right">{{ model.algorithm }}</b>
+    <div class="flex items-stretch gap-3 flex-1 min-h-0">
+      <div class="w-24 flex-shrink-0 rounded-lg bg-surface-veil-03 border border-surface-veil-06 p-2 flex flex-col justify-center">
+        <span class="text-cockpit-xs text-slate-500">验证质量</span>
+        <b class="font-mono text-cockpit-md text-sky-400 mt-1">{{ qualityLabel }}</b>
+        <div class="h-1 mt-2 rounded-full bg-white/5 overflow-hidden">
+          <div class="h-full rounded-full bg-sky-400" :style="{ width: `${qualityPercent}%` }" />
+        </div>
       </div>
-      <div class="flex items-center justify-between gap-2">
-        <span class="flex-shrink-0">目标：</span>
-        <code class="font-mono text-emerald-400 truncate text-right">{{ model.target }}</code>
-      </div>
-      <div v-if="model.quality != null" class="flex items-center justify-between gap-2">
-        <span class="flex-shrink-0">模型性能：</span>
-        <b class="font-mono text-sky-400 truncate text-right">
-          {{ model.target.includes('daily') ? model.quality.toFixed(4) : `${(model.quality * 100).toFixed(1)}%` }}
-          <span class="text-slate-400 font-normal">({{ model.target.includes('daily') ? 'R² 拟合优度' : '分类准确率' }})</span>
-        </b>
-      </div>
-      <div v-else class="flex items-center justify-between gap-2">
-        <span class="flex-shrink-0">模型性能：</span>
-        <b class="font-mono text-slate-400 truncate text-right">—（训练/评分未完成）</b>
-      </div>
-      <div class="pt-1 border-t border-surface-veil-06">
-        <span class="block mb-1 text-slate-500">特征维度：</span>
-        <div class="flex flex-wrap gap-1">
+      <div class="flex-1 min-w-0 flex flex-col justify-center gap-1.5 text-cockpit-xs">
+        <div class="flex items-center justify-between gap-2"><span class="text-slate-500">算法</span><b class="font-mono text-slate-200 truncate">{{ model.algorithm }}</b></div>
+        <div class="flex items-center justify-between gap-2"><span class="text-slate-500">目标</span><code class="font-mono text-emerald-400 truncate">{{ model.target }}</code></div>
+        <p class="text-slate-400 truncate">{{ model.description }}</p>
+        <div class="flex items-center gap-1 overflow-hidden">
           <span
-            v-for="feature in model.features"
+            v-for="feature in model.features.slice(0, 3)"
             :key="feature"
             class="font-mono text-cockpit-xs px-1.5 py-0.5 rounded bg-sky-950/30 text-sky-300 border border-sky-500/20"
           >
             {{ feature }}
           </span>
+          <span v-if="model.features.length > 3" class="text-slate-500 flex-shrink-0">+{{ model.features.length - 3 }}</span>
         </div>
       </div>
     </div>
 
     <div
-      v-if="!ready"
-      class="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-900/40 border border-dashed border-white/10 text-slate-500 text-cockpit-xs flex-shrink-0"
+      class="flex items-center gap-1.5 text-cockpit-xs flex-shrink-0"
+      :class="ready ? 'text-emerald-400' : 'text-slate-500'"
     >
-      <Cpu :size="15" class="opacity-50 text-slate-400" />
-      <span>{{ emptyLabel }}</span>
-    </div>
-    <div
-      v-else
-      class="flex items-center justify-between py-2 px-3 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 text-cockpit-xs flex-shrink-0"
-    >
-      <div class="flex items-center gap-1.5 min-w-0">
-        <Cpu :size="15" class="text-emerald-400 flex-shrink-0" />
-        <span class="truncate">独立测试集验证达标 · 库内推理就绪</span>
-      </div>
-      <span v-if="model.quality != null" class="font-mono font-semibold text-cockpit-xs flex-shrink-0">
-        {{ model.target.includes('daily') ? `R² = ${model.quality.toFixed(4)}` : `Acc = ${(model.quality * 100).toFixed(1)}%` }}
-      </span>
+      <Cpu :size="13" class="flex-shrink-0" />
+      <span class="truncate">{{ ready ? '独立测试集验证达标 · 库内推理就绪' : emptyLabel }}</span>
     </div>
   </div>
 </template>

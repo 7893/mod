@@ -53,6 +53,16 @@ function openLedgerWithFilter(statusFilter = '全部') {
   switchTab('ledger')
 }
 
+function handleReadinessClick(params: { name?: string }) {
+  const filters: Record<string, string> = {
+    已导入: '已上线',
+    已校验: '已上线',
+    收集中: '建设中',
+    未收集: '准备中',
+  }
+  if (params.name && filters[params.name]) openLedgerWithFilter(filters[params.name])
+}
+
 const format = (value: number | undefined) => (
   value === undefined ? '—' : new Intl.NumberFormat('zh-CN').format(value)
 )
@@ -248,10 +258,10 @@ const readinessPieOption = computed(() => ({
     radius: ['45%', '70%'],
     center: ['35%', '50%'],
     data: [
-      { value: readinessSummary.value?.imported ?? 0, name: `已导入 (${format(readinessSummary.value?.imported)})`, itemStyle: { color: chartColors.accent } },
-      { value: readinessSummary.value?.verified ?? 0, name: `已校验 (${format(readinessSummary.value?.verified)})`, itemStyle: { color: chartColors.success } },
-      { value: readinessSummary.value?.collecting ?? 0, name: `收集中 (${format(readinessSummary.value?.collecting)})`, itemStyle: { color: chartColors.warning } },
-      { value: readinessSummary.value?.notCollected ?? 0, name: `未收集 (${format(readinessSummary.value?.notCollected)})`, itemStyle: { color: chartColors.muted } },
+      { value: readinessSummary.value?.imported ?? 0, name: '已导入', itemStyle: { color: chartColors.accent } },
+      { value: readinessSummary.value?.verified ?? 0, name: '已校验', itemStyle: { color: chartColors.success } },
+      { value: readinessSummary.value?.collecting ?? 0, name: '收集中', itemStyle: { color: chartColors.warning } },
+      { value: readinessSummary.value?.notCollected ?? 0, name: '未收集', itemStyle: { color: chartColors.muted } },
     ],
     label: { show: false },
   }],
@@ -292,7 +302,7 @@ const readinessPieOption = computed(() => ({
         </div>
       </CockpitPanel>
 
-      <!-- B5: 期初数据准备度 (保留台账下钻入口与状态过滤卡片) -->
+      <!-- B5: 图表本身承担状态下钻，避免图例与按钮重复 -->
       <CockpitPanel title="期初数据准备度" zone="B5" subtitle="单位数据状态">
         <template #actions>
           <button
@@ -305,45 +315,8 @@ const readinessPieOption = computed(() => ({
           </button>
         </template>
         <div class="flex h-full min-h-0 flex-col gap-2">
-          <VChart class="min-h-0 flex-1" :option="readinessPieOption" autoresize />
-          <div class="grid grid-cols-2 gap-2 text-cockpit-sm">
-            <button
-              type="button"
-              class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5 text-left hover:bg-white/5 transition-colors cursor-pointer"
-              title="点击查看已导入单位台账"
-              @click="openLedgerWithFilter('已上线')"
-            >
-              <span class="text-slate-400">已导入</span>
-              <b class="font-mono text-sky-400">{{ format(readinessSummary?.imported) }} 家</b>
-            </button>
-            <button
-              type="button"
-              class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5 text-left hover:bg-white/5 transition-colors cursor-pointer"
-              title="点击查看已校验单位台账"
-              @click="openLedgerWithFilter('已上线')"
-            >
-              <span class="text-slate-400">已校验</span>
-              <b class="font-mono text-emerald-400">{{ format(readinessSummary?.verified) }} 家</b>
-            </button>
-            <button
-              type="button"
-              class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5 text-left hover:bg-white/5 transition-colors cursor-pointer"
-              title="点击查看收集中单位台账"
-              @click="openLedgerWithFilter('建设中')"
-            >
-              <span class="text-slate-400">收集中</span>
-              <b class="font-mono text-amber-400">{{ format(readinessSummary?.collecting) }} 家</b>
-            </button>
-            <button
-              type="button"
-              class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5 text-left hover:bg-white/5 transition-colors cursor-pointer"
-              title="点击查看未收集单位台账"
-              @click="openLedgerWithFilter('准备中')"
-            >
-              <span class="text-slate-400">未收集</span>
-              <b class="font-mono text-slate-300">{{ format(readinessSummary?.notCollected) }} 家</b>
-            </button>
-          </div>
+          <VChart class="min-h-0 flex-1 cursor-pointer" :option="readinessPieOption" autoresize @click="handleReadinessClick" />
+          <p class="text-center text-cockpit-xs text-slate-500 flex-shrink-0">点击扇区，按状态进入单位台账</p>
         </div>
       </CockpitPanel>
     </main>

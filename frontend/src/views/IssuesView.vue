@@ -216,8 +216,8 @@ const paginatedTableUnits = computed(() => {
     </div>
 
     <!-- 下部：E4 用趋势与柱图替代 8 张横向小卡 -->
-    <CockpitPanel title="各批次合规监督概览" zone="E4" subtitle="8 批次合规率与重点监督单位分布" class="flex-shrink-0">
-      <VChart class="w-full h-28 min-h-0" :option="batchComplianceOption" autoresize />
+    <CockpitPanel title="各批次合规监督概览" zone="E4" subtitle="8 批次合规率与高风险单位分布" class="h-52 flex-shrink-0">
+      <VChart class="w-full h-full min-h-0" :option="batchComplianceOption" autoresize />
     </CockpitPanel>
 
     <!-- 底部：E5 重点监督单位台账与下钻 -->

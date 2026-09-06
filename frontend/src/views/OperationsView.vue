@@ -507,33 +507,28 @@ const qualityBarOption = computed(() => {
 
       <!-- D7: 数据质量金标准核验 -->
       <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="核心业务约束与金标准稽核规则 (真实核验 0 异常如实展示)" class="col-span-2">
-        <div class="grid grid-cols-12 gap-3 h-full min-h-0 items-center">
-          <!-- 左侧：4 大金标准规则核验卡 -->
-          <div class="col-span-5 grid grid-cols-2 gap-2 h-full min-h-0">
+        <div class="flex flex-col gap-2 h-full min-h-0">
+          <!-- 四项规则压缩成单行状态带，把主要面积交给趋势比较 -->
+          <div class="grid grid-cols-4 gap-2 flex-shrink-0">
             <div
               v-for="item in qualityAuditList"
               :key="item.id"
-              class="p-2 rounded-xl bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between"
+              class="px-2.5 py-2 rounded-lg bg-surface-veil-03 border border-surface-veil-06 min-w-0"
             >
-              <div class="flex items-center justify-between">
-                <span class="text-cockpit-xs text-slate-300 font-medium">{{ item.rule }}</span>
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-cockpit-xs text-slate-300 font-medium truncate">{{ item.rule }}</span>
                 <span class="font-mono text-cockpit-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   {{ item.errors === 0 ? '0 异常' : (item.errors != null ? `${item.errors} 异常` : '—') }}
                 </span>
               </div>
-              <div class="flex items-baseline justify-between mt-1 text-cockpit-xs">
-                <span class="text-slate-500">稽核样本</span>
-                <span class="font-mono text-slate-300">{{ format(item.total) }} {{ item.unit }}</span>
-              </div>
-              <div class="flex items-center justify-between mt-0.5 text-cockpit-xs text-slate-400">
-                <span>达标率</span>
-                <b class="font-mono text-emerald-400 font-semibold">{{ item.rate != null ? `${item.rate}%` : '—' }}</b>
+              <div class="flex items-center justify-between mt-1 text-cockpit-xs">
+                <span class="font-mono text-slate-500">{{ format(item.total) }} {{ item.unit }}</span>
+                <b class="font-mono text-emerald-400">{{ item.rate != null ? `${item.rate}%` : '—' }}</b>
               </div>
             </div>
           </div>
 
-          <!-- 右侧：金标准合规通过率横向对比柱状图 -->
-          <div class="col-span-7 h-full min-h-0 flex flex-col justify-center">
+          <div class="flex-1 min-h-0">
             <VChart class="w-full h-full min-h-0" :option="qualityBarOption" autoresize />
           </div>
         </div>

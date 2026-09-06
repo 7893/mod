@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart, PieChart } from 'echarts/charts'
+import { GridComponent, LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components'
 import {
   Database,
   FileCheck2,
@@ -15,14 +20,17 @@ import CockpitPanel from '../components/CockpitPanel.vue'
 import OverviewTrendChart from '../components/OverviewTrendChart.vue'
 import AnimatedProgress from '../components/AnimatedProgress.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
-import StatList from '../components/blocks/StatList.vue'
 import StatusList from '../components/blocks/StatusList.vue'
-import type { MetricItem, StatRow, StatusRow } from '../components/blocks/types.ts'
+import type { MetricItem, StatusRow } from '../components/blocks/types.ts'
+import { buildBatchProgressSeries } from '../charts/panelData.ts'
+import { createBatchProgressOption, createProvinceProfileOption } from '../charts/panelOptions.ts'
 import { useLiveProjection } from '../composables/useLiveProjection.ts'
 import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
 import { formatPercent } from '../formatters/metrics.ts'
 import { useLiveProjectionStore } from '../stores/liveProjection.ts'
 import { useProjectStore } from '../stores/project.ts'
+
+use([CanvasRenderer, BarChart, PieChart, GridComponent, LegendComponent, TitleComponent, TooltipComponent])
 
 const store = useProjectStore()
 const liveStore = useLiveProjectionStore()
@@ -92,12 +100,10 @@ const selectedProvinceData = computed(() => {
   }
 })
 
-const detailItems = computed<MetricItem[]>(() => [
-  { label: '纳入单位', value: selectedProvinceData.value.total },
-  { label: '正式上线', value: selectedProvinceData.value.launched, tone: 'success' },
-  { label: '双轨运行', value: selectedProvinceData.value.dual, tone: 'accent' },
-  { label: '建设进度', value: selectedProvinceData.value.progress, unit: '%' },
-])
+const provinceProfileOption = computed(() => createProvinceProfileOption(selectedProvinceData.value.progress))
+const batchProgressOption = computed(() => createBatchProgressOption(
+  buildBatchProgressSeries(store.snapshot.rollout || []),
+))
 
 const opsItems = computed<MetricItem[]>(() => [
   {
@@ -130,35 +136,6 @@ const riskRows = computed<StatusRow[]>(() =>
     dot: true,
     tone: item.level === '高' ? 'danger' : (item.status === '正常' ? 'success' : 'warning'),
   })),
-)
-
-const BATCH_STAGES: Record<number, string> = {
-  1: '工序7 · 标杆示范',
-  2: '工序6 · 稳态优化',
-  3: '工序5 · 季结巡检',
-  4: '工序4 · 首月巩固',
-  5: '工序3 · 脱轨初投',
-  6: '工序2 · 双轨冲刺',
-  7: '工序1 · 联调赋能',
-  8: '工序0 · 动态储备',
-}
-
-const batchRows = computed<StatRow[]>(() =>
-  (store.snapshot.rollout || []).map((batch) => {
-    const stage = BATCH_STAGES[batch.batchId] || (batch as any).stageLabel || '建设推进'
-    const isUnstarted = batch.batchId === 8
-    return {
-      id: batch.name,
-      label: batch.name,
-      sub: isUnstarted ? `${stage} · 待启动` : (batch.dual > 0 ? `${stage} · ${batch.dual}家双轨` : stage),
-      value: isUnstarted ? 0 : batch.launchedPct,
-      unit: '%',
-      progress: isUnstarted ? 0 : batch.constructionPct,
-      progressLabel: isUnstarted ? '未开始 0%' : `建设 ${batch.constructionPct}%`,
-      progressAlt: isUnstarted ? 0 : batch.launchedPct,
-      progressAltLabel: isUnstarted ? '待纳管' : `上线 ${batch.launchedPct}%`,
-    }
-  }),
 )
 
 const chooseProvince = (name: string) => {
@@ -226,15 +203,20 @@ const chooseProvince = (name: string) => {
                   返回全国 ✕
                 </button>
                 <button
-                  class="text-cockpit-sm font-medium text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-0.5 px-2 py-0.5 rounded-lg bg-sky-500/10 border border-sky-500/20 cursor-pointer"
+                  class="text-cockpit-sm font-medium text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1 px-2 py-0.5 rounded-lg bg-sky-500/10 border border-sky-500/20 cursor-pointer"
                   @click="router.push('/c')"
                 >
-                  单位台账 <ArrowUpRight :size="12" />
+                  台账 <ArrowUpRight :size="12" />
                 </button>
               </div>
             </template>
-            <div class="bg-surface-veil-03 border border-surface-veil-06 rounded-xl p-2">
-              <MetricGrid :items="detailItems" :columns="2" size="sm" />
+            <div class="grid grid-cols-2 items-center gap-2 h-24 bg-surface-veil-03 border border-surface-veil-06 rounded-xl p-2">
+              <VChart :option="provinceProfileOption" autoresize class="h-full min-w-0" />
+              <div class="grid grid-rows-3 h-full divide-y divide-white/5 min-w-0">
+                <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">纳入单位</span><b class="font-mono text-slate-100">{{ selectedProvinceData.total }}</b></div>
+                <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">正式上线</span><b class="font-mono text-emerald-400">{{ selectedProvinceData.launched }}</b></div>
+                <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">双轨运行</span><b class="font-mono text-sky-400">{{ selectedProvinceData.dual }}</b></div>
+              </div>
             </div>
           </CockpitPanel>
 
@@ -245,13 +227,7 @@ const chooseProvince = (name: string) => {
             subtitle="全网8批工序推进"
             class="flex-1 min-h-0"
           >
-            <div class="flex flex-col h-full min-h-0 overflow-hidden">
-              <div class="text-cockpit-sm font-medium text-slate-400 mb-1 flex items-center justify-between flex-shrink-0">
-                <span>批次演进状态</span>
-                <span class="text-slate-500 font-mono">建设 / 上线</span>
-              </div>
-              <StatList :rows="batchRows" density="dense" scroll class="flex-1 min-h-0 pr-1" />
-            </div>
+            <VChart :option="batchProgressOption" autoresize class="w-full h-full min-h-0" />
           </CockpitPanel>
         </div>
 
