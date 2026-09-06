@@ -199,8 +199,8 @@ const paginatedTableUnits = computed(() => {
       <MetricGrid :items="e1SummaryItems" variant="inline" :columns="4" />
     </CockpitPanel>
 
-    <!-- 中部：E2 风险维度分布 + E3 水位构成 -->
-    <div class="grid grid-cols-issues-top gap-2.5 min-h-[220px] max-h-[250px] flex-shrink-0">
+    <!-- 中部：E2 风险维度分布 + E3 水位构成 (弹性优先，Guardrail 扩大为 min-h-[200px] max-h-[300px]，E-2) -->
+    <div class="grid grid-cols-issues-top gap-2.5 min-h-[200px] max-h-[300px] flex-1">
       <CockpitPanel title="单位级合规风险标签分布" zone="E2" subtitle="挂账/越级/预算/票据/非工作操作 5 大维度">
         <VChart class="w-full h-full min-h-0" :option="tagBarOption" autoresize />
       </CockpitPanel>
@@ -212,13 +212,13 @@ const paginatedTableUnits = computed(() => {
       </CockpitPanel>
     </div>
 
-    <!-- 下部：E4 批次合规监督态势 -->
+    <!-- 下部：E4 批次合规监督态势 (8批次全部一行呈现，精简核心数据，窗口缩小可横滑，E-1) -->
     <CockpitPanel title="各批次合规监督概览" zone="E4" subtitle="8 批次合规率与重点监督单位分布" class="flex-shrink-0">
-      <div class="grid grid-cols-4 gap-2.5 min-h-0">
+      <div class="flex gap-2.5 overflow-x-auto min-h-0">
         <div
           v-for="b in batchComplianceStats"
           :key="b.batchId"
-          class="flex flex-col justify-between p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-h-0"
+          class="flex-1 min-w-[110px] flex flex-col justify-between p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-h-0 flex-shrink-0"
         >
           <div class="flex items-center justify-between gap-1 mb-1.5">
             <b class="text-cockpit-md font-semibold text-slate-100 truncate">{{ b.name }}</b>
@@ -228,15 +228,13 @@ const paginatedTableUnits = computed(() => {
                 ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30'
                 : 'bg-amber-950/40 text-amber-400 border-amber-500/30'"
             >
-              合规率 {{ b.complianceRate }}%
+              {{ b.complianceRate }}%
             </span>
           </div>
-          <div class="flex items-center justify-between gap-1.5 text-cockpit-xs text-slate-400">
-            <span>纳管 {{ b.total }} 家</span>
-            <div class="flex items-center gap-2">
-              <span class="text-amber-400">监督 {{ b.problemCount }}</span>
-              <span v-if="b.highCount > 0" class="text-rose-400 font-medium">高危 {{ b.highCount }}</span>
-            </div>
+          <div class="flex items-center justify-between gap-1 text-cockpit-xs text-slate-400">
+            <span>纳管 <b class="font-mono text-slate-200">{{ b.total }}</b></span>
+            <span class="text-amber-400">监督 <b class="font-mono">{{ b.problemCount }}</b></span>
+            <span v-if="b.highCount > 0" class="text-rose-400 font-medium">高危 <b class="font-mono">{{ b.highCount }}</b></span>
           </div>
         </div>
       </div>
