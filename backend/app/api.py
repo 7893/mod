@@ -256,6 +256,16 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
         return base_insights
 
 
+@router.get("/insights/risk-explanation/{org_id}")
+def insights_risk_explanation(org_id: int, conn: Connection | None = Depends(connection)) -> dict:
+    """
+    返回指定单位的 HeatWave AutoML SHAP 风险归因与贡献分解。
+    只读查询，零外部调用，物理数据不出库。
+    """
+    adapter = HeatWaveMLAdapter(conn)
+    return adapter.explain_risk(org_id)
+
+
 @router.post("/insights/generate")
 def insights_generate(conn: Connection | None = Depends(connection)) -> dict:
     """

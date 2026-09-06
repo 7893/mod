@@ -321,6 +321,27 @@ def train_heatwave_models(conn: Any) -> dict[str, str]:
     logger.info("Classifier %s trained in %.2f seconds", cls_handle, cls_duration)
     models[cls_handle] = "trained"
 
+    # 1.1 Train SHAP explainer for MOD_RISK_CLASSIFIER
+    logger.info("Training SHAP explainer for %s...", cls_handle)
+    try:
+        conn.execute(text(f"CALL sys.ML_MODEL_LOAD('{cls_handle}', NULL)"))
+        conn.execute(
+            text(
+                f"""
+                CALL sys.ML_EXPLAIN(
+                    'mod.ml_feat_risk_train',
+                    'risk_flag',
+                    '{cls_handle}',
+                    JSON_OBJECT('prediction_explainer', 'shap')
+                )
+                """
+            )
+        )
+        conn.commit()
+        logger.info("SHAP explainer for %s trained successfully", cls_handle)
+    except Exception as ex:
+        logger.warning("SHAP explainer training notice/warning: %s", ex)
+
     # 2. Train Regression Model: MOD_REGRESSION_MODEL
     reg_handle = "MOD_REGRESSION_MODEL"
     logger.info("Training %s on `mod`.ml_feat_doc_delta_train...", reg_handle)
