@@ -14,11 +14,29 @@ import {
   Workflow,
   XCircle,
 } from 'lucide-vue-next'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart, PieChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
 import type { MetricItem } from '../components/blocks/types.ts'
 import { formatCount, formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
+import {
+  chartPalette,
+  chartInk,
+  chartTooltip,
+  valueAxis,
+  calmAnimation,
+} from '../charts/theme.ts'
+import {
+  calcDualRunConsistency,
+  buildQualityAuditList,
+} from '../utils/qualityMetrics.ts'
+
+use([CanvasRenderer, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent])
 
 const store = useProjectStore()
 const format = formatCount
@@ -35,13 +53,6 @@ const formatWithUnit = (value: number | null | undefined, unit: string) => {
   const s = format(value)
   return s === '—' ? '—' : `${s} ${unit}`
 }
-
-const qualityItems: MetricItem[] = [
-  { label: '借贷平衡', value: '已纳入', unit: '校验规则', icon: ShieldCheck, tone: 'success', hint: '借贷平衡规则纳入封版质量校验' },
-  { label: '时间顺序', value: '已纳入', unit: '校验规则', icon: ShieldCheck, tone: 'success', hint: '核验单据提交、审批、制证时间戳顺序' },
-  { label: '孤儿链路', value: '已纳入', unit: '校验规则', icon: ShieldCheck, tone: 'success', hint: '单据凭证关系纳入孤儿链路校验' },
-  { label: '状态演进', value: '已纳入', unit: '快照追踪', icon: ShieldCheck, tone: 'success', hint: '按单位历史快照追踪全周期状态变化' },
-]
 
 const ops = computed(() => store.snapshot.operations || {
   businessDocument: 5050416,
@@ -116,6 +127,185 @@ const integrationBars = computed(() => {
     { label: '成功入账', value: integrationSuccessCount.value, width: (integrationSuccessCount.value * 100) / total, tone: 'success' },
     { label: '异常结果', value: integrationFailedCount.value, width: (integrationFailedCount.value * 100) / total, tone: 'danger' },
   ]
+})
+
+const dualRunStats = computed(() => {
+  return calcDualRunConsistency(
+    ops.value.dualRunResult,
+    ops.value.dualRunConsistent,
+    ops.value.dualRunInconsistent,
+  )
+})
+
+const dualRunChartOption = computed(() => {
+  const stats = dualRunStats.value
+  if (!stats) return null
+
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'item',
+      ...chartTooltip,
+      formatter: (params: any) => {
+        return `
+          <div style="font-size: 12px; line-height: 1.5;">
+            <div style="font-weight: 600; color: ${chartInk.textPrimary}; margin-bottom: 4px;">${params.seriesName}</div>
+            <div style="color: ${chartInk.textMuted};">${params.marker} ${params.name}: <b style="color: ${chartInk.textPrimary}; font-family: monospace;">${Number(params.value).toLocaleString()} 笔</b> (${params.percent}%)</div>
+          </div>
+        `
+      },
+    },
+    legend: {
+      orient: 'vertical',
+      right: 8,
+      top: 'center',
+      textStyle: { color: chartInk.textMuted, fontSize: 11 },
+      itemWidth: 8,
+      itemHeight: 8,
+      itemGap: 10,
+    },
+    title: {
+      text: formatPercent(stats.consistencyPct),
+      subtext: '核对一致率',
+      left: '34%',
+      top: '36%',
+      textAlign: 'center',
+      textStyle: {
+        color: chartInk.textPrimary,
+        fontSize: 16,
+        fontWeight: 'bold',
+        fontFamily: 'monospace',
+      },
+      subtextStyle: {
+        color: chartInk.textMuted,
+        fontSize: 10,
+      },
+    },
+    series: [
+      {
+        name: '双轨核对结果',
+        type: 'pie',
+        radius: ['52%', '76%'],
+        center: ['34%', '52%'],
+        avoidLabelOverlap: false,
+        label: { show: false },
+        emphasis: { scale: false },
+        data: [
+          {
+            value: stats.consistent,
+            name: '核对一致',
+            itemStyle: { color: chartPalette.success },
+          },
+          {
+            value: stats.inconsistent,
+            name: '差异待核',
+            itemStyle: { color: chartPalette.warning },
+          },
+        ],
+      },
+    ],
+  }
+})
+
+const qualityAuditList = computed(() => {
+  return buildQualityAuditList(
+    store.snapshot.quality,
+    ops.value,
+    store.snapshot.overview.orgTotal,
+  )
+})
+
+const qualityBarOption = computed(() => {
+  const list = [...qualityAuditList.value].reverse()
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      ...chartTooltip,
+      formatter: (params: any) => {
+        const p = Array.isArray(params) ? params[0] : params
+        const raw = list[p?.dataIndex]
+        if (!raw) return ''
+        return `
+          <div style="font-size: 12px; line-height: 1.6;">
+            <div style="font-weight: 600; color: ${chartInk.textPrimary}; margin-bottom: 4px;">${raw.rule}</div>
+            <div style="color: ${chartInk.textMuted};">稽核规模: <b style="color: ${chartInk.textPrimary}; font-family: monospace;">${format(raw.total)} ${raw.unit}</b></div>
+            <div style="color: ${chartInk.textMuted};">检出异常: <b style="color: ${raw.errors === 0 ? chartPalette.success : chartPalette.warning}; font-family: monospace;">${raw.errors ?? 0} 笔</b></div>
+            <div style="color: ${chartInk.textMuted};">合规达成率: <b style="color: ${chartPalette.success}; font-family: monospace;">${raw.rate != null ? `${raw.rate}%` : '—'}</b></div>
+            <div style="color: ${chartInk.textMuted}; margin-top: 4px; border-top: 1px dashed ${chartInk.borderSoft}; padding-top: 4px;">${raw.hint}</div>
+          </div>
+        `
+      },
+    },
+    grid: {
+      top: 10,
+      bottom: 20,
+      left: 80,
+      right: 120,
+      containLabel: true,
+    },
+    xAxis: {
+      ...valueAxis,
+      max: 100,
+      splitNumber: 4,
+      axisLabel: {
+        color: chartInk.textMuted,
+        fontSize: 10,
+        fontFamily: 'monospace',
+        formatter: '{value}%',
+      },
+      splitLine: {
+        lineStyle: {
+          color: chartInk.borderSoft,
+          type: 'dashed',
+        },
+      },
+    },
+    yAxis: {
+      type: 'category',
+      data: list.map((i) => i.rule),
+      axisLabel: {
+        color: chartInk.textMuted,
+        fontSize: 11,
+      },
+      axisTick: { show: false },
+      axisLine: {
+        lineStyle: { color: chartInk.border },
+      },
+    },
+    series: [
+      {
+        name: '合规率',
+        type: 'bar',
+        barWidth: 12,
+        data: list.map((item) => ({
+          value: item.rate ?? 100,
+          itemStyle: {
+            borderRadius: [0, 4, 4, 0],
+            color: item.status === 'pass' ? chartPalette.success : chartPalette.warning,
+          },
+        })),
+        label: {
+          show: true,
+          position: 'right',
+          color: chartPalette.success,
+          fontFamily: 'monospace',
+          fontSize: 11,
+          fontWeight: 'bold',
+          formatter: (params: any) => {
+            const raw = list[params.dataIndex]
+            return `${params.value}% (${raw?.errors ?? 0}异常)`
+          },
+        },
+        showBackground: true,
+        backgroundStyle: {
+          color: 'rgba(255, 255, 255, 0.03)',
+          borderRadius: [0, 4, 4, 0],
+        },
+      },
+    ],
+  }
 })
 </script>
 
@@ -279,30 +469,71 @@ const integrationBars = computed(() => {
 
       <!-- D6: 双轨运行核对 -->
       <CockpitPanel title="双轨运行核对" zone="D6" subtitle="新老系统一致性对账">
-        <div class="flex flex-col justify-between h-full min-h-0 gap-2.5">
-          <div class="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06">
+        <div class="flex flex-col justify-between h-full min-h-0 gap-2">
+          <!-- 上部指标概要 -->
+          <div class="grid grid-cols-3 gap-2 pb-1.5 border-b border-surface-veil-06">
             <div class="flex flex-col">
               <span class="text-cockpit-xs text-slate-400">核对总笔数</span>
-              <b class="font-mono text-cockpit-lg font-bold text-slate-100 mt-1">{{ format(ops.dualRunResult) }}</b>
+              <b class="font-mono text-cockpit-md font-bold text-slate-100 mt-0.5">{{ format(ops.dualRunResult) }}</b>
             </div>
             <div class="flex flex-col">
               <span class="text-cockpit-xs text-slate-400">一致笔数</span>
-              <b class="font-mono text-cockpit-lg font-bold text-emerald-400 mt-1">{{ format(ops.dualRunConsistent) }}</b>
+              <b class="font-mono text-cockpit-md font-bold text-emerald-400 mt-0.5">{{ format(ops.dualRunConsistent) }}</b>
             </div>
             <div class="flex flex-col">
-              <span class="text-cockpit-xs text-slate-400">不一致</span>
-              <b class="font-mono text-cockpit-lg font-bold text-amber-400 mt-1">{{ formatWithUnit(ops.dualRunInconsistent, '笔') }}</b>
+              <span class="text-cockpit-xs text-slate-400">差异待核</span>
+              <b class="font-mono text-cockpit-md font-bold text-amber-400 mt-0.5">{{ formatWithUnit(ops.dualRunInconsistent, '笔') }}</b>
             </div>
           </div>
-          <p class="text-cockpit-xs text-slate-400 px-1">
-            核对一致率 <span class="font-mono font-semibold text-slate-200">{{ formatPercent(ops.dualRunConsistencyPct) }}</span>，仅展示当前数据库汇总结果
-          </p>
+
+          <!-- 中部环形图可视化 (撑起格子，消除空旷感) -->
+          <div class="flex-1 min-h-0 w-full flex items-center justify-center">
+            <VChart v-if="dualRunChartOption" class="w-full h-full min-h-0" :option="dualRunChartOption" autoresize />
+            <div v-else class="flex flex-col items-center justify-center h-full text-slate-500 text-cockpit-xs">
+              <span>当前快照未提供双轨明细</span>
+            </div>
+          </div>
+
+          <!-- 底部口径提示 -->
+          <div class="flex items-center justify-between pt-1 border-t border-surface-veil-06 text-cockpit-xs text-slate-500">
+            <span>并行核对门禁 95.0%</span>
+            <span class="font-mono text-slate-400">一致率 {{ formatPercent(ops.dualRunConsistencyPct) }}</span>
+          </div>
         </div>
       </CockpitPanel>
 
       <!-- D7: 数据质量金标准核验 -->
-      <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="核心业务约束与稽核规则" class="col-span-2">
-        <MetricGrid :items="qualityItems" :columns="4" size="sm" fill />
+      <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="核心业务约束与金标准稽核规则 (真实核验 0 异常如实展示)" class="col-span-2">
+        <div class="grid grid-cols-12 gap-3 h-full min-h-0 items-center">
+          <!-- 左侧：4 大金标准规则核验卡 -->
+          <div class="col-span-5 grid grid-cols-2 gap-2 h-full min-h-0">
+            <div
+              v-for="item in qualityAuditList"
+              :key="item.id"
+              class="p-2 rounded-xl bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-cockpit-xs text-slate-300 font-medium">{{ item.rule }}</span>
+                <span class="font-mono text-cockpit-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  {{ item.errors === 0 ? '0 异常' : (item.errors != null ? `${item.errors} 异常` : '—') }}
+                </span>
+              </div>
+              <div class="flex items-baseline justify-between mt-1 text-cockpit-xs">
+                <span class="text-slate-500">稽核样本</span>
+                <span class="font-mono text-slate-300">{{ format(item.total) }} {{ item.unit }}</span>
+              </div>
+              <div class="flex items-center justify-between mt-0.5 text-cockpit-xs text-slate-400">
+                <span>达标率</span>
+                <b class="font-mono text-emerald-400 font-semibold">{{ item.rate != null ? `${item.rate}%` : '—' }}</b>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧：金标准合规通过率横向对比柱状图 -->
+          <div class="col-span-7 h-full min-h-0 flex flex-col justify-center">
+            <VChart class="w-full h-full min-h-0" :option="qualityBarOption" autoresize />
+          </div>
+        </div>
       </CockpitPanel>
     </div>
   </div>
