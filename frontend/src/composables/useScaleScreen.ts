@@ -15,11 +15,8 @@ export interface ScaleScreenOptions {
  * 以 baseWidth×baseHeight 为唯一设计基准，用 GPU transform: scale 等比映射到任意视口。
  * 「屏」的分辨率差异全部由这里的等比缩放兜住；窗体内部的疏密由设计契约在基准尺寸上定死。
  *
- * 全屏处理说明：
- * - 浏览器进入全屏时触发 fullscreenchange 而非 resize。
- * - 全屏后 document.documentElement 变为全屏元素，command-main 的 clientHeight
- *   依赖 dvh/vh 重算，在部分浏览器里存在单帧延迟。
- * - 全屏模式下直接用 window.screen.width/height 避免延迟，减去 header 56px 即可用高度。
+ * 全屏模式：App.vue 隐藏 header，command-main 占满整屏。
+ * 此时直接用 window.screen.width/height 计算，不再减 header 高度。
  */
 export function useScaleScreen(options: ScaleScreenOptions = {}) {
   const { baseWidth = 1920, baseHeight = 980, minScale = 0.55, maxScale = 1.35 } = options
@@ -34,10 +31,10 @@ export function useScaleScreen(options: ScaleScreenOptions = {}) {
     let h: number
 
     if (document.fullscreenElement) {
-      // 全屏模式：clientWidth/Height 依赖视口单位重算，部分浏览器有单帧延迟。
-      // 直接读物理屏幕尺寸，减去固定 header 高度 56px，结果立即可用。
+      // 全屏模式：header 已隐藏，content-main 占满物理屏幕。
+      // 直接用物理屏幕尺寸，不减 header。
       w = window.screen.width
-      h = window.screen.height - 56
+      h = window.screen.height
     } else {
       // 普通模式：command-main 内容盒（不含滚动条与 padding）。
       w = el.clientWidth
@@ -49,18 +46,19 @@ export function useScaleScreen(options: ScaleScreenOptions = {}) {
     scale.value = Math.max(minScale, Math.min(maxScale, fit))
   }
 
-  let resizeObserver: ResizeObserver | null = null
   const handleFullscreenChange = () => {
     // fullscreenchange 触发时布局可能尚未稳定，等下一帧再算。
     requestAnimationFrame(updateScale)
   }
+
+  let resizeObserver: ResizeObserver | null = null
 
   onMounted(() => {
     updateScale()
     window.addEventListener('resize', updateScale)
     document.addEventListener('fullscreenchange', handleFullscreenChange)
     if (viewportRef.value) {
-      resizeObserver = new ResizeObserver(() => updateScale())
+      resizeObserver = new ResizeObserver(updateScale)
       resizeObserver.observe(viewportRef.value)
     }
   })

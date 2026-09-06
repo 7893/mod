@@ -21,7 +21,7 @@ const store = useProjectStore()
 const now = ref(new Date())
 let timer = 0
 
-// 全站统一缩放骨架：唯一设计基准 1920×980，六屏共用同一张画布。
+// 全站统一缩放骨架：唯一设计基准 1920×980（含header），全屏时 1920×1080（无header）。
 const { scale, viewportRef, baseWidth, baseHeight } = useScaleScreen({
   baseWidth: 1920,
   baseHeight: 980,
@@ -44,10 +44,25 @@ const formattedClock = computed(() => {
   return `${map.year}-${map.month}-${map.day} ${map.hour}:${map.minute}:${map.second}`
 })
 
+const isFullscreen = ref(false)
+const screenHeight = computed(() => window.screen.height)
+
 const toggleFullscreen = async () => {
-  if (!document.fullscreenElement) await document.documentElement.requestFullscreen()
-  else await document.exitFullscreen()
+  if (!document.fullscreenElement) {
+    await document.documentElement.requestFullscreen()
+    isFullscreen.value = true
+  } else {
+    await document.exitFullscreen()
+    isFullscreen.value = false
+  }
 }
+
+// 同步 isFullscreen 状态（ESC 退出也能感知）
+onMounted(() => {
+  document.addEventListener('fullscreenchange', () => {
+    isFullscreen.value = !!document.fullscreenElement
+  })
+})
 
 const handleManualRefresh = () => {
   void store.refresh(false)
@@ -82,8 +97,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="command-shell">
-    <!-- 顶部导航栏 -->
-    <header class="command-header">
+    <!-- 顶部导航栏：全屏时隐藏，内容区占满整屏 -->
+    <header v-show="!isFullscreen" class="command-header">
       <!-- 左侧：前三个菜单 -->
       <div class="header-left">
         <nav class="header-nav">
@@ -156,13 +171,13 @@ onBeforeUnmount(() => {
       <button @click="handleManualRefresh">重试</button>
     </div>
 
-    <!-- 主内容区：统一缩放视口，RouterView 内容落在固定 1920×980 画布上等比缩放 -->
+    <!-- 主内容区：统一缩放视口，RouterView 内容落在固定画布上等比缩放 -->
     <main ref="viewportRef" class="command-main">
       <div
         class="screen-scale-box"
         :style="{
           width: `${baseWidth}px`,
-          height: `${baseHeight}px`,
+          height: isFullscreen ? `${screenHeight}px` : `${baseHeight}px`,
           transform: `scale(${scale})`,
         }"
       >
