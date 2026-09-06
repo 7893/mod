@@ -74,7 +74,7 @@
 
 硬约束全绿：0 手写 `<style>`、0 arbitrary values、全用 CockpitPanel、A屏381行、B屏364行、make check 115 passed。
 
-### 第二批（C屏 + E屏）——已完成改造与测试门禁，等待主控验收（2026-09-06）
+### 第二批（C屏 + E屏）——已通过主控验收（2026-09-06）
 
 | 改动项 | 提交 | 状态 |
 |---|---|---|
@@ -86,4 +86,4 @@
 
 硬约束全绿：0 手写 `<style>`、0 arbitrary values、全用 CockpitPanel、C屏298行、E屏373行、make check 115 passed。
 
-### 第三批（D屏 + F屏）——待排
+### 第三批（D屏 + F屏）——派单已写，等待 agy 执行（2026-09-06）
