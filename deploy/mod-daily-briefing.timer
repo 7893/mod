@@ -1,0 +1,10 @@
+[Unit]
+Description=MOD Daily Command Briefing Timer (HKT 00:30, after retrain)
+PartOf=mod-daily-briefing.service
+
+[Timer]
+OnCalendar=*-*-* 00:30:00 Asia/Hong_Kong
+Persistent=true
+
+[Install]
+WantedBy=timers.target

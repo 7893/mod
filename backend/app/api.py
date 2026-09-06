@@ -311,6 +311,19 @@ def insights_latest() -> dict:
         }
 
 
+@router.get("/insights/briefing")
+def insights_briefing(conn: Connection | None = Depends(connection)) -> dict:
+    """
+    返回最新一条每日指挥部决策简报（只读，零外部请求）。
+    由后台定时任务生成入库，大屏直接展示；无简报时返回 status=no_briefing。
+    """
+    try:
+        from .services.daily_briefing import get_latest
+        return get_latest(conn)
+    except Exception as e:
+        return {"status": "no_briefing", "message": f"服务端错误：{e}"}
+
+
 @router.get("/operations/summary")
 def operations_summary(conn: Connection | None = Depends(connection)) -> dict:
     snap = dashboard_snapshot(conn)
