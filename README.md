@@ -33,7 +33,7 @@ MOD 是一个面向**业务系统建设与推广管控**的领导驾驶舱大屏
                                   → mod-simulator（后台常驻，持续写入）
 ```
 
-- 生产与源码工作区同机（见 `docs/decisions/0006-single-host-consolidation.md`）
+- 生产与源码工作区同机（见 `docs/decisions/0006-生产与工作区合并到单一运行主机.md`）
 - 前后端均通过软链发布隔离（`frontend/current`、`backend/current` → `releases/<ts>/`），
   工作区修改不影响生产，发布由主控运行 `scripts/project/publish.sh` 原子切换
 - 连接异常时前端自动降级为内置模拟快照
