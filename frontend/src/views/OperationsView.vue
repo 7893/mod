@@ -231,7 +231,7 @@ const qualityBarOption = computed(() => {
           <div style="font-size: 12px; line-height: 1.6;">
             <div style="font-weight: 600; color: ${chartInk.textPrimary}; margin-bottom: 4px;">${raw.rule}</div>
             <div style="color: ${chartInk.textMuted};">稽核规模: <b style="color: ${chartInk.textPrimary}; font-family: monospace;">${format(raw.total)} ${raw.unit}</b></div>
-            <div style="color: ${chartInk.textMuted};">检出异常: <b style="color: ${raw.errors === 0 ? chartPalette.success : chartPalette.warning}; font-family: monospace;">${raw.errors ?? 0} 笔</b></div>
+            <div style="color: ${chartInk.textMuted};">检出异常: <b style="color: ${raw.errors === 0 ? chartPalette.success : chartPalette.warning}; font-family: monospace;">${raw.errors != null ? `${raw.errors} 笔` : '—'}</b></div>
             <div style="color: ${chartInk.textMuted};">合规达成率: <b style="color: ${chartPalette.success}; font-family: monospace;">${raw.rate != null ? `${raw.rate}%` : '—'}</b></div>
             <div style="color: ${chartInk.textMuted}; margin-top: 4px; border-top: 1px dashed ${chartInk.borderSoft}; padding-top: 4px;">${raw.hint}</div>
           </div>
@@ -280,10 +280,12 @@ const qualityBarOption = computed(() => {
         type: 'bar',
         barWidth: 12,
         data: list.map((item) => ({
-          value: item.rate ?? 100,
+          value: item.rate,
           itemStyle: {
             borderRadius: [0, 4, 4, 0],
-            color: item.status === 'pass' ? chartPalette.success : chartPalette.warning,
+            color: item.status === 'pass'
+              ? chartPalette.success
+              : (item.status === 'unknown' ? chartPalette.neutral : chartPalette.warning),
           },
         })),
         label: {
@@ -295,7 +297,8 @@ const qualityBarOption = computed(() => {
           fontWeight: 'bold',
           formatter: (params: any) => {
             const raw = list[params.dataIndex]
-            return `${params.value}% (${raw?.errors ?? 0}异常)`
+            if (!raw || raw.rate == null) return '—'
+            return `${raw.rate}% (${raw.errors ?? '—'}异常)`
           },
         },
         showBackground: true,

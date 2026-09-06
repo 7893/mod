@@ -88,7 +88,9 @@ describe('utils/qualityMetrics', () => {
       expect(list).toHaveLength(4)
       expect(list[0].errors).toBeNull()
       expect(list[0].total).toBeNull()
+      expect(list[0].rate).toBeNull()
       expect(list[0].status).toBe('unknown')
+      expect(list[3]).toMatchObject({ errors: null, total: null, rate: null, status: 'unknown' })
     })
   })
 
@@ -124,4 +126,3 @@ describe('utils/qualityMetrics', () => {
     })
   })
 })
-

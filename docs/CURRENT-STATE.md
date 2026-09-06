@@ -1,6 +1,6 @@
 # MOD 当前状态
 
-更新日期：2026-09-06
+更新日期：2026-09-07
 状态：现行事实入口
 适用范围：当前运行、数据、功能、质量、安全状态与操作边界
 
@@ -91,11 +91,15 @@
   - `utils/modelEvaluation.ts`：严格落实 KI-023/KI-028/ADR-0010 诚实模型判定契约（R² > 0 回归有效性、(0.5, 1.0) 分类有效性及整体 READY 判定）；
   - `utils/qualityMetrics.ts`：质量合规率、双轨一致性与困难户风险维度分布聚合纯函数运算及缺失边界防呆；
   - 门禁打通：`pnpm test` 正式纳入 `Makefile` 的 `frontend-check` 目标，与 typecheck 和 build 并列守护前端质量。
-- 空旷面板图表化落地（OperationsView D6/D7 与 InsightsView F3）：
+- 面板信息密度平衡与图表化已覆盖 B/C/D/E/F 屏的高收益区域：
+  - **B2 阶段任务分布**：原 8 张横排指标卡收敛为已完成/进行中/未开始横向堆叠图，阶段完成率贴近对应条形展示；
+  - **C2/C5 推广与联系人**：批次工序卡改为 8 批次上线/双轨/待推进堆叠图；联系人纯数字面板改为覆盖环图配合三项精简指标；
+  - **E4 批次合规监督**：原 8 张横排卡改为合规率折线与重点监督/高风险单位柱图，统一呈现批次间差异；
   - **D6 双轨核对**：引入基于 `echarts` + `charts/theme.ts` 的一致率环形图（`dualRunConsistent` vs `dualRunInconsistent`），中心展示对账一致率百分比，对称呼应 D5 阶梯条，彻底消除纯数字卡片的空旷感；
   - **D7 数据质量金标准**：将原 4 项纯静态标签升级为“4 项金标准稽核规则卡 + 横向通过率柱状图”组合面板，真实接入快照 `quality`（`voucherBalanceErrors`、`timeOrderErrors`、`orphanLinkErrors`、`organizationsWithStatusProgression`），0 异常如实展示，配合 147 万凭证 / 231 万单据 / 2000 家单位真实核验规模与 100% 达标率；
   - **F3 综合态势预警**：在确定性规则研判卡左侧新增困难户风险维度分布柱状图，直观展现准备期卡顿、双轨核对差异与建设严重滞后各维度预警单位数及集中批次，撑起版面空间；
   - **统一图表契约**：全量走 `charts/theme.ts`（`chartPalette`、`chartInk`、`chartTooltip`、`calmAnimation`），零硬编码十六进制色值，缺失数据显示 `—`，0 值如实展示；
+  - **质量缺失态修正**：D7 缺失稽核规模、异常数或状态演进数据时不再回填 100%/0 异常/2000 家，卡片与图表统一显示 `—`。
 - 前端构建按库分包（`vite.config.ts` `manualChunks`）：echarts / vue 全家桶 / 地图 GeoJSON / 图标各自独立 chunk，
   业务视图 chunk 从数百 KB 降至数十 KB（改动不再让用户重下 echarts），`chunkSizeWarningLimit` 上调至 700 消除噪音。
   注：`element-plus`、`vxe-table`、`@element-plus/icons-vue` 为未使用依赖，已移除。
@@ -128,7 +132,7 @@
 ## 本地质量基线
 
 - 前端：Vue 3、TypeScript、Vite；`pnpm exec vue-tsc --noEmit --incremental false` 通过。
-- 后端：FastAPI、SQLAlchemy；43 项 pytest 测试通过。
+- 后端：FastAPI、SQLAlchemy；当前收集 130 项 pytest 测试。
 - Ruff 检查已清零并纳入 `make check`。
 - 本地 Git hooks 已强制执行凭据扫描、`make check` 和提交信息格式；GitHub Actions workflow 已在仓库
   落地，远端启用后在拉取请求和推送中复用同一闸门，不包含部署或生产访问。
