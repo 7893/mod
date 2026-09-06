@@ -14,6 +14,11 @@ import {
   ShieldAlert,
   Sparkles,
 } from 'lucide-vue-next'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
 import type { MetricItem } from '../components/blocks/types.ts'
@@ -25,6 +30,16 @@ import { isRegressionEffective, isClassifierEffective, isAutomlReady } from '../
 import { useProjectStore } from '../stores/project.ts'
 import { useAiInsights } from '../composables/useAiInsights.ts'
 import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
+import {
+  chartPalette,
+  chartInk,
+  chartTooltip,
+  valueAxis,
+  calmAnimation,
+} from '../charts/theme.ts'
+import { buildRiskDimensionBreakdown } from '../utils/qualityMetrics.ts'
+
+use([CanvasRenderer, BarChart, GridComponent, TooltipComponent])
 
 const router = useRouter()
 const store = useProjectStore()
@@ -133,6 +148,107 @@ const atRiskUnits = computed<AtRiskUnit[]>(() => {
 const dualDiffCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '双轨核对差异').length)
 const constLagCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '建设严重滞后').length)
 const prepStuckCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '准备期卡顿').length)
+
+const riskDimensions = computed(() => {
+  return buildRiskDimensionBreakdown(atRiskUnits.value)
+})
+
+const riskDistChartOption = computed(() => {
+  const list = [...riskDimensions.value].reverse()
+  const total = atRiskUnits.value.length
+
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      ...chartTooltip,
+      formatter: (params: any) => {
+        const p = Array.isArray(params) ? params[0] : params
+        const raw = list[p?.dataIndex]
+        if (!raw) return ''
+        const pct = total > 0 ? ((raw.count / total) * 100).toFixed(1) : '0.0'
+        const batchKeys = Object.keys(raw.batchDistribution)
+        const batchDetails = batchKeys.length
+          ? batchKeys.map((k) => `${k} (${raw.batchDistribution[k]}家)`).join('、')
+          : '暂无集中批次'
+
+        return `
+          <div style="font-size: 12px; line-height: 1.6;">
+            <div style="font-weight: 600; color: ${chartInk.textPrimary}; margin-bottom: 4px;">${raw.type} · ${raw.level}</div>
+            <div style="color: ${chartInk.textMuted};">预警规模: <b style="color: ${chartInk.textPrimary}; font-family: monospace;">${raw.count} 家</b> (${pct}%)</div>
+            <div style="color: ${chartInk.textMuted};">集中批次: <span style="color: ${chartInk.textPrimary};">${batchDetails}</span></div>
+            <div style="color: ${chartInk.textMuted}; margin-top: 4px; border-top: 1px dashed ${chartInk.borderSoft}; padding-top: 4px;">门禁规则: ${raw.gate}</div>
+          </div>
+        `
+      },
+    },
+    grid: {
+      top: 10,
+      bottom: 20,
+      left: 80,
+      right: 60,
+      containLabel: true,
+    },
+    xAxis: {
+      ...valueAxis,
+      minInterval: 1,
+      axisLabel: {
+        color: chartInk.textMuted,
+        fontSize: 10,
+        fontFamily: 'monospace',
+      },
+      splitLine: {
+        lineStyle: {
+          color: chartInk.borderSoft,
+          type: 'dashed',
+        },
+      },
+    },
+    yAxis: {
+      type: 'category',
+      data: list.map((i) => i.type),
+      axisLabel: {
+        color: chartInk.textMuted,
+        fontSize: 11,
+      },
+      axisTick: { show: false },
+      axisLine: {
+        lineStyle: { color: chartInk.border },
+      },
+    },
+    series: [
+      {
+        name: '单位数量',
+        type: 'bar',
+        barWidth: 12,
+        data: list.map((item) => ({
+          value: item.count,
+          itemStyle: {
+            borderRadius: [0, 4, 4, 0],
+            color: item.tone === 'danger'
+              ? chartPalette.danger
+              : (item.tone === 'warning' ? chartPalette.warning : chartPalette.accent),
+          },
+        })),
+        label: {
+          show: true,
+          position: 'right',
+          color: chartInk.textPrimary,
+          fontFamily: 'monospace',
+          fontSize: 11,
+          fontWeight: 'bold',
+          formatter: '{c} 家',
+        },
+        showBackground: true,
+        backgroundStyle: {
+          color: 'rgba(255, 255, 255, 0.03)',
+          borderRadius: [0, 4, 4, 0],
+        },
+      },
+    ],
+  }
+})
 
 /**
  * 严守 KI-023/KI-028 规范：
@@ -263,24 +379,42 @@ const f1SummaryItems = computed<MetricItem[]>(() => [
         zone="F3"
         subtitle="确定性规则研判与批次推进堵点"
       >
-        <div class="flex flex-col gap-2 h-full min-h-0 overflow-y-auto pr-1">
-          <div
-            v-for="alert in insights.ruleBasedAlerts"
-            :key="alert.title"
-            class="flex flex-col gap-1 p-2.5 rounded-xl border"
-            :class="alert.level === 'SUCCESS'
-              ? 'bg-emerald-950/15 border-emerald-500/20'
-              : (alert.level === 'WARNING'
-                ? 'bg-amber-950/15 border-amber-500/20'
-                : 'bg-surface-veil-03 border-surface-veil-06')"
-          >
-            <div class="flex items-center gap-1.5">
-              <CheckCircle2 v-if="alert.level === 'SUCCESS'" :size="14" class="text-emerald-400 flex-shrink-0" />
-              <AlertCircle v-else-if="alert.level === 'WARNING'" :size="14" class="text-amber-400 flex-shrink-0" />
-              <Info v-else :size="14" class="text-sky-400 flex-shrink-0" />
-              <b class="text-cockpit-sm font-semibold text-slate-200 truncate">{{ alert.title }}</b>
+        <div class="grid grid-cols-12 gap-3 h-full min-h-0 items-stretch">
+          <!-- 左侧：风险维度分布小图 (撑起空间，消除空旷感) -->
+          <div class="col-span-5 flex flex-col h-full min-h-0 p-2 rounded-xl bg-surface-veil-03 border border-surface-veil-06">
+            <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06">
+              <span class="text-cockpit-xs font-medium text-slate-300">困难户风险维度分布</span>
+              <span class="font-mono text-cockpit-xs text-slate-400">共 {{ atRiskUnits.length }} 家预警</span>
             </div>
-            <p class="text-cockpit-xs text-slate-400 leading-relaxed">{{ alert.detail }}</p>
+            <div class="flex-1 min-h-0 w-full">
+              <VChart class="w-full h-full min-h-0" :option="riskDistChartOption" autoresize />
+            </div>
+            <div class="flex items-center justify-between pt-1 border-t border-surface-veil-06 text-cockpit-xs text-slate-500">
+              <span>门禁：凭证率 &lt; 95% / 进度 &lt; 88%</span>
+              <span class="font-mono text-slate-400">{{ dualDiffCount + constLagCount }} 家高危</span>
+            </div>
+          </div>
+
+          <!-- 右侧：确定性规则告警卡 -->
+          <div class="col-span-7 flex flex-col gap-2 h-full min-h-0 overflow-y-auto pr-1">
+            <div
+              v-for="alert in insights.ruleBasedAlerts"
+              :key="alert.title"
+              class="flex flex-col gap-1 p-2.5 rounded-xl border flex-1 justify-center"
+              :class="alert.level === 'SUCCESS'
+                ? 'bg-emerald-950/15 border-emerald-500/20'
+                : (alert.level === 'WARNING'
+                  ? 'bg-amber-950/15 border-amber-500/20'
+                  : 'bg-surface-veil-03 border-surface-veil-06')"
+            >
+              <div class="flex items-center gap-1.5">
+                <CheckCircle2 v-if="alert.level === 'SUCCESS'" :size="14" class="text-emerald-400 flex-shrink-0" />
+                <AlertCircle v-else-if="alert.level === 'WARNING'" :size="14" class="text-amber-400 flex-shrink-0" />
+                <Info v-else :size="14" class="text-sky-400 flex-shrink-0" />
+                <b class="text-cockpit-sm font-semibold text-slate-200 truncate">{{ alert.title }}</b>
+              </div>
+              <p class="text-cockpit-xs text-slate-400 leading-relaxed">{{ alert.detail }}</p>
+            </div>
           </div>
         </div>
       </CockpitPanel>
