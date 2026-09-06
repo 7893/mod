@@ -12,5 +12,6 @@
 - `DATA-AND-SECURITY-STANDARD.md`：数据、凭据、远端和恢复边界。
 - `CLI-SCRIPT-POLICY.md`：人类和各 CLI 的脚本归属。
 - `LIVE-PROJECTION.md`：驾驶舱只读实时投影的数据流、边界与增长约束。
+- `HEATWAVE-AUTOML-CAPABILITIES.md`：HeatWave AutoML 能力与边界手册（技术清单、SQL 接口、硬限制与大屏使用规范）。
 
 新增规范必须放在本目录并同步 `docs/INDEX.md`。不要在根目录创建零散开发说明。

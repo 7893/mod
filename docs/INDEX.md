@@ -34,6 +34,7 @@
 - `development/SIMULATION-DIURNAL-SPEC.md`：AI 业务语义、香港时区作息、体量二八定律与异常自愈闭环（原 docs/28）。
 - `development/DASHBOARD-REFRESH-MECHANISM.md`：动态刷新与无刷新轮询机制（原 docs/24）。
 - `development/ML-AI-DATA-BOUNDARY.md`：AutoML/Cloudflare AI 最小数据边界与授权清单（原 docs/25）。
+- `development/HEATWAVE-AUTOML-CAPABILITIES.md`：HeatWave AutoML 能力与边界手册（技术清单、SQL 接口、硬限制与大屏使用规范）。
 - `development/CAPACITY-ESTIMATION.md`：容量评估工具说明（原 docs/26）。
 - `development/GOVERNANCE-AND-COLLABORATION.md`：协作机制与文档治理的标杆对照与演进方向（架构阐释）。
 - `operations/USA-DEPLOYMENT-LAYOUT.md`：迁移前旧部署目录形态（已失效，仅作历史；当前架构见 `CURRENT-STATE.md`）。
