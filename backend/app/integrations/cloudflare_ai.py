@@ -34,7 +34,8 @@ from datetime import datetime, timezone
 #   MOD_CF_AI_ENABLED           "true" 才启用（默认 "false"）
 #   CLOUDFLARE_ACCOUNT_ID       CF 账号 ID
 #   CLOUDFLARE_API_TOKEN        CF API Token（Bearer）
-#   MOD_CF_AI_MODEL             模型名（默认 @cf/openai/gpt-oss-20b）
+#   MOD_CF_AI_MODEL             模型名（默认 @cf/meta/llama-3.1-8b-instruct）
+#   MOD_CF_AI_GATEWAY           AI Gateway 名（默认 mod-gateway；置空则直连，见 ADR-0010）
 #   MOD_CF_AI_CACHE_TTL_SECONDS 缓存 TTL 秒数（默认 21600 = 6 小时）
 #   MOD_CF_AI_DAILY_LIMIT       每 UTC 日最多真实调用次数（默认 20）
 #
@@ -59,9 +60,16 @@ _CF_AI_ALLOWED_FIELDS: frozenset[str] = frozenset({
 })
 
 # Cloudflare Workers AI REST 端点模板
+# 直连端点（兜底：未配置网关时使用）
 _CF_AI_ENDPOINT = (
     "https://api.cloudflare.com/client/v4/accounts/{account_id}"
     "/ai/run/{model}"
+)
+# AI Gateway 端点模板（首选：统一入口，享受缓存/限流/日志，见 ADR-0010）
+# 形如 https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway>/workers-ai/<model>
+_CF_AI_GATEWAY_ENDPOINT = (
+    "https://gateway.ai.cloudflare.com/v1/{account_id}"
+    "/{gateway}/workers-ai/{model}"
 )
 
 # 发给 AI 的系统提示，限定任务范围
@@ -141,6 +149,9 @@ class CloudflareAIAdapter:
         self._model: str = os.getenv(
             "MOD_CF_AI_MODEL", "@cf/meta/llama-3.1-8b-instruct"
         ).strip()
+        # AI Gateway 名称（默认 mod-gateway）。配置了则走网关端点，享受缓存/限流/日志（ADR-0010）；
+        # 显式置空则回退到直连端点。
+        self._gateway: str = os.getenv("MOD_CF_AI_GATEWAY", "mod-gateway").strip()
         self._cache_ttl: int = int(
             os.getenv("MOD_CF_AI_CACHE_TTL_SECONDS", "21600")
         )
@@ -218,6 +229,7 @@ class CloudflareAIAdapter:
             "status": cf_status,
             "message": cf_message,
             "model": self._model,
+            "gateway": self._gateway or None,
             "cache": self._get_cache_snapshot(),
             "quota": self._get_daily_count_snapshot(),
             "data_boundary": sorted(_CF_AI_ALLOWED_FIELDS),
@@ -336,13 +348,24 @@ class CloudflareAIAdapter:
         user_message += "\n请给出简洁的管理层洞察。"
 
         # ---- 6. 构造请求 ----
-        url = _CF_AI_ENDPOINT.format(
-            account_id=account_id,
-            model=self._model,
-        )
+        # 首选 AI Gateway 端点（统一入口 + 缓存/限流/日志）；未配置网关名时回退直连。
+        if self._gateway:
+            url = _CF_AI_GATEWAY_ENDPOINT.format(
+                account_id=account_id,
+                gateway=self._gateway,
+                model=self._model,
+            )
+        else:
+            url = _CF_AI_ENDPOINT.format(
+                account_id=account_id,
+                model=self._model,
+            )
         headers = {
             "Authorization": f"Bearer {api_token}",
             "Content-Type": "application/json",
+            # Cloudflare 网关域名 WAF 会拦截默认 Python-urllib UA（error 1010），
+            # 显式声明服务型 UA 放行。
+            "User-Agent": "MOD-CockpitInsights/1.0",
         }
         body = {
             "messages": [
