@@ -14,7 +14,9 @@ Read these documents in order before making changes:
 2. `ENFORCEMENT.md` — how those rules are enforced at the point of action (gates, not just guidance).
 3. `docs/CURRENT-STATE.md` — current runtime, data, and safety facts.
 4. `PROJECT-LAYOUT.md` — directory and host boundaries.
-5. The relevant standards under `docs/development/`.
+5. The standard matching your task type — see the "Required reading by task type" table in `AGENTS.md`
+   (e.g. frontend changes require `FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md`, DB/data require
+   `DATA-AND-SECURITY-STANDARD.md`, any change requires `TESTING-STANDARD.md`). Read the matching one, not all.
 
 If documents disagree, follow the authority order in `AGENTS.md`. The old collaboration state machine is archived
 under `archive/legacy-collaboration/` and must not be used as an active workflow.
