@@ -76,5 +76,17 @@ defineProps<{
       <Cpu :size="15" class="opacity-50 text-slate-400" />
       <span>{{ emptyLabel }}</span>
     </div>
+    <div
+      v-else
+      class="flex items-center justify-between py-2 px-3 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 text-cockpit-xs flex-shrink-0"
+    >
+      <div class="flex items-center gap-1.5 min-w-0">
+        <Cpu :size="15" class="text-emerald-400 flex-shrink-0" />
+        <span class="truncate">独立测试集验证达标 · 库内推理就绪</span>
+      </div>
+      <span v-if="model.quality != null" class="font-mono font-semibold text-cockpit-xs flex-shrink-0">
+        {{ model.target.includes('daily') ? `R² = ${model.quality.toFixed(4)}` : `Acc = ${(model.quality * 100).toFixed(1)}%` }}
+      </span>
+    </div>
   </div>
 </template>
