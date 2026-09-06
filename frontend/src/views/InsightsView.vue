@@ -8,7 +8,6 @@ import {
   Building,
   CheckCircle2,
   Database,
-  HelpCircle,
   Info,
   Lock,
   RefreshCw,
@@ -22,8 +21,10 @@ import ModelContractCard from '../components/ModelContractCard.vue'
 import MarkdownLite from '../components/MarkdownLite.vue'
 import AtRiskUnitTable, { type AtRiskUnit } from '../components/AtRiskUnitTable.vue'
 import { formatPercent } from '../formatters/metrics.ts'
+import { isRegressionEffective, isClassifierEffective, isAutomlReady } from '../utils/modelEvaluation.ts'
 import { useProjectStore } from '../stores/project.ts'
 import { useAiInsights } from '../composables/useAiInsights.ts'
+import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
 
 const router = useRouter()
 const store = useProjectStore()
@@ -32,16 +33,10 @@ const format = (value: number | undefined) => (
   value === undefined ? '—' : new Intl.NumberFormat('zh-CN').format(value)
 )
 
-const {
-  aiPhase,
-  aiStatus,
-  aiLatest,
-  aiGenerating,
-  aiButtonLabel,
-  aiButtonDisabled,
-  generatedAt,
-  triggerGenerate,
-} = useAiInsights()
+const { aiStatus } = useAiInsights()
+
+// F5 每日决策简报（后台自动生成，只读展示，零交互）
+const { briefing, loading: briefingLoading } = useDailyBriefing()
 
 const predictionsMap = computed(() => {
   const map = new Map<number, any>()
@@ -149,9 +144,13 @@ const insights = computed(() => {
   const hw = data.hw_ml || {}
   const regQuality = hw.models?.regression?.quality ?? null
   const clsQuality = hw.models?.classifier?.quality ?? null
-  const regEffective = regQuality != null && regQuality > 0
-  const clsEffective = clsQuality != null && clsQuality > 0.5 && clsQuality < 1.0
-  const isReady = (data.automlStatus === 'READY' || (store.snapshot.insights as any)?.automlStatus === 'READY') && (regEffective || clsEffective)
+  const regEffective = isRegressionEffective(regQuality)
+  const clsEffective = isClassifierEffective(clsQuality)
+  const isReady = isAutomlReady(
+    data.automlStatus || (store.snapshot.insights as any)?.automlStatus,
+    regQuality,
+    clsQuality
+  )
 
   return {
     automlStatusDisplay: isReady ? '已就绪 (In-DB Ready)' : '已训练，验证未达标',
@@ -286,68 +285,43 @@ const f1SummaryItems = computed<MetricItem[]>(() => [
         </div>
       </CockpitPanel>
 
-      <!-- 右下：F5 边缘 AI 态势辅助解说与系统联动 -->
+      <!-- 右下：F5 每日指挥部决策简报（后台自动生成，只读展示，零交互） -->
       <CockpitPanel
-        title="边缘 AI 态势辅助解说"
+        title="每日指挥部决策简报"
         zone="F5"
-        subtitle="Cloudflare Workers AI (Llama 3.1 8B) · 只读辅助研判"
+        subtitle="Cloudflare Workers AI · 每日自动生成 · 只读研判"
       >
-        <template #actions>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1 px-2.5 py-0.5 text-cockpit-xs font-medium rounded-lg transition-colors border"
-            :class="(aiGenerating || aiPhase === 'generating' || aiButtonDisabled)
-              ? 'bg-slate-800 text-slate-500 border-white/5 cursor-not-allowed'
-              : 'bg-sky-600 hover:bg-sky-500 text-white border-sky-400/30 shadow-sm shadow-sky-950 cursor-pointer'"
-            :disabled="aiButtonDisabled"
-            @click="triggerGenerate"
-          >
-            <RefreshCw v-if="aiGenerating || aiPhase === 'generating'" :size="11" class="animate-spin" />
-            <Sparkles v-else :size="11" />
-            <span>{{ aiButtonLabel }}</span>
-          </button>
-        </template>
-
         <div class="flex flex-col h-full min-h-0 gap-2">
           <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/60 border border-white/10 text-slate-400 text-cockpit-xs flex-shrink-0">
             <ShieldAlert :size="12" class="flex-shrink-0 text-sky-400" />
-            <span>AI 辅助研判仅供参考，风险名单来自库内真实运行指标</span>
+            <span>AI 辅助研判仅供参考，事实数据均来自库内真实运行指标</span>
           </div>
 
           <div class="flex-1 min-h-0 overflow-y-auto rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2.5">
-            <!-- 加载中态：真实发起请求时显示旋转等待 -->
-            <div v-if="aiPhase === 'loading'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-4 text-slate-500">
+            <!-- 加载中 -->
+            <div v-if="briefingLoading" class="flex flex-col items-center justify-center h-full text-center gap-2 py-4 text-slate-500">
               <RefreshCw :size="18" class="animate-spin opacity-50 text-sky-400" />
-              <span class="text-cockpit-xs">正在读取态势…</span>
+              <span class="text-cockpit-xs">正在读取每日简报…</span>
             </div>
 
-            <!-- 空态 (idle)：静态待触发卡片设计，消除虚假加载感 (F-3) -->
-            <div v-else-if="aiPhase === 'idle'" class="flex flex-col items-center justify-center h-full text-center gap-1.5 py-4 text-slate-400">
+            <!-- 已有简报 -->
+            <div v-else-if="briefing?.status === 'ok'" class="flex flex-col gap-2">
+              <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs text-slate-400">
+                <span class="text-emerald-400 flex items-center gap-1 font-medium">
+                  <CheckCircle2 :size="12" /> 每日自动研判
+                </span>
+                <span v-if="briefing.briefingDate" class="font-mono">{{ briefing.briefingDate }}</span>
+              </div>
+              <MarkdownLite class="text-cockpit-xs text-slate-300 leading-relaxed" :content="briefing.content" />
+            </div>
+
+            <!-- 尚无简报（定时任务未生成） -->
+            <div v-else class="flex flex-col items-center justify-center h-full text-center gap-1.5 py-4 text-slate-400">
               <div class="w-8 h-8 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-0.5">
                 <Sparkles :size="15" />
               </div>
-              <span class="text-cockpit-sm font-semibold text-slate-200">待触发 AI 态势研判</span>
-              <span class="text-cockpit-xs text-slate-500">点击右上角「生成最新研判」按钮生成实时报告</span>
-            </div>
-
-            <div v-else-if="aiPhase === 'generating'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-4 text-sky-400">
-              <RefreshCw :size="18" class="animate-spin" />
-              <span class="text-cockpit-xs font-medium">正在生成态势研判报告…</span>
-            </div>
-
-            <div v-else-if="aiPhase === 'ok' || aiPhase === 'cache_hit'" class="flex flex-col gap-2">
-              <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs text-slate-400">
-                <span class="text-emerald-400 flex items-center gap-1 font-medium">
-                  <CheckCircle2 :size="12" /> {{ aiPhase === 'cache_hit' ? '缓存命中' : '已就绪' }}
-                </span>
-                <span v-if="generatedAt" class="font-mono">{{ generatedAt }}</span>
-              </div>
-              <MarkdownLite class="text-cockpit-xs text-slate-300 leading-relaxed" :content="aiLatest?.content" />
-            </div>
-
-            <div v-else class="flex flex-col items-center justify-center h-full text-center gap-1 py-4 text-slate-400">
-              <HelpCircle :size="18" class="text-slate-500" />
-              <span class="text-cockpit-xs">暂无报告缓存，点击右上角生成态势研判</span>
+              <span class="text-cockpit-sm font-semibold text-slate-200">每日简报待生成</span>
+              <span class="text-cockpit-xs text-slate-500">后台定时任务每日 00:30 自动生成研判简报</span>
             </div>
           </div>
 
