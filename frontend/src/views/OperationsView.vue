@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import {
   ArrowRight,
   Check,
@@ -22,6 +22,14 @@ import { useProjectStore } from '../stores/project.ts'
 
 const store = useProjectStore()
 const format = formatCount
+
+const isMounted = ref(false)
+onMounted(async () => {
+  await nextTick()
+  requestAnimationFrame(() => {
+    isMounted.value = true
+  })
+})
 
 const formatWithUnit = (value: number | null | undefined, unit: string) => {
   const s = format(value)
@@ -168,7 +176,7 @@ const integrationBars = computed(() => {
                     'bg-amber-400': item.tone === 'warning',
                     'bg-slate-500': item.tone === 'muted',
                   }"
-                  :style="{ width: `${Math.min(100, item.width)}%` }"
+                  :style="{ width: isMounted ? `${Math.min(100, item.width)}%` : '0%' }"
                 />
               </div>
               <b class="font-mono text-right text-slate-200">{{ format(item.value) }}</b>
@@ -254,7 +262,7 @@ const integrationBars = computed(() => {
                     'bg-emerald-400': item.tone === 'success',
                     'bg-rose-400': item.tone === 'danger',
                   }"
-                  :style="{ width: `${Math.min(100, item.width)}%` }"
+                  :style="{ width: isMounted ? `${Math.min(100, item.width)}%` : '0%' }"
                 />
               </div>
               <b class="font-mono text-right text-slate-200">{{ format(item.value) }}</b>

@@ -238,6 +238,7 @@ const trainingBarOption = computed(() => {
 })
 
 const readinessPieOption = computed(() => ({
+  ...calmAnimation,
   tooltip: {
     trigger: 'item',
     ...chartTooltip,
