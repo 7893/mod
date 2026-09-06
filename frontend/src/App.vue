@@ -75,9 +75,9 @@ const leftNavItems = [
 ]
 
 const rightNavItems = [
-  { path: '/d', label: '风险预警', icon: AlertTriangle },
+  { path: '/d', label: '业务运营', icon: BarChart3 },
   { path: '/e', label: '合规监督', icon: ClipboardCheck },
-  { path: '/f', label: '业务运营', icon: BarChart3 },
+  { path: '/f', label: '风险预警', icon: AlertTriangle },
 ]
 
 const isActive = (path: string) => {
@@ -134,7 +134,7 @@ onBeforeUnmount(() => {
             <component :is="item.icon" :size="16" />
             <span>{{ item.label }}</span>
             <i
-              v-if="item.path === '/d' && store.snapshot.overview.highRisk"
+              v-if="item.path === '/f' && store.snapshot.overview.highRisk"
               class="risk-badge"
               :title="`待处置高风险事项：${store.snapshot.overview.highRisk} 项（未解决总量 ${(store.snapshot.overview.unresolvedIssues || 0).toLocaleString()} 项）`"
             >
