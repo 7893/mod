@@ -70,10 +70,10 @@ const format = (value: number | undefined) => (
 const complianceUnits = computed<ComplianceIssueUnit[]>(() => {
   const result: ComplianceIssueUnit[] = []
   store.entities.forEach((row) => {
-    const isDualInconsistent = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < 0.95)
-    const isConstructionLag = row.construction < 85 && (row.status === '建设中' || row.status === '双轨运行')
-    const isOpeningDataLag = row.openingData < 80 && row.status !== '准备中'
-    const isStuckPrep = row.status === '准备中' && row.id <= 600
+    const isDualInconsistent = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < 95)
+    const isConstructionLag = row.construction < 88 && (row.status === '建设中' || row.status === '双轨运行')
+    const isOpeningDataLag = row.openingData < 88 && (row.status === '建设中' || row.status === '双轨运行')
+    const isStuckPrep = row.status === '准备中' && (row.batchId ? row.batchId <= 6 : row.id <= 1000)
 
     if (isDualInconsistent || isConstructionLag || isOpeningDataLag || isStuckPrep) {
       const tags: string[] = []
