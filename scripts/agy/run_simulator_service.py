@@ -26,9 +26,9 @@ from zoneinfo import ZoneInfo
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 BACKEND_DIR = BASE_DIR / "backend"
-sys.path.insert(0, str(BACKEND_DIR))
+sys.path.insert(0, str(BASE_DIR))
 
-from app.simulation.runtime_service import (  # noqa: E402
+from simulation.runtime_service import (  # noqa: E402
     FailClosedManager,
     SimulatorRuntimeConfig,
     SimulatorRuntimeService,

@@ -6,12 +6,12 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock
 
-from app.simulation.construction_models import (
+from simulation.construction_models import (
     DualRunCheckEventFootprint,
     DualRunResultRecordFootprint,
     ConstructionTaskFootprint,
 )
-from app.simulation.construction_writer import ConstructionWriter, is_construction_writer_enabled
+from simulation.construction_writer import ConstructionWriter, is_construction_writer_enabled
 
 
 def test_construction_writer_safety_switch_blocked(monkeypatch):

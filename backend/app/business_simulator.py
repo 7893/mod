@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import asyncio
 
-from .simulation.models import (
+from simulation.models import (
     ActiveScenario as ActiveScenario,
     BusinessEvent,
     BusinessEventChain,

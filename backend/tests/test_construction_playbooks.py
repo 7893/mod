@@ -10,7 +10,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.simulation.construction_playbooks import (
+from simulation.construction_playbooks import (
     BatchRolloutPlaybook,
     DataReadinessPlaybook,
     DualRunCheckPlaybook,
@@ -19,7 +19,7 @@ from app.simulation.construction_playbooks import (
     TrainingCertificationPlaybook,
     TransitionReviewPlaybook,
 )
-from app.simulation.engine_context import ConstructionBaseline, IdAllocator
+from simulation.engine_context import ConstructionBaseline, IdAllocator
 
 
 @pytest.fixture

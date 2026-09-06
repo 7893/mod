@@ -10,8 +10,8 @@ from decimal import Decimal
 
 import pytest
 
-from app.simulation.engine_context import ConstructionBaseline
-from app.simulation.lifecycle_advancer import (
+from simulation.engine_context import ConstructionBaseline
+from simulation.lifecycle_advancer import (
     LifecycleAdvancer,
     LifecycleThresholds,
     OrgMetricsSnapshot,

@@ -8,9 +8,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.simulation.engine_context import IdAllocator, SimulationBaseline
-from app.simulation.expense_playbook import ExpensePlaybook
-from app.simulation.footprint_models import (
+from simulation.engine_context import IdAllocator, SimulationBaseline
+from simulation.expense_playbook import ExpensePlaybook
+from simulation.footprint_models import (
     DocumentFootprint,
     DocumentLineFootprint,
     EventFootprint,
@@ -20,7 +20,7 @@ from app.simulation.footprint_models import (
     VoucherLineFootprint,
     validate_footprint,
 )
-from app.simulation.simulation_writer import SimulationWriter, is_simulation_engine_enabled
+from simulation.simulation_writer import SimulationWriter, is_simulation_engine_enabled
 
 
 def _create_sample_event(

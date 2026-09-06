@@ -10,7 +10,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.simulation.construction_models import (
+from simulation.construction_models import (
     BatchRolloutEventFootprint,
     ConstructionTaskFootprint,
     DataReadinessEventFootprint,

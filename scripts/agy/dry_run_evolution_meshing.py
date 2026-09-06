@@ -25,9 +25,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 BACKEND_DIR = os.path.join(BASE_DIR, "backend")
 sys.path.insert(0, BACKEND_DIR)
 
-from app.simulation.engine_context import load_construction_baseline  # noqa: E402
-from app.simulation.evolution_coordinator import EvolutionCoordinator  # noqa: E402
-from app.simulation.lifecycle_advancer import LifecycleThresholds  # noqa: E402
+from simulation.engine_context import load_construction_baseline  # noqa: E402
+from simulation.evolution_coordinator import EvolutionCoordinator  # noqa: E402
+from simulation.lifecycle_advancer import LifecycleThresholds  # noqa: E402
 
 
 def get_db_connection() -> pymysql.Connection:

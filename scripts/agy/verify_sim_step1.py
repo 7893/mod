@@ -22,9 +22,9 @@ sys.path.insert(0, str(backend_dir))
 
 import pymysql
 
-from app.simulation.engine_context import IdAllocator, load_simulation_baseline
-from app.simulation.expense_playbook import ExpensePlaybook
-from app.simulation.simulation_writer import SimulationWriter, is_simulation_engine_enabled
+from simulation.engine_context import IdAllocator, load_simulation_baseline
+from simulation.expense_playbook import ExpensePlaybook
+from simulation.simulation_writer import SimulationWriter, is_simulation_engine_enabled
 
 
 def load_env():
