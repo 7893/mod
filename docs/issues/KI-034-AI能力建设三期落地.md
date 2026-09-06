@@ -25,8 +25,8 @@
 ### 第二期 · 指挥部决策简报自动化（主控 + 后续派单）
 - [x] `cloudflare_ai.py` 端点改走 `mod-gateway`（2026-09-06 完成，实测经网关调 Llama 生成三段式研判成功；补 User-Agent 绕过网关 WAF 1010 拦截）
 - [x] 清理 `ai_narrator.py` 及 `/narrator/*` 死代码（2026-09-06 完成，含测试）
-- [ ] 新建简报聚合器 + 每日定时生成服务 + `daily_briefing` 表（需建表授权）
-- [ ] A 屏 / F 屏简报卡片展示
+- [x] 新建简报聚合器 + 每日定时生成服务 + `daily_briefing` 表（2026-09-06 完成，授权建表；`services/daily_briefing.py` + `scripts/kiro/run_daily_briefing.py` + `deploy/mod-daily-briefing.{service,timer}`，每日 HKT 00:30 触发；实测端到端生成入库成功）
+- [x] A 屏简报卡片展示（2026-09-06 完成，A1 下方一行摘要横幅，点击进 F 屏；只读 `/api/insights/briefing`）
 
 ### 第三期 · 拟真业务语料生态（押后）
 - [ ] LLM 离线生成行业质感卡点事由语料库
