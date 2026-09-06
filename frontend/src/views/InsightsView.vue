@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   AlertCircle,
@@ -12,42 +12,21 @@ import {
   Info,
   Lock,
   RefreshCw,
-  Search,
   ShieldAlert,
   Sparkles,
-  Zap,
 } from 'lucide-vue-next'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
 import type { MetricItem } from '../components/blocks/types.ts'
 import ModelContractCard from '../components/ModelContractCard.vue'
 import MarkdownLite from '../components/MarkdownLite.vue'
+import AtRiskUnitTable, { type AtRiskUnit } from '../components/AtRiskUnitTable.vue'
 import { formatPercent } from '../formatters/metrics.ts'
-import { useProjectStore, type EntityRow } from '../stores/project.ts'
+import { useProjectStore } from '../stores/project.ts'
 import { useAiInsights } from '../composables/useAiInsights.ts'
 
 const router = useRouter()
 const store = useProjectStore()
-
-interface AtRiskUnit {
-  id: number
-  name: string
-  province: string
-  batch: string
-  owner: string
-  status: string
-  construction: number
-  openingData: number
-  voucherRate: number | null
-  riskType: '双轨核对差异' | '建设严重滞后' | '准备期卡顿'
-  riskLevel: '高危' | '重点关注'
-  reason: string
-}
-
-const query = ref('')
-const selectedRiskType = ref('全部类型')
-const page = ref(1)
-const pageSize = ref(6)
 
 const format = (value: number | undefined) => (
   value === undefined ? '—' : new Intl.NumberFormat('zh-CN').format(value)
@@ -114,34 +93,16 @@ const atRiskUnits = computed<AtRiskUnit[]>(() => {
   return list
 })
 
-const filteredRiskUnits = computed(() => {
-  return atRiskUnits.value.filter((u) => {
-    const matchType = selectedRiskType.value === '全部类型' || u.riskType === selectedRiskType.value
-    const matchQuery = !query.value || `${u.name}${u.province}${u.batch}${u.owner}`.includes(query.value)
-    return matchType && matchQuery
-  })
-})
-
-const totalRiskPages = computed(() => Math.ceil(filteredRiskUnits.value.length / pageSize.value) || 1)
-
-const paginatedRiskUnits = computed(() => {
-  const start = (page.value - 1) * pageSize.value
-  return filteredRiskUnits.value.slice(start, start + pageSize.value)
-})
-
 const dualDiffCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '双轨核对差异').length)
 const constLagCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '建设严重滞后').length)
 const prepStuckCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '准备期卡顿').length)
 
 const {
   aiPhase,
-  aiStatus,
   aiLatest,
   aiGenerating,
-  aiError,
   aiButtonLabel,
   aiButtonDisabled,
-  quotaRemaining,
   generatedAt,
   triggerGenerate,
 } = useAiInsights()
@@ -154,18 +115,14 @@ const {
 const insights = computed(() => {
   const data: any = store.snapshot.insights || {}
   const hw = data.hw_ml || {}
-
   const regQuality = hw.models?.regression?.quality ?? null
   const clsQuality = hw.models?.classifier?.quality ?? null
-
-  // KI-028 有效性门禁：回归 R² > 0，分类准确率在 (0.5, 1.0)
   const regEffective = regQuality != null && regQuality > 0
   const clsEffective = clsQuality != null && clsQuality > 0.5 && clsQuality < 1.0
   const isReady = (data.automlStatus === 'READY') && (regEffective || clsEffective)
 
   return {
     automlStatusDisplay: isReady ? '已就绪 (In-DB Ready)' : '已训练，验证未达标',
-    notice: '严守 KI-023/KI-028：模型质量分严格依据测试集验证；当前模型未达标，暂不输出预测结论，风险名单来自库内真实指标。',
     isReady,
     targetModels: [
       {
@@ -202,37 +159,10 @@ const insights = computed(() => {
 })
 
 const d1SummaryItems = computed<MetricItem[]>(() => [
-  {
-    label: '掉队高危单位',
-    value: format(atRiskUnits.value.length),
-    unit: '家',
-    tone: 'danger',
-    icon: ShieldAlert,
-    hint: '困难户风险预警主场',
-  },
-  {
-    label: '双轨核对差异',
-    value: format(dualDiffCount.value),
-    unit: '家',
-    tone: 'warning',
-    icon: AlertTriangle,
-    hint: '平账凭证率 < 95%',
-  },
-  {
-    label: '建设推进迟滞',
-    value: format(constLagCount.value + prepStuckCount.value),
-    unit: '家',
-    tone: 'warning',
-    icon: Building,
-    hint: '滞后与准备期卡顿单位',
-  },
-  {
-    label: 'AutoML 模型状态',
-    value: '验证未达标',
-    tone: 'accent',
-    icon: Database,
-    hint: '严守 KI-023/KI-028 真实评估',
-  },
+  { label: '掉队高危单位', value: format(atRiskUnits.value.length), unit: '家', tone: 'danger', icon: ShieldAlert, hint: '困难户风险预警主场' },
+  { label: '双轨核对差异', value: format(dualDiffCount.value), unit: '家', tone: 'warning', icon: AlertTriangle, hint: '平账凭证率 < 95%' },
+  { label: '建设推进迟滞', value: format(constLagCount.value + prepStuckCount.value), unit: '家', tone: 'warning', icon: Building, hint: '滞后与准备期卡顿单位' },
+  { label: 'AutoML 模型状态', value: '验证未达标', tone: 'accent', icon: Database, hint: '严守 KI-023/KI-028 真实评估' },
 ])
 </script>
 
@@ -256,109 +186,7 @@ const d1SummaryItems = computed<MetricItem[]>(() => [
         zone="D2"
         subtitle="矛与盾读同一事实源 · 库内真实运行指标派生"
       >
-        <template #actions>
-          <div class="flex items-center gap-2">
-            <label class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-300">
-              <Search :size="12" class="text-slate-400" />
-              <input
-                v-model="query"
-                placeholder="搜索单位/区域/联系人"
-                class="bg-transparent border-none outline-none text-slate-200 placeholder-slate-500 w-28 text-cockpit-xs"
-              />
-            </label>
-            <select
-              v-model="selectedRiskType"
-              class="px-2 py-0.5 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-200 focus:outline-none focus:border-sky-500/40"
-            >
-              <option>全部类型</option>
-              <option>双轨核对差异</option>
-              <option>建设严重滞后</option>
-              <option>准备期卡顿</option>
-            </select>
-          </div>
-        </template>
-
-        <div class="flex flex-col h-full min-h-0 justify-between gap-2">
-          <div class="flex-1 min-h-0 overflow-y-auto rounded-xl border border-surface-veil-06 bg-surface-veil-03">
-            <table class="w-full border-collapse text-cockpit-sm text-left">
-              <thead>
-                <tr class="border-b border-surface-veil-06 text-slate-400 font-medium bg-slate-900/80 sticky top-0 backdrop-blur-sm z-10">
-                  <th class="px-2.5 py-1.5">编码 / 单位</th>
-                  <th class="px-2.5 py-1.5">区域 / 批次</th>
-                  <th class="px-2.5 py-1.5">掉队风险类型</th>
-                  <th class="px-2.5 py-1.5 text-right">建设进度</th>
-                  <th class="px-2.5 py-1.5 text-right">双轨平账</th>
-                  <th class="px-2.5 py-1.5 text-center">预警等级</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-surface-veil-06">
-                <tr
-                  v-for="u in paginatedRiskUnits"
-                  :key="u.id"
-                  class="hover:bg-white/5 transition-colors"
-                >
-                  <td class="px-2.5 py-1">
-                    <div class="flex flex-col">
-                      <b class="text-slate-200 font-medium truncate max-w-44">{{ u.name }}</b>
-                      <small class="font-mono text-cockpit-xs text-slate-500">MOD-{{ u.id }} · {{ u.owner }}</small>
-                    </div>
-                  </td>
-                  <td class="px-2.5 py-1 text-slate-300 text-cockpit-xs">
-                    <div>{{ u.province }}</div>
-                    <small class="text-slate-500">{{ u.batch }}</small>
-                  </td>
-                  <td class="px-2.5 py-1">
-                    <span
-                      class="px-1.5 py-0.5 rounded text-cockpit-xs font-medium border inline-block"
-                      :class="u.riskType === '双轨核对差异'
-                        ? 'bg-rose-950/40 text-rose-400 border-rose-500/30'
-                        : (u.riskType === '建设严重滞后'
-                          ? 'bg-amber-950/40 text-amber-400 border-amber-500/30'
-                          : 'bg-sky-950/40 text-sky-400 border-sky-500/30')"
-                    >
-                      {{ u.riskType }}
-                    </span>
-                  </td>
-                  <td class="px-2.5 py-1 text-right font-mono text-slate-300">{{ u.construction }}%</td>
-                  <td class="px-2.5 py-1 text-right font-mono text-slate-300">{{ formatPercent(u.voucherRate) }}</td>
-                  <td class="px-2.5 py-1 text-center">
-                    <span
-                      class="px-1.5 py-0.5 rounded text-cockpit-xs font-semibold"
-                      :class="u.riskLevel === '高危' ? 'text-rose-400' : 'text-amber-400'"
-                    >
-                      {{ u.riskLevel }}
-                    </span>
-                  </td>
-                </tr>
-                <tr v-if="!paginatedRiskUnits.length">
-                  <td colspan="6" class="px-3 py-6 text-center text-slate-500">无匹配掉队风险单位</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="flex items-center justify-between px-1 pt-0.5 text-cockpit-xs text-slate-400">
-            <span>预警困难户 {{ filteredRiskUnits.length }} 家 · 第 {{ page }} / {{ totalRiskPages }} 页</span>
-            <div class="flex items-center gap-1.5">
-              <button
-                type="button"
-                :disabled="page <= 1"
-                class="px-2 py-0.5 rounded bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-cockpit-xs cursor-pointer"
-                @click="page--"
-              >
-                上一页
-              </button>
-              <button
-                type="button"
-                :disabled="page >= totalRiskPages"
-                class="px-2 py-0.5 rounded bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-cockpit-xs cursor-pointer"
-                @click="page++"
-              >
-                下一页
-              </button>
-            </div>
-          </div>
-        </div>
+        <AtRiskUnitTable :units="atRiskUnits" />
       </CockpitPanel>
 
       <!-- 右上：D4 HeatWave AutoML 预测模型 (严守 KI-023/KI-028 真实性) -->
@@ -368,7 +196,6 @@ const d1SummaryItems = computed<MetricItem[]>(() => [
         subtitle="Oracle HeatWave 库内机器学习 · 严守真实评估门禁"
       >
         <div class="flex flex-col h-full min-h-0 gap-2">
-          <!-- 严守门禁声明 -->
           <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-cockpit-xs flex-shrink-0">
             <Lock :size="13" class="flex-shrink-0 text-amber-400" />
             <span>门禁生效：独立测试集未达标指标不谎报为可信预测能力（KI-023 / KI-028）</span>
