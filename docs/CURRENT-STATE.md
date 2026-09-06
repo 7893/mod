@@ -32,6 +32,10 @@
   缓存 TTL 3600 秒（相同请求命中缓存不消耗模型 token，实测 MISS→HIT 生效）、限流 100 次 / 60 秒（sliding）、
   日志开启。端点形如 `https://gateway.ai.cloudflare.com/v1/<account_id>/mod-gateway/workers-ai/<model>`；
   实测经网关调用 `@cf/meta/llama-3.1-8b-instruct` 链路通畅。凭据存于运行主机环境变量，不入库不入代码。
+- 每日指挥部决策简报（KI-034 第二期）：后台服务 `mod-daily-briefing.timer`（HKT 00:30 触发）调用
+  `scripts/kiro/run_daily_briefing.py`，读 dashboard overview 聚合指标经 `mod-gateway` 生成研判，写入
+  `mod`.`daily_briefing` 表（一天一条，主键 briefing_date）。大屏 A 屏 A1 下方一行摘要横幅只读展示，
+  点击进 F 屏；接口 `GET /api/insights/briefing`。LLM 降级时不写假简报。
 - 时区契约：后端与 UTC 侧一律使用 UTC；面向用户的展示时区由 `MOD_DISPLAY_TIMEZONE` 决定，
   默认 `Asia/Hong_Kong`，唯一定义在 `backend/app/config.py`。快照 `meta.displayTimezone`、实时投影
   作息节律与前端时钟均派生自该来源，不得各自写死。已知偏差：`v2_connection` 的会话时区固定
