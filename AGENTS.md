@@ -27,6 +27,23 @@ These rules apply to the entire repository.
   architecture, paths, commands, data state, or deployment state changes.
 - Finish with a concise handoff covering changes, validation, remaining risks, deployment state, and commit ID.
 
+## Required reading by task type
+
+Before touching an area, read the matching standard under `docs/development/`. This is mandatory — do not rely on
+being told each time. Every task also reads this `AGENTS.md` first.
+
+| If you change... | You MUST read first |
+|---|---|
+| Frontend (Vue/CSS/views/components) | `docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md` (skeleton/component/Token three-layer contract; no ad-hoc CSS or arbitrary values) |
+| Backend / services / API | `docs/development/DEVELOPMENT-STANDARD.md` |
+| Database / data / credentials / migrations | `docs/development/DATA-AND-SECURITY-STANDARD.md` |
+| Docs / decisions / issues | `docs/development/DOCUMENTATION-STANDARD.md` + `docs/development/DOCUMENTATION-LIFECYCLE.md` |
+| CLI / one-off scripts | `docs/development/CLI-SCRIPT-POLICY.md` |
+| Any change (always) | `docs/development/TESTING-STANDARD.md`; run `make check` before every commit |
+
+Enforcement of these standards is described in `ENFORCEMENT.md`. Where CI gates exist (e.g. frontend arbitrary-value
+lint, credential scan, commit-message check), a violation fails the build — read the standard, do not fight the gate.
+
 ## Script ownership
 
 - Codex/OpenAI GPT scripts: `scripts/codex/`
