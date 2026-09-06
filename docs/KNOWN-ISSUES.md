@@ -20,6 +20,7 @@
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
 | KI-028 | 真实评估暴露模型指标不可信（数据过度可分 / 回归无效） | OPEN | P2 | [详情](issues/KI-028-model-metrics-not-credible.md) |
+| KI-031 | 后端软链发布隔离（与前端统一发布范式） | IN-PROGRESS | P2 | [详情](issues/KI-031-backend-symlink-release.md) |
 | KI-030 | 协作机制与文档治理演进（对标业界典范7条建议） | DONE | P2 | [详情](issues/KI-030-governance-evolution.md) |
 
 ## 已关闭问题（DONE）
