@@ -135,3 +135,76 @@ export function buildQualityAuditList(
     },
   ]
 }
+
+export interface RiskDimensionSummary {
+  id: string
+  type: string
+  count: number
+  level: '高危' | '重点关注'
+  batchDistribution: Record<string, number>
+  gate: string
+  tone: 'danger' | 'warning' | 'accent'
+}
+
+/**
+ * 汇总 F3 风险维度分布统计
+ */
+export function buildRiskDimensionBreakdown(
+  units: Array<{
+    riskType: string
+    riskLevel?: string
+    batch?: string
+  }> | null | undefined,
+): RiskDimensionSummary[] {
+  const safeUnits = Array.isArray(units) ? units : []
+
+  const counts: Record<string, number> = {
+    准备期卡顿: 0,
+    双轨核对差异: 0,
+    建设严重滞后: 0,
+  }
+  const batches: Record<string, Record<string, number>> = {
+    准备期卡顿: {},
+    双轨核对差异: {},
+    建设严重滞后: {},
+  }
+
+  safeUnits.forEach((u) => {
+    if (u && u.riskType && counts[u.riskType] !== undefined) {
+      counts[u.riskType] += 1
+      const b = u.batch || '其他批次'
+      batches[u.riskType][b] = (batches[u.riskType][b] || 0) + 1
+    }
+  })
+
+  return [
+    {
+      id: 'prep-stuck',
+      type: '准备期卡顿',
+      count: counts['准备期卡顿'],
+      level: '重点关注',
+      batchDistribution: batches['准备期卡顿'],
+      gate: '准备期停留超时，期初数据收集受阻',
+      tone: 'warning',
+    },
+    {
+      id: 'dual-diff',
+      type: '双轨核对差异',
+      count: counts['双轨核对差异'],
+      level: '高危',
+      batchDistribution: batches['双轨核对差异'],
+      gate: '双轨凭证率 < 95%，借贷试算不平',
+      tone: 'danger',
+    },
+    {
+      id: 'const-lag',
+      type: '建设严重滞后',
+      count: counts['建设严重滞后'],
+      level: '高危',
+      batchDistribution: batches['建设严重滞后'],
+      gate: '建设度 < 88%，落后批次推进均值',
+      tone: 'accent',
+    },
+  ]
+}
+

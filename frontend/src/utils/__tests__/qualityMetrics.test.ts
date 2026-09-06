@@ -3,6 +3,7 @@ import {
   calcComplianceRate,
   calcDualRunConsistency,
   buildQualityAuditList,
+  buildRiskDimensionBreakdown,
 } from '../qualityMetrics'
 
 describe('utils/qualityMetrics', () => {
@@ -90,4 +91,37 @@ describe('utils/qualityMetrics', () => {
       expect(list[0].status).toBe('unknown')
     })
   })
+
+  describe('buildRiskDimensionBreakdown', () => {
+    it('aggregates counts and batch distributions accurately', () => {
+      const mockUnits = [
+        { riskType: '准备期卡顿', riskLevel: '重点关注', batch: '第六批' },
+        { riskType: '准备期卡顿', riskLevel: '重点关注', batch: '第六批' },
+        { riskType: '双轨核对差异', riskLevel: '高危', batch: '第六批' },
+        { riskType: '建设严重滞后', riskLevel: '高危', batch: '第五批' },
+      ]
+
+      const res = buildRiskDimensionBreakdown(mockUnits)
+      expect(res).toHaveLength(3)
+
+      const prep = res.find((r) => r.type === '准备期卡顿')
+      expect(prep?.count).toBe(2)
+      expect(prep?.batchDistribution).toEqual({ 第六批: 2 })
+
+      const dual = res.find((r) => r.type === '双轨核对差异')
+      expect(dual?.count).toBe(1)
+      expect(dual?.batchDistribution).toEqual({ 第六批: 1 })
+
+      const lag = res.find((r) => r.type === '建设严重滞后')
+      expect(lag?.count).toBe(1)
+      expect(lag?.batchDistribution).toEqual({ 第五批: 1 })
+    })
+
+    it('returns zero counts safely on empty or null inputs', () => {
+      const res = buildRiskDimensionBreakdown(null)
+      expect(res).toHaveLength(3)
+      expect(res.every((r) => r.count === 0)).toBe(true)
+    })
+  })
 })
+
