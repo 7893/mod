@@ -29,9 +29,13 @@
 - `development/SECRET-SCAN-HOOK-DESIGN.md`：本地与 CI 凭据扫描、提交信息闸门的现行实现说明。
 - `development/CLI-SCRIPT-POLICY.md`：各 CLI 专属脚本目录制度。
 - `development/LIVE-PROJECTION.md`：驾驶舱只读实时投影的数据流、边界与增长约束。
-- `development/BUSINESS-SIMULATION-ENGINE.md`：业务驱动拟真引擎设计规范（设计草案，尚未实现）。
-- `27-全生命周期批次工序推进与全要素动态模拟业务规范.md`：全生命周期8批次工序流水线、第八批未启动储备池与全要素因果约束。
-- `28-AI驱动的高仿真业务模拟与时钟节律实施规范.md`：AI赋能的真实业务语义、香港时区作息突发、体量二八定律与异常自愈闭环。
+- `development/BUSINESS-SIMULATION-ENGINE.md`：业务驱动拟真引擎设计规范。
+- `development/SIMULATION-PIPELINE-SPEC.md`：全生命周期8批次工序流水线、储备池与全要素因果约束（原 docs/27）。
+- `development/SIMULATION-DIURNAL-SPEC.md`：AI 业务语义、香港时区作息、体量二八定律与异常自愈闭环（原 docs/28）。
+- `development/DASHBOARD-REFRESH-MECHANISM.md`：动态刷新与无刷新轮询机制（原 docs/24）。
+- `development/ML-AI-DATA-BOUNDARY.md`：AutoML/Cloudflare AI 最小数据边界与授权清单（原 docs/25）。
+- `development/CAPACITY-ESTIMATION.md`：容量评估工具说明（原 docs/26）。
+- `development/GOVERNANCE-AND-COLLABORATION.md`：协作机制与文档治理的标杆对照与演进方向（架构阐释）。
 - `operations/USA-DEPLOYMENT-LAYOUT.md`：迁移前旧部署目录形态（已失效，仅作历史；当前架构见 `CURRENT-STATE.md`）。
 
 ## 需求与设计
