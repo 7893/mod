@@ -41,6 +41,9 @@ export function useScaleScreen(options: ScaleScreenOptions = {}) {
   onMounted(() => {
     updateScale()
     window.addEventListener('resize', updateScale)
+    // 全屏切换时浏览器不保证触发 window resize，必须额外监听 fullscreenchange。
+    // 全屏动画结束后 clientWidth/Height 已稳定，此时重算 scale 才准确。
+    document.addEventListener('fullscreenchange', updateScale)
     if (viewportRef.value) {
       resizeObserver = new ResizeObserver(() => updateScale())
       resizeObserver.observe(viewportRef.value)
@@ -49,6 +52,7 @@ export function useScaleScreen(options: ScaleScreenOptions = {}) {
 
   onUnmounted(() => {
     window.removeEventListener('resize', updateScale)
+    document.removeEventListener('fullscreenchange', updateScale)
     if (resizeObserver) {
       resizeObserver.disconnect()
       resizeObserver = null
