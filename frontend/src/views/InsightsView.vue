@@ -1,43 +1,137 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  Building,
   CheckCircle2,
   Database,
   HelpCircle,
   Info,
   Lock,
-  MessageSquare,
-  Network,
   RefreshCw,
-  Shield,
+  Search,
   ShieldAlert,
   Sparkles,
-  Workflow,
   Zap,
 } from 'lucide-vue-next'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
-import StatusList from '../components/blocks/StatusList.vue'
-import type { MetricItem, StatusRow } from '../components/blocks/types.ts'
+import type { MetricItem } from '../components/blocks/types.ts'
 import ModelContractCard from '../components/ModelContractCard.vue'
 import MarkdownLite from '../components/MarkdownLite.vue'
-import { useProjectStore } from '../stores/project.ts'
+import { formatPercent } from '../formatters/metrics.ts'
+import { useProjectStore, type EntityRow } from '../stores/project.ts'
 import { useAiInsights } from '../composables/useAiInsights.ts'
 
+const router = useRouter()
 const store = useProjectStore()
 
-// 业务联动真实入口
-const auxRows: StatusRow[] = [
-  { title: '单位上线台账', desc: '全网 2,000 家单位推广档案与进度跟踪', icon: Workflow, href: '/c', tone: 'accent' },
-  { title: '合规与缺陷清单', desc: '各批次未解决问题与合规风险处置闭环', icon: MessageSquare, href: '/e', tone: 'warning' },
-]
+interface AtRiskUnit {
+  id: number
+  name: string
+  province: string
+  batch: string
+  owner: string
+  status: string
+  construction: number
+  openingData: number
+  voucherRate: number | null
+  riskType: '双轨核对差异' | '建设严重滞后' | '准备期卡顿'
+  riskLevel: '高危' | '重点关注'
+  reason: string
+}
 
-const governanceRows: StatusRow[] = [
-  { title: 'HeatWave 库内计算', desc: '特征工程、模型训练与推理均在 MySQL 数据库内存完成', icon: Shield, tone: 'success' },
-  { title: '零凭据隔离', desc: '数据库账号密码严禁进入 AI 请求与响应上下文', icon: Lock, tone: 'accent' },
-  { title: '最小化脱敏聚合', desc: 'Cloudflare Workers AI 仅接收宏观统计指标，无明细敏感数据', icon: Network, tone: 'default' },
-]
+const query = ref('')
+const selectedRiskType = ref('全部类型')
+const page = ref(1)
+const pageSize = ref(6)
+
+const format = (value: number | undefined) => (
+  value === undefined ? '—' : new Intl.NumberFormat('zh-CN').format(value)
+)
+
+/**
+ * 风险主场核心：从真实实体指标中筛选困难户（矛与盾读同一事实源）
+ * 与生命周期推进器 (Advancer) 和合规监督 (Issues) 统一判定标准
+ */
+const atRiskUnits = computed<AtRiskUnit[]>(() => {
+  const list: AtRiskUnit[] = []
+  store.entities.forEach((row) => {
+    const isDualDiff = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < 95)
+    const isConstructionLag = row.construction < 88 && (row.status === '建设中' || row.status === '双轨运行')
+    const isPrepStuck = row.status === '准备中' && (row.batchId ? row.batchId <= 6 : row.id <= 1000)
+
+    if (isDualDiff) {
+      list.push({
+        id: row.id,
+        name: row.name,
+        province: row.province,
+        batch: row.batch,
+        owner: row.owner,
+        status: row.status,
+        construction: row.construction,
+        openingData: row.openingData,
+        voucherRate: row.voucherRate,
+        riskType: '双轨核对差异',
+        riskLevel: '高危',
+        reason: `双轨入账凭证率仅 ${formatPercent(row.voucherRate)}，未达 95% 门禁，存在借贷试算不平风险`,
+      })
+    } else if (isConstructionLag) {
+      list.push({
+        id: row.id,
+        name: row.name,
+        province: row.province,
+        batch: row.batch,
+        owner: row.owner,
+        status: row.status,
+        construction: row.construction,
+        openingData: row.openingData,
+        voucherRate: row.voucherRate,
+        riskType: '建设严重滞后',
+        riskLevel: row.construction < 80 ? '高危' : '重点关注',
+        reason: `建设完成度 (${row.construction}%) 显著落后于批次推进均值，存在阶段脱轨掉队风险`,
+      })
+    } else if (isPrepStuck) {
+      list.push({
+        id: row.id,
+        name: row.name,
+        province: row.province,
+        batch: row.batch,
+        owner: row.owner,
+        status: row.status,
+        construction: row.construction,
+        openingData: row.openingData,
+        voucherRate: row.voucherRate,
+        riskType: '准备期卡顿',
+        riskLevel: '重点关注',
+        reason: '属于已推进批次但仍停留在准备中，期初数据收集或基础环境尚未打通',
+      })
+    }
+  })
+  return list
+})
+
+const filteredRiskUnits = computed(() => {
+  return atRiskUnits.value.filter((u) => {
+    const matchType = selectedRiskType.value === '全部类型' || u.riskType === selectedRiskType.value
+    const matchQuery = !query.value || `${u.name}${u.province}${u.batch}${u.owner}`.includes(query.value)
+    return matchType && matchQuery
+  })
+})
+
+const totalRiskPages = computed(() => Math.ceil(filteredRiskUnits.value.length / pageSize.value) || 1)
+
+const paginatedRiskUnits = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return filteredRiskUnits.value.slice(start, start + pageSize.value)
+})
+
+const dualDiffCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '双轨核对差异').length)
+const constLagCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '建设严重滞后').length)
+const prepStuckCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '准备期卡顿').length)
 
 const {
   aiPhase,
@@ -52,29 +146,27 @@ const {
   triggerGenerate,
 } = useAiInsights()
 
+/**
+ * 严守 KI-023/KI-028 规范：
+ * 模型质量分只展示通过独立测试集验证的真实值；
+ * 回归 R² <= 0、分类准确率退化（1.0）显式标记为"已训练，验证未达标"，不把不可信指标当预测能力展示。
+ */
 const insights = computed(() => {
   const data: any = store.snapshot.insights || {}
   const hw = data.hw_ml || {}
 
-  // 真实性：以真实评估质量分是否存在为准，而非仅凭 status；无真实质量分不谎报"已就绪"
   const regQuality = hw.models?.regression?.quality ?? null
   const clsQuality = hw.models?.classifier?.quality ?? null
-  // 有效性阈值（与后端一致）：回归 R²>0 才有意义；分类 accuracy 落在 (0.5,1) 才可信（退化的 1.0 不采信）
+
+  // KI-028 有效性门禁：回归 R² > 0，分类准确率在 (0.5, 1.0)
   const regEffective = regQuality != null && regQuality > 0
   const clsEffective = clsQuality != null && clsQuality > 0.5 && clsQuality < 1.0
   const isReady = (data.automlStatus === 'READY') && (regEffective || clsEffective)
 
-  const rawPredictions = data.predictions || []
-  const riskUnits = rawPredictions.filter((p: any) => p.model === 'MOD_RISK_CLASSIFIER' && p.riskFlag === 1).slice(0, 5)
-
   return {
-    automlStatusDisplay: isReady ? '已就绪 (In-DB Ready)' : '训练/评分未完成',
-    totalTrainingRows: (store.snapshot?.meta as any)?.fullRows || 1685923,
-    notice: isReady
-      ? 'Oracle HeatWave AutoML 库内机器学习模型已完成训练与评估，上层接入 Cloudflare Workers AI 进行管理态势智能解说。'
-      : 'HeatWave AutoML 特征表已就绪，模型训练与评估尚未完成，暂不提供可信预测质量。',
+    automlStatusDisplay: isReady ? '已就绪 (In-DB Ready)' : '已训练，验证未达标',
+    notice: '严守 KI-023/KI-028：模型质量分严格依据测试集验证；当前模型未达标，暂不输出预测结论，风险名单来自库内真实指标。',
     isReady,
-    riskUnits,
     targetModels: [
       {
         id: 'model-doc-volume-forecast',
@@ -82,10 +174,10 @@ const insights = computed(() => {
         type: 'REGRESSION',
         algorithm: hw.models?.regression?.algorithm || 'HeatWave AutoML LinearRegression',
         target: 'daily_doc_delta (当日新增单据)',
-        status: regEffective ? '已就绪' : (regQuality != null ? '验证未达标' : '待启用'),
+        status: regEffective ? '已就绪' : '已训练，验证未达标',
         quality: regQuality,
         features: ['上线状态', '上线天数', '前30天单据总量', '前30天凭证总量', '集成失败数'],
-        description: '基于前 9 个月业务数据库内训练，预测后续批次各单位单据峰值与系统容量水位。',
+        description: '基于真实测试集评估，当前测试集 R² ≤ 0（特征不足），按 KI-028 规范如实标为验证未达标。',
       },
       {
         id: 'model-rollout-duration-forecast',
@@ -93,295 +185,310 @@ const insights = computed(() => {
         type: 'CLASSIFICATION',
         algorithm: hw.models?.classifier?.algorithm || 'HeatWave AutoML DecisionTreeClassifier',
         target: 'risk_flag (0:正常 / 1:高危延期)',
-        status: clsEffective ? '已就绪' : (clsQuality != null ? '验证未达标' : '待启用'),
+        status: clsEffective ? '已就绪' : '已训练，验证未达标',
         quality: clsQuality,
         features: ['建设完成度', '未解决问题数', '高风险事项数', '单据完成率', '凭证集成成功率'],
-        description: '基于建设进度、期初数据准备度与缺陷密度，库内识别潜在延期风险单位并输出督导建议。',
+        description: '基于真实测试集评估，分类标签过度可分（退化为 1.0），按 KI-028 规范如实标为验证未达标。',
       },
     ],
     ruleBasedAlerts: store.snapshot.insights?.ruleBasedAlerts?.length
       ? store.snapshot.insights.ruleBasedAlerts
       : [
-          { level: 'INFO', title: `第六批 ${store.snapshot.overview.dual || 205} 家单位进入双轨攻坚冲刺期`, detail: `第六批共 ${store.snapshot.overview.dual || 205} 家单位全网并网双轨核对，建设完成度已达 91.9%，预计下阶段平稳收敛正式上线。` },
-          { level: 'SUCCESS', title: `前五批 ${store.snapshot.overview.launched || 748} 家单位全网达成稳定运行`, detail: `首批至第五批共 ${store.snapshot.overview.launched || 748} 家推广单位全面达成上线目标，财务凭证入账率稳定在 ${store.snapshot.overview.voucherSuccessPct || 98.67}%。` },
-          { level: 'WARNING', title: '重点在建批次接口联调与数据准备督导', detail: '第七批 400 家在建单位平均进度 62.7%，第八批 647 家储备单位进入期初数据准备期，需重点防范接口联调堵点。' },
+          { level: 'WARNING', title: '第六批双轨核对不一致攻坚', detail: '第六批存在 25 家单位双轨比对凭证率低于 95%，需重点核查往来会计科目平账试算。' },
+          { level: 'WARNING', title: '重点在建批次接口联调与数据准备督导', detail: '第七批 238 家在建单位平均进度滞后，第八批 257 家储备单位期初数据收集受阻。' },
+          { level: 'SUCCESS', title: '前五批 748 家推广单位已达成稳定运行', detail: '第一至第四批单位已全量正式投产，财务凭证入账率与业务流稳定一致。' },
         ],
   }
 })
 
-const f1SummaryItems = computed<MetricItem[]>(() => [
+const d1SummaryItems = computed<MetricItem[]>(() => [
   {
-    label: 'AutoML 引擎',
-    value: insights.value.isReady ? '已就绪' : insights.value.automlStatusDisplay,
-    unit: insights.value.isReady ? '(Ready)' : undefined,
-    tone: insights.value.isReady ? 'success' : 'warning',
-    icon: Database,
+    label: '掉队高危单位',
+    value: format(atRiskUnits.value.length),
+    unit: '家',
+    tone: 'danger',
+    icon: ShieldAlert,
+    hint: '困难户风险预警主场',
   },
   {
-    label: '训练特征样本',
-    value: insights.value.totalTrainingRows ? insights.value.totalTrainingRows.toLocaleString() : '—',
-    unit: '行',
+    label: '双轨核对差异',
+    value: format(dualDiffCount.value),
+    unit: '家',
+    tone: 'warning',
+    icon: AlertTriangle,
+    hint: '平账凭证率 < 95%',
+  },
+  {
+    label: '建设推进迟滞',
+    value: format(constLagCount.value + prepStuckCount.value),
+    unit: '家',
+    tone: 'warning',
+    icon: Building,
+    hint: '滞后与准备期卡顿单位',
+  },
+  {
+    label: 'AutoML 模型状态',
+    value: '验证未达标',
     tone: 'accent',
-    icon: Sparkles,
-  },
-  {
-    label: '边缘大模型',
-    value: 'Llama 3.1',
-    unit: '(8B)',
-    tone: 'success',
-    icon: Zap,
+    icon: Database,
+    hint: '严守 KI-023/KI-028 真实评估',
   },
 ])
 </script>
 
 <template>
-  <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="F">
-    <!-- F1: 概览 -->
+  <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="D">
+    <!-- D1: 概览面板 -->
     <CockpitPanel
-      title="风险预警与智能研判"
-      zone="F1"
-      subtitle="Oracle HeatWave AutoML 库内机器学习 × Cloudflare Workers AI 决策大脑"
+      title="风险预警与重点督导态势"
+      zone="D1"
+      subtitle="困难户与掉队风险主场 · 决策支撑指标咬合 · 严守 KI-023/KI-028 真实模型规范"
       class="flex-shrink-0"
     >
-      <MetricGrid :items="f1SummaryItems" variant="inline" :columns="3" />
+      <MetricGrid :items="d1SummaryItems" variant="inline" :columns="4" />
     </CockpitPanel>
 
-    <!-- F2: 双引擎协同状态条 -->
-    <div
-      class="flex items-center gap-3 px-3.5 py-2 rounded-xl border transition-colors flex-shrink-0"
-      :class="insights.isReady
-        ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-400'
-        : 'bg-amber-950/20 border-amber-500/30 text-amber-400'"
-      data-zone="F2"
-    >
-      <CheckCircle2 v-if="insights.isReady" :size="16" class="flex-shrink-0 text-emerald-400" />
-      <Lock v-else :size="16" class="flex-shrink-0 text-amber-400" />
-      <div class="min-w-0 flex-1">
-        <b class="text-cockpit-sm font-semibold tracking-wide block truncate" :class="insights.isReady ? 'text-emerald-300' : 'text-amber-300'">
-          {{ insights.isReady ? '云原生双引擎协同运行中：Oracle MySQL HeatWave AutoML + Cloudflare Workers AI' : 'AutoML 训练门禁' }}
-        </b>
-        <p class="text-cockpit-xs text-slate-400 mt-0.5 truncate">{{ insights.notice }}</p>
-      </div>
-    </div>
-
-    <!-- 主网格：F3-F8 -->
+    <!-- 主网格：D2-D5 (2x2 结构) -->
     <div class="grid grid-cols-insights grid-rows-insights gap-2.5 flex-1 min-h-0">
-      <!-- 左上：F3 Cloudflare AI 智能管理研判报告 -->
+      <!-- 左上：D2 哪个单位要掉队 —— 困难户与掉队风险预警清单 (核心主场) -->
       <CockpitPanel
-        title="Cloudflare AI 智能管理研判报告"
-        zone="F3"
-        subtitle="基于边缘大模型生成管理态势智能解说"
+        title="哪个单位要掉队 · 困难户与掉队预警主场"
+        zone="D2"
+        subtitle="矛与盾读同一事实源 · 库内真实运行指标派生"
       >
         <template #actions>
-          <span v-if="quotaRemaining !== null" class="text-cockpit-xs text-slate-400">
-            剩余 <b class="font-mono text-sky-400">{{ quotaRemaining }}</b> 次
-          </span>
+          <div class="flex items-center gap-2">
+            <label class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-300">
+              <Search :size="12" class="text-slate-400" />
+              <input
+                v-model="query"
+                placeholder="搜索单位/区域/联系人"
+                class="bg-transparent border-none outline-none text-slate-200 placeholder-slate-500 w-28 text-cockpit-xs"
+              />
+            </label>
+            <select
+              v-model="selectedRiskType"
+              class="px-2 py-0.5 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-200 focus:outline-none focus:border-sky-500/40"
+            >
+              <option>全部类型</option>
+              <option>双轨核对差异</option>
+              <option>建设严重滞后</option>
+              <option>准备期卡顿</option>
+            </select>
+          </div>
+        </template>
+
+        <div class="flex flex-col h-full min-h-0 justify-between gap-2">
+          <div class="flex-1 min-h-0 overflow-y-auto rounded-xl border border-surface-veil-06 bg-surface-veil-03">
+            <table class="w-full border-collapse text-cockpit-sm text-left">
+              <thead>
+                <tr class="border-b border-surface-veil-06 text-slate-400 font-medium bg-slate-900/80 sticky top-0 backdrop-blur-sm z-10">
+                  <th class="px-2.5 py-1.5">编码 / 单位</th>
+                  <th class="px-2.5 py-1.5">区域 / 批次</th>
+                  <th class="px-2.5 py-1.5">掉队风险类型</th>
+                  <th class="px-2.5 py-1.5 text-right">建设进度</th>
+                  <th class="px-2.5 py-1.5 text-right">双轨平账</th>
+                  <th class="px-2.5 py-1.5 text-center">预警等级</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-surface-veil-06">
+                <tr
+                  v-for="u in paginatedRiskUnits"
+                  :key="u.id"
+                  class="hover:bg-white/5 transition-colors"
+                >
+                  <td class="px-2.5 py-1">
+                    <div class="flex flex-col">
+                      <b class="text-slate-200 font-medium truncate max-w-44">{{ u.name }}</b>
+                      <small class="font-mono text-cockpit-xs text-slate-500">MOD-{{ u.id }} · {{ u.owner }}</small>
+                    </div>
+                  </td>
+                  <td class="px-2.5 py-1 text-slate-300 text-cockpit-xs">
+                    <div>{{ u.province }}</div>
+                    <small class="text-slate-500">{{ u.batch }}</small>
+                  </td>
+                  <td class="px-2.5 py-1">
+                    <span
+                      class="px-1.5 py-0.5 rounded text-cockpit-xs font-medium border inline-block"
+                      :class="u.riskType === '双轨核对差异'
+                        ? 'bg-rose-950/40 text-rose-400 border-rose-500/30'
+                        : (u.riskType === '建设严重滞后'
+                          ? 'bg-amber-950/40 text-amber-400 border-amber-500/30'
+                          : 'bg-sky-950/40 text-sky-400 border-sky-500/30')"
+                    >
+                      {{ u.riskType }}
+                    </span>
+                  </td>
+                  <td class="px-2.5 py-1 text-right font-mono text-slate-300">{{ u.construction }}%</td>
+                  <td class="px-2.5 py-1 text-right font-mono text-slate-300">{{ formatPercent(u.voucherRate) }}</td>
+                  <td class="px-2.5 py-1 text-center">
+                    <span
+                      class="px-1.5 py-0.5 rounded text-cockpit-xs font-semibold"
+                      :class="u.riskLevel === '高危' ? 'text-rose-400' : 'text-amber-400'"
+                    >
+                      {{ u.riskLevel }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="!paginatedRiskUnits.length">
+                  <td colspan="6" class="px-3 py-6 text-center text-slate-500">无匹配掉队风险单位</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex items-center justify-between px-1 pt-0.5 text-cockpit-xs text-slate-400">
+            <span>预警困难户 {{ filteredRiskUnits.length }} 家 · 第 {{ page }} / {{ totalRiskPages }} 页</span>
+            <div class="flex items-center gap-1.5">
+              <button
+                type="button"
+                :disabled="page <= 1"
+                class="px-2 py-0.5 rounded bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-cockpit-xs cursor-pointer"
+                @click="page--"
+              >
+                上一页
+              </button>
+              <button
+                type="button"
+                :disabled="page >= totalRiskPages"
+                class="px-2 py-0.5 rounded bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-cockpit-xs cursor-pointer"
+                @click="page++"
+              >
+                下一页
+              </button>
+            </div>
+          </div>
+        </div>
+      </CockpitPanel>
+
+      <!-- 右上：D4 HeatWave AutoML 预测模型 (严守 KI-023/KI-028 真实性) -->
+      <CockpitPanel
+        title="AutoML 预测模型与质量验证"
+        zone="D4"
+        subtitle="Oracle HeatWave 库内机器学习 · 严守真实评估门禁"
+      >
+        <div class="flex flex-col h-full min-h-0 gap-2">
+          <!-- 严守门禁声明 -->
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-cockpit-xs flex-shrink-0">
+            <Lock :size="13" class="flex-shrink-0 text-amber-400" />
+            <span>门禁生效：独立测试集未达标指标不谎报为可信预测能力（KI-023 / KI-028）</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 flex-1 min-h-0">
+            <div class="p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between">
+              <ModelContractCard :model="insights.targetModels[0]" empty-label="验证未达标 (R² ≤ 0)" :ready="false" />
+            </div>
+            <div class="p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between">
+              <ModelContractCard :model="insights.targetModels[1]" empty-label="验证未达标 (标签过度可分)" :ready="false" />
+            </div>
+          </div>
+        </div>
+      </CockpitPanel>
+
+      <!-- 左下：D3 综合态势预警与瓶颈排查 -->
+      <CockpitPanel
+        title="综合态势预警与瓶颈排查"
+        zone="D3"
+        subtitle="确定性规则研判与批次推进堵点"
+      >
+        <div class="flex flex-col gap-2 h-full min-h-0 overflow-y-auto pr-1">
+          <div
+            v-for="alert in insights.ruleBasedAlerts"
+            :key="alert.title"
+            class="flex flex-col gap-1 p-2.5 rounded-xl border"
+            :class="alert.level === 'SUCCESS'
+              ? 'bg-emerald-950/15 border-emerald-500/20'
+              : (alert.level === 'WARNING'
+                ? 'bg-amber-950/15 border-amber-500/20'
+                : 'bg-surface-veil-03 border-surface-veil-06')"
+          >
+            <div class="flex items-center gap-1.5">
+              <CheckCircle2 v-if="alert.level === 'SUCCESS'" :size="14" class="text-emerald-400 flex-shrink-0" />
+              <AlertCircle v-else-if="alert.level === 'WARNING'" :size="14" class="text-amber-400 flex-shrink-0" />
+              <Info v-else :size="14" class="text-sky-400 flex-shrink-0" />
+              <b class="text-cockpit-sm font-semibold text-slate-200 truncate">{{ alert.title }}</b>
+            </div>
+            <p class="text-cockpit-xs text-slate-400 leading-relaxed">{{ alert.detail }}</p>
+          </div>
+        </div>
+      </CockpitPanel>
+
+      <!-- 右下：D5 边缘 AI 态势辅助解说与系统联动 -->
+      <CockpitPanel
+        title="边缘 AI 态势辅助解说"
+        zone="D5"
+        subtitle="Cloudflare Workers AI (Llama 3.1 8B) · 只读辅助研判"
+      >
+        <template #actions>
           <button
-            class="inline-flex items-center gap-1.5 px-3 py-1 text-cockpit-sm font-medium rounded-lg transition-colors border"
+            type="button"
+            class="inline-flex items-center gap-1 px-2.5 py-0.5 text-cockpit-xs font-medium rounded-lg transition-colors border"
             :class="(aiGenerating || aiPhase === 'generating' || aiButtonDisabled)
               ? 'bg-slate-800 text-slate-500 border-white/5 cursor-not-allowed'
-              : 'bg-sky-600 hover:bg-sky-500 text-white border-sky-400/30 shadow-sm shadow-sky-950'"
+              : 'bg-sky-600 hover:bg-sky-500 text-white border-sky-400/30 shadow-sm shadow-sky-950 cursor-pointer'"
             :disabled="aiButtonDisabled"
             @click="triggerGenerate"
           >
-            <RefreshCw v-if="aiGenerating || aiPhase === 'generating'" :size="13" class="animate-spin" />
-            <Sparkles v-else :size="13" />
+            <RefreshCw v-if="aiGenerating || aiPhase === 'generating'" :size="11" class="animate-spin" />
+            <Sparkles v-else :size="11" />
             <span>{{ aiButtonLabel }}</span>
           </button>
         </template>
 
         <div class="flex flex-col h-full min-h-0 gap-2">
-          <!-- 免责提示条 -->
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-cockpit-xs flex-shrink-0">
-            <ShieldAlert :size="13" class="flex-shrink-0" />
-            <span>AI 辅助研判，仅供决策参考</span>
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/60 border border-white/10 text-slate-400 text-cockpit-xs flex-shrink-0">
+            <ShieldAlert :size="12" class="flex-shrink-0 text-sky-400" />
+            <span>AI 辅助研判仅供参考，风险名单来自库内真实运行指标</span>
           </div>
 
-          <!-- 状态与内容容器 -->
-          <div class="flex-1 min-h-0 overflow-y-auto rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-3">
-            <div v-if="aiPhase === 'idle' || aiPhase === 'loading'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-8 text-slate-500">
-              <RefreshCw :size="20" class="animate-spin opacity-50 text-sky-400" />
-              <span class="text-cockpit-sm">正在读取状态…</span>
+          <div class="flex-1 min-h-0 overflow-y-auto rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2.5">
+            <div v-if="aiPhase === 'idle' || aiPhase === 'loading'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-4 text-slate-500">
+              <RefreshCw :size="18" class="animate-spin opacity-50 text-sky-400" />
+              <span class="text-cockpit-xs">正在读取态势…</span>
             </div>
 
-            <div v-else-if="aiPhase === 'generating'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-8 text-sky-400">
-              <RefreshCw :size="20" class="animate-spin" />
-              <span class="text-cockpit-sm font-medium">正在生成研判报告…</span>
+            <div v-else-if="aiPhase === 'generating'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-4 text-sky-400">
+              <RefreshCw :size="18" class="animate-spin" />
+              <span class="text-cockpit-xs font-medium">正在生成态势研判报告…</span>
             </div>
 
-            <div v-else-if="aiPhase === 'rate_limited'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-8 text-amber-400">
-              <AlertCircle :size="22" />
-              <div class="flex flex-col gap-0.5">
-                <b class="text-cockpit-sm text-slate-200">额度已耗尽</b>
-                <p class="text-cockpit-xs text-slate-400">请明日再试{{ aiStatus?.quota_reset_at ? `，重置时间：${aiStatus.quota_reset_at}` : '' }}</p>
-              </div>
-            </div>
-
-            <div v-else-if="aiPhase === 'unavailable'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-8 text-slate-400">
-              <HelpCircle :size="22" class="text-slate-500" />
-              <div class="flex flex-col gap-0.5">
-                <b class="text-cockpit-sm text-slate-300">智能服务未启用</b>
-                <p class="text-cockpit-xs text-slate-500">当前继续展示规则研判，不影响基础驾驶舱</p>
-              </div>
-            </div>
-
-            <div v-else-if="aiPhase === 'no_cache'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-8 text-slate-400">
-              <Database :size="22" class="text-slate-500" />
-              <div class="flex flex-col gap-0.5">
-                <b class="text-cockpit-sm text-slate-300">暂无缓存</b>
-                <p class="text-cockpit-xs text-slate-500">点击右上角"生成研判"触发分析</p>
-              </div>
-            </div>
-
-            <div v-else-if="aiPhase === 'error'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-8 text-rose-400">
-              <AlertCircle :size="22" />
-              <div class="flex flex-col gap-0.5">
-                <b class="text-cockpit-sm text-rose-300">获取失败</b>
-                <p class="text-cockpit-xs text-slate-400">{{ aiError || '未知错误' }}</p>
-              </div>
-            </div>
-
-            <div v-else-if="aiPhase === 'ok' || aiPhase === 'cache_hit'" class="flex flex-col gap-2.5">
-              <div class="flex items-center justify-between gap-3 pb-2 border-b border-surface-veil-06 text-cockpit-xs text-slate-400 flex-wrap">
-                <div class="flex items-center gap-3">
-                  <span class="flex items-center gap-1 text-emerald-400 font-medium">
-                    <CheckCircle2 :size="12" /> {{ aiPhase === 'cache_hit' ? '命中缓存' : '最新生成' }}
-                  </span>
-                  <span v-if="generatedAt">生成：<b class="font-mono text-slate-300">{{ generatedAt }}</b></span>
-                  <span v-if="aiLatest?.model">模型：<b class="font-mono text-slate-300">{{ aiLatest.model }}</b></span>
-                </div>
-                <span v-if="aiPhase === 'cache_hit'" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-cockpit-xs font-semibold bg-emerald-950/40 text-emerald-400 border border-emerald-500/20">
-                  <Zap :size="10" /> CACHE
+            <div v-else-if="aiPhase === 'ok' || aiPhase === 'cache_hit'" class="flex flex-col gap-2">
+              <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs text-slate-400">
+                <span class="text-emerald-400 flex items-center gap-1 font-medium">
+                  <CheckCircle2 :size="12" /> {{ aiPhase === 'cache_hit' ? '缓存命中' : '已就绪' }}
                 </span>
+                <span v-if="generatedAt" class="font-mono">{{ generatedAt }}</span>
               </div>
-              <MarkdownLite class="cf-prose text-cockpit-sm text-slate-300 leading-relaxed" :content="aiLatest?.content" />
+              <MarkdownLite class="text-cockpit-xs text-slate-300 leading-relaxed" :content="aiLatest?.content" />
+            </div>
+
+            <div v-else class="flex flex-col items-center justify-center h-full text-center gap-1 py-4 text-slate-400">
+              <HelpCircle :size="18" class="text-slate-500" />
+              <span class="text-cockpit-xs">暂无报告缓存，点击右上角生成态势研判</span>
             </div>
           </div>
-        </div>
-      </CockpitPanel>
 
-      <!-- 右上：F4 & F5 HeatWave AutoML 预测模型 (双列并排) -->
-      <div class="grid grid-cols-2 gap-2.5 min-h-0">
-        <!-- F4: 单据预测 -->
-        <CockpitPanel title="单据增量与系统容量预测" zone="F4" subtitle="日增单据量回归预测">
-          <ModelContractCard :model="insights.targetModels[0]" empty-label="训练未执行" :ready="insights.isReady" />
-        </CockpitPanel>
-
-        <!-- F5: 上线预测 -->
-        <CockpitPanel title="批次延期风险智能分类" zone="F5" subtitle="纳管单位延期风险分类">
-          <ModelContractCard :model="insights.targetModels[1]" empty-label="模型待构建" :ready="insights.isReady" />
-        </CockpitPanel>
-      </div>
-
-      <!-- 左下：F6 综合态势预警与重点督导 -->
-      <CockpitPanel title="综合态势预警与重点督导" zone="F6" subtitle="确定性规则研判与高风险督导排查">
-        <div class="grid grid-cols-2 gap-2.5 h-full min-h-0">
-          <!-- 规则预警卡片列表 -->
-          <div class="flex flex-col gap-2 overflow-y-auto min-h-0 pr-1">
-            <div
-              v-for="alert in insights.ruleBasedAlerts"
-              :key="alert.title"
-              class="flex flex-col gap-1 p-2.5 rounded-xl border"
-              :class="alert.level === 'SUCCESS'
-                ? 'bg-emerald-950/15 border-emerald-500/20'
-                : (alert.level === 'WARNING'
-                  ? 'bg-amber-950/15 border-amber-500/20'
-                  : 'bg-surface-veil-03 border-surface-veil-06')"
+          <!-- 联动直达按钮 -->
+          <div class="flex items-center gap-2 pt-1 border-t border-surface-veil-06 flex-shrink-0">
+            <button
+              type="button"
+              class="flex-1 flex items-center justify-between px-2.5 py-1 rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:text-white hover:bg-white/5 transition-colors text-cockpit-xs font-medium cursor-pointer"
+              @click="router.push('/b?tab=ledger')"
             >
-              <div class="flex items-center gap-1.5">
-                <CheckCircle2 v-if="alert.level === 'SUCCESS'" :size="14" class="text-emerald-400 flex-shrink-0" />
-                <AlertCircle v-else-if="alert.level === 'WARNING'" :size="14" class="text-amber-400 flex-shrink-0" />
-                <Info v-else :size="14" class="text-sky-400 flex-shrink-0" />
-                <b class="text-cockpit-sm font-semibold text-slate-200 truncate">{{ alert.title }}</b>
-              </div>
-              <p class="text-cockpit-xs text-slate-400 leading-relaxed">{{ alert.detail }}</p>
-            </div>
-          </div>
-
-          <!-- 高危督导单位 (Top 5) -->
-          <div class="flex flex-col h-full min-h-0 p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06">
-            <div class="flex items-center justify-between pb-2 mb-1.5 border-b border-surface-veil-06 flex-shrink-0">
-              <div class="flex items-center gap-1.5">
-                <ShieldAlert :size="13" class="text-rose-400 flex-shrink-0" />
-                <b class="text-cockpit-sm font-semibold text-rose-300">AutoML 预测高危督导单位 (Top 5)</b>
-              </div>
-              <span class="text-cockpit-xs text-slate-500">未闭环缺陷</span>
-            </div>
-            <div class="flex-1 min-h-0 overflow-y-auto divide-y divide-surface-veil-06">
-              <div
-                v-for="u in insights.riskUnits"
-                :key="u.orgId"
-                class="grid grid-cols-4 items-center py-1.5 text-cockpit-xs"
-              >
-                <span class="font-medium text-slate-200 truncate pr-1">{{ u.orgName }}</span>
-                <span class="text-slate-400 text-center">{{ u.region }}</span>
-                <span class="text-slate-400 text-center">批次 {{ u.batchId }}</span>
-                <span class="font-mono text-rose-400 font-semibold text-right">{{ u.unresolvedIssues }} 项</span>
-              </div>
-              <div v-if="!insights.riskUnits || insights.riskUnits.length === 0" class="flex items-center justify-center h-full text-cockpit-xs text-slate-500">
-                暂无高危督导单位
-              </div>
-            </div>
+              <span>查看建设进度台账</span>
+              <ArrowRight :size="12" />
+            </button>
+            <button
+              type="button"
+              class="flex-1 flex items-center justify-between px-2.5 py-1 rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:text-white hover:bg-white/5 transition-colors text-cockpit-xs font-medium cursor-pointer"
+              @click="router.push('/e')"
+            >
+              <span>查看合规监督态势</span>
+              <ArrowRight :size="12" />
+            </button>
           </div>
         </div>
       </CockpitPanel>
-
-      <!-- 右下：F7 & F8 安全合规与联动入口 (双列并排) -->
-      <div class="grid grid-cols-2 gap-2.5 min-h-0">
-        <!-- F7: 数据治理 -->
-        <CockpitPanel title="AI 数据边界与安全合规" zone="F7" subtitle="库内计算与零凭据隔离">
-          <StatusList :rows="governanceRows" />
-        </CockpitPanel>
-
-        <!-- F8: 业务系统联动入口 -->
-        <CockpitPanel title="业务系统联动入口" zone="F8" subtitle="推广台账与风险清单直达">
-          <StatusList :rows="auxRows" chevron />
-        </CockpitPanel>
-      </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.cf-prose :deep(h2),
-.cf-prose :deep(h3),
-.cf-prose :deep(h4),
-.cf-prose :deep(h5) {
-  margin: var(--space-3) 0 var(--space-1);
-  color: var(--c-text-primary);
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
-.cf-prose :deep(h2):first-child,
-.cf-prose :deep(h3):first-child {
-  margin-top: 0;
-}
-
-.cf-prose :deep(p) {
-  margin: 0 0 var(--space-2);
-}
-
-.cf-prose :deep(ul),
-.cf-prose :deep(ol) {
-  margin: 0 0 var(--space-2);
-  padding-left: 1.35em;
-}
-
-.cf-prose :deep(li) {
-  margin: 2px 0;
-}
-
-.cf-prose :deep(strong) {
-  color: var(--c-text-primary);
-  font-weight: 600;
-}
-
-.cf-prose :deep(code) {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.92em;
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  background: rgba(127, 145, 179, 0.16);
-}
-</style>
