@@ -108,3 +108,5 @@ generator/
 docs/history/
 frontend/releases/
 frontend/current
+backend/releases/
+backend/current

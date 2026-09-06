@@ -1,6 +1,6 @@
 # KI-031 · 后端软链发布隔离（与前端统一发布范式）
 
-- 状态：IN-PROGRESS（2026-09-06 立项）
+- 状态：DONE（2026-09-06，四阶段全部完成）
 - 更新日期：2026-09-06
 - 关联链接：[已知问题看板](../KNOWN-ISSUES.md)、[ADR-0008](../decisions/0008-symlink-release-isolation.md)、[KI-030](KI-030-governance-evolution.md)
 
@@ -38,3 +38,12 @@
 ## 进度
 - 文档/决策已记录（ADR-0008、KI-031）
 - 执行待开始
+
+## 完成记录（2026-09-06 主控执行）
+- 阶段一：建 `backend/releases/<ts>/`，复制 `backend/app/`，建 `backend/current` 软链。
+- 阶段二：`mod-api.service` 的 `WorkingDirectory` 改为 `backend/current/`（备份 .bak-pre-symlink），
+  daemon-reload + restart，验证 HTTP 200、进程 cwd 指向 releases/ ✓。
+- 阶段三：`publish_frontend.sh` 升级为统一的 `scripts/project/publish.sh`，整合前后端软链切换、
+  make check、reload Nginx + restart mod-api、健康验证、失败自动回滚、旧版本清理（保留最近5个）。
+- 阶段四：`backend/releases/` 和 `backend/current` 加入 `.gitignore`；更新 `AGENTS.md` 发布约束；
+  旧的 `publish_frontend.sh` 保留但已被 `publish.sh` 取代（前端发布请用统一脚本）。
