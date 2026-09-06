@@ -23,8 +23,8 @@
 - [ ] 回归测试覆盖（KI 铁律：行为变更必须加回归测试）
 
 ### 第二期 · 指挥部决策简报自动化（主控 + 后续派单）
-- [ ] `cloudflare_ai.py` 端点改走 `mod-gateway`（主控先行）
-- [ ] 清理 `ai_narrator.py` 及 `/narrator/*` 死代码（主控先行）
+- [x] `cloudflare_ai.py` 端点改走 `mod-gateway`（2026-09-06 完成，实测经网关调 Llama 生成三段式研判成功；补 User-Agent 绕过网关 WAF 1010 拦截）
+- [x] 清理 `ai_narrator.py` 及 `/narrator/*` 死代码（2026-09-06 完成，含测试）
 - [ ] 新建简报聚合器 + 每日定时生成服务 + `daily_briefing` 表（需建表授权）
 - [ ] A 屏 / F 屏简报卡片展示
 
