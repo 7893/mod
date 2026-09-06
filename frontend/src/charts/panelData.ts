@@ -44,3 +44,16 @@ export function buildCoverageComposition(total?: number | null, covered?: number
     rate: Math.round((safeCovered * 10000) / total) / 100,
   }
 }
+
+export function buildBatchProgressSeries(batches: Array<{
+  name: string
+  constructionPct: number
+  launchedPct: number
+}>) {
+  const normalize = (value: number) => Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0))
+  return batches.map((batch) => ({
+    name: batch.name,
+    construction: normalize(batch.constructionPct),
+    launched: normalize(batch.launchedPct),
+  }))
+}

@@ -362,7 +362,7 @@ const f1SummaryItems = computed<MetricItem[]>(() => [
             <span>独立测试集验证达标：时序回归 R²>0 与分类泛化已消除过度可分，库内推理与 SHAP 归因就绪</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-2.5 flex-1 min-h-0">
+          <div class="grid grid-rows-2 gap-2 flex-1 min-h-0">
             <div class="p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between">
               <ModelContractCard :model="insights.targetModels[0]" empty-label="验证未达标 (R² ≤ 0)" :ready="insights.isReady && insights.targetModels[0].status === '已就绪'" />
             </div>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildBatchProgressSeries,
   buildCoverageComposition,
   buildRolloutComposition,
   buildTaskStageSeries,
@@ -29,5 +30,15 @@ describe('charts/panelData', () => {
     expect(buildCoverageComposition(100, 120)).toEqual({ covered: 100, gap: 0, rate: 100 })
     expect(buildCoverageComposition(null, null)).toBeNull()
     expect(buildCoverageComposition(0, 0)).toBeNull()
+  })
+
+  it('normalizes batch progress percentages for comparison charts', () => {
+    expect(buildBatchProgressSeries([
+      { name: '第一批', constructionPct: 108, launchedPct: 82.5 },
+      { name: '第二批', constructionPct: Number.NaN, launchedPct: -4 },
+    ])).toEqual([
+      { name: '第一批', construction: 100, launched: 82.5 },
+      { name: '第二批', construction: 0, launched: 0 },
+    ])
   })
 })

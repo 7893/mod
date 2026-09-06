@@ -31,8 +31,13 @@ interface CoverageSeriesItem {
 interface ComplianceSeriesItem {
   name: string
   complianceRate: string
-  problemCount: number
   highCount: number
+}
+
+interface BatchProgressItem {
+  name: string
+  construction: number
+  launched: number
 }
 
 const compactLegend = (data: string[]) => ({
@@ -147,11 +152,79 @@ export function createCoverageOption(coverage: CoverageSeriesItem | null) {
   }
 }
 
+export function createProvinceProfileOption(progress?: number | null) {
+  const hasValue = progress != null && Number.isFinite(progress)
+  const safeProgress = hasValue ? Math.max(0, Math.min(100, progress)) : 0
+  return {
+    ...calmAnimation,
+    tooltip: { show: false },
+    title: {
+      text: hasValue ? `${safeProgress}%` : '—',
+      subtext: '建设完成度',
+      left: 'center',
+      top: '31%',
+      textStyle: { color: chartInk.textPrimary, fontSize: 18, fontFamily: 'monospace' },
+      subtextStyle: { color: chartInk.textMuted, fontSize: 10 },
+    },
+    series: [{
+      type: 'pie',
+      radius: ['62%', '82%'],
+      center: ['50%', '50%'],
+      silent: true,
+      label: { show: false },
+      data: [
+        { value: safeProgress, itemStyle: { color: chartPalette.accent } },
+        { value: 100 - safeProgress, itemStyle: { color: chartPalette.neutral } },
+      ],
+    }],
+  }
+}
+
+export function createBatchProgressOption(list: BatchProgressItem[]) {
+  const reversed = [...list].reverse()
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (value: number) => `${value}%`,
+      ...chartTooltip,
+    },
+    legend: compactLegend(['建设进度', '上线率']),
+    grid: { left: 6, right: 10, top: 25, bottom: 4, containLabel: true },
+    xAxis: {
+      ...valueAxis,
+      min: 0,
+      max: 100,
+      axisLabel: { color: chartInk.textMuted, fontSize: 9, formatter: '{value}%' },
+    },
+    yAxis: {
+      type: 'category',
+      data: reversed.map((batch) => batch.name),
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: chartInk.border } },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10, interval: 0 },
+    },
+    series: [
+      {
+        name: '建设进度', type: 'bar', barMaxWidth: 8, barGap: '25%',
+        data: reversed.map((batch) => batch.construction),
+        itemStyle: { color: chartPalette.accent, borderRadius: 2 },
+      },
+      {
+        name: '上线率', type: 'bar', barMaxWidth: 8,
+        data: reversed.map((batch) => batch.launched),
+        itemStyle: { color: chartPalette.success, borderRadius: 2 },
+      },
+    ],
+  }
+}
+
 export function createBatchComplianceOption(list: ComplianceSeriesItem[]) {
   return {
     ...calmAnimation,
     tooltip: { trigger: 'axis', ...chartTooltip },
-    legend: compactLegend(['合规率', '重点监督', '高风险']),
+    legend: compactLegend(['合规率', '高风险']),
     grid: { left: 8, right: 8, top: 24, bottom: 6, containLabel: true },
     xAxis: {
       ...categoryAxis,
@@ -167,12 +240,7 @@ export function createBatchComplianceOption(list: ComplianceSeriesItem[]) {
     ],
     series: [
       {
-        name: '重点监督', type: 'bar', yAxisIndex: 1, barMaxWidth: 30,
-        data: list.map((batch) => batch.problemCount),
-        itemStyle: { color: chartPalette.warning, opacity: 0.42, borderRadius: [3, 3, 0, 0] },
-      },
-      {
-        name: '高风险', type: 'bar', yAxisIndex: 1, barMaxWidth: 30,
+        name: '高风险', type: 'bar', yAxisIndex: 1, barMaxWidth: 34,
         data: list.map((batch) => batch.highCount),
         itemStyle: { color: chartPalette.danger, borderRadius: [3, 3, 0, 0] },
       },
