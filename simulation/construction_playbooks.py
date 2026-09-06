@@ -20,6 +20,7 @@ from decimal import Decimal
 import random
 from typing import Any, Dict, Optional
 
+from .business_corpus import get_transition_review_notes
 from .construction_models import (
     BatchRolloutEventFootprint,
     ConstructionTaskFootprint,
@@ -445,10 +446,7 @@ class TransitionReviewPlaybook(BaseConstructionPlaybook):
                 f"Gate violated: org {org_id} current status is '{org['status']}', expected '{from_status}'"
             )
 
-        notes = review_notes or (
-            f"经项目推进办公室组织专家进行现场综合验收评审，该单位各项前置指标已稳定达标，"
-            f"业务验证无阻断性缺陷，准予由[{from_status}]阶段跃迁至[{to_status}]阶段。"
-        )
+        notes = review_notes or get_transition_review_notes(from_status, to_status, org_id)
 
         event = TransitionReviewEventFootprint(
             org_id=org_id,

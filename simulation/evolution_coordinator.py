@@ -17,6 +17,7 @@ import hashlib
 import random
 from typing import Dict, List, Optional, Set, Tuple
 
+from .business_corpus import get_friction_reason
 from .construction_playbooks import (
     DataReadinessPlaybook,
     DualRunCheckPlaybook,
@@ -117,12 +118,7 @@ class EvolutionCoordinator:
         digest = hashlib.md5(f"org_friction_{org_id}".encode("utf-8")).hexdigest()  # noqa: S324
         val = int(digest[:6], 16) % 100
         if val < 4:
-            friction_types = [
-                "历史账套期初科目余额存在核销差异",
-                "跨行银企直联接口专线网络间歇性超时",
-                "老系统月末高频单据核对存在长尾差异",
-            ]
-            reason = friction_types[val % len(friction_types)]
+            reason = get_friction_reason(org_id)
             return True, reason
         return False, None
 
