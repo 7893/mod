@@ -92,12 +92,24 @@ class ExpensePlaybook:
         int_delta = timedelta(seconds=self.rng.randint(15, 180))  # 15s ~ 3 min
         int_time = gen_time + int_delta
 
-        # 2. Select actor: pick online unit and applicant from that unit's sys_user pool
-        org_id = self.rng.choice(self.baseline.online_org_ids)
+        # 2. Select actor: pick online unit weighted by org size (user count), with realistic applicant concentration
+        # Causal link: larger entities submit proportionally higher volume
+        org_weights = [
+            max(0.5, len(self.baseline.org_users.get(oid, [])) / 10.0)
+            for oid in self.baseline.online_org_ids
+        ]
+        org_id = self.rng.choices(self.baseline.online_org_ids, weights=org_weights, k=1)[0]
         unit_users = self.baseline.org_users[org_id]
         handlers = [u["name"] for u in unit_users if u.get("role") == "经办人"]
+        
+        # Causal link: ~15% of units exhibit high handler concentration (single person bottlenecks ~75% of operations)
+        is_concentrated = (org_id % 7 == 0 or org_id % 13 == 0)
         if handlers:
-            applicant = self.rng.choice(handlers)
+            if is_concentrated and len(handlers) > 1:
+                handler_weights = [0.75] + [0.25 / (len(handlers) - 1)] * (len(handlers) - 1)
+                applicant = self.rng.choices(handlers, weights=handler_weights, k=1)[0]
+            else:
+                applicant = self.rng.choice(handlers)
         else:
             applicant = self.rng.choice(unit_users)["name"]
 
@@ -177,8 +189,10 @@ class ExpensePlaybook:
             lines=doc_lines,
         )
 
-        # 6. Integration status (~95% SUCCESS, ~5% FAIL)
-        is_success = self.rng.random() < 0.95
+        # 6. Integration status
+        # Causal link: units with handler concentration or training deficits exhibit higher error rates (~15% vs ~2%)
+        fail_prob = 0.15 if is_concentrated or (org_id % 11 == 0) else 0.02
+        is_success = self.rng.random() >= fail_prob
         if is_success:
             vch_status = "已集成"
             integ_status = "SUCCESS"
