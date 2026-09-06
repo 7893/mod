@@ -1,6 +1,6 @@
 .PHONY: check backend-check frontend-check
 
-check: backend-check frontend-check
+check: backend-check frontend-check doc-check
 
 backend-check:
 	cd backend && .venv/bin/ruff check app tests
@@ -10,3 +10,6 @@ frontend-check:
 	python3 scripts/project/lint_frontend_arbitrary_values.py
 	cd frontend && pnpm run typecheck
 	cd frontend && pnpm run build
+
+doc-check:
+	python3 scripts/project/check_doc_links.py
