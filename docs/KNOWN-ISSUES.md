@@ -20,6 +20,7 @@
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
 | KI-028 | 真实评估暴露模型指标不可信（数据过度可分 / 回归无效） | OPEN | P2 | [详情](issues/KI-028-model-metrics-not-credible.md) |
+| KI-029 | 驾驶舱六屏叙事重构（导航收敛 + 屏定位 + 内容并入） | IN-PROGRESS | P2 | [详情](issues/KI-029-six-screen-restructure.md) |
 
 ## 已关闭问题（DONE）
 
