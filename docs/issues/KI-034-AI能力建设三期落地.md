@@ -34,4 +34,8 @@
 
 ## 进度
 - 2026-09-06 立项，ADR-0010 采纳，`mod-gateway` 网关（缓存/限流/日志）已就绪并登记 CURRENT-STATE。
+- 2026-09-06 第二期第一步完成（主控）：`cloudflare_ai.py` 改走 `mod-gateway` 实测通、清理 `ai_narrator.py` 死代码。
+- 2026-09-06 **第一期完成并通过主控验收 + 上线**（agy 实现，主控验收部署 release `20260906-185652`）：
+  AutoML 从 `VALIDATION_FAILED` 复活为 `READY`——分类测试集 89.5%、回归 R² 0.4488（真实、非虚假 1.0），
+  SHAP 归因下钻已上线，线上 `/api/insights/status` 实测 `READY`。第一期六项全部达标。
 - 2026-09-06 第一期完成并达标：模拟器因果改造（commit `91ccb4c`）、特征表扩充动量（commit `06b727a`）、SHAP 归因调通与库内重训独立验证达标（回归 R² = 0.4488, 分类 Accuracy = 89.50%, commit `ba19629`）、前端归因下钻抽屉与达标卡片联动（commit `3eb1ef7`）、自动化回归测试通过并归档。交付主控验收。
