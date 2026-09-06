@@ -89,6 +89,15 @@ retired to the ignored `archive/legacy-db-scripts/` — data is now produced by 
   must not override current code, tests, or deployment configuration.
 - New maintained documents need a title, updated date, status, scope, relative links, and no secrets or personal data.
 - Never edit historical evidence to make it appear current. Add a current correction or an explicit historical notice.
+- **KI vs feature discipline (four iron rules):**
+  1. Never log new feature requests in `docs/KNOWN-ISSUES.md`; use GitHub Issues (`feature_request.md`/`task.md`)
+     for new capabilities. KNOWN-ISSUES is for defects, data drift, and existing technical debt only.
+  2. `docs/KNOWN-ISSUES.md` is a one-line-per-entry kanban; detail lives in `docs/issues/KI-xxx.md`. Keep the
+     kanban under ~100 lines. Never physically delete closed entries — mark DONE and leave them for traceability.
+  3. Any KI fix that changes behaviour **must** add or update an automated regression test to prevent recurrence.
+     A fix without a regression test is not finished.
+  4. Any change that alters facts (data scale, API routes, page layout, deployment) **must** update
+     `docs/CURRENT-STATE.md` and relevant living standards in the same commit. Uncommitted fact drift = unfinished work.
 
 ## Safety
 
