@@ -15,9 +15,11 @@ export interface ScaleScreenOptions {
  * 以 baseWidth×baseHeight 为唯一设计基准，用 GPU transform: scale 等比映射到任意视口。
  * 「屏」的分辨率差异全部由这里的等比缩放兜住；窗体内部的疏密由设计契约在基准尺寸上定死。
  *
- * 关键修正：缩放系数必须用「缩放容器自身的内容尺寸」测量，
- * 而不是带 padding 的父级——否则系数偏大、画布比可视区宽，
- * 配合居中会导致左右两侧对称裁切（越窄裁得越狠），这正是此前 A 屏的病根。
+ * 全屏处理说明：
+ * - 浏览器进入全屏时触发 fullscreenchange 而非 resize。
+ * - 全屏后 document.documentElement 变为全屏元素，command-main 的 clientHeight
+ *   依赖 dvh/vh 重算，在部分浏览器里存在单帧延迟。
+ * - 全屏模式下直接用 window.screen.width/height 避免延迟，减去 header 56px 即可用高度。
  */
 export function useScaleScreen(options: ScaleScreenOptions = {}) {
   const { baseWidth = 1920, baseHeight = 980, minScale = 0.55, maxScale = 1.35 } = options
@@ -27,23 +29,36 @@ export function useScaleScreen(options: ScaleScreenOptions = {}) {
   function updateScale() {
     const el = viewportRef.value
     if (!el) return
-    // clientWidth/Height 取的是内容盒（不含滚动条、不含自身 padding），
-    // 即缩放画布真正可落位的区域，正是应当拿来算比例的尺寸。
-    const w = el.clientWidth
-    const h = el.clientHeight
+
+    let w: number
+    let h: number
+
+    if (document.fullscreenElement) {
+      // 全屏模式：clientWidth/Height 依赖视口单位重算，部分浏览器有单帧延迟。
+      // 直接读物理屏幕尺寸，减去固定 header 高度 56px，结果立即可用。
+      w = window.screen.width
+      h = window.screen.height - 56
+    } else {
+      // 普通模式：command-main 内容盒（不含滚动条与 padding）。
+      w = el.clientWidth
+      h = el.clientHeight
+    }
+
     if (w <= 0 || h <= 0) return
     const fit = Math.min(w / baseWidth, h / baseHeight)
     scale.value = Math.max(minScale, Math.min(maxScale, fit))
   }
 
   let resizeObserver: ResizeObserver | null = null
+  const handleFullscreenChange = () => {
+    // fullscreenchange 触发时布局可能尚未稳定，等下一帧再算。
+    requestAnimationFrame(updateScale)
+  }
 
   onMounted(() => {
     updateScale()
     window.addEventListener('resize', updateScale)
-    // 全屏切换时浏览器不保证触发 window resize，必须额外监听 fullscreenchange。
-    // 全屏动画结束后 clientWidth/Height 已稳定，此时重算 scale 才准确。
-    document.addEventListener('fullscreenchange', updateScale)
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
     if (viewportRef.value) {
       resizeObserver = new ResizeObserver(() => updateScale())
       resizeObserver.observe(viewportRef.value)
@@ -52,7 +67,7 @@ export function useScaleScreen(options: ScaleScreenOptions = {}) {
 
   onUnmounted(() => {
     window.removeEventListener('resize', updateScale)
-    document.removeEventListener('fullscreenchange', updateScale)
+    document.removeEventListener('fullscreenchange', handleFullscreenChange)
     if (resizeObserver) {
       resizeObserver.disconnect()
       resizeObserver = null
