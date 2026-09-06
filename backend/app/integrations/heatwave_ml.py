@@ -502,6 +502,10 @@ class HeatWaveMLAdapter:
                             s.construction_pct,
                             s.unresolved_issues,
                             s.high_risk_issues,
+                            s.progress_slope_14d,
+                            s.stagnant_days,
+                            s.training_error_scissors,
+                            s.handler_concentration,
                             s.risk_flag                      AS actual_flag
                         FROM `{SCORE_TABLE_CLASSIFIER}` s
                         LEFT JOIN org_unit o ON o.id = s.org_id
@@ -536,6 +540,10 @@ class HeatWaveMLAdapter:
                             "constructionPct": r.get("construction_pct"),
                             "unresolvedIssues": r.get("unresolved_issues"),
                             "highRiskIssues": r.get("high_risk_issues"),
+                            "progressSlope14d": r.get("progress_slope_14d"),
+                            "stagnantDays": r.get("stagnant_days"),
+                            "trainingErrorScissors": r.get("training_error_scissors"),
+                            "handlerConcentration": r.get("handler_concentration"),
                             "actualFlag": r.get("actual_flag"),
                         }
                     )
@@ -580,6 +588,175 @@ class HeatWaveMLAdapter:
                 pass
 
         return predictions
+
+    # ------------------------------------------------------------------
+    # 7. 单单位 SHAP 特征归因解释（只读）
+    # ------------------------------------------------------------------
+
+    def explain_risk(self, org_id: int) -> dict:
+        """
+        对指定单位调用 sys.ML_EXPLAIN_ROW 或本地特征贡献计算，
+        输出 Top 3 致险因子及归因权重百分比。
+        严格遵循 KI-034 任务 3：
+        - 优先调用 sys.ML_EXPLAIN_ROW (shap)
+        - 若数据库不支持或未训练，安全降级至基于真实特征偏离度的归因计算，不崩溃
+        """
+        if self.conn is None:
+            return {
+                "orgId": org_id,
+                "status": "unavailable",
+                "topAttributions": [],
+            }
+
+        # 1. 查询该单位的特征行与基本信息
+        feat_rows = self._safe_query(
+            f"""
+            SELECT
+                f.org_id,
+                o.name AS org_name,
+                f.region,
+                f.batch_id,
+                f.construction_pct,
+                f.unresolved_issues,
+                f.high_risk_issues,
+                f.doc_success_pct,
+                f.integration_success_pct,
+                f.days_since_start,
+                f.progress_slope_14d,
+                f.stagnant_days,
+                f.training_error_scissors,
+                f.handler_concentration,
+                f.risk_flag
+            FROM `{FEAT_TABLE_CLASSIFIER}` f
+            LEFT JOIN org_unit o ON o.id = f.org_id
+            WHERE f.org_id = :oid
+            LIMIT 1
+            """,
+            {"oid": org_id},
+        )
+
+        if not feat_rows:
+            return {
+                "orgId": org_id,
+                "status": "not_found",
+                "message": f"未在特征表中找到单位 #{org_id} 的特征数据",
+                "topAttributions": [],
+            }
+
+        row = feat_rows[0]
+        factor_defs = {
+            "unresolved_issues": ("未解决问题积压", "当前存在未闭环业务与数据问题工单"),
+            "high_risk_issues": ("高危风险阻断", "存在阻断系统正常推进的重大缺陷事项"),
+            "stagnant_days": ("工期停滞过久", "近期缺乏持续推进记录，任务长时间未更新"),
+            "progress_slope_14d": ("推进速度滞后", "近14天施工推进斜率落后于全网批次基线"),
+            "training_error_scissors": ("培训与上线报错剪刀差", "全员考核通过但实际系统运行接口报错率偏高"),
+            "handler_concentration": ("经办人单点集中瓶颈", "单人集中承揽绝大部分单据，推广覆盖面不足"),
+            "construction_pct": ("建设任务完成度偏低", "基础任务总体完成率显著落后于批次门禁"),
+            "integration_success_pct": ("凭证入账集成受阻", "双轨财务凭证自动集成成功率偏离达标线"),
+            "doc_success_pct": ("业务单据处理流转异常", "单据审批流转与凭证闭环率偏低"),
+            "days_since_start": ("启动入池耗时过长", "自批次启动以来持续时间较长未达成跃迁"),
+        }
+
+        attributions: dict[str, float] = {}
+
+        # 2. 尝试调用 HeatWave sys.ML_EXPLAIN_ROW
+        try:
+            feats_dict = {
+                "region": str(row.get("region") or ""),
+                "batch_id": int(row.get("batch_id") or 1),
+                "construction_pct": float(row.get("construction_pct") or 0.0),
+                "unresolved_issues": int(row.get("unresolved_issues") or 0),
+                "high_risk_issues": int(row.get("high_risk_issues") or 0),
+                "doc_success_pct": float(row.get("doc_success_pct") or 100.0),
+                "integration_success_pct": float(row.get("integration_success_pct") or 100.0),
+                "days_since_start": int(row.get("days_since_start") or 0),
+                "progress_slope_14d": float(row.get("progress_slope_14d") or 0.0),
+                "stagnant_days": int(row.get("stagnant_days") or 0),
+                "training_error_scissors": float(row.get("training_error_scissors") or 0.0),
+                "handler_concentration": float(row.get("handler_concentration") or 0.0),
+            }
+            explain_res = self.conn.execute(
+                text(
+                    f"SELECT sys.ML_EXPLAIN_ROW(:feats, '{MODEL_CLASSIFIER}', JSON_OBJECT('prediction_explainer', 'shap'))"
+                ),
+                {"feats": json.dumps(feats_dict)},
+            ).scalar()
+
+            if explain_res:
+                parsed = json.loads(explain_res) if isinstance(explain_res, str) else explain_res
+                raw_attrs = parsed.get("ml_results", {}).get("attributions", {})
+                if not raw_attrs:
+                    raw_attrs = {k: v for k, v in parsed.items() if k.endswith("_attribution")}
+
+                for k, v in raw_attrs.items():
+                    col = k.replace("_attribution", "")
+                    if col in factor_defs and v is not None:
+                        attributions[col] = float(v)
+        except Exception:
+            pass
+
+        # 3. 若 HeatWave 原生 SHAP 未产生有效归因，执行确定性因果偏离度降级计算
+        if not attributions:
+            const_pct = float(row.get("construction_pct") or 0.0)
+            stagnant = int(row.get("stagnant_days") or 0)
+            unres = int(row.get("unresolved_issues") or 0)
+            high_r = int(row.get("high_risk_issues") or 0)
+            slope = float(row.get("progress_slope_14d") or 0.0)
+            scissors = float(row.get("training_error_scissors") or 0.0)
+            conc = float(row.get("handler_concentration") or 0.0)
+            integ_pct = float(row.get("integration_success_pct") or 100.0)
+
+            attributions = {
+                "high_risk_issues": high_r * 0.35,
+                "unresolved_issues": unres * 0.15,
+                "stagnant_days": (stagnant / 10.0) * 0.25,
+                "progress_slope_14d": max(0.0, (2.0 - slope) * 0.18),
+                "training_error_scissors": (scissors / 5.0) * 0.20,
+                "handler_concentration": (conc / 0.5) * 0.18,
+                "construction_pct": max(0.0, (90.0 - const_pct) * 0.01),
+                "integration_success_pct": max(0.0, (98.0 - integ_pct) * 0.02),
+            }
+
+        # 4. 提取对风险正向贡献最大的 Top 3 因子并归一化为百分比
+        sorted_factors = sorted(attributions.items(), key=lambda x: x[1], reverse=True)
+        top3 = [(k, max(0.001, v)) for k, v in sorted_factors[:3] if v > 0]
+        if not top3:
+            top3 = [(sorted_factors[0][0], 1.0)]
+
+        total_weight = sum(w for _, w in top3)
+        top_attributions = []
+        for feat_name, weight in top3:
+            name, desc = factor_defs.get(feat_name, (feat_name, "业务指标偏离"))
+            weight_pct = round((weight / total_weight) * 100)
+            top_attributions.append({
+                "factor": feat_name,
+                "factorName": name,
+                "attribution": round(weight, 4),
+                "weightPct": weight_pct,
+                "description": desc,
+            })
+
+        # 确保三项权重和恰好等于 100%
+        if top_attributions:
+            curr_sum = sum(a["weightPct"] for a in top_attributions)
+            if curr_sum != 100:
+                top_attributions[0]["weightPct"] += (100 - curr_sum)
+
+        return {
+            "orgId": org_id,
+            "orgName": row.get("org_name") or f"单位 #{org_id}",
+            "riskFlag": int(row.get("risk_flag") or 0),
+            "region": row.get("region"),
+            "batchId": row.get("batch_id"),
+            "constructionPct": row.get("construction_pct"),
+            "unresolvedIssues": row.get("unresolved_issues"),
+            "highRiskIssues": row.get("high_risk_issues"),
+            "stagnantDays": row.get("stagnant_days"),
+            "progressSlope14d": row.get("progress_slope_14d"),
+            "trainingErrorScissors": row.get("training_error_scissors"),
+            "handlerConcentration": row.get("handler_concentration"),
+            "topAttributions": top_attributions,
+        }
 
     # ------------------------------------------------------------------
     # 辅助：检查表是否存在（只读）
