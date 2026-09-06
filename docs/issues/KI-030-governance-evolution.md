@@ -1,6 +1,6 @@
 # KI-030 · 协作机制与文档治理演进（对标业界典范的5条建议）
 
-- 状态：IN-PROGRESS（2026-09-06 立项，主控推进）
+- 状态：DONE（2026-09-06，7条建议全部完成或按计划处置）
 - 更新日期：2026-09-06
 - 关联链接：[已知问题看板](../KNOWN-ISSUES.md)、[治理与协作阐释](../development/GOVERNANCE-AND-COLLABORATION.md)、[KI-019](KI-019-documentation-governance.md)、[KI-025](KI-025-doc-code-sync-semi-mechanism.md)、[ADR-0006](../decisions/0006-single-host-consolidation.md)
 
@@ -31,3 +31,8 @@
 - 建议6 完成（commit a9f1725）：`COLLABORATION-STANDARD.md` 新增 Blast Radius 声明规范。
 - 建议5（软链发布）：待单独推进，需动 Nginx，单独授权。
 - 建议3(State Impact 声明卡)：暂缓，避免增摩擦。
+- 建议5（软链发布隔离）完成（commit 0852b4f）：`frontend/releases/<ts>/` 存放各版本构建产物；
+  `frontend/current` 软链指向当前生产版本；Nginx 从 `current` 提供页面；`pnpm build` 只写 dist
+  不影响生产；主控通过 `scripts/project/publish_frontend.sh` 原子切换软链发布；AGENTS.md 与
+  ENFORCEMENT.md 已更新"前端发布分离"约束；releases/ 加入 .gitignore。
+- **KI-030 全部建议已完成或按计划处置，关闭。**
