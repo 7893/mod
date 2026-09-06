@@ -106,3 +106,5 @@ generator/
 
 # Historical process docs may carry legacy real hosts/OCIDs; keep local, do not publish.
 docs/history/
+frontend/releases/
+frontend/current

@@ -105,6 +105,10 @@ retired to the ignored `archive/legacy-db-scripts/` — data is now produced by 
 - Do not modify frozen data under `artifacts/v2-sim-data/`.
 - Production runs on the same host as the workspace. Building the frontend and reloading services affects
   production directly; treat frontend builds, service control, and Nginx changes as production changes.
+- **Frontend publish discipline**: `pnpm build` outputs to `frontend/dist/` for local verification only —
+  Nginx serves `frontend/current/` (a symlink). To publish to production, the controller runs
+  `scripts/project/publish_frontend.sh` which builds, checks, atomically swaps the symlink, reloads Nginx,
+  and verifies the live site. Agents must NOT call the publish script directly.
 - Database writes, backend/service control, Nginx changes, and cloud resource changes still require explicit scope.
 - Do not modify or remove files belonging to `/home/ubuntu/modo` or other projects.
 
