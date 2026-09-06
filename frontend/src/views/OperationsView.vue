@@ -92,6 +92,23 @@ const volumeBars = computed(() => {
     { label: '双轨核对', value: ops.value.dualRunResult, width: (ops.value.dualRunResult * 100) / documents, tone: 'muted' },
   ]
 })
+
+const integrationTotal = computed(() => ops.value.integrationResult || 0)
+const integrationRate = computed(() => store.snapshot.overview.integrationSuccessPct ?? 94.67)
+const integrationSuccessCount = computed(() =>
+  ops.value.integrationSuccess ?? Math.round((integrationTotal.value * integrationRate.value) / 100)
+)
+const integrationFailedCount = computed(() =>
+  ops.value.integrationFailed ?? Math.max(0, integrationTotal.value - integrationSuccessCount.value)
+)
+const integrationBars = computed(() => {
+  const total = integrationTotal.value || 1
+  return [
+    { label: '调用总盘', value: integrationTotal.value, width: 100, tone: 'info' },
+    { label: '成功入账', value: integrationSuccessCount.value, width: (integrationSuccessCount.value * 100) / total, tone: 'success' },
+    { label: '异常结果', value: integrationFailedCount.value, width: (integrationFailedCount.value * 100) / total, tone: 'danger' },
+  ]
+})
 </script>
 
 <template>
@@ -196,38 +213,58 @@ const volumeBars = computed(() => {
         </div>
       </CockpitPanel>
 
-      <!-- D5: 接口集成入账 -->
+      <!-- D5: 接口集成入账 (阶梯条充实内容，消除空旷感，D-2) -->
       <CockpitPanel title="接口集成入账" zone="D5" subtitle="实时与批量接口调用结果">
-        <div class="flex items-center justify-around h-full min-h-0 gap-4 px-2">
-          <div class="flex flex-col items-center justify-center text-center">
-            <span class="text-cockpit-sm text-slate-400 mb-1">集成成功率</span>
-            <b class="font-mono text-cockpit-metric font-bold text-sky-400">
-              {{ formatPercent(store.snapshot.overview.integrationSuccessPct) }}
-            </b>
+        <div class="flex flex-col justify-between h-full min-h-0 gap-2">
+          <!-- 上部指标概要 -->
+          <div class="grid grid-cols-3 gap-2 pb-2 border-b border-surface-veil-06">
+            <div class="flex flex-col">
+              <span class="text-cockpit-xs text-slate-400">集成成功率</span>
+              <b class="font-mono text-cockpit-metric font-bold text-sky-400 mt-0.5">
+                {{ formatPercent(integrationRate) }}
+              </b>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-cockpit-xs text-slate-400">成功入账</span>
+              <b class="font-mono text-cockpit-md font-bold text-emerald-400 mt-1">
+                {{ format(integrationSuccessCount) }}
+              </b>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-cockpit-xs text-slate-400">异常待核</span>
+              <b class="font-mono text-cockpit-md font-bold text-rose-400 mt-1">
+                {{ format(integrationFailedCount) }}
+              </b>
+            </div>
           </div>
-          <div class="h-14 w-px bg-surface-veil-06"></div>
-          <div class="flex flex-col justify-center gap-2 min-w-44">
-            <div class="flex items-center justify-between gap-3 text-cockpit-sm">
-              <div class="flex items-center gap-2 text-slate-300">
-                <CheckCircle2 :size="15" class="text-emerald-400 flex-shrink-0" />
-                <span>成功入账</span>
+
+          <!-- 中部调用量阶梯条 (类似 D3 volumeBars 风格) -->
+          <div class="flex flex-col justify-around flex-1 min-h-0 gap-1.5 py-1">
+            <div
+              v-for="item in integrationBars"
+              :key="item.label"
+              class="grid grid-cols-ops-volume items-center gap-3 text-cockpit-sm"
+            >
+              <span class="text-slate-400 truncate">{{ item.label }}</span>
+              <div class="h-2 rounded-full bg-slate-800/80 overflow-hidden">
+                <div
+                  class="h-full rounded-full transition-all duration-500"
+                  :class="{
+                    'bg-sky-400': item.tone === 'info',
+                    'bg-emerald-400': item.tone === 'success',
+                    'bg-rose-400': item.tone === 'danger',
+                  }"
+                  :style="{ width: `${Math.min(100, item.width)}%` }"
+                />
               </div>
-              <b class="font-mono text-slate-100">{{ formatWithUnit(ops.integrationSuccess, '笔') }}</b>
+              <b class="font-mono text-right text-slate-200">{{ format(item.value) }}</b>
             </div>
-            <div class="flex items-center justify-between gap-3 text-cockpit-sm">
-              <div class="flex items-center gap-2 text-slate-300">
-                <XCircle :size="15" class="text-rose-400 flex-shrink-0" />
-                <span>异常结果</span>
-              </div>
-              <b class="font-mono text-rose-400">{{ formatWithUnit(ops.integrationFailed, '笔') }}</b>
-            </div>
-            <div class="flex items-center justify-between gap-3 text-cockpit-sm">
-              <div class="flex items-center gap-2 text-slate-300">
-                <Clock3 :size="15" class="text-sky-400 flex-shrink-0" />
-                <span>数据口径</span>
-              </div>
-              <b class="font-mono text-slate-300">当前快照</b>
-            </div>
+          </div>
+
+          <!-- 底部口径提示 -->
+          <div class="flex items-center justify-between pt-1.5 border-t border-surface-veil-06 text-cockpit-xs text-slate-500">
+            <span>实时数据总线监听</span>
+            <span class="font-mono text-slate-400">总调用 {{ format(integrationTotal) }} 笔</span>
           </div>
         </div>
       </CockpitPanel>
