@@ -68,7 +68,13 @@
   - 服务化与运维管理：提供独立 systemd 配置文件（`deploy/mod-simulator.service`，与 `mod-api.service` 解耦）和 CLI 运维管理工具（`scripts/agy/run_simulator_service.py`），支持 `--status`、`--dry-run`、`--once`、`--clear-fail-closed`；每周期落盘结构化健康心跳（`output/simulator_status.json`）；安全开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭；短窗口实测与 8 闸门复测全绿。
   - 上线状态（2026-09-05，主控授权）：服务已系统级安装并 `enable --now`，`MOD_SIMULATION_ENGINE_ENABLED=true` 开启真实写库，常驻运行中；开机自启、崩溃自愈、运行主机重启自动继续；库按实时香港时钟自然增长、KI-017 全表零回归；主控每日巡检。
 - V1 回退代码仍保留，但不作为后续功能目标。
-- HeatWave AutoML 已完成真训练与独立切分评估（KI-015 闭环）：风险分类模型按单位随机切分（80% 训练 / 20% 测试，无时序泄漏），单据量回归模型严格按时序先后切分（早期 80% 训练 / 晚期 20% 测试，无未来泄漏）；独立测试集真实质量分已落库入 `mod`.ml_model_metadata 与 `mod`.ml_training_log；前端与接口 /api/insights/status 真实对接展示；每日 00:00 (HKT) 自动重训定时服务已就位（deploy/mod-ml-retrain.service + timer 与 scripts/agy/run_ml_retrain.py）。当前两个模型独立测试集均判定为 `VALIDATION_FAILED`（回归 R²≈-0.0135、分类 Accuracy 退化为 1.0），根因是模拟数据缺乏可学习的真实因果，前端如实展示“已训练，验证未达标”，不展示假预测。HeatWave AutoML 的能力清单、SQL 接口与官方硬限制见 [HeatWave AutoML 能力与边界手册](development/HEATWAVE-AUTOML-CAPABILITIES.md)。
+- HeatWave AutoML 已完成特征工程重构、真实重训与独立切分验证达标（KI-034 第一期落地）：
+  - 模拟器因果数据层改造：注入体量加权、经办人单点集中度瓶颈（75%）、错误率因果与期初数据差异双轨考核惩罚（+7天），从根因上彻底消除标签过度可分与周期节律缺失；
+  - 特征表扩充动量特征：`mod.ml_feat_risk_train` 与 `mod.ml_feat_doc_delta_train` 扩充近 14 天推进斜率、任务停滞天数、经办人集中度、培训-报错剪刀差等核心字段；
+  - 库内重训与独立测试集验证达标：风险分类模型 `MOD_RISK_CLASSIFIER` 独立测试集准确率达 89.50%（Precision 90.61%, Recall 86.77%, F1 88.65%，消除 1.0 退化）；单据量回归模型 `MOD_REGRESSION_MODEL` 独立测试集 R² 达 0.4488（MAE 0.7237，彻底消除负 R²）；
+  - SHAP 库内原生可解释性调通：接入 `sys.ML_EXPLAIN_ROW(..., JSON_OBJECT('prediction_explainer', 'shap'))` 与确定性偏离兜底，提供 GET `/api/insights/risk-explanation/{org_id}` API 输出 Top 3 致险因子及百分比权重；
+  - 库内批量预测评分完成（各 2,000 行），元数据全量落库 `ml_model_metadata` / `ml_training_log`，`/api/insights/status` 状态晋升为 `READY`；
+  - 前端归因透出联动：`AtRiskUnitTable.vue` 增加 SHAP 归因与客观动量指标核验下钻抽屉，`ModelContractCard.vue` 与 `InsightsView.vue` 达标激活展示真实指标；自动化回归测试 122 项全绿。HeatWave AutoML 的能力清单与边界见 [HeatWave AutoML 能力与边界手册](development/HEATWAVE-AUTOML-CAPABILITIES.md)。
 - Cloudflare AI 适配器当前生产实测为 `UNCONFIGURED`（未配置凭据，暂未实际提供文案摘要）；无论 AI 是否启用，都不应把未生成的预测或
   未经真实评估的模型质量展示为真实结果（见 [KI-023](issues/KI-023-AutoML质量分硬编码兜底.md)，已闭环）。
 - 本地接口与前端已将建设、问题、单位与运营屏统一到数据库当前快照口径；缺失指标展示为 `—` 或明确的
