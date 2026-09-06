@@ -24,11 +24,25 @@
 |---|---|
 | Python 后端 | Ruff、相关 pytest、全量 `make check` |
 | API 路由或响应 | 正常、降级、错误状态和兼容字段测试 |
-| Vue/TypeScript | `pnpm run typecheck`、`pnpm run build`、全量 `make check` |
-| CSS/布局 | 类型检查、生产构建；涉及视觉行为时补充实际页面验收 |
+| Vue/TypeScript 前端 | `pnpm test`（Vitest 单元测试）、`pnpm run typecheck`、`pnpm run build`、全量 `make check` |
+| CSS/布局 | 缩放单测、类型检查、生产构建；涉及视觉行为时补充实际页面验收 |
 | 配置或依赖 | 解析/启动检查、锁文件一致性、全量 `make check` |
 | 文档 | 链接和事实检查、`git diff --check`、全量 `make check` |
 | 生产（运行主机） | 用户/系统服务、单一 8100 监听、API、静态资源、禁止索引和日志核验 |
+
+## 前端测试规范 (Vitest)
+
+- **框架基座**：采用 `vitest` + `@vue/test-utils` + `happy-dom`，依赖版本严格精确锁定，测试文件统一采用 `__tests__/*.test.ts` 就近组织。
+- **覆盖核心**：
+  - 缩放引擎（`useScaleScreen.ts`）：基准等比计算、普通/全屏视口切换、上下限 clamp 钳夹、非正常尺寸保护；
+  - 核心状态机（`useAiInsights.ts` / `useDailyBriefing.ts`）：状态流转（`loading` / `ok` / `cache_hit` / `rate_limited` / `unavailable` / `error`）、并发节流与离线降级兜底；
+  - 格式化与数值边界（`formatters/metrics.ts`）：空值/NaN/零/负数/极大数值的安全兜底与 zh-CN 本地化展示；
+  - 状态管理（Pinia stores）：快照键名递归驼峰化转换（`fixKeys`）、SSE 实时投影序列有序性校验与跨场重置、数据刷新网络异常隔离；
+  - 模型可解释性判定（`modelEvaluation.ts`）：严守 KI-023/KI-028 规范，R² ≤ 0 及准确率退化（1.0）显式标为未达标。
+- **硬性约束**：
+  - **严禁向真实网络发请求**：所有 API 与模型请求（fetch）必须由 Mock 拦截处理，零后端依赖、零外部服务依赖；
+  - **稳定性与性能**：测试必须完全确定、秒级完成（毫秒级单测），严禁引入 flaky 用例；
+  - **门禁约束**：`pnpm test` 已纳入 `Makefile` 的 `frontend-check`，提交代码前必须保持全量全绿。
 
 ## 提交前检查
 
