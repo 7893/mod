@@ -19,4 +19,10 @@
 | 5 | 同机生产软链发布隔离（构建输出私有目录，Nginx 指向 releases 软链，授权后原子切换） | 做（最高价值） | 主控设计，落地含运维 |
 
 ## 进度
-- （执行中，逐条回填）
+- 建议1 完成（commit 90cd5d5）：docs 顶层编号文档归位——24→DASHBOARD-REFRESH-MECHANISM、
+  25→ML-AI-DATA-BOUNDARY、26→CAPACITY-ESTIMATION、27→SIMULATION-PIPELINE-SPEC、
+  28→SIMULATION-DIURNAL-SPEC（移入 development，语义命名）；23 移入 history；docs 顶层仅剩
+  CURRENT-STATE/INDEX/KNOWN-ISSUES 三大活文档 + 子目录；INDEX 引用已更新、无死链。
+  另：历史任务书脱敏后移入 history，撤销 docs/tasks 遗留（tasks 机制已被 Issues+KI 取代）。
+- 建议2/4/5：待推进（2 事实派生脚本、4 协作规范补 Blast Radius、5 软链发布隔离）。
+- 建议3：暂缓（观察 check_doc_sync 软警告是否足够）。
