@@ -1,6 +1,6 @@
 # KI-029 · 驾驶舱六屏叙事重构（导航收敛 + 屏定位调整 + 内容并入）
 
-- 状态：IN-PROGRESS（2026-09-05 立项）
+- 状态：DONE（2026-09-05，骨架+内容改造全部完成并主控验收）
 - 更新日期：2026-09-05
 - 关联链接：[已知问题看板](../KNOWN-ISSUES.md)、[ADR-0007](../decisions/0007-six-screen-narrative.md)
 
@@ -35,5 +35,11 @@ URL 用序号路径 `/a`~`/f`，展示用中文名。
   （D风险预警/E合规监督/F业务运营），命名与图标调整（问题清单→合规监督、智能研判→风险预警），
   highRisk 徽章移到 D；修正各屏内部跳转到新路径；InsightsView 标题改"风险预警与智能研判"。
   6 屏 URL 全 200、make check 绿。
-- 重量部分（待 agy 执行，主控验收）：见"重量"清单——台账并入 B、E 转合规视角、D 转风险主场。
-  派工单 `scripts/kiro/tmp/mod-task-dispatch.html`。
+- 重量部分（agy 完成，主控验收通过，2026-09-05）：
+  - 任务一（commit d4fbd9f）：DataView 台账并入 ConstructionView（数据准备台账、纳管单位、台账下钻）；
+    DataView 退役归档至 `archive/legacy-frontend/DataView.vue`（搬不删，ADR-0004）；`/data` 路由已移除。
+  - 任务二（commit 61942a2/c44f319）：IssuesView 转"合规监督"——合规率 92~96%、问题单位与困难户咬合、单位级合规标签，可下钻。
+  - 任务三（commit a87b89d/b722894/dc187f8）：InsightsView 转"风险预警主场"——困难户/掉队高危单位，注明严守 KI-023/KI-028。
+  - 主控验收：**前端规范全绿**（无私有面板样式、面板均 CockpitPanel、零手写 `<style>`、改造三屏均 ≤400 行、
+    前端任意值 lint 0 命中）；6 屏线上全 200、导航对称、合规率真实计算非硬编码；make check 绿。
+- 状态：DONE（2026-09-05，骨架+内容改造全部完成并验收）
