@@ -18,22 +18,24 @@ defineProps<{
     :data-zone="zone"
   >
     <!-- 面板标准头部 -->
-    <header class="flex items-center justify-between px-3.5 py-2 border-b border-white/5 flex-shrink-0">
-      <div class="flex items-center gap-2 min-w-0">
+    <header class="flex items-center justify-between px-3.5 py-2 border-b border-white/5 flex-shrink-0 gap-2">
+      <div class="flex items-start gap-2 min-w-0 flex-1">
         <span
           v-if="zone"
-          class="font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 tracking-wide"
+          class="font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 tracking-wide mt-0.5 flex-shrink-0"
         >
           {{ zone }}
         </span>
-        <h3 class="text-cockpit-md font-semibold tracking-wide text-slate-100 truncate">
-          {{ title }}
-        </h3>
-        <span v-if="subtitle" class="text-cockpit-sm text-slate-500 font-normal truncate">
-          · {{ subtitle }}
-        </span>
+        <div class="min-w-0 flex-1">
+          <h3 class="text-cockpit-md font-semibold tracking-wide text-slate-100">
+            {{ title }}
+          </h3>
+          <span v-if="subtitle" class="block text-cockpit-xs text-slate-500 font-normal leading-tight mt-0.5">
+            {{ subtitle }}
+          </span>
+        </div>
       </div>
-      <div class="flex items-center gap-2 flex-shrink-0">
+      <div class="flex items-center gap-2 flex-shrink-0 self-center">
         <slot name="actions" />
       </div>
     </header>

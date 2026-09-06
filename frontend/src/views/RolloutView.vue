@@ -16,7 +16,7 @@ import MetricGrid from '../components/blocks/MetricGrid.vue'
 import ChartBlock from '../components/blocks/ChartBlock.vue'
 import RolloutLedgerTable from '../components/RolloutLedgerTable.vue'
 import type { MetricItem } from '../components/blocks/types.ts'
-import { chartInk, chartPalette } from '../charts/theme.ts'
+import { calmAnimation, chartInk, chartPalette } from '../charts/theme.ts'
 import { useProjectStore } from '../stores/project.ts'
 
 use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent])
@@ -97,6 +97,7 @@ const chartColors = {
 }
 
 const batchChartOption = computed(() => ({
+  ...calmAnimation,
   tooltip: {
     trigger: 'axis',
     backgroundColor: chartColors.bg,
@@ -155,6 +156,7 @@ const c4Stats = computed<MetricItem[]>(() => [
 ])
 
 const provinceRolloutOption = computed(() => ({
+  ...calmAnimation,
   tooltip: {
     trigger: 'axis',
     axisPointer: { type: 'shadow' },

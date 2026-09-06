@@ -25,6 +25,20 @@
   grid-auto-rows: minmax(0, 1fr);
 }
 
+.metric-grid--inline {
+  height: 100%;
+  align-content: center;
+}
+
+.metric-grid--inline .metric-cell {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.metric-grid--inline .metric-cell__body {
+  justify-content: center;
+}
+
 .metric-cell {
   display: flex;
   align-items: center;
