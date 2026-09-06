@@ -743,6 +743,7 @@ class HeatWaveMLAdapter:
                 top_attributions[0]["weightPct"] += (100 - curr_sum)
 
         return {
+            "status": "ok",
             "orgId": org_id,
             "orgName": row.get("org_name") or f"单位 #{org_id}",
             "riskFlag": int(row.get("risk_flag") or 0),
