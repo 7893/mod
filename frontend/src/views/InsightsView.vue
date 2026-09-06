@@ -158,7 +158,7 @@ const insights = computed(() => {
   }
 })
 
-const d1SummaryItems = computed<MetricItem[]>(() => [
+const f1SummaryItems = computed<MetricItem[]>(() => [
   { label: '掉队高危单位', value: format(atRiskUnits.value.length), unit: '家', tone: 'danger', icon: ShieldAlert, hint: '困难户风险预警主场' },
   { label: '双轨核对差异', value: format(dualDiffCount.value), unit: '家', tone: 'warning', icon: AlertTriangle, hint: '平账凭证率 < 95%' },
   { label: '建设推进迟滞', value: format(constLagCount.value + prepStuckCount.value), unit: '家', tone: 'warning', icon: Building, hint: '滞后与准备期卡顿单位' },
@@ -167,32 +167,32 @@ const d1SummaryItems = computed<MetricItem[]>(() => [
 </script>
 
 <template>
-  <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="D">
-    <!-- D1: 概览面板 -->
+  <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="F">
+    <!-- F1: 概览面板 -->
     <CockpitPanel
       title="风险预警与重点督导态势"
-      zone="D1"
+      zone="F1"
       subtitle="困难户与掉队风险主场 · 决策支撑指标咬合 · 严守 KI-023/KI-028 真实模型规范"
       class="flex-shrink-0"
     >
-      <MetricGrid :items="d1SummaryItems" variant="inline" :columns="4" />
+      <MetricGrid :items="f1SummaryItems" variant="inline" :columns="4" />
     </CockpitPanel>
 
-    <!-- 主网格：D2-D5 (2x2 结构) -->
+    <!-- 主网格：F2-F5 (2x2 结构) -->
     <div class="grid grid-cols-insights grid-rows-insights gap-2.5 flex-1 min-h-0">
-      <!-- 左上：D2 哪个单位要掉队 —— 困难户与掉队风险预警清单 (核心主场) -->
+      <!-- 左上：F2 哪个单位要掉队 —— 困难户与掉队风险预警清单 (核心主场) -->
       <CockpitPanel
         title="哪个单位要掉队 · 困难户与掉队预警主场"
-        zone="D2"
+        zone="F2"
         subtitle="矛与盾读同一事实源 · 库内真实运行指标派生"
       >
         <AtRiskUnitTable :units="atRiskUnits" />
       </CockpitPanel>
 
-      <!-- 右上：D4 HeatWave AutoML 预测模型 (严守 KI-023/KI-028 真实性) -->
+      <!-- 右上：F4 HeatWave AutoML 预测模型 (严守 KI-023/KI-028 真实性) -->
       <CockpitPanel
         title="AutoML 预测模型与质量验证"
-        zone="D4"
+        zone="F4"
         subtitle="Oracle HeatWave 库内机器学习 · 严守真实评估门禁"
       >
         <div class="flex flex-col h-full min-h-0 gap-2">
@@ -212,10 +212,10 @@ const d1SummaryItems = computed<MetricItem[]>(() => [
         </div>
       </CockpitPanel>
 
-      <!-- 左下：D3 综合态势预警与瓶颈排查 -->
+      <!-- 左下：F3 综合态势预警与瓶颈排查 -->
       <CockpitPanel
         title="综合态势预警与瓶颈排查"
-        zone="D3"
+        zone="F3"
         subtitle="确定性规则研判与批次推进堵点"
       >
         <div class="flex flex-col gap-2 h-full min-h-0 overflow-y-auto pr-1">
@@ -240,10 +240,10 @@ const d1SummaryItems = computed<MetricItem[]>(() => [
         </div>
       </CockpitPanel>
 
-      <!-- 右下：D5 边缘 AI 态势辅助解说与系统联动 -->
+      <!-- 右下：F5 边缘 AI 态势辅助解说与系统联动 -->
       <CockpitPanel
         title="边缘 AI 态势辅助解说"
-        zone="D5"
+        zone="F5"
         subtitle="Cloudflare Workers AI (Llama 3.1 8B) · 只读辅助研判"
       >
         <template #actions>
@@ -269,9 +269,19 @@ const d1SummaryItems = computed<MetricItem[]>(() => [
           </div>
 
           <div class="flex-1 min-h-0 overflow-y-auto rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2.5">
-            <div v-if="aiPhase === 'idle' || aiPhase === 'loading'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-4 text-slate-500">
+            <!-- 加载中态：真实发起请求时显示旋转等待 -->
+            <div v-if="aiPhase === 'loading'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-4 text-slate-500">
               <RefreshCw :size="18" class="animate-spin opacity-50 text-sky-400" />
               <span class="text-cockpit-xs">正在读取态势…</span>
+            </div>
+
+            <!-- 空态 (idle)：静态待触发卡片设计，消除虚假加载感 (F-3) -->
+            <div v-else-if="aiPhase === 'idle'" class="flex flex-col items-center justify-center h-full text-center gap-1.5 py-4 text-slate-400">
+              <div class="w-8 h-8 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-0.5">
+                <Sparkles :size="15" />
+              </div>
+              <span class="text-cockpit-sm font-semibold text-slate-200">待触发 AI 态势研判</span>
+              <span class="text-cockpit-xs text-slate-500">点击右上角「生成最新研判」按钮生成实时报告</span>
             </div>
 
             <div v-else-if="aiPhase === 'generating'" class="flex flex-col items-center justify-center h-full text-center gap-2 py-4 text-sky-400">
