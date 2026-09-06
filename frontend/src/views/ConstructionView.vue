@@ -25,6 +25,8 @@ import {
   chartTooltip,
   valueAxis,
 } from '../charts/theme.ts'
+import { buildTaskStageSeries } from '../charts/panelData.ts'
+import { createTaskStageOption } from '../charts/panelOptions.ts'
 import { useProjectStore } from '../stores/project.ts'
 
 use([CanvasRenderer, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
@@ -57,19 +59,6 @@ const format = (value: number | undefined) => (
 
 const taskStages = computed(() => store.snapshot.construction?.taskStages || [])
 
-const stageItems = computed<MetricItem[]>(() =>
-  taskStages.value.map((stg) => ({
-    label: stg.name,
-    value: stg.avgProgress,
-    unit: '%',
-    progress: stg.avgProgress,
-    meta: [
-      { label: '总', value: stg.total },
-      { label: '完', value: stg.completed },
-      { label: '行', value: stg.inProgress },
-    ],
-  })),
-)
 const constructionSummary = computed(() => store.snapshot.construction)
 const trainingSummary = computed(() => constructionSummary.value?.trainingSummary)
 const readinessSummary = computed(() => constructionSummary.value?.dataReadinessSummary)
@@ -157,6 +146,8 @@ const chartColors = {
   muted: chartPalette.neutral,
   textMuted: chartInk.textMuted,
 }
+
+const stageDistributionOption = computed(() => createTaskStageOption(buildTaskStageSeries(taskStages.value)))
 
 // B4 培训分类横向柱状图：展示4大培训类型通过率与规模
 const trainingBarOption = computed(() => {
@@ -281,9 +272,9 @@ const readinessPieOption = computed(() => ({
 
     <!-- 建设全景主区 -->
     <main v-if="activeTab === 'overview'" class="flex-1 min-h-0 grid grid-cols-construction grid-rows-construction gap-2.5">
-      <!-- B2: 阶段任务分布 (改为一排8列展开，呼应流水线推进，B-2) -->
-      <CockpitPanel title="阶段任务分布" zone="B2" subtitle="按建设阶段流水线" class="col-span-2">
-        <MetricGrid :items="stageItems" :columns="8" size="sm" fill />
+      <!-- B2: 以堆叠图承载 8 阶段，避免小卡横向拥挤 -->
+      <CockpitPanel title="阶段任务分布" zone="B2" subtitle="已完成 / 进行中 / 未开始 · 右侧为阶段完成率" class="col-span-2">
+        <VChart class="w-full h-full min-h-0" :option="stageDistributionOption" autoresize />
       </CockpitPanel>
 
       <!-- B3: 省域建设排行 -->

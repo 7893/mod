@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, PieChart } from 'echarts/charts'
+import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import {
   AlertTriangle,
@@ -29,8 +29,9 @@ import {
 } from '../charts/theme.ts'
 import { formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
+import { createBatchComplianceOption } from '../charts/panelOptions.ts'
 
-use([CanvasRenderer, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
+use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
 
 const store = useProjectStore()
 
@@ -171,6 +172,8 @@ const batchComplianceStats = computed(() =>
   }),
 )
 
+const batchComplianceOption = computed(() => createBatchComplianceOption(batchComplianceStats.value))
+
 const filteredTableUnits = computed(() => {
   return complianceUnits.value.filter((u) => {
     const matchTag = selectedTag.value === '全部标签' || u.tags.includes(selectedTag.value)
@@ -212,32 +215,9 @@ const paginatedTableUnits = computed(() => {
       </CockpitPanel>
     </div>
 
-    <!-- 下部：E4 批次合规监督态势 (8批次全部一行呈现，精简核心数据，窗口缩小可横滑，E-1) -->
+    <!-- 下部：E4 用趋势与柱图替代 8 张横向小卡 -->
     <CockpitPanel title="各批次合规监督概览" zone="E4" subtitle="8 批次合规率与重点监督单位分布" class="flex-shrink-0">
-      <div class="flex gap-2.5 overflow-x-auto min-h-0">
-        <div
-          v-for="b in batchComplianceStats"
-          :key="b.batchId"
-          class="flex-1 min-w-[110px] flex flex-col justify-between p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-h-0 flex-shrink-0"
-        >
-          <div class="flex items-center justify-between gap-1 mb-1.5">
-            <b class="text-cockpit-md font-semibold text-slate-100 truncate">{{ b.name }}</b>
-            <span
-              class="font-mono text-cockpit-xs font-semibold px-1.5 py-0.5 rounded border"
-              :class="Number(b.complianceRate) >= 95
-                ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30'
-                : 'bg-amber-950/40 text-amber-400 border-amber-500/30'"
-            >
-              {{ b.complianceRate }}%
-            </span>
-          </div>
-          <div class="flex items-center justify-between gap-1 text-cockpit-xs text-slate-400">
-            <span>纳管 <b class="font-mono text-slate-200">{{ b.total }}</b></span>
-            <span class="text-amber-400">监督 <b class="font-mono">{{ b.problemCount }}</b></span>
-            <span v-if="b.highCount > 0" class="text-rose-400 font-medium">高危 <b class="font-mono">{{ b.highCount }}</b></span>
-          </div>
-        </div>
-      </div>
+      <VChart class="w-full h-28 min-h-0" :option="batchComplianceOption" autoresize />
     </CockpitPanel>
 
     <!-- 底部：E5 重点监督单位台账与下钻 -->

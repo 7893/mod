@@ -3,23 +3,19 @@ import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
-import {
-  Building,
-  Layers,
-  UserCheck,
-  Users,
-} from 'lucide-vue-next'
+import { BarChart, LineChart, PieChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
 import ChartBlock from '../components/blocks/ChartBlock.vue'
 import RolloutLedgerTable from '../components/RolloutLedgerTable.vue'
 import type { MetricItem } from '../components/blocks/types.ts'
 import { calmAnimation, chartInk, chartPalette } from '../charts/theme.ts'
+import { buildCoverageComposition, buildRolloutComposition } from '../charts/panelData.ts'
+import { createCoverageOption, createRolloutCompositionOption } from '../charts/panelOptions.ts'
 import { useProjectStore } from '../stores/project.ts'
 
-use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent])
+use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent])
 
 const store = useProjectStore()
 
@@ -58,34 +54,6 @@ const c1SummaryItems = computed<MetricItem[]>(() => [
   },
 ])
 
-const contactItems = computed<MetricItem[]>(() => [
-  {
-    label: '联系人总数',
-    value: (store.snapshot.overview.contactsTotal || 15613).toLocaleString(),
-    icon: Users,
-    tone: 'accent',
-  },
-  {
-    label: '单位覆盖率',
-    value: String(store.snapshot.overview.contactsCoveragePct || 100),
-    unit: '%',
-    icon: UserCheck,
-    tone: 'success',
-  },
-  {
-    label: '已覆盖单位',
-    value: (store.snapshot.overview.contactsCoveredOrgs || 2000).toLocaleString(),
-    unit: '家',
-    icon: Building,
-  },
-  {
-    label: '纳管总数',
-    value: (store.snapshot.overview.orgTotal || 2000).toLocaleString(),
-    unit: '家',
-    icon: Layers,
-  },
-])
-
 // 色值统一取自 charts/theme.ts，避免图表区与页面外壳出现两套蓝绿黄
 const chartColors = {
   accent: chartPalette.accent,
@@ -95,6 +63,17 @@ const chartColors = {
   border: chartInk.border,
   textMuted: chartInk.textMuted,
 }
+
+const rolloutComposition = computed(() => buildRolloutComposition(batches.value))
+
+const batchCompositionOption = computed(() => createRolloutCompositionOption(rolloutComposition.value))
+
+const contactCoverage = computed(() => buildCoverageComposition(
+  store.snapshot.overview.orgTotal,
+  store.snapshot.overview.contactsCoveredOrgs,
+))
+
+const contactCoverageOption = computed(() => createCoverageOption(contactCoverage.value))
 
 const batchChartOption = computed(() => ({
   ...calmAnimation,
@@ -225,53 +204,14 @@ const provinceRolloutOption = computed(() => ({
       <MetricGrid :items="c1SummaryItems" variant="inline" :columns="3" />
     </CockpitPanel>
 
-    <!-- C2: 8 批次工序卡片流水线 (横向滚动容器，8批始终呈现，窗口缩小时可横滑，C-1) -->
+    <!-- C2: 用批次堆叠图替代 8 张拥挤工序卡 -->
     <CockpitPanel
       title="批次推进工序梯队"
       zone="C2"
-      subtitle="8 批次全生命周期流水线"
+      subtitle="8 批次单位构成 · 已上线 / 双轨 / 待推进"
       class="flex-shrink-0"
     >
-      <div class="flex gap-2.5 overflow-x-auto h-full">
-        <div
-          v-for="b in batches"
-          :key="b.batchId"
-          class="flex-1 min-w-[110px] flex flex-col justify-between p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-h-0 flex-shrink-0"
-        >
-          <div class="flex items-center justify-between gap-1 mb-1">
-            <b class="text-cockpit-md font-semibold text-slate-100 truncate">{{ b.name }}</b>
-            <span
-              class="text-cockpit-xs font-medium px-1.5 py-0.5 rounded border whitespace-nowrap"
-              :class="b.batchId === 8
-                ? 'bg-slate-800/60 text-slate-400 border-white/10'
-                : (b.launchedPct === 100
-                  ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30'
-                  : (b.dual > 0
-                    ? 'bg-amber-950/40 text-amber-400 border-amber-500/30'
-                    : 'bg-sky-950/40 text-sky-400 border-sky-500/30'))"
-            >
-              {{ b.batchId === 8 ? '待启动储备' : (b.stageLabel || (b.launchedPct === 100 ? '已投产运行' : b.dual > 0 ? '双轨比对' : '联调在建')) }}
-            </span>
-          </div>
-          <div class="grid grid-cols-3 gap-1 text-cockpit-xs text-slate-400 my-1.5">
-            <div>纳管 <b class="font-mono text-slate-200 block text-cockpit-sm">{{ b.total }}</b></div>
-            <div>上线 <b class="font-mono text-emerald-400 block text-cockpit-sm">{{ b.launched }}</b></div>
-            <div>双轨 <b class="font-mono text-sky-400 block text-cockpit-sm">{{ b.dual }}</b></div>
-          </div>
-          <div class="flex items-center gap-2 mt-auto">
-            <div class="flex-1 h-1.5 rounded-full bg-slate-800/80 overflow-hidden">
-              <div
-                class="h-full rounded-full transition-all duration-500"
-                :class="b.launchedPct === 100 ? 'bg-emerald-400' : 'bg-sky-400'"
-                :style="{ width: `${b.launchedPct}%` }"
-              />
-            </div>
-            <span class="font-mono text-cockpit-xs font-semibold text-slate-300 w-8 text-right">
-              {{ b.launchedPct }}%
-            </span>
-          </div>
-        </div>
-      </div>
+      <VChart class="w-full h-28 min-h-0" :option="batchCompositionOption" autoresize />
     </CockpitPanel>
 
     <!-- 中部三栏：C3 上线趋势 + C4 省域上线分布 + C5 项目联系人 (弹性优先，Guardrail 扩大为 min-h-[200px] max-h-[320px]，C-2) -->
@@ -287,9 +227,22 @@ const provinceRolloutOption = computed(() => ({
       </CockpitPanel>
 
       <CockpitPanel title="项目联系人" zone="C5" subtitle="组织覆盖与专员">
-        <div class="flex flex-col justify-between h-full min-h-0 gap-2">
-          <MetricGrid :items="contactItems" variant="inline" :columns="2" fill />
-          <p class="text-center text-cockpit-xs text-slate-500 tracking-wide">* 均为规则推导的项目联系人</p>
+        <div class="grid grid-cols-2 h-full min-h-0 items-center gap-2">
+          <VChart class="w-full h-full min-h-0" :option="contactCoverageOption" autoresize />
+          <div class="flex flex-col justify-center gap-2 text-cockpit-sm">
+            <div class="flex items-center justify-between border-b border-surface-veil-06 pb-1.5">
+              <span class="text-slate-400">联系人总数</span>
+              <b class="font-mono text-sky-400">{{ format(store.snapshot.overview.contactsTotal) }}</b>
+            </div>
+            <div class="flex items-center justify-between border-b border-surface-veil-06 pb-1.5">
+              <span class="text-slate-400">已覆盖单位</span>
+              <b class="font-mono text-emerald-400">{{ format(contactCoverage?.covered) }}</b>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">待补齐缺口</span>
+              <b class="font-mono text-amber-400">{{ format(contactCoverage?.gap) }}</b>
+            </div>
+          </div>
         </div>
       </CockpitPanel>
     </div>

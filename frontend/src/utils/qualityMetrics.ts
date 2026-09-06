@@ -86,7 +86,10 @@ export function buildQualityAuditList(
   const vTotal = ops?.accountingVoucher ?? null
   const dTotal = ops?.businessDocument ?? null
   const lTotal = ops?.documentVoucherLink ?? null
-  const orgCount = orgTotal ?? 2000
+  const orgCount = orgTotal ?? null
+  const progressionErrors = orgCount != null && orgProg != null
+    ? Math.max(0, orgCount - orgProg)
+    : null
 
   return [
     {
@@ -96,7 +99,7 @@ export function buildQualityAuditList(
       errors: vErrors,
       total: vTotal,
       unit: '张凭证',
-      rate: vTotal != null && vErrors != null ? calcComplianceRate(vTotal, vErrors) : 100,
+      rate: vTotal != null && vErrors != null ? calcComplianceRate(vTotal, vErrors) : null,
       status: vErrors === 0 ? 'pass' : (vErrors != null && vErrors > 0 ? 'warning' : 'unknown'),
       hint: '严格校验凭证主表与分录借贷总额一致，杜绝单边账',
     },
@@ -107,7 +110,7 @@ export function buildQualityAuditList(
       errors: tErrors,
       total: dTotal,
       unit: '笔单据',
-      rate: dTotal != null && tErrors != null ? calcComplianceRate(dTotal, tErrors) : 100,
+      rate: dTotal != null && tErrors != null ? calcComplianceRate(dTotal, tErrors) : null,
       status: tErrors === 0 ? 'pass' : (tErrors != null && tErrors > 0 ? 'warning' : 'unknown'),
       hint: '核验业务单据全链路流转时间戳顺序，无时间倒流',
     },
@@ -118,7 +121,7 @@ export function buildQualityAuditList(
       errors: oErrors,
       total: lTotal,
       unit: '条关联',
-      rate: lTotal != null && oErrors != null ? calcComplianceRate(lTotal, oErrors) : 100,
+      rate: lTotal != null && oErrors != null ? calcComplianceRate(lTotal, oErrors) : null,
       status: oErrors === 0 ? 'pass' : (oErrors != null && oErrors > 0 ? 'warning' : 'unknown'),
       hint: '核查业务拓扑映射，无孤儿断链或悬空记录',
     },
@@ -126,11 +129,15 @@ export function buildQualityAuditList(
       id: 'status-progression',
       rule: '状态演进追踪',
       target: '全周期状态快照跟踪',
-      errors: 0,
-      total: orgProg ?? orgCount,
+      errors: progressionErrors,
+      total: orgCount,
       unit: '家单位',
-      rate: orgCount > 0 && orgProg != null ? Math.min(100, Math.round((orgProg / orgCount) * 100)) : 100,
-      status: 'pass',
+      rate: orgCount != null && orgCount > 0 && orgProg != null
+        ? Math.max(0, Math.min(100, Math.round((orgProg / orgCount) * 100)))
+        : null,
+      status: progressionErrors === 0
+        ? 'pass'
+        : (progressionErrors != null && progressionErrors > 0 ? 'warning' : 'unknown'),
       hint: '历史快照跟踪生命周期演进，状态单向闭环达标',
     },
   ]
@@ -207,4 +214,3 @@ export function buildRiskDimensionBreakdown(
     },
   ]
 }
-
