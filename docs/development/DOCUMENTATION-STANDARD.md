@@ -29,8 +29,17 @@
 适用范围：...
 ```
 
-文件名使用清晰稳定的主题名。新规范放入 `docs/development/`，新运维规则放入 `docs/operations/`；
+文件名使用清晰稳定的主题名（英文大写，如 `FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md`）。
+新规范放入 `docs/development/`，新运维规则放入 `docs/operations/`；
 不要继续扩展旧编号文档体系，也不要在项目根目录新增零散说明。
+
+**语言规范：文档内容默认使用中文；仅在"必要"时使用英文。**
+"必要"的定义：
+- AI agent 约定入口文件（`AGENTS.md`、`CLAUDE.md`、`GEMINI.md`）内容用英文（大模型对英文指令执行更稳定）
+- 对外门面文档（`README.md`）用英文（GitHub 访客与开源惯例）
+- 文件名始终用英文大写（路径稳定、跨平台兼容）
+- 专业术语（ADR、Blast Radius、Diátaxis 等）在中文文档中可保留英文原文
+- 其余所有文档正文、标题、章节名一律中文
 
 ## 事实与更新
 

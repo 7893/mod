@@ -1,55 +1,52 @@
-# Contributing to MOD
+# MOD 项目协作指南
 
-Updated: 2026-09-02
-Status: Current
-Scope: Humans and all coding agents working in `/home/ubuntu/mod`
+更新日期：2026-09-06
+状态：现行
+适用范围：在 `/home/ubuntu/mod` 工作的人类开发者与所有编码 Agent
 
-This repository is maintained on the primary run host, which also serves production from the same machine. There is no separate deployment host.
+本仓库维护在主运行主机上，同机承载生产运行，不存在独立的纯部署主机。
 
-## Start here
+## 接手前必读（按顺序）
 
-Read these documents in order before making changes:
+1. `AGENTS.md` — 全仓库强制约束，最高优先级。
+2. `ENFORCEMENT.md` — 约束如何在动作点被强制执行（闸门，不只是指导）。
+3. `docs/CURRENT-STATE.md` — 当前运行时、数据与安全事实。
+4. `PROJECT-LAYOUT.md` — 目录与主机边界。
+5. 与任务类型匹配的领域规范 — 见 `AGENTS.md` 的"按任务类型必读规范"映射表
+   （改前端读 `FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md`，碰数据库读 `DATA-AND-SECURITY-STANDARD.md`，
+   任何改动读 `TESTING-STANDARD.md`）。按需读对应的，不必全读。
 
-1. `AGENTS.md` — mandatory repository-wide rules.
-2. `ENFORCEMENT.md` — how those rules are enforced at the point of action (gates, not just guidance).
-3. `docs/CURRENT-STATE.md` — current runtime, data, and safety facts.
-4. `PROJECT-LAYOUT.md` — directory and host boundaries.
-5. The standard matching your task type — see the "Required reading by task type" table in `AGENTS.md`
-   (e.g. frontend changes require `FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md`, DB/data require
-   `DATA-AND-SECURITY-STANDARD.md`, any change requires `TESTING-STANDARD.md`). Read the matching one, not all.
+文档有冲突时，以 `AGENTS.md` 的权威顺序为准。旧的多 Agent 协作状态机已归档至
+`archive/legacy-collaboration/`，不得作为活跃工作流使用。
 
-If documents disagree, follow the authority order in `AGENTS.md`. The old collaboration state machine is archived
-under `archive/legacy-collaboration/` and must not be used as an active workflow.
+## 标准工作流
 
-## Standard workflow
+1. 运行 `git status --short`，检查相关已有改动。
+2. 查看是否有更具体的 `AGENTS.md`，然后阅读目标区域的源码、测试与当前文档。
+3. 说明预期改动范围，识别需要显式授权的操作。
+4. 在正确的领域目录做最小的连贯改动。
+5. 为行为变更和回归修复添加或更新测试。
+6. 先跑局部检查，再从仓库根目录运行 `make check`。
+7. 检查 `git diff --check`、`git diff`、`git status --short`。
+8. 凡事实、行为、路径、命令、数据或部署状态发生变化，必须同步更新当前文档。
+9. 创建签名本地提交，一次提交一个连贯意图，提交信息格式：英文小写 Conventional Commit 类型，不超过七个词。
+10. 报告验证结果、剩余风险、部署状态与提交 ID。
 
-1. Run `git status --short` and inspect relevant existing changes.
-2. Check for a more specific `AGENTS.md`, then read the source, tests, and current documentation for the area.
-3. State the intended scope and identify any operation needing explicit authorization.
-4. Make the smallest coherent change in the correct domain directory.
-5. Add or update tests for changed behavior and regressions.
-6. Run targeted checks, then run `make check` from the repository root.
-7. Review `git diff --check`, `git diff`, and `git status --short`.
-8. Update current documentation whenever facts, behavior, paths, commands, data, or deployment change.
-9. Create a signed local commit with one intent and an English message of no more than seven words.
-10. Report the validation result, remaining risks, deployment state, and commit ID.
+## 改动边界
 
-## Change boundaries
+默认只读检查。以下操作需要显式授权方可执行：数据库写入、生产服务启停、Nginx 变更、云资源变更、
+破坏性清理、或向本地仓库以外发布任何内容。不得修改 `/home/ubuntu/modo` 或其他项目。
 
-Read-only inspection within the project is the default. Explicit authorization is required before database writes,
-production service control, Nginx changes, cloud resource changes, destructive cleanup, or publishing anything
-outside this local repository. Never modify `/home/ubuntu/modo` or another project.
+## 提交约定
 
-## Commit contract
+- 使用 `git commit -S` 与现有签名配置。
+- 提交主题使用英文小写 Conventional Commit 类型，不超过七个词。
+- 每次提交保持一个连贯意图。
+- 未经明确指令不得改写已有提交。
+- 未经明确指令不得添加远程仓库、推送、发布 release 或创建 GitHub 仓库。
+- 绝不提交密钥、本地数据、生成的 CSV 文件、构建产物、依赖缓存或 CLI 日志。
 
-- Use `git commit -S` and the existing signing configuration.
-- Use a lowercase English Conventional Commit type and no more than seven words in the subject.
-- Keep one coherent intent per commit.
-- Do not rewrite existing commits without explicit instruction.
-- Do not add remotes, push, publish releases, or create a GitHub repository without explicit instruction.
-- Never commit secrets, local data, generated CSV files, build output, dependency caches, or CLI logs.
-
-## Standards
+## 现行规范文档
 
 - `docs/development/PROJECT-ORGANIZATION.md`
 - `docs/development/DEVELOPMENT-STANDARD.md`
@@ -60,4 +57,3 @@ outside this local repository. Never modify `/home/ubuntu/modo` or another proje
 - `docs/development/DATA-AND-SECURITY-STANDARD.md`
 - `docs/development/SECRET-SCAN-HOOK-DESIGN.md`
 - `docs/development/CLI-SCRIPT-POLICY.md`
-- `docs/operations/USA-DEPLOYMENT-LAYOUT.md`
