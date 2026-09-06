@@ -26,3 +26,8 @@
   另：历史任务书脱敏后移入 history，撤销 docs/tasks 遗留（tasks 机制已被 Issues+KI 取代）。
 - 建议2/4/5：待推进（2 事实派生脚本、4 协作规范补 Blast Radius、5 软链发布隔离）。
 - 建议3：暂缓（观察 check_doc_sync 软警告是否足够）。
+- 建议2 完成（commit a9f1725）：新增 `scripts/project/inspect_state.py`，按需派生实时数字。
+- 建议3(死链检测) 完成（commit a9f1725）：新增 `check_doc_links.py`，进 Makefile + CI，0 死链。
+- 建议6 完成（commit a9f1725）：`COLLABORATION-STANDARD.md` 新增 Blast Radius 声明规范。
+- 建议5（软链发布）：待单独推进，需动 Nginx，单独授权。
+- 建议3(State Impact 声明卡)：暂缓，避免增摩擦。
