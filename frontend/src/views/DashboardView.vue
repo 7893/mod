@@ -247,32 +247,30 @@ const chooseProvince = (name: string) => {
       </aside>
 
       <!-- 中列：中国地图沙盘 (A5) -->
-      <section class="min-h-0 relative rounded-xl bg-slate-900/60 border border-white/10 backdrop-blur-md overflow-hidden p-3 flex flex-col">
-        <!-- 业务说明角标 -->
-        <div class="absolute top-3 left-3.5 flex items-center gap-2 z-10 pointer-events-none">
-          <span class="font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 tracking-wide">
-            A5
-          </span>
-          <span class="text-cockpit-md font-semibold text-slate-100 tracking-wide">
-            全域推展沙盘
-          </span>
-          <span class="text-cockpit-sm text-slate-500 font-normal">
-            · 点击省份联动左栏下钻
-          </span>
+      <section class="min-h-0 relative rounded-xl bg-slate-900/60 border border-white/10 backdrop-blur-md overflow-hidden p-3 flex flex-col gap-2">
+        <!-- 地图 header：左侧标识，右侧下钻状态/重置，同行不重叠 -->
+        <div class="flex items-center justify-between flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 tracking-wide">
+              A5
+            </span>
+            <span class="text-cockpit-md font-semibold text-slate-100 tracking-wide">全域推展沙盘</span>
+          </div>
+          <!-- 未下钻：淡色提示；已下钻：高亮省名 + 一键重置 -->
+          <div class="flex items-center">
+            <span v-if="selectedProvince === '全国'" class="text-cockpit-xs text-slate-500">点击省份下钻</span>
+            <button
+              v-else
+              class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/25 text-sky-300 hover:text-white transition-all text-cockpit-sm font-medium cursor-pointer backdrop-blur-md"
+              @click="selectedProvince = '全国'"
+            >
+              <b class="text-white">{{ selectedProvince }}</b>
+              <span class="text-sky-400/70">· 重置 ✕</span>
+            </button>
+          </div>
         </div>
 
-        <!-- 当前下钻状态提示与快速重置按钮 -->
-        <div v-if="selectedProvince !== '全国'" class="absolute top-3 right-3.5 z-10">
-          <button
-            class="text-cockpit-sm font-medium text-sky-300 hover:text-white transition-all flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/30 backdrop-blur-md shadow-md cursor-pointer"
-            @click="selectedProvince = '全国'"
-          >
-            <span>当前下钻：<b class="text-white">{{ selectedProvince }}</b></span>
-            <span class="text-sky-300/80 hover:text-sky-200">· 重置为全国 ✕</span>
-          </button>
-        </div>
-
-        <div class="flex-1 w-full h-full min-h-0 relative z-10">
+        <div class="flex-1 w-full min-h-0 relative">
           <ChinaMap
             :data="store.provinceSummary"
             :selected="selectedProvince"
