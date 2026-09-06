@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -9,9 +10,13 @@ import {
   Award,
   BookOpen,
   CheckCircle2,
+  Database,
+  LayoutGrid,
+  ListFilter,
   Users,
 } from 'lucide-vue-next'
 import CockpitPanel from '../components/CockpitPanel.vue'
+import ConstructionLedger from '../components/ConstructionLedger.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
 import StatList from '../components/blocks/StatList.vue'
 import type { MetricItem, StatRow } from '../components/blocks/types.ts'
@@ -20,7 +25,28 @@ import { useProjectStore } from '../stores/project.ts'
 
 use([CanvasRenderer, PieChart, TooltipComponent, LegendComponent])
 
+const route = useRoute()
+const router = useRouter()
 const store = useProjectStore()
+
+const activeTab = ref<'overview' | 'ledger'>(route.query.tab === 'ledger' ? 'ledger' : 'overview')
+const ledgerFilter = ref('全部')
+
+watch(() => route.query.tab, (val) => {
+  if (val === 'ledger') activeTab.value = 'ledger'
+  else if (val === 'overview' || !val) activeTab.value = 'overview'
+})
+
+function switchTab(tab: 'overview' | 'ledger') {
+  activeTab.value = tab
+  void router.replace({ query: { ...route.query, tab } })
+}
+
+function openLedgerWithFilter(statusFilter = '全部') {
+  ledgerFilter.value = statusFilter
+  switchTab('ledger')
+}
+
 const format = (value: number | undefined) => (
   value === undefined ? '—' : new Intl.NumberFormat('zh-CN').format(value)
 )
@@ -81,12 +107,7 @@ const provinceRanking = computed(() =>
 )
 
 /**
- * 排行条的条长映射。
- *
- * 进入榜单的各省完成率集中在几个百分点的窄区间内，若条长直接等于百分比，
- * 第 1 名和第 10 名的条几乎一样长，排行就失去了可比性。
- * 这里把区间拉伸到 [34%, 100%]，保留排序直觉又放大差距；
- * 具体数值仍以条末的百分比文字为准。
+ * 排行条的条长映射：拉伸到 [34%, 100%]
  */
 const rankBarWidth = (value: number) => {
   const values = provinceRanking.value.map((p) => p.value)
@@ -124,7 +145,7 @@ const trainingItems = computed<MetricItem[]>(() => [
   },
 ])
 
-// 色值统一取自 charts/theme.ts，避免图表区与页面外壳出现两套蓝绿黄
+// 色值统一取自 charts/theme.ts
 const chartColors = {
   accent: chartPalette.accent,
   success: chartPalette.success,
@@ -138,10 +159,10 @@ const readinessPieOption = computed(() => ({
     trigger: 'item',
     ...chartTooltip,
   },
-  legend: { 
-    orient: 'vertical', 
-    right: 10, 
-    top: 'center', 
+  legend: {
+    orient: 'vertical',
+    right: 10,
+    top: 'center',
     textStyle: { color: chartColors.textMuted, fontSize: 11 },
     itemWidth: 10,
     itemHeight: 10,
@@ -164,16 +185,40 @@ const readinessPieOption = computed(() => ({
 
 <template>
   <div class="w-full h-full p-3 bg-surface-base flex flex-col gap-2.5 overflow-hidden" data-zone="B">
+    <!-- B1: 进度总览 + 视图切换 -->
     <CockpitPanel
       title="系统建设进度全景"
       zone="B1"
       :subtitle="`${format(store.snapshot.overview.orgTotal)} 家单位 · ${format(constructionSummary?.totalTasks)} 项任务 · ${format(trainingSummary?.totalSessions)} 场培训`"
       class="flex-shrink-0"
     >
+      <template #actions>
+        <div class="flex items-center gap-1 bg-surface-veil-03 p-0.5 rounded-lg border border-surface-veil-06">
+          <button
+            type="button"
+            class="flex items-center gap-1.5 px-3 py-1 rounded text-cockpit-xs font-medium transition-colors cursor-pointer"
+            :class="activeTab === 'overview' ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'"
+            @click="switchTab('overview')"
+          >
+            <LayoutGrid :size="12" />
+            <span>建设全景</span>
+          </button>
+          <button
+            type="button"
+            class="flex items-center gap-1.5 px-3 py-1 rounded text-cockpit-xs font-medium transition-colors cursor-pointer"
+            :class="activeTab === 'ledger' ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'"
+            @click="openLedgerWithFilter('全部')"
+          >
+            <ListFilter :size="12" />
+            <span>数据准备台账 ({{ format(store.snapshot.overview.orgTotal) }})</span>
+          </button>
+        </div>
+      </template>
       <MetricGrid :items="summaryItems" variant="inline" :columns="4" />
     </CockpitPanel>
 
-    <main class="flex-1 min-h-0 grid grid-cols-construction grid-rows-construction gap-2.5">
+    <!-- 建设全景主区 -->
+    <main v-if="activeTab === 'overview'" class="flex-1 min-h-0 grid grid-cols-construction grid-rows-construction gap-2.5">
       <CockpitPanel title="阶段任务分布" zone="B2" subtitle="按建设阶段汇总" class="col-span-2">
         <MetricGrid :items="stageItems" :max-per-row="4" size="sm" fill />
       </CockpitPanel>
@@ -223,28 +268,63 @@ const readinessPieOption = computed(() => ({
       </CockpitPanel>
 
       <CockpitPanel title="期初数据准备度" zone="B5" subtitle="单位数据状态">
+        <template #actions>
+          <button
+            type="button"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/25 transition-colors text-cockpit-xs font-medium cursor-pointer"
+            @click="openLedgerWithFilter('全部')"
+          >
+            <Database :size="12" />
+            <span>台账下钻</span>
+          </button>
+        </template>
         <div class="flex h-full min-h-0 flex-col gap-2">
           <VChart class="min-h-0 flex-1" :option="readinessPieOption" autoresize />
           <div class="grid grid-cols-2 gap-2 text-cockpit-sm">
-            <div class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5">
+            <button
+              type="button"
+              class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5 text-left hover:bg-white/5 transition-colors cursor-pointer"
+              title="点击查看已导入单位台账"
+              @click="openLedgerWithFilter('已上线')"
+            >
               <span class="text-slate-400">已导入</span>
               <b class="font-mono text-sky-400">{{ format(readinessSummary?.imported) }} 家</b>
-            </div>
-            <div class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5">
+            </button>
+            <button
+              type="button"
+              class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5 text-left hover:bg-white/5 transition-colors cursor-pointer"
+              title="点击查看已校验单位台账"
+              @click="openLedgerWithFilter('已上线')"
+            >
               <span class="text-slate-400">已校验</span>
               <b class="font-mono text-emerald-400">{{ format(readinessSummary?.verified) }} 家</b>
-            </div>
-            <div class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5">
+            </button>
+            <button
+              type="button"
+              class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5 text-left hover:bg-white/5 transition-colors cursor-pointer"
+              title="点击查看收集中单位台账"
+              @click="openLedgerWithFilter('建设中')"
+            >
               <span class="text-slate-400">收集中</span>
               <b class="font-mono text-amber-400">{{ format(readinessSummary?.collecting) }} 家</b>
-            </div>
-            <div class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5">
+            </button>
+            <button
+              type="button"
+              class="flex justify-between rounded-lg bg-surface-veil-03 px-2.5 py-1.5 text-left hover:bg-white/5 transition-colors cursor-pointer"
+              title="点击查看未收集单位台账"
+              @click="openLedgerWithFilter('准备中')"
+            >
               <span class="text-slate-400">未收集</span>
               <b class="font-mono text-slate-300">{{ format(readinessSummary?.notCollected) }} 家</b>
-            </div>
+            </button>
           </div>
         </div>
       </CockpitPanel>
+    </main>
+
+    <!-- 并入的数据准备台账下钻主区 -->
+    <main v-else class="flex-1 min-h-0 flex flex-col">
+      <ConstructionLedger :initial-filter="ledgerFilter" @back="switchTab('overview')" />
     </main>
   </div>
 </template>
