@@ -83,13 +83,19 @@
   - 离线预生成静态语料资产（`simulation/assets/business_corpus.json`，688 条）：含 363 条符合真实国资政企财务质感的卡点事由（覆盖历史数据清洗、银企直联/税企接口、双轨平账尾差、交叉权签矩阵、流程合规等 5 大维度）与 325 条阶段跃迁《专家组上线评审决议书》专业措辞，去除虚构姓名与占位符；
   - 模拟器确定性接入：`simulation/evolution_coordinator.py` 接入 `get_friction_reason(org_id)`，约 4% 困难户卡点事由从原 3 条固定死文本扩展为 363 条多样化真实事由；`simulation/construction_playbooks.py` 接入 `get_transition_review_notes(from_status, to_status, org_id)`，替换固定模板；均基于 `org_id` 稳定 MD5 哈希查表，同一单位全程一致，保持 100% 确定性可复现；
   - 运行时零成本与零依赖：语料一次性离线生成，运行时严格本地查表，零 LLM 实时调用，零网络开销，免除 DB 建表与结构变更风险；新增 8 项回归测试，全量 `make check` 130 项测试全绿。
-- 前端自动化测试体系从 0 到 1 落地：基于 Vitest 5 + @vue/test-utils 2 + happy-dom 搭建测试基座，编写 7 个核心测试套件、49 项单测，实现毫秒级执行与 100% 离线 Mock，覆盖：
+- 前端自动化测试体系从 0 到 1 落地：基于 Vitest 5 + @vue/test-utils 2 + happy-dom 搭建测试基座，编写 8 个核心测试套件、59 项单测，实现毫秒级执行与 100% 离线 Mock，覆盖：
   - `useScaleScreen.ts`：普通/全屏模式视口等比计算、clamp 范围约束、零尺寸防御与生命周期事件解绑；
   - `useAiInsights.ts` 与 `useDailyBriefing.ts`：完整状态机流转、并发节流、429 限流捕获与网络异常优雅降级；
   - `formatters/metrics.ts`：千分位与百分比格式化及各类边界数值（null/undefined/NaN/0/负数）安全保护；
   - `stores/project.ts` 与 `liveProjection.ts`：快照加载、键名递归驼峰化（fixKeys）、审计记录生成、实时投影有序应用与重置；
   - `utils/modelEvaluation.ts`：严格落实 KI-023/KI-028/ADR-0010 诚实模型判定契约（R² > 0 回归有效性、(0.5, 1.0) 分类有效性及整体 READY 判定）；
+  - `utils/qualityMetrics.ts`：质量合规率、双轨一致性与困难户风险维度分布聚合纯函数运算及缺失边界防呆；
   - 门禁打通：`pnpm test` 正式纳入 `Makefile` 的 `frontend-check` 目标，与 typecheck 和 build 并列守护前端质量。
+- 空旷面板图表化落地（OperationsView D6/D7 与 InsightsView F3）：
+  - **D6 双轨核对**：引入基于 `echarts` + `charts/theme.ts` 的一致率环形图（`dualRunConsistent` vs `dualRunInconsistent`），中心展示对账一致率百分比，对称呼应 D5 阶梯条，彻底消除纯数字卡片的空旷感；
+  - **D7 数据质量金标准**：将原 4 项纯静态标签升级为“4 项金标准稽核规则卡 + 横向通过率柱状图”组合面板，真实接入快照 `quality`（`voucherBalanceErrors`、`timeOrderErrors`、`orphanLinkErrors`、`organizationsWithStatusProgression`），0 异常如实展示，配合 147 万凭证 / 231 万单据 / 2000 家单位真实核验规模与 100% 达标率；
+  - **F3 综合态势预警**：在确定性规则研判卡左侧新增困难户风险维度分布柱状图，直观展现准备期卡顿、双轨核对差异与建设严重滞后各维度预警单位数及集中批次，撑起版面空间；
+  - **统一图表契约**：全量走 `charts/theme.ts`（`chartPalette`、`chartInk`、`chartTooltip`、`calmAnimation`），零硬编码十六进制色值，缺失数据显示 `—`，0 值如实展示；
 - 前端构建按库分包（`vite.config.ts` `manualChunks`）：echarts / vue 全家桶 / 地图 GeoJSON / 图标各自独立 chunk，
   业务视图 chunk 从数百 KB 降至数十 KB（改动不再让用户重下 echarts），`chunkSizeWarningLimit` 上调至 700 消除噪音。
   注：`element-plus`、`vxe-table`、`@element-plus/icons-vue` 为未使用依赖，已移除。
