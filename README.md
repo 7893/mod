@@ -40,7 +40,7 @@ MOD 是一个**下一代 AI 驱动开发**的领导驾驶舱与大屏可视化�
 - `docs/KNOWN-ISSUES.md`：已知问题看板（各 issue 详情见 `docs/issues/`；新需求/任务用 GitHub Issues 登记）。
 - `docs/history/21-V2数据与项目目录现状基线.md`：V2 冻结基线历史记录。
 - `artifacts/v2-sim-data/`：V2 封版数据。
-- `docs/tasks/`：当前和历史任务书；任务书文件本身不等于操作授权。
+- `docs/history/`：已完成或已废止的历史任务书、过程档案与决策记录。
 
 ## 运行架构
 
