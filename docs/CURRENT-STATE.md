@@ -92,7 +92,7 @@
   - 门禁打通：`pnpm test` 正式纳入 `Makefile` 的 `frontend-check` 目标，与 typecheck 和 build 并列守护前端质量。
 - 前端构建按库分包（`vite.config.ts` `manualChunks`）：echarts / vue 全家桶 / 地图 GeoJSON / 图标各自独立 chunk，
   业务视图 chunk 从数百 KB 降至数十 KB（改动不再让用户重下 echarts），`chunkSizeWarningLimit` 上调至 700 消除噪音。
-  注：`element-plus`、`vxe-table` 为未使用依赖，待清理。
+  注：`element-plus`、`vxe-table`、`@element-plus/icons-vue` 为未使用依赖，已移除。
 - F 屏 F5 已由“手动点击生成研判”改为纯展示每日自动简报（与 A 屏简报同源、零交互，读 `GET /api/insights/briefing`），
   A 屏一行摘要、F 屏展示全文，消除两处 LLM 研判入口的重复。
 - Cloudflare AI Gateway 用量可只读巡检：`scripts/kiro/inspect_gateway_usage.py`（缓存命中率、累计 token、错误数），
