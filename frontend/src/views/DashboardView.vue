@@ -19,6 +19,7 @@ import StatList from '../components/blocks/StatList.vue'
 import StatusList from '../components/blocks/StatusList.vue'
 import type { MetricItem, StatRow, StatusRow } from '../components/blocks/types.ts'
 import { useLiveProjection } from '../composables/useLiveProjection.ts'
+import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
 import { formatPercent } from '../formatters/metrics.ts'
 import { useLiveProjectionStore } from '../stores/liveProjection.ts'
 import { useProjectStore } from '../stores/project.ts'
@@ -28,6 +29,19 @@ const liveStore = useLiveProjectionStore()
 const router = useRouter()
 const selectedProvince = ref('全国')
 const { connected: projectionConnected, recentEvent } = useLiveProjection(liveStore.apply)
+
+// 每日指挥部决策简报（后台 LLM 生成，打开即见，不交互）
+const { briefing } = useDailyBriefing()
+// 取简报正文首段纯文本作一行摘要（去 markdown 符号）
+const briefingSummary = computed(() => {
+  const c = briefing.value?.content
+  if (!c) return ''
+  const firstMeaningful = c
+    .split('\n')
+    .map((l) => l.replace(/[#*`>-]/g, '').trim())
+    .find((l) => l.length > 8)
+  return firstMeaningful || ''
+})
 
 // 首屏动效只播放一次：进入页面后关闭数字/进度条的强动效时长，
 // 避免省份切换、数据轮询刷新时反复"跳数字+飞入"造成视觉噪音。
@@ -174,6 +188,19 @@ const chooseProvince = (name: string) => {
         @open-risk="router.push('/d')"
       />
     </header>
+
+    <!-- 每日指挥部智能简报（后台 AI 生成，一行摘要，点击进 F 屏看全文） -->
+    <button
+      v-if="briefingSummary"
+      type="button"
+      class="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-left hover:bg-sky-500/15 transition-colors cursor-pointer w-full min-w-0"
+      title="点击查看智能研判全文"
+      @click="router.push('/f')"
+    >
+      <span class="flex-shrink-0 font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">AI 简报</span>
+      <span class="text-cockpit-sm text-slate-300 truncate min-w-0">{{ briefingSummary }}</span>
+      <ChevronRight :size="13" class="flex-shrink-0 text-sky-400 ml-auto" />
+    </button>
 
     <!-- 三栏主体：严格固定 Grid 物理防爆舱 (左右比例一致，绝对水平对齐) -->
     <main class="flex-1 grid grid-cols-cockpit gap-2.5 min-h-0">
