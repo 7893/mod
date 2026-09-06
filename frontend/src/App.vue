@@ -102,7 +102,7 @@ onBeforeUnmount(() => {
 
       <!-- 中央：大屏主标题 -->
       <div class="header-center">
-        <h1 class="header-main-title">下一代业务系统建设推广大屏</h1>
+        <h1 class="header-main-title">业务系统建设推广大屏</h1>
         <div class="header-title-decor"></div>
       </div>
 
