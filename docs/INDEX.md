@@ -82,8 +82,7 @@ Worker 均已退出当前运行架构。
 
 - `../archive/legacy-collaboration/`：已归档的停用协作状态机（调度器、agent 定义、任务与交接记录）；
   只读历史，不恢复、不运行、不维护。
-- `tasks/README.md`：任务书目录规则；任务书本身不等于执行授权。
-- `tasks/MOD-V2数据库整改执行提示词.txt`：已完成的历史整改提示词，禁止再次执行。
+- `tasks/MOD-V2数据库整改执行提示词.txt`：（已移入 `history/`，历史整改提示词，禁止再次执行。）
 - `operations/MOD-USA-手工配置与验收清单.txt`：历史 DataEase/NocoDB 手工清单，已停用，禁止执行。
 - `operations/USA-DIRECTORY-MAINTENANCE-20260902.md`：USA 目录整理、防索引与遗留运行风险记录。
 - `operations/USA-DEPLOYMENT-LAYOUT.md`：USA 纯部署目录允许项和部署后验收要求。
