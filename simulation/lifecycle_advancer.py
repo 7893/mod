@@ -179,9 +179,14 @@ class LifecycleAdvancer:
         elif current_status == "双轨运行中":
             t = self.thresholds
             duration_days = (current_date - metrics.stage_entered_date).days
-            if duration_days < t.dual_run_days_min:
+            # Causal link: if opening diff amount > 0, dual run required days increases by 7 days
+            required_dual_days = t.dual_run_days_min + (7 if metrics.opening_diff_amount > 0 else 0)
+            if duration_days < required_dual_days:
                 is_qualified = False
-                reasons.append(f"双轨运行天数不足: {duration_days}天 < {t.dual_run_days_min}天")
+                reasons.append(
+                    f"双轨运行天数不足: {duration_days}天 < {required_dual_days}天"
+                    + (" (含期初数据质量差异考核惩罚+7天)" if metrics.opening_diff_amount > 0 else "")
+                )
             if metrics.dual_run_checks_total < t.dual_run_min_checks:
                 is_qualified = False
                 reasons.append(f"双轨核对笔数不足: {metrics.dual_run_checks_total} < {t.dual_run_min_checks}")
