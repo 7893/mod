@@ -8,6 +8,7 @@ backend-check:
 
 frontend-check:
 	python3 scripts/project/lint_frontend_arbitrary_values.py
+	cd frontend && pnpm test
 	cd frontend && pnpm run typecheck
 	cd frontend && pnpm run build
 

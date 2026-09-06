@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "vue-tsc --noEmit --incremental false",
+    "test": "vitest run",
     "build": "vue-tsc -b && vite build --config vite.config.ts",
     "preview": "vite preview"
   },
@@ -25,9 +26,12 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.9.1",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/test-utils": "2.5.0",
+    "happy-dom": "20.14.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9.3",
     "vite": "^7.1.12",
+    "vitest": "5.0.0",
     "vue-tsc": "^3.1.1"
   }
 }
