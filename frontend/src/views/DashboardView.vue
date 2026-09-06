@@ -247,30 +247,14 @@ const chooseProvince = (name: string) => {
       </aside>
 
       <!-- 中列：中国地图沙盘 (A5) -->
-      <section class="min-h-0 relative rounded-xl bg-slate-900/60 border border-white/10 backdrop-blur-md overflow-hidden p-3 flex flex-col gap-2">
-        <!-- 地图 header：左侧标识，右侧下钻状态/重置，同行不重叠 -->
-        <div class="flex items-center justify-between flex-shrink-0">
-          <div class="flex items-center gap-2">
-            <span class="font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 tracking-wide">
-              A5
-            </span>
-            <span class="text-cockpit-md font-semibold text-slate-100 tracking-wide">全域推展沙盘</span>
-          </div>
-          <!-- 未下钻：淡色提示；已下钻：高亮省名 + 一键重置 -->
-          <div class="flex items-center">
-            <span v-if="selectedProvince === '全国'" class="text-cockpit-xs text-slate-500">点击省份下钻</span>
-            <button
-              v-else
-              class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/25 text-sky-300 hover:text-white transition-all text-cockpit-sm font-medium cursor-pointer backdrop-blur-md"
-              @click="selectedProvince = '全国'"
-            >
-              <b class="text-white">{{ selectedProvince }}</b>
-              <span class="text-sky-400/70">· 重置 ✕</span>
-            </button>
-          </div>
+      <section class="min-h-0 rounded-xl bg-slate-900/60 border border-white/10 backdrop-blur-md overflow-hidden p-3 flex flex-col gap-2">
+        <!-- 地图 header：仅标识，无冗余提示 -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <span class="font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 tracking-wide">A5</span>
+          <span class="text-cockpit-md font-semibold text-slate-100 tracking-wide">全域推展沙盘</span>
         </div>
 
-        <div class="flex-1 w-full min-h-0 relative">
+        <div class="flex-1 w-full min-h-0">
           <ChinaMap
             :data="store.provinceSummary"
             :selected="selectedProvince"
