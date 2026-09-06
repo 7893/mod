@@ -29,8 +29,8 @@ const store = useProjectStore()
 
 // 业务联动真实入口
 const auxRows: StatusRow[] = [
-  { title: '单位上线台账', desc: '全网 2,000 家单位推广档案与进度跟踪', icon: Workflow, href: '/rollout', tone: 'accent' },
-  { title: '风险与缺陷清单', desc: '各批次未解决问题与高风险项处置闭环', icon: MessageSquare, href: '/issues', tone: 'warning' },
+  { title: '单位上线台账', desc: '全网 2,000 家单位推广档案与进度跟踪', icon: Workflow, href: '/c', tone: 'accent' },
+  { title: '合规与缺陷清单', desc: '各批次未解决问题与合规风险处置闭环', icon: MessageSquare, href: '/e', tone: 'warning' },
 ]
 
 const governanceRows: StatusRow[] = [
@@ -138,7 +138,7 @@ const f1SummaryItems = computed<MetricItem[]>(() => [
   <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="F">
     <!-- F1: 概览 -->
     <CockpitPanel
-      title="智能研判与预测"
+      title="风险预警与智能研判"
       zone="F1"
       subtitle="Oracle HeatWave AutoML 库内机器学习 × Cloudflare Workers AI 决策大脑"
       class="flex-shrink-0"

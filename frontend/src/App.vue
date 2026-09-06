@@ -3,14 +3,14 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   Activity,
+  AlertTriangle,
   BarChart3,
-  Brain,
+  ClipboardCheck,
   Fullscreen,
   Hammer,
   LayoutDashboard,
   RefreshCw,
   Rocket,
-  ShieldAlert,
   WifiOff,
 } from 'lucide-vue-next'
 import { useProjectStore } from './stores/project.ts'
@@ -54,19 +54,19 @@ const handleManualRefresh = () => {
 }
 
 const leftNavItems = [
-  { path: '/dashboard', label: '项目总览', icon: LayoutDashboard },
-  { path: '/construction', label: '建设进度', icon: Hammer },
-  { path: '/rollout', label: '上线推广', icon: Rocket },
+  { path: '/a', label: '项目总览', icon: LayoutDashboard },
+  { path: '/b', label: '建设进度', icon: Hammer },
+  { path: '/c', label: '上线推广', icon: Rocket },
 ]
 
 const rightNavItems = [
-  { path: '/operations', label: '业务运营', icon: BarChart3 },
-  { path: '/issues', label: '问题清单', icon: ShieldAlert },
-  { path: '/insights', label: '智能研判', icon: Brain },
+  { path: '/d', label: '风险预警', icon: AlertTriangle },
+  { path: '/e', label: '合规监督', icon: ClipboardCheck },
+  { path: '/f', label: '业务运营', icon: BarChart3 },
 ]
 
 const isActive = (path: string) => {
-  if (path === '/dashboard') return route.path === '/' || route.path === '/dashboard'
+  if (path === '/a') return route.path === '/' || route.path === '/a'
   return route.path === path
 }
 
@@ -119,7 +119,7 @@ onBeforeUnmount(() => {
             <component :is="item.icon" :size="16" />
             <span>{{ item.label }}</span>
             <i
-              v-if="item.path === '/issues' && store.snapshot.overview.highRisk"
+              v-if="item.path === '/d' && store.snapshot.overview.highRisk"
               class="risk-badge"
               :title="`待处置高风险事项：${store.snapshot.overview.highRisk} 项（未解决总量 ${(store.snapshot.overview.unresolvedIssues || 0).toLocaleString()} 项）`"
             >

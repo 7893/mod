@@ -257,7 +257,7 @@ const chooseProvince = (name: string) => {
         :recent-event="recentEvent"
         :num-duration="numDuration"
         :short-date="shortDate"
-        @open-risk="router.push('/issues')"
+        @open-risk="router.push('/d')"
       />
     </header>
 
@@ -283,7 +283,7 @@ const chooseProvince = (name: string) => {
               </button>
               <button
                 class="text-cockpit-sm font-medium text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-0.5 px-2 py-0.5 rounded-lg bg-sky-500/10 border border-sky-500/20"
-                @click="router.push('/rollout')"
+                @click="router.push('/c')"
               >
                 单位台账 <ArrowUpRight :size="12" />
               </button>
@@ -412,13 +412,13 @@ const chooseProvince = (name: string) => {
 
             <!-- 风险清单列表 -->
             <div class="flex-1 min-h-0 overflow-y-auto pr-1">
-              <StatusList :rows="riskRows" scroll chevron @select="router.push('/issues')" />
+              <StatusList :rows="riskRows" scroll chevron @select="router.push('/d')" />
             </div>
 
             <!-- 底部进入风险中心操作按钮 -->
             <button
               class="w-full py-1.5 px-3 rounded-xl text-cockpit-sm font-medium text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all flex items-center justify-center gap-1 mt-auto flex-shrink-0"
-              @click="router.push('/issues')"
+              @click="router.push('/d')"
             >
               进入风险中心 <ChevronRight :size="13" />
             </button>
