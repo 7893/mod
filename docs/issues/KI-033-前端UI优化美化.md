@@ -97,13 +97,24 @@
 
 硬约束全绿：0 手写 `<style>`、0 arbitrary values、全用 CockpitPanel、D屏301行、F屏331行、make check 115 passed。
 
+### 第四批（全局三大问题）——已完成改造与测试门禁，等待主控验收（2026-09-06）
+
+| 改动项 | 提交 | 状态 |
+|---|---|---|
+| 问题一（Panel 顶部与 MetricGrid 美化）：CockpitPanel 顶部栏重构，subtitle 独占一行不截断，actions slot 垂直居中；blocks.css 中 `.metric-grid--inline` 增加 `height: 100%; align-content: center` 与指标内容垂直居中 | `cdd9903` | ✅ 已完成 |
+| 问题二（Zone 严格 1:1）：全项目 Zone 属性审计，确认 A1-A8、B1-B5、C1-C6、D1-D7、E1-E5、F1-F5 无重复、无多编号共享，A1 TopBar 与 A5 地图区保留例外 | `cdd9903` | ✅ 已完成 |
+| 问题三（图表入场动画与过渡）：RolloutView（批次推进+省域柱状图）与 ConstructionView（数据准备度饼图）展开 `calmAnimation`；OperationsView D3 volumeBars 与 D5 integrationBars 增加 `isMounted` 入场宽度滑入动效 | `cdd9903` | ✅ 已完成 |
+
+硬约束全绿：0 手写 `<style>`、0 arbitrary values、全用 CockpitPanel、各文件均 ≤400 行、make check 115 passed。
+
 ---
 
 ### 全景验收汇总（六屏协同闭环）
 
-| 批次 | 覆盖屏幕 | 提交 | 状态 |
+| 批次 | 覆盖内容 | 提交 | 状态 |
 |---|---|---|---|
 | 第一批 | A屏（项目总览）+ B屏（建设进度） | `9ede072`, `0f4a79e` | ✅ 已验收通过 |
 | 第二批 | C屏（推广上线）+ E屏（合规监督） | `ddb2d9e`, `4709b26` | ✅ 已验收通过 |
 | 第三批 | D屏（业务运营）+ F屏（风险预警与 AI 研判） | `c44a27b`, `4174b94` | ✅ 已完成门禁（待验收） |
+| 第四批 | 全局三大问题（Panel Header、Zone 1:1、入场动画与滑入动效） | `cdd9903` | ✅ 已完成门禁（待验收） |
 
