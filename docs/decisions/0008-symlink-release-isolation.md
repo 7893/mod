@@ -1,0 +1,31 @@
+# ADR-0008: 前后端统一软链发布隔离
+
+- 状态：采纳
+- 日期：2026-09-06
+
+## 背景
+ADR-0006 确定了生产与源码工作区同机运行的架构。前端已通过软链（`frontend/current → releases/<ts>/`）
+实现构建与生产伺服隔离（ADR 对应 KI-030 建议5）。但后端 systemd 服务仍直接读工作区
+`backend/app/`——agy 或主控修改后端代码时，改到一半生产就能读到半截代码，存在真实风险。
+
+## 决策
+对后端实施与前端相同的**软链发布隔离模式**：
+- 发布时将 `backend/app/` 与 `.venv/` 打包复制到 `backend/releases/<ts>/`
+- `backend/current` 软链指向当前生产版本
+- `mod-api.service` 的 `WorkingDirectory` 与 `ExecStart` 改为读 `backend/current/`
+- 工作区 `backend/app/` 可随意修改（开发/测试），不影响生产
+- 发布由主控运行统一发布脚本（`scripts/project/publish.sh`），原子切换前后端软链，
+  make check 全绿后方可发布，出错自动回滚
+
+## 理由
+- 与前端软链模式保持一致，降低认知负担（统一一套发布范式）
+- 从物理机制上杜绝"改到一半影响生产"的风险
+- 工作区与生产完全解耦，agy 开发不影响生产稳定性
+- 替代方案：完整分离工作区与部署目录（两套目录 + 同步脚本）——成本超过收益，否决
+
+## 后果
+- `mod-api.service` 读 `backend/current/`（软链），不再直接读工作区
+- 需要一个统一发布脚本 `scripts/project/publish.sh`，整合前后端软链切换
+- `backend/releases/` 加入 `.gitignore`
+- 保留最近 N 个发布版本（回滚用），定期清理旧版本
+- 见 `docs/issues/KI-031-backend-symlink-release.md`
