@@ -1,6 +1,6 @@
 # MOD 当前状态
 
-更新日期：2026-09-05
+更新日期：2026-09-06
 状态：现行事实入口
 适用范围：当前运行、数据、功能、质量、安全状态与操作边界
 
@@ -26,7 +26,8 @@
 - MOD 不使用 Docker、DataEase、NocoDB 或 Cloudflare Worker 作为现行运行组件。
 - `archive/legacy-cloudflare-worker/` 是未接入现行链路的历史实验原型，不部署。
 - 后端包含可选的 Cloudflare Workers AI REST 适配器，代码默认关闭（`MOD_CF_AI_ENABLED` 未设置时不启用）；
-  当前生产运行主机已显式启用（`MOD_CF_AI_ENABLED=true` + 凭据齐备），仅用于驾驶舱文案摘要生成，只读不写库；它不依赖上述历史 Worker。
+  当前生产实测状态为 `UNCONFIGURED`（未配置凭据，`/api/insights/status` 返回“未配置适配器”），
+  即该适配器暂未实际提供文案摘要能力；接入需显式配置 `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN`；它不依赖上述历史 Worker。
 - 时区契约：后端与 UTC 侧一律使用 UTC；面向用户的展示时区由 `MOD_DISPLAY_TIMEZONE` 决定，
   默认 `Asia/Hong_Kong`，唯一定义在 `backend/app/config.py`。快照 `meta.displayTimezone`、实时投影
   作息节律与前端时钟均派生自该来源，不得各自写死。已知偏差：`v2_connection` 的会话时区固定
@@ -63,8 +64,8 @@
   - 服务化与运维管理：提供独立 systemd 配置文件（`deploy/mod-simulator.service`，与 `mod-api.service` 解耦）和 CLI 运维管理工具（`scripts/agy/run_simulator_service.py`），支持 `--status`、`--dry-run`、`--once`、`--clear-fail-closed`；每周期落盘结构化健康心跳（`output/simulator_status.json`）；安全开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭；短窗口实测与 8 闸门复测全绿。
   - 上线状态（2026-09-05，主控授权）：服务已系统级安装并 `enable --now`，`MOD_SIMULATION_ENGINE_ENABLED=true` 开启真实写库，常驻运行中；开机自启、崩溃自愈、运行主机重启自动继续；库按实时香港时钟自然增长、KI-017 全表零回归；主控每日巡检。
 - V1 回退代码仍保留，但不作为后续功能目标。
-- HeatWave AutoML 已完成真训练与独立切分评估（KI-015 闭环）：风险分类模型按单位随机切分（80% 训练 / 20% 测试，无时序泄漏），单据量回归模型严格按时序先后切分（早期 80% 训练 / 晚期 20% 测试，无未来泄漏）；独立测试集真实质量分已落库入 `mod`.ml_model_metadata 与 `mod`.ml_training_log；前端与接口 /api/insights/status 真实对接展示；每日 00:00 (HKT) 自动重训定时服务已就位（deploy/mod-ml-retrain.service + timer 与 scripts/agy/run_ml_retrain.py）。
-- Cloudflare AI 已在生产启用（用于文案摘要，只读）；但无论 AI 是否启用，都不应把未生成的预测或
+- HeatWave AutoML 已完成真训练与独立切分评估（KI-015 闭环）：风险分类模型按单位随机切分（80% 训练 / 20% 测试，无时序泄漏），单据量回归模型严格按时序先后切分（早期 80% 训练 / 晚期 20% 测试，无未来泄漏）；独立测试集真实质量分已落库入 `mod`.ml_model_metadata 与 `mod`.ml_training_log；前端与接口 /api/insights/status 真实对接展示；每日 00:00 (HKT) 自动重训定时服务已就位（deploy/mod-ml-retrain.service + timer 与 scripts/agy/run_ml_retrain.py）。当前两个模型独立测试集均判定为 `VALIDATION_FAILED`（回归 R²≈-0.0135、分类 Accuracy 退化为 1.0），根因是模拟数据缺乏可学习的真实因果，前端如实展示“已训练，验证未达标”，不展示假预测。HeatWave AutoML 的能力清单、SQL 接口与官方硬限制见 [HeatWave AutoML 能力与边界手册](development/HEATWAVE-AUTOML-CAPABILITIES.md)。
+- Cloudflare AI 适配器当前生产实测为 `UNCONFIGURED`（未配置凭据，暂未实际提供文案摘要）；无论 AI 是否启用，都不应把未生成的预测或
   未经真实评估的模型质量展示为真实结果（见 [KI-023](issues/KI-023-AutoML质量分硬编码兜底.md)，已闭环）。
 - 本地接口与前端已将建设、问题、单位与运营屏统一到数据库当前快照口径；缺失指标展示为 `—` 或明确的
   “未提供”，不再以冻结基线数值替代实时结果。已随运行主机生产构建生效。
