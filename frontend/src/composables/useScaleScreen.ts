@@ -15,8 +15,8 @@ export interface ScaleScreenOptions {
  * 以 baseWidth×baseHeight 为唯一设计基准，用 GPU transform: scale 等比映射到任意视口。
  * 「屏」的分辨率差异全部由这里的等比缩放兜住；窗体内部的疏密由设计契约在基准尺寸上定死。
  *
- * 全屏模式：App.vue 隐藏 header，command-main 占满整屏。
- * 此时直接用 window.screen.width/height 计算，不再减 header 高度。
+ * 普通与全屏模式都保留导航栏，因此始终以 command-main 的真实内容盒计算。
+ * fullscreenchange 只负责在浏览器完成布局切换后重新测量。
  */
 export function useScaleScreen(options: ScaleScreenOptions = {}) {
   const { baseWidth = 1920, baseHeight = 980, minScale = 0.55, maxScale = 1.35 } = options
@@ -27,19 +27,10 @@ export function useScaleScreen(options: ScaleScreenOptions = {}) {
     const el = viewportRef.value
     if (!el) return
 
-    let w: number
-    let h: number
-
-    if (document.fullscreenElement) {
-      // 全屏模式：header 已隐藏，content-main 占满物理屏幕。
-      // 直接用物理屏幕尺寸，不减 header。
-      w = window.screen.width
-      h = window.screen.height
-    } else {
-      // 普通模式：command-main 内容盒（不含滚动条与 padding）。
-      w = el.clientWidth
-      h = el.clientHeight
-    }
+    // command-main 内容盒已经扣除了常驻导航栏高度；使用真实布局尺寸
+    // 可避免全屏时按物理屏幕高度放大画布、造成导航与内容重叠。
+    const w = el.clientWidth
+    const h = el.clientHeight
 
     if (w <= 0 || h <= 0) return
     const fit = Math.min(w / baseWidth, h / baseHeight)
