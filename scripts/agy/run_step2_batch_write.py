@@ -29,20 +29,20 @@ import pymysql
 # Setup python path
 BASE_DIR = Path(__file__).resolve().parents[2]
 BACKEND_DIR = BASE_DIR / "backend"
-sys.path.insert(0, str(BACKEND_DIR))
+sys.path.insert(0, str(BASE_DIR))
 
-from app.simulation.construction_models import (  # noqa: E402
+from simulation.construction_models import (  # noqa: E402
     validate_construction_event,
 )
-from app.simulation.construction_playbooks import (  # noqa: E402
+from simulation.construction_playbooks import (  # noqa: E402
     DataReadinessPlaybook,
     DualRunCheckPlaybook,
     InterfaceDebuggingPlaybook,
     TrainingCertificationPlaybook,
     TransitionReviewPlaybook,
 )
-from app.simulation.construction_writer import ConstructionWriter  # noqa: E402
-from app.simulation.engine_context import IdAllocator, load_construction_baseline  # noqa: E402
+from simulation.construction_writer import ConstructionWriter  # noqa: E402
+from simulation.engine_context import IdAllocator, load_construction_baseline  # noqa: E402
 
 
 def get_db_connection() -> pymysql.Connection:

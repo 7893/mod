@@ -7,9 +7,9 @@ from decimal import Decimal
 
 import pytest
 
-from app.simulation.engine_context import ConstructionBaseline
-from app.simulation.evolution_coordinator import EvolutionCoordinator
-from app.simulation.lifecycle_advancer import LifecycleThresholds
+from simulation.engine_context import ConstructionBaseline
+from simulation.evolution_coordinator import EvolutionCoordinator
+from simulation.lifecycle_advancer import LifecycleThresholds
 
 
 @pytest.fixture

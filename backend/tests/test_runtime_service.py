@@ -7,17 +7,17 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
 
-from app.simulation.construction_models import (
+from simulation.construction_models import (
     ConstructionTaskFootprint,
     DataReadinessEventFootprint,
     DataReadinessRecordFootprint,
 )
-from app.simulation.engine_context import (
+from simulation.engine_context import (
     ConstructionBaseline,
     IdAllocator,
     SimulationBaseline,
 )
-from app.simulation.footprint_models import (
+from simulation.footprint_models import (
     DocumentFootprint,
     DocumentLineFootprint,
     EventFootprint,
@@ -26,7 +26,7 @@ from app.simulation.footprint_models import (
     VoucherFootprint,
     VoucherLineFootprint,
 )
-from app.simulation.runtime_service import (
+from simulation.runtime_service import (
     FailClosedManager,
     PostCycleSelfChecker,
     RateLimitFuse,
@@ -399,7 +399,7 @@ def test_runtime_service_successful_writes(tmp_path, monkeypatch):
 
     # Mock fast movie writer and check
     mock_res = MagicMock(success=True, written_count=1)
-    monkeypatch.setattr("app.simulation.runtime_service.SimulationWriter.write_events", lambda self, evts: mock_res)
+    monkeypatch.setattr("simulation.runtime_service.SimulationWriter.write_events", lambda self, evts: mock_res)
     monkeypatch.setattr(PostCycleSelfChecker, "check_fast_movie_events", lambda conn, evts: (True, ""))
 
     # Cycle 1: Fast movie
@@ -412,7 +412,7 @@ def test_runtime_service_successful_writes(tmp_path, monkeypatch):
     # Mock slow movie writer and check
     c_mock_res = MagicMock(success=True)
     monkeypatch.setattr(
-        "app.simulation.runtime_service.ConstructionWriter.write_construction_events",
+        "simulation.runtime_service.ConstructionWriter.write_construction_events",
         lambda self, evts, execute=True: c_mock_res,
     )
     monkeypatch.setattr(PostCycleSelfChecker, "check_construction_events", lambda conn, evts: (True, ""))

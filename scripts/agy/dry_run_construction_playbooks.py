@@ -23,8 +23,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 BACKEND_DIR = os.path.join(BASE_DIR, "backend")
 sys.path.insert(0, BACKEND_DIR)
 
-from app.simulation.construction_models import validate_construction_event  # noqa: E402
-from app.simulation.construction_playbooks import (  # noqa: E402
+from simulation.construction_models import validate_construction_event  # noqa: E402
+from simulation.construction_playbooks import (  # noqa: E402
     BatchRolloutPlaybook,
     DataReadinessPlaybook,
     DualRunCheckPlaybook,
@@ -33,7 +33,7 @@ from app.simulation.construction_playbooks import (  # noqa: E402
     TrainingCertificationPlaybook,
     TransitionReviewPlaybook,
 )
-from app.simulation.engine_context import IdAllocator, load_construction_baseline  # noqa: E402
+from simulation.engine_context import IdAllocator, load_construction_baseline  # noqa: E402
 
 
 def get_db_connection() -> pymysql.Connection:
