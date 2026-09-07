@@ -4,7 +4,7 @@ from datetime import datetime
 from threading import Lock
 from time import monotonic
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
@@ -335,23 +335,26 @@ def operations_summary(conn: Connection | None = Depends(connection)) -> dict:
 @router.get("/simulator/status")
 async def simulator_status() -> dict:
     """
-    获取业务模拟器内存状态（只读）。
+    获取独立常驻拟真引擎运行状态与健康心跳（只读）。
 
     安全说明：
-    - 仅读取已有内存状态，不创建写库引擎，不初始化模拟器。
-    - 模拟器未启用时（MOD_SIMULATOR_ENABLED 未设置），返回 enabled=false。
-    - 不接受任何参数，不写库，不泄露凭据。
+    - 读取独立常驻进程（mod-simulator.service）输出的结构化心跳文件。
+    - 不导入 simulation 包，不导入 business_simulator，不创建任何写库连接或引擎。
+    - 不执行任何子进程或外部命令。
+    - 字段白名单过滤，不泄露系统绝对路径或凭据。
     """
-    from .business_simulator import get_simulator_instance
+    from .services.simulator_status import read_simulator_status
 
-    instance = get_simulator_instance()
-    if instance is None:
-        return {
-            "enabled": False,
-            "notice": "模拟器未启用（MOD_SIMULATOR_ENABLED 未设置或不在白名单）",
-        }
-    return {
-        "enabled": True,
-        **instance.get_status(),
-    }
+    try:
+        return read_simulator_status()
+    except PermissionError:
+        raise HTTPException(
+            status_code=503,
+            detail="Simulator status temporarily unavailable",
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail="Simulator status temporarily unavailable",
+        )
 

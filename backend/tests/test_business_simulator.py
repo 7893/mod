@@ -170,6 +170,7 @@ class TestTC04ReadOnlyStatus:
         with patch.dict("os.environ", {
             "MOD_SIMULATOR_ENABLED": "",
             "MOD_DB_WRITE_URL": "",
+            "MOD_SIMULATOR_STATUS_PATH": "/tmp/nonexistent_heartbeat.json",
         }, clear=False):
             # mock DB 连接依赖（避免连接真实数据库）
             mock_conn = None  # connection 返回 None 触发 fallback 路径

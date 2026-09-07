@@ -511,9 +511,11 @@ class SimulatorRuntimeService:
         return None
 
     def _save_status(self, last_status: str, intensity: float, now: datetime, last_error: Optional[str]) -> None:
-        """Persist structured service heartbeat status to JSON file."""
+        """Persist structured service heartbeat status to JSON file using atomic tempfile swap."""
+        tmp_path = None
         try:
-            self.config.status_file_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path = self.config.status_file_path
+            target_path.parent.mkdir(parents=True, exist_ok=True)
             status_data = {
                 "service": "mod-simulator",
                 "status": "HALTED" if self.fail_closed_mgr.is_tripped() else ("RUNNING" if last_status != "ERROR" else "DEGRADED"),
@@ -526,10 +528,25 @@ class SimulatorRuntimeService:
                 "fuse_metrics": self.fuse.get_metrics(),
                 "last_error": last_error,
             }
-            with open(self.config.status_file_path, "w", encoding="utf-8") as f:
+            tmp_path = target_path.with_name(f".tmp_{target_path.name}")
+            with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(status_data, f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+
+            tmp_path.replace(target_path)
+            try:
+                target_path.chmod(0o644)
+            except Exception:
+                pass
         except Exception as ex:
             logger.warning(f"Could not persist runtime status: {ex}")
+        finally:
+            if tmp_path and tmp_path.exists():
+                try:
+                    tmp_path.unlink()
+                except Exception:
+                    pass
 
     def run_once(self, now: Optional[datetime] = None) -> CycleResult:
         """Execute a single cycle and return outcome."""
