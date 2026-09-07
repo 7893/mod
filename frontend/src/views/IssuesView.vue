@@ -197,10 +197,10 @@ const paginatedTableUnits = computed(() => {
       class="flex-shrink-0"
     >
       <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
-        <section class="col-span-9 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-h-0">
+        <section class="col-span-9 pr-3 border-r border-surface-veil-06 min-h-0">
           <VChart class="w-full h-full min-h-0" :option="complianceOverviewOption" autoresize />
         </section>
-        <section class="col-span-3 flex flex-col rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2 min-h-0">
+        <section class="col-span-3 flex flex-col min-h-0">
           <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs"><span class="font-medium text-slate-300">主要风险维度</span><span class="text-slate-500">TOP 3</span></div>
           <div class="grid grid-rows-3 flex-1 min-h-0">
             <div v-for="item in dominantComplianceTags" :key="item.label" class="flex items-center gap-2 min-w-0 text-cockpit-xs">

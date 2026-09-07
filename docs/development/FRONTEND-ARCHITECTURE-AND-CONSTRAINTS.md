@@ -99,7 +99,8 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
     `grid-cols-construction`（B 屏 12 列）与 `grid-rows-construction`（上下 0.95fr/1.05fr）。
   - 表面色：`bg-surface-base`（大屏底色）、`bg-surface-panel`、`border-surface-hairline`、
     `bg-surface-veil-06`、`bg-surface-veil-03`。
-  - 字号：`text-cockpit-xs`(10)、`text-cockpit-sm`(11)、`text-cockpit-md`(13)、`text-cockpit-metric`(18)。
+  - 字号：`text-cockpit-xs`(10)、`text-cockpit-sm`(11)、`text-cockpit-md`(13)、`text-cockpit-metric`(18)、
+    `text-cockpit-kpi`(24，仅用于单面板唯一主指标)。
   - 信号灯语义色沿用 Tailwind 内置 sky/rose/amber/emerald，仅在有信号价值处使用。
 - 优先使用 Tailwind 原子类表达布局与样式；不得为可用 Token 表达的样式手写新的一次性 CSS 规则。
 - 手写 CSS 仅保留 Token 定义、第三方组件必要覆盖、以及无法用原子类表达的少量复杂选择器；
@@ -125,7 +126,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 - 全站存量专属旧 CSS（`rollout.css`、`operations.css`、`issues.css`、`insights.css`）已全部物理清零，旧物料 `components/Panel.vue` 已彻底物理删除；`DataView`（数据台账页）已统一为 `CockpitPanel` + Tailwind 范式，`styles.css` 仅保留基座与通用物料层。
 - 全站各视图整体骨架、物料与 Token 三层契约已全面闭环生效。
 - A1、B1、C1、D1、E1、F1、A2、A3、B2、B4、B5、C2、C5、D4、D6、D7、E4、F3、F4、F5 已完成面板密度图表化：拥挤的横排卡收敛为比较图，空旷数字面板补充构成、进度或质量图，长篇简报转为分组摘要卡，重复信息由图表交互或悬停提示承载。
-- 六屏主面板采用统一的“领域主图 + 少量精确事实”语言，但不强制同构：A1 为双进度环、运营规模谱和风险闭环，B2 为阶段状态矩阵与八轴轮廓，C1 为上线仪表与推进漏斗，D1 为业务规模谱与结构效率，E1 为合规仪表与监督梯队，F1 为风险构成与模型质量门禁。图表派生数据集中在 `charts/`，视觉统一复用 `charts/theme.ts`。
+- 六屏主面板采用统一的“领域主图 + 少量精确事实”语言，但不强制同构：A1 为双进度环、运营规模谱和风险闭环，B2 为阶段状态矩阵与八轴轮廓，C1 为上线仪表与推进漏斗，D1 为业务规模谱与结构效率，E1 为合规仪表与监督梯队，F1 为风险比较条与模型质量门禁。面板区号、标题和小说明保持单行；主面板内容以分隔线组织，不再套同级边框框体。图表派生数据集中在 `charts/`，视觉统一复用 `charts/theme.ts`。
 
 ## 重构执行顺序（后续 AI 必须按此顺序，不得跳步）
 

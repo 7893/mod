@@ -4,7 +4,7 @@ import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, PieChart } from 'echarts/charts'
-import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/components'
+import { GridComponent, TooltipComponent } from 'echarts/components'
 import { ChevronRight } from 'lucide-vue-next'
 import AnimatedNumber from './AnimatedNumber.vue'
 import CockpitPanel from './CockpitPanel.vue'
@@ -13,7 +13,7 @@ import { calmAnimation, chartInk, chartPalette, chartTooltip } from '../charts/t
 import type { LiveProjectionCounts, LiveProjectionEvent } from '../composables/useLiveProjection.ts'
 import type { ProjectSnapshot } from '../stores/project.ts'
 
-use([CanvasRenderer, BarChart, PieChart, GridComponent, TitleComponent, TooltipComponent])
+use([CanvasRenderer, BarChart, PieChart, GridComponent, TooltipComponent])
 
 /**
  * A1 顶部总览带：双环展示建设/上线水位，规模谱展示运营总量，风险环展示闭环压力。
@@ -102,14 +102,6 @@ const closeRate = computed(() => Math.max(0, Math.min(100, safeNumber(props.issu
 const riskClosureOption = computed(() => ({
   ...calmAnimation,
   tooltip: { trigger: 'item', ...chartTooltip },
-  title: {
-    text: `${closeRate.value}%`,
-    subtext: '闭环率',
-    left: 'center',
-    top: '29%',
-    textStyle: { color: chartInk.textPrimary, fontSize: 15, fontFamily: 'monospace' },
-    subtextStyle: { color: chartInk.textMuted, fontSize: 9 },
-  },
   series: [{
     name: '问题闭环',
     type: 'pie',
@@ -138,16 +130,16 @@ const riskClosureOption = computed(() => ({
     </template>
 
     <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
-      <section class="col-span-4 grid grid-cols-5 gap-2 min-w-0 rounded-lg bg-surface-veil-03 border border-surface-veil-06 p-2">
+      <section class="col-span-4 grid grid-cols-5 gap-2 min-w-0 pr-3 border-r border-surface-veil-06">
         <VChart class="col-span-2 w-full h-full min-h-0" :option="progressRingsOption" autoresize />
         <div class="col-span-3 grid grid-rows-3 divide-y divide-surface-veil-06 min-w-0">
-          <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设完成度</span><b class="font-mono text-sky-400"><AnimatedNumber :value="constructionProgress" :decimals="1" :duration="numDuration(800)" />%</b></div>
+          <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设完成率</span><b class="font-mono text-sky-400"><AnimatedNumber :value="constructionProgress" :decimals="1" :duration="numDuration(800)" />%</b></div>
           <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">正式上线率</span><b class="font-mono text-emerald-400">{{ rolloutRate }}%</b></div>
           <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设任务</span><b class="font-mono text-slate-200">{{ (construction?.totalTasks || 0).toLocaleString() }}</b></div>
         </div>
       </section>
 
-      <section class="col-span-5 flex flex-col min-w-0 rounded-lg bg-surface-veil-03 border border-surface-veil-06 p-2">
+      <section class="col-span-5 flex flex-col min-w-0 pr-3 border-r border-surface-veil-06">
         <div class="grid grid-cols-3 gap-2 flex-shrink-0">
           <div><span class="block text-cockpit-xs text-slate-500">今日单据</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.docsTodayAdded || 0" :duration="500" /></b></div>
           <div><span class="block text-cockpit-xs text-slate-500">今日凭证</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.vouchersTodayAdded || 0" :duration="500" /></b></div>
@@ -158,17 +150,17 @@ const riskClosureOption = computed(() => ({
 
       <button
         type="button"
-        class="col-span-3 flex items-center min-w-0 rounded-lg bg-rose-950/20 border border-rose-500/20 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
+        class="col-span-3 flex items-center min-w-0 rounded-lg px-2 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
         title="进入风险中心"
         @click="$emit('openRisk')"
       >
-        <div class="h-full w-28 flex-shrink-0">
+        <div class="h-full w-20 flex-shrink-0">
           <VChart :option="riskClosureOption" autoresize class="h-full w-full" />
         </div>
-        <div class="flex-1 min-w-0 grid grid-cols-2 gap-2 pr-2">
-          <div><span class="block text-cockpit-xs text-slate-500">高风险</span><b class="font-mono text-cockpit-lg text-rose-400"><AnimatedNumber :value="overview.highRisk || 0" :duration="numDuration(600)" /></b></div>
-          <div><span class="block text-cockpit-xs text-slate-500">未解决</span><b class="font-mono text-cockpit-lg text-amber-400">{{ (overview.unresolvedIssues || 0).toLocaleString() }}</b></div>
-          <span class="col-span-2 text-cockpit-xs text-slate-500 truncate">风险预警与闭环处置</span>
+        <div class="flex-1 min-w-0 grid grid-cols-3 gap-2">
+          <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500 truncate">闭环率</span><b class="font-mono text-cockpit-lg text-emerald-400">{{ closeRate }}%</b></div>
+          <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500 truncate">高风险</span><b class="font-mono text-cockpit-lg text-rose-400"><AnimatedNumber :value="overview.highRisk || 0" :duration="numDuration(600)" /></b></div>
+          <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500 truncate">未解决</span><b class="font-mono text-cockpit-lg text-amber-400">{{ (overview.unresolvedIssues || 0).toLocaleString() }}</b></div>
         </div>
         <ChevronRight :size="14" class="text-slate-500 mr-2 flex-shrink-0" />
       </button>

@@ -179,14 +179,14 @@ const provinceRolloutOption = computed(() => ({
       class="flex-shrink-0"
     >
       <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
-        <section class="col-span-9 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-h-0">
+        <section class="col-span-9 pr-3 border-r border-surface-veil-06 min-h-0">
           <VChart class="w-full h-full min-h-0" :option="rolloutCommandOption" autoresize />
         </section>
-        <section class="col-span-3 grid grid-cols-2 grid-rows-2 gap-2 min-h-0">
-          <div class="rounded-lg bg-surface-veil-03 border border-surface-veil-06 px-2 py-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">纳管单位</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">{{ format(store.snapshot.overview.orgTotal) }}</b></div>
-          <div class="rounded-lg bg-surface-veil-03 border border-surface-veil-06 px-2 py-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">推广批次</span><b class="font-mono text-cockpit-md text-sky-400 mt-0.5">{{ batches.length }} 批</b></div>
-          <div class="rounded-lg bg-surface-veil-03 border border-surface-veil-06 px-2 py-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">覆盖省份</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">34 省</b></div>
-          <div class="rounded-lg bg-surface-veil-03 border border-surface-veil-06 px-2 py-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">联系人</span><b class="font-mono text-cockpit-md text-emerald-400 mt-0.5">{{ format(store.snapshot.overview.contactsTotal) }}</b></div>
+        <section class="col-span-3 grid grid-cols-2 grid-rows-2 min-h-0">
+          <div class="pr-2 pb-1 border-r border-b border-surface-veil-06 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">纳管单位</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">{{ format(store.snapshot.overview.orgTotal) }}</b></div>
+          <div class="pl-2 pb-1 border-b border-surface-veil-06 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">推广批次</span><b class="font-mono text-cockpit-md text-sky-400 mt-0.5">{{ batches.length }} 批</b></div>
+          <div class="pr-2 pt-1 border-r border-surface-veil-06 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">覆盖省份</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">34 省</b></div>
+          <div class="pl-2 pt-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">联系人</span><b class="font-mono text-cockpit-md text-emerald-400 mt-0.5">{{ format(store.snapshot.overview.contactsTotal) }}</b></div>
         </section>
       </div>
     </CockpitPanel>

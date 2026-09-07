@@ -187,12 +187,15 @@ const chooseProvince = (name: string) => {
                 </button>
               </div>
             </template>
-            <div class="grid grid-cols-5 items-center gap-2 h-24 bg-surface-veil-03 border border-surface-veil-06 rounded-xl p-2">
-              <VChart :option="provinceProfileOption" autoresize class="col-span-2 h-full min-w-0" />
-              <div class="col-span-3 grid grid-rows-3 h-full divide-y divide-white/5 min-w-0">
+            <div class="grid grid-cols-5 items-center gap-3 h-24">
+              <div class="col-span-2 h-full min-w-0 border-r border-surface-veil-06 pr-3">
+                <VChart :option="provinceProfileOption" autoresize class="h-full w-full min-w-0" />
+              </div>
+              <div class="col-span-3 grid grid-rows-4 h-full divide-y divide-white/5 min-w-0">
+                <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">建设完成率</span><b class="font-mono text-sky-400">{{ selectedProvinceData.progress }}%</b></div>
                 <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">纳入单位</span><b class="font-mono text-slate-100">{{ selectedProvinceData.total }}</b></div>
                 <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">正式上线</span><b class="font-mono text-emerald-400">{{ selectedProvinceData.launched }}</b></div>
-                <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">双轨运行</span><b class="font-mono text-sky-400">{{ selectedProvinceData.dual }}</b></div>
+                <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">双轨运行</span><b class="font-mono text-amber-400">{{ selectedProvinceData.dual }}</b></div>
               </div>
             </div>
           </CockpitPanel>

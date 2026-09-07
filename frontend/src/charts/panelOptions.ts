@@ -185,21 +185,9 @@ export function createProvinceProfileOption(progress?: number | string | null) {
       axisTick: { show: false },
       splitLine: { show: false },
       axisLabel: { show: false },
-      title: {
-        show: true,
-        offsetCenter: [0, '34%'],
-        color: chartInk.textMuted,
-        fontSize: 10,
-      },
-      detail: {
-        valueAnimation: true,
-        offsetCenter: [0, '-8%'],
-        color: chartInk.textPrimary,
-        fontFamily: 'monospace',
-        fontSize: 18,
-        formatter: hasValue ? '{value}%' : '—',
-      },
-      data: [{ value: safeProgress, name: '建设完成度' }],
+      title: { show: false },
+      detail: { show: false },
+      data: [{ value: safeProgress, name: '建设完成率' }],
     }],
   }
 }

@@ -313,6 +313,8 @@ const riskOverviewOption = computed(() => createRiskOverviewOption([
   { name: '准备卡顿', value: prepStuckCount.value, color: chartPalette.accent },
 ]))
 
+const riskUnitTotal = computed(() => dualDiffCount.value + constLagCount.value + prepStuckCount.value)
+
 const modelQualityRows = computed(() => insights.value.targetModels.map((model) => {
   const quality = model.quality == null ? null : Math.max(0, Math.min(1, model.quality))
   const regression = model.type === 'REGRESSION'
@@ -336,10 +338,15 @@ const readyModelCount = computed(() => insights.value.targetModels.filter((model
       class="flex-shrink-0"
     >
       <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
-        <section class="col-span-7 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-h-0">
-          <VChart class="w-full h-full min-h-0" :option="riskOverviewOption" autoresize />
+        <section class="col-span-7 grid grid-cols-12 min-h-0 pr-3 border-r border-surface-veil-06">
+          <div class="col-span-3 flex flex-col justify-center min-w-0">
+            <span class="text-cockpit-xs text-slate-500">风险单位</span>
+            <b class="font-mono text-cockpit-metric text-rose-400 mt-1">{{ riskUnitTotal }}</b>
+            <span class="text-cockpit-xs text-slate-500 mt-1">三类风险合计</span>
+          </div>
+          <VChart class="col-span-9 w-full h-full min-h-0" :option="riskOverviewOption" autoresize />
         </section>
-        <section class="col-span-5 flex flex-col rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2 min-h-0">
+        <section class="col-span-5 flex flex-col min-h-0">
           <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs">
             <span class="font-medium text-slate-300">AutoML 质量门禁</span>
             <b class="font-mono" :class="insights.isReady ? 'text-emerald-400' : 'text-amber-400'">{{ readyModelCount }}/{{ insights.targetModels.length }} 可用</b>
@@ -347,10 +354,10 @@ const readyModelCount = computed(() => insights.value.targetModels.filter((model
           <div class="grid grid-rows-2 gap-1.5 flex-1 min-h-0 pt-1.5">
             <div v-for="(model, index) in modelQualityRows" :key="model.label" class="grid grid-cols-12 items-center gap-2 min-w-0">
               <span class="col-span-4 text-cockpit-xs text-slate-400 truncate">{{ model.label }}</span>
-              <div class="col-span-6 h-1.5 rounded-full bg-white/5 overflow-hidden">
+              <div class="col-span-5 h-1.5 rounded-full bg-white/5 overflow-hidden">
                 <div class="h-full rounded-full" :class="index === 0 ? 'bg-sky-400' : 'bg-emerald-400'" :style="{ width: `${model.progress}%` }" />
               </div>
-              <b class="col-span-2 font-mono text-cockpit-xs text-slate-200 text-right">{{ model.value }}</b>
+              <b class="col-span-3 font-mono text-cockpit-xs text-slate-200 text-right whitespace-nowrap">{{ model.value }}</b>
             </div>
           </div>
         </section>
