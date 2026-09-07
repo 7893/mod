@@ -117,6 +117,7 @@ class ConstructionWriter:
                     # Sanitize table names against allowed list
                     if table not in (
                         "org_unit",
+                        "sys_user",
                         "construction_task",
                         "rollout_batch",
                         "rollout_status_snapshot",
