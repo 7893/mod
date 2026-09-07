@@ -28,9 +28,15 @@ server {
     add_header X-Frame-Options SAMEORIGIN always;
     add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
 
+    # 硬拦截：AI/LLM 训练爬虫与检索爬虫，按 User-Agent 直接 403，连内容都不返回。
+    # robots.txt 只是君子协定；这里是强制层。内部交流系统，谢绝一切采集。
+    if ($http_user_agent ~* "(GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-Web|anthropic-ai|Google-Extended|GoogleOther|PerplexityBot|Perplexity-User|CCBot|Bytespider|Amazonbot|Applebot-Extended|Meta-ExternalAgent|FacebookBot|cohere-ai|Diffbot|ImagesiftBot|Timpibot|Omgilibot|YouBot|Baiduspider|YandexBot|Sogou|360Spider|DotBot|MJ12bot|AhrefsBot|SemrushBot|DataForSeoBot)") {
+        return 403;
+    }
+
     location = /robots.txt {
-        return 200 "User-agent: *\nDisallow: /\n";
-        add_header Content-Type text/plain;
+        default_type text/plain;
+        return 200 "# 本站为内部交流系统，谢绝一切检索、抓取、索引与 AI 训练采集。\nUser-agent: *\nDisallow: /\n";
     }
 
     location = /api/v2/live-projection/events {
