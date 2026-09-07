@@ -107,7 +107,9 @@ class ConstructionWriter:
         self,
         tables: List[str],
         compress: bool = True,
-        max_backups: int = 3,
+        max_backups: Optional[int] = None,
+        retention_days: Optional[int] = None,
+        max_total_bytes: Optional[int] = None,
         min_free_bytes: Optional[int] = None,
     ) -> str:
         """Create a safety snapshot backup of target tables before writing.
@@ -116,15 +118,23 @@ class ConstructionWriter:
         1. Checks available disk space; raises RuntimeError if below min_free_bytes (fail closed).
         2. Compresses with gzip by default to prevent disk ballooning.
         3. Writes to temp file and atomically renames.
-        4. Rotates backups keeping at most max_backups.
+        4. Rotates backups enforcing 3-fold bounds: max_backups, retention_days, and max_total_bytes.
+        5. Fails closed (raises RuntimeError) if rotation or limits cannot be satisfied.
         """
         if not self._backup_dir:
             self._backup_dir = Path("scripts/agy/output/backups")
         self._backup_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1. Disk space check (fail closed if free space < threshold)
+        if max_backups is None:
+            max_backups = int(os.getenv("MOD_BACKUP_MAX_COPIES", "3"))
+        if retention_days is None:
+            retention_days = int(os.getenv("MOD_BACKUP_RETENTION_DAYS", "7"))
+        if max_total_bytes is None:
+            max_total_bytes = int(os.getenv("MOD_BACKUP_MAX_TOTAL_BYTES", str(200 * 1024 * 1024)))
         if min_free_bytes is None:
             min_free_bytes = int(os.getenv("MOD_BACKUP_MIN_FREE_BYTES", str(5 * 1024 * 1024 * 1024)))
+
+        # 1. Disk space check (fail closed if free space < threshold)
         usage = shutil.disk_usage(self._backup_dir)
         if usage.free < min_free_bytes:
             raise RuntimeError(
@@ -174,12 +184,24 @@ class ConstructionWriter:
                 with open(temp_path, "w", encoding="utf-8") as f:
                     json.dump(backup_data, f, ensure_ascii=False, indent=2)
 
+            # Atomic swap
             temp_path.replace(backup_path)
             logger.info(f"Backup created successfully: {backup_path}")
 
-            # Rotate backups: keep only max_backups most recent
-            if max_backups > 0:
-                self._rotate_backups(max_backups)
+            # Enforce 3-fold bounds (fail-closed if pruning fails)
+            try:
+                self._rotate_backups(
+                    max_backups=max_backups,
+                    retention_days=retention_days,
+                    max_total_bytes=max_total_bytes,
+                )
+            except Exception as rot_ex:
+                if backup_path.exists():
+                    try:
+                        backup_path.unlink()
+                    except Exception:
+                        pass
+                raise RuntimeError(f"Backup rotation enforcement failed (fail-closed): {rot_ex}") from rot_ex
 
             return str(backup_path)
         finally:
@@ -191,25 +213,132 @@ class ConstructionWriter:
             if not self._external_conn:
                 conn.close()
 
-    def _rotate_backups(self, max_backups: int) -> None:
-        """Keep at most max_backups construction_backup_* files, removing older ones."""
-        try:
-            existing = [
-                p
-                for p in self._backup_dir.iterdir()
-                if p.is_file()
-                and p.name.startswith("construction_backup_")
-                and (p.name.endswith(".json") or p.name.endswith(".json.gz"))
-            ]
-            existing.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-            for old_path in existing[max_backups:]:
+    def _rotate_backups(
+        self,
+        max_backups: int = 3,
+        retention_days: int = 7,
+        max_total_bytes: int = 200 * 1024 * 1024,
+    ) -> None:
+        """Enforce 3-fold bounds on backups: copies, retention days, and total directory bytes.
+
+        Guarantees:
+        1. Never deletes the sole remaining backup file.
+        2. Raises RuntimeError (fail closed) if an unlinked file cannot be deleted or bounds exceeded.
+        """
+        if not self._backup_dir or not self._backup_dir.exists():
+            return
+
+        existing = [
+            p
+            for p in self._backup_dir.iterdir()
+            if p.is_file()
+            and p.name.startswith("construction_backup_")
+            and (p.name.endswith(".json") or p.name.endswith(".json.gz"))
+        ]
+        if not existing:
+            return
+
+        # Sort newest first
+        existing.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+        # 1. Retention Days check (never delete sole remaining backup)
+        now_ts = time.time()
+        cutoff_ts = now_ts - (retention_days * 86400.0)
+        for old_path in list(existing[1:]):
+            try:
+                if old_path.stat().st_mtime < cutoff_ts:
+                    old_path.unlink()
+                    existing.remove(old_path)
+                    logger.info(f"Rotated expired backup beyond {retention_days} days: {old_path.name}")
+            except Exception as ex:
+                raise RuntimeError(f"Failed to delete expired backup {old_path}: {ex}") from ex
+
+        # 2. Max Backups Count check (never delete sole remaining backup)
+        if max_backups > 0 and len(existing) > max_backups:
+            to_delete = existing[max_backups:]
+            for old_path in to_delete:
+                if len(existing) <= 1:
+                    break
                 try:
                     old_path.unlink()
-                    logger.info(f"Rotated old backup: {old_path.name}")
+                    existing.remove(old_path)
+                    logger.info(f"Rotated excess backup beyond {max_backups} copies: {old_path.name}")
                 except Exception as ex:
-                    logger.warning(f"Could not remove old backup {old_path}: {ex}")
-        except Exception as ex:
-            logger.warning(f"Backup rotation failed: {ex}")
+                    raise RuntimeError(f"Failed to delete excess backup {old_path}: {ex}") from ex
+
+        # 3. Max Total Bytes check (never delete sole remaining backup)
+        if max_total_bytes > 0:
+            total_bytes = sum(p.stat().st_size for p in existing)
+            while total_bytes > max_total_bytes and len(existing) > 1:
+                oldest = existing[-1]
+                try:
+                    oldest.unlink()
+                    existing.pop()
+                    logger.info(
+                        f"Rotated backup {oldest.name} to enforce max_total_bytes ({max_total_bytes} bytes)"
+                    )
+                except Exception as ex:
+                    raise RuntimeError(
+                        f"Failed to delete backup to enforce capacity limit {oldest}: {ex}"
+                    ) from ex
+                total_bytes = sum(p.stat().st_size for p in existing)
+
+        # 4. Final verification
+        final_count = len(existing)
+        final_bytes = sum(p.stat().st_size for p in existing)
+        if max_backups > 0 and final_count > max_backups:
+            raise RuntimeError(f"Backup capacity breach: {final_count} copies exceed max_backups {max_backups}")
+        if max_total_bytes > 0 and final_bytes > max_total_bytes:
+            raise RuntimeError(
+                f"Backup capacity breach: {final_bytes} bytes exceed max_total_bytes {max_total_bytes}"
+            )
+
+    def record_success_audit(
+        self,
+        result: Any,
+        run_id: Optional[str] = None,
+    ) -> None:
+        """Explicitly record SUCCESS audit entry when transaction is committed."""
+        audit_entry = {
+            "run_id": run_id or f"c_sim_{uuid.uuid4().hex[:12]}",
+            "timestamp": datetime.now().isoformat(),
+            "event_count": getattr(result, "event_count", 0),
+            "rows_written": getattr(result, "rows_written", {}),
+            "backup_file": getattr(result, "backup_file", None),
+            "status": "SUCCESS",
+            "duration_ms": getattr(result, "duration_ms", 0.0),
+        }
+        self._record_audit(audit_entry)
+
+    def record_failure_audit(
+        self,
+        error: str,
+        event_count: int = 0,
+        run_id: Optional[str] = None,
+        backup_file: Optional[str] = None,
+    ) -> None:
+        """Explicitly record FAILED audit entry when transaction is rolled back."""
+        audit_entry = {
+            "run_id": run_id or f"c_sim_{uuid.uuid4().hex[:12]}",
+            "timestamp": datetime.now().isoformat(),
+            "event_count": event_count,
+            "rows_written": {
+                "org_unit": 0,
+                "sys_user": 0,
+                "rollout_status_snapshot": 0,
+                "data_readiness": 0,
+                "training": 0,
+                "dual_run_result": 0,
+                "construction_task": 0,
+                "rollout_batch": 0,
+                "daily_stats": 0,
+            },
+            "backup_file": backup_file,
+            "status": "FAILED",
+            "error": error,
+            "duration_ms": 0.0,
+        }
+        self._record_audit(audit_entry)
 
     def _record_audit(self, audit: Dict[str, Any]) -> None:
         """Write structured audit record to local JSONL log file."""
@@ -228,13 +357,17 @@ class ConstructionWriter:
         batch_size: int = 500,
         execute: bool = False,
         create_backup: bool = False,
+        auto_commit: bool = True,
     ) -> ConstructionWriteResult:
         """Atomically write a collection of construction event footprints in batches.
 
-        Requires:
-        1. execute=True AND MOD_SIMULATION_ENGINE_ENABLED=true.
-        2. Strict validation of every event before any write.
-        3. create_backup=True only when explicitly requested (decoupled from resident small ticks).
+        Guarantees:
+        1. Single-transaction atomicity: All events across all batches commit together at the end.
+           Zero intermediate commits occur inside the batch loop.
+        2. If any SQL or batch fails, the entire transaction is rolled back with zero committed rows.
+        3. Audit log reports SUCCESS only after successful final commit; on failure reports zero committed rows.
+        4. auto_commit=False allows the caller (e.g. resident runtime service) to own the transaction
+           and execute post-write assertions before final commit.
         """
         run_id = f"c_sim_{uuid.uuid4().hex[:12]}"
         t0 = time.perf_counter()
@@ -294,33 +427,35 @@ class ConstructionWriter:
 
         try:
             with conn.cursor() as cursor:
-                # Write in batches
+                # Stage in batches without intermediate commit
                 total_batches = (len(events) + batch_size - 1) // batch_size if events else 1
                 for b_idx in range(total_batches):
                     chunk = events[b_idx * batch_size : (b_idx + 1) * batch_size]
                     batch_rows_start = sum(rows_written.values())
                     for ev in chunk:
                         self._write_single_event(cursor, ev, rows_written)
-                    conn.commit()
                     batch_rows_end = sum(rows_written.values())
                     batch_rows = batch_rows_end - batch_rows_start
                     pct = (b_idx + 1) / total_batches * 100
                     logger.info(
-                        f"[{run_id}] Committed batch {b_idx + 1}/{total_batches} ({pct:.1f}%): "
-                        f"{len(chunk)} events, {batch_rows} rows. Total written: {batch_rows_end}."
+                        f"[{run_id}] Staged batch {b_idx + 1}/{total_batches} ({pct:.1f}%): "
+                        f"{len(chunk)} events, {batch_rows} rows. Total staged: {batch_rows_end}."
                     )
 
             duration = (time.perf_counter() - t0) * 1000
-            audit_entry = {
-                "run_id": run_id,
-                "timestamp": datetime.now().isoformat(),
-                "event_count": len(events),
-                "rows_written": rows_written,
-                "backup_file": backup_file,
-                "status": "SUCCESS",
-                "duration_ms": duration,
-            }
-            self._record_audit(audit_entry)
+            if auto_commit:
+                conn.commit()
+                audit_entry = {
+                    "run_id": run_id,
+                    "timestamp": datetime.now().isoformat(),
+                    "event_count": len(events),
+                    "rows_written": rows_written,
+                    "backup_file": backup_file,
+                    "status": "SUCCESS",
+                    "duration_ms": duration,
+                }
+                self._record_audit(audit_entry)
+
             return ConstructionWriteResult(
                 success=True,
                 event_count=len(events),
@@ -330,15 +465,19 @@ class ConstructionWriter:
             )
 
         except Exception as ex:
-            conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             duration = (time.perf_counter() - t0) * 1000
             err_msg = f"Rolled back batch: {ex}"
             logger.error(f"[{run_id}] Write failed: {err_msg}")
+            zero_rows = {k: 0 for k in rows_written}
             audit_entry = {
                 "run_id": run_id,
                 "timestamp": datetime.now().isoformat(),
                 "event_count": len(events),
-                "rows_written": rows_written,
+                "rows_written": zero_rows,
                 "backup_file": backup_file,
                 "status": "FAILED",
                 "error": err_msg,
@@ -348,13 +487,13 @@ class ConstructionWriter:
             return ConstructionWriteResult(
                 success=False,
                 event_count=len(events),
-                rows_written=rows_written,
+                rows_written=zero_rows,
                 backup_file=backup_file,
                 error=err_msg,
                 duration_ms=duration,
             )
         finally:
-            if not self._external_conn:
+            if auto_commit and not self._external_conn:
                 conn.close()
 
     def _upsert_task(
