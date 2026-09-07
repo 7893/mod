@@ -7,27 +7,25 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import {
-  Award,
-  BookOpen,
-  CheckCircle2,
   Database,
-  Users,
 } from 'lucide-vue-next'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import ConstructionLedger from '../components/ConstructionLedger.vue'
-import MetricGrid from '../components/blocks/MetricGrid.vue'
 import OverviewBand from '../components/blocks/OverviewBand.vue'
 import StatList from '../components/blocks/StatList.vue'
-import type { MetricItem, StatRow } from '../components/blocks/types.ts'
+import type { StatRow } from '../components/blocks/types.ts'
 import {
   calmAnimation,
   chartInk,
   chartPalette,
   chartTooltip,
-  valueAxis,
 } from '../charts/theme.ts'
 import { buildOverviewComposition, buildTaskStageSeries } from '../charts/panelData.ts'
-import { createTaskStageOption } from '../charts/panelOptions.ts'
+import {
+  createTaskStageOverviewOption,
+  createTrainingFunnelOption,
+  createTrainingPerformanceOption,
+} from '../charts/constructionOptions.ts'
 import { useProjectStore } from '../stores/project.ts'
 
 use([CanvasRenderer, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
@@ -97,7 +95,7 @@ const b1Facts = computed(() => [
   { label: '培训场次', value: format(trainingSummary.value?.totalSessions), unit: '场' },
 ])
 
-const RANK_LIMIT = 10
+const RANK_LIMIT = 8
 
 const provinceRanking = computed(() =>
   [...store.provinceSummary].sort((a, b) => b.value - a.value).slice(0, RANK_LIMIT),
@@ -125,23 +123,6 @@ const rankRows = computed<StatRow[]>(() =>
   })),
 )
 
-const trainingItems = computed<MetricItem[]>(() => [
-  { label: '培训场次', value: format(trainingSummary.value?.totalSessions), icon: BookOpen },
-  { label: '参培人次', value: format(trainingSummary.value?.totalActual), icon: Users },
-  {
-    label: '考核通过',
-    value: format(trainingSummary.value?.totalPassed),
-    icon: CheckCircle2,
-    tone: 'accent',
-  },
-  {
-    label: '证书发放',
-    value: format(trainingSummary.value?.totalCert),
-    icon: Award,
-    tone: 'success',
-  },
-])
-
 // 色值统一取自 charts/theme.ts
 const chartColors = {
   accent: chartPalette.accent,
@@ -151,86 +132,9 @@ const chartColors = {
   textMuted: chartInk.textMuted,
 }
 
-const stageDistributionOption = computed(() => createTaskStageOption(buildTaskStageSeries(taskStages.value)))
-
-// B4 培训分类横向柱状图：展示4大培训类型通过率与规模
-const trainingBarOption = computed(() => {
-  const list = [...(trainingSummary.value?.byType ?? [])].reverse()
-  return {
-    ...calmAnimation,
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      ...chartTooltip,
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params
-        const raw = list[p?.dataIndex]
-        if (!raw) return ''
-        const rate = raw.actual ? ((raw.passed / raw.actual) * 100).toFixed(1) : '—'
-        return `
-          <div style="font-size: 12px; line-height: 1.6;">
-            <div style="font-weight: 600; color: #f1f5f9; margin-bottom: 4px;">${raw.type}</div>
-            <div style="color: #94a3b8;">培训场次: <b style="color: #f1f5f9; font-family: monospace;">${raw.count?.toLocaleString()} 场</b></div>
-            <div style="color: #94a3b8;">实参培人数: <b style="color: #f1f5f9; font-family: monospace;">${raw.actual?.toLocaleString()} 人</b> (应参培 ${raw.expected?.toLocaleString()} 人)</div>
-            <div style="color: #94a3b8;">考核通过率: <b style="color: #34d399; font-family: monospace;">${rate}%</b> (${raw.passed?.toLocaleString()} 人)</div>
-            ${raw.cert ? `<div style="color: #94a3b8;">证书发放: <b style="color: #38bdf8; font-family: monospace;">${raw.cert?.toLocaleString()} 张</b></div>` : ''}
-          </div>
-        `
-      },
-    },
-    grid: { top: 12, bottom: 20, left: 160, right: 65 },
-    xAxis: {
-      ...valueAxis,
-      max: 100,
-      splitNumber: 4,
-      axisLabel: { color: '#64748b', fontSize: 10, fontFamily: 'monospace', formatter: '{value}%' },
-      splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)', type: 'dashed' } },
-    },
-    yAxis: {
-      type: 'category',
-      data: list.map((i) => i.type),
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
-      axisTick: { show: false },
-      axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.08)' } },
-    },
-    series: [{
-      name: '考核通过率',
-      type: 'bar',
-      barWidth: 14,
-      data: list.map((i) => {
-        const rate = i.actual ? Number(((i.passed / i.actual) * 100).toFixed(1)) : 0
-        return {
-          value: rate,
-          itemStyle: {
-            borderRadius: [0, 4, 4, 0],
-            color: {
-              type: 'linear',
-              x: 0, y: 0, x2: 1, y2: 0,
-              colorStops: [
-                { offset: 0, color: 'rgba(56, 189, 248, 0.25)' },
-                { offset: 1, color: '#38bdf8' },
-              ],
-            },
-          },
-        }
-      }),
-      label: {
-        show: true,
-        position: 'right',
-        color: '#34d399',
-        fontFamily: 'monospace',
-        fontSize: 11,
-        fontWeight: 'bold',
-        formatter: '{c}%',
-      },
-      showBackground: true,
-      backgroundStyle: {
-        color: 'rgba(255, 255, 255, 0.03)',
-        borderRadius: [0, 4, 4, 0],
-      },
-    }],
-  }
-})
+const stageDistributionOption = computed(() => createTaskStageOverviewOption(buildTaskStageSeries(taskStages.value)))
+const trainingPerformanceOption = computed(() => createTrainingPerformanceOption(trainingSummary.value?.byType ?? []))
+const trainingFunnelOption = computed(() => createTrainingFunnelOption(trainingSummary.value))
 
 const readinessPieOption = computed(() => ({
   ...calmAnimation,
@@ -282,28 +186,38 @@ const readinessPieOption = computed(() => ({
 
     <!-- 建设全景主区 -->
     <main v-if="activeTab === 'overview'" class="flex-1 min-h-0 grid grid-cols-construction grid-rows-construction gap-2.5">
-      <!-- B2: 以堆叠图承载 8 阶段，避免小卡横向拥挤 -->
-      <CockpitPanel title="阶段任务分布" zone="B2" subtitle="已完成 / 进行中 / 未开始 · 右侧为阶段完成率" class="col-span-2">
+      <!-- B2: 100% 纵向构成柱在有限面积内保留 8 阶段，避免横向长条形成线墙 -->
+      <CockpitPanel title="阶段任务结构" zone="B2" subtitle="各阶段任务完成、推进与待启动占比" class="col-span-8">
         <VChart class="w-full h-full min-h-0" :option="stageDistributionOption" autoresize />
       </CockpitPanel>
 
       <!-- B3: 省域建设排行 -->
-      <CockpitPanel title="省域建设排行" zone="B3" subtitle="完成率前十">
+      <CockpitPanel title="省域建设领先榜" zone="B3" subtitle="完成率前八" class="col-span-4">
         <StatList :rows="rankRows" ranked density="dense" scroll />
       </CockpitPanel>
 
-      <!-- B4: 培训赋能 (去掉报表表格，替换为可视化横向柱状图，B-3) -->
-      <CockpitPanel title="培训赋能" zone="B4" subtitle="场次、参培与认证" class="col-span-2">
-        <div class="flex h-full min-h-0 flex-col gap-2">
-          <MetricGrid :items="trainingItems" variant="inline" :columns="4" />
-          <div class="flex-1 min-h-0">
-            <VChart class="w-full h-full" :option="trainingBarOption" autoresize />
-          </div>
+      <!-- B4: 培训质量与人次转化双图，避免指标卡占满高度后挤掉图表 -->
+      <CockpitPanel title="培训赋能转化" zone="B4" subtitle="分类通过率与参培转化漏斗" class="col-span-8">
+        <div class="grid grid-cols-12 gap-3 h-full min-h-0">
+          <section class="col-span-7 flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
+            <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs">
+              <span class="font-medium text-slate-300">分类考核通过率</span>
+              <span class="font-mono text-slate-500">{{ format(trainingSummary?.totalSessions) }} 场</span>
+            </div>
+            <VChart class="w-full flex-1 min-h-0" :option="trainingPerformanceOption" autoresize />
+          </section>
+          <section class="col-span-5 flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
+            <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs">
+              <span class="font-medium text-slate-300">参培与认证转化</span>
+              <span class="font-mono text-emerald-400">通过 {{ format(trainingSummary?.totalPassed) }} 人</span>
+            </div>
+            <VChart class="w-full flex-1 min-h-0" :option="trainingFunnelOption" autoresize />
+          </section>
         </div>
       </CockpitPanel>
 
       <!-- B5: 图表本身承担状态下钻，避免图例与按钮重复 -->
-      <CockpitPanel title="期初数据准备度" zone="B5" subtitle="单位数据状态">
+      <CockpitPanel title="期初数据准备度" zone="B5" subtitle="单位数据状态" class="col-span-4">
         <template #actions>
           <button
             type="button"

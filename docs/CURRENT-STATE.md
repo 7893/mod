@@ -10,13 +10,15 @@
 ## 现行架构
 
 ```text
-浏览器 -> Nginx / -> Vue 静态文件
-                 -> /api/ -> FastAPI -> MySQL HeatWave（库 `mod`）
+访客 -> CloudFront(全球边缘, 带回源密钥) -> Nginx(校验密钥) / -> Vue 静态文件
+                                                          -> /api/ -> FastAPI -> MySQL HeatWave（库 `mod`）
 ```
 
 - 2026-09-05 全项目迁移到主运行主机（Always Free 托管环境）。生产运行与源码工作区
   统一在同一台主机，不再区分部署目标与开发机。旧运行环境不再承载 MOD 任何组件。
-- 现行入口为已配置的生产域名（见部署配置，不对外公开），DNS A/AAAA 指向当前运行主机。
+- 访客入口 `mod.fuming.name` 经 **AWS CloudFront** 前置（隐藏源站，见下条"源站隐藏架构"），
+  DNS 托管在 Route53（zone `fuming.name`），`mod.fuming.name` 为指向 CloudFront 分发的 Alias 记录，
+  DNS 层查不到源站真实 IP。
 - 数据库为托管 MySQL HeatWave（库 `mod`，Always Free 规格），连接主机、端口与凭据
   仅存于运行主机的本地环境文件，不写入版本库或文档。原运行环境的旧数据库实例已删除。
 - 运行主机使用系统级 systemd 服务 `mod-api.service` 运行项目内 FastAPI 虚拟环境，监听
@@ -56,6 +58,14 @@
 
 ## 功能状态
 
+- 源站隐藏架构（AWS CloudFront 前置，隐藏 jpa 源站 IP）：
+  - 访客 `mod.fuming.name` → Route53 Alias → CloudFront 分发（`E3VGRUTD9T8HPY`，域 `d32qg3wqjwjbek.cloudfront.net`）；
+    CloudFront 回源到隐蔽域名 `origin-mod-k7x9.8n8m.cfd`（Cloudflare 上 DNS-only，指向源站），协议 https-only。
+  - **回源密钥防绕过**：CloudFront 回源时注入自定义头 `X-Origin-Secret`；源站 Nginx 校验该头，
+    无正确密钥的请求（即绕过 CloudFront 直连源站 IP 或回源域名）一律 403。密钥值只存源站 Nginx 与 CloudFront 配置，不入库不入代码。
+  - 效果：`dig mod.fuming.name` 只见 CloudFront IP、查不到源站；直连源站 IP / 回源域名均 403；仅 CloudFront 回源可达。
+  - 证书：viewer 侧用 us-east-1 的 ACM 证书（`mod.fuming.name`，CloudFront 强制 us-east-1）；缓存策略 CachingDisabled（大屏数据动态 + SSE 实时，全站不缓存保证正确性）；SSE 实时投影经 CloudFront 实测正常（回源超时 60s + 转发 Host）。
+  - 未迁移域名托管到 Cloudflare（DNS 在 Route53）；CloudFront 免费额度（1TB/月）远超本项目用量。
 - 反检索/反抓取（内部交流系统，谢绝一切采集）：三层防护叠加——`robots.txt`（`Disallow: /` 且显式点名 GPTBot/ClaudeBot/
   PerplexityBot/Google-Extended/Baiduspider 等 AI 与搜索爬虫）、HTML `<meta robots/googlebot/bingbot noindex,nofollow,noarchive,nosnippet,noimageindex>`、
   HTTP 响应头 `X-Robots-Tag` 同值；并在 Nginx 层按 `User-Agent` **硬拦截** AI/检索爬虫直接返回 403（不返回任何内容），
@@ -110,21 +120,22 @@
   - **A1/B1/C1 首屏总览带**：A1 由六个同权数字指标重组为建设进度、推广构成、实时增量与风险闭环四组信息，并以推广状态堆叠条和风险闭环环图建立视觉主次；B1/C1 统一为“核心进度 + 状态构成图 + 三项上下文”结构，分别展示任务状态和上线状态构成，减少空旷卡片与拥挤数字；
   - **A2/A3 总览侧栏**：省域 4 项重复指标卡收敛为建设完成度环形仪表与三项核心数，仪表兼容接口返回的数字字符串；批次图将 100% 完成的重复批次合并，保留在推批次，并以已上线/已建设待上线/待完成单条阶段构成图展示；
   - **A4/A6 趋势与质效**：累计上线改用轻量折线、双轨运行改用柱形，移除重复快照页脚；运营质效由三张拥挤指标卡收敛为双轨主数与凭证/接口成功率横向比较图，业务量明细下沉至 tooltip；
-  - **B2 阶段任务分布**：原 8 张横排指标卡收敛为已完成/进行中/未开始横向堆叠图，阶段完成率贴近对应条形展示；
+  - **B2/B4 建设与培训**：B 屏骨架调整为 12 列，B2/B4 各占 8 列承担主分析，B3/B5 各占 4 列承担排行与准备度；B2 将拥挤的 8 条超长横线重构为 8 根 100% 纵向阶段构成柱，直接比较已完成/进行中/未开始；B4 修复指标区挤占图表导致的零高度画布，改为培训类型通过率与应到→实到→通过→认证转化双图；
   - **B5 期初数据准备度**：移除与环图图例重复的 4 个状态按钮，改为点击扇区直接按状态下钻单位台账；
-  - **C2/C5 推广与联系人**：批次工序卡改为 8 批次上线/双轨/待推进堆叠图；联系人纯数字面板改为覆盖环图配合三项精简指标；
+  - **C2/C5 推广与联系人**：C2 明确为“各批次单位推进状态”，比较 8 个批次已上线/双轨/待推进单位构成，并以固定可见高度修复原 77px 折叠画布；联系人纯数字面板改为覆盖环图配合三项精简指标；
+  - **D4 凭证质量**：原三张同权数字卡与说明横幅重构为成功率环形仪表、凭证/分录规模对比条和平均分录数结构事实，缺失异常数继续明确显示接口未提供；
   - **E4 批次合规监督**：原 8 张横排卡改为合规率折线与高风险单位柱图，扩大图表画布并减少重复序列，突出批次间差异；
   - **D6 双轨核对**：引入基于 `echarts` + `charts/theme.ts` 的一致率环形图（`dualRunConsistent` vs `dualRunInconsistent`），中心展示对账一致率百分比，对称呼应 D5 阶梯条，彻底消除纯数字卡片的空旷感；
   - **D7 数据质量金标准**：4 项规则压缩为单行状态带，主画布用于横向通过率柱状比较；真实接入快照 `quality`（`voucherBalanceErrors`、`timeOrderErrors`、`orphanLinkErrors`、`organizationsWithStatusProgression`），0 异常如实展示；
   - **F3 综合态势预警**：在确定性规则研判卡左侧新增困难户风险维度分布柱状图，直观展现准备期卡顿、双轨核对差异与建设严重滞后各维度预警单位数及集中批次，撑起版面空间；
-  - **F4 AutoML 模型验证**：右列宽度提升，两个模型从窄列并排改为上下紧凑卡；保留真实质量、算法、目标与验证状态，特征仅展示前三项及余量；
+  - **F4/F5 智能研判**：F4 两个模型改为上下质量仪表卡，正文说明下沉到悬停提示，首屏只保留真实质量、算法、目标、验证状态与两项特征；F5 将 Markdown 文字墙解析为“成效/瓶颈/行动”三列简报卡，每类首屏显示前三条且卡片悬停保留完整内容；
   - **统一图表契约**：全量走 `charts/theme.ts`（`chartPalette`、`chartInk`、`chartTooltip`、`calmAnimation`），零硬编码十六进制色值，缺失数据显示 `—`，0 值如实展示；
   - **质量缺失态修正**：D7 缺失稽核规模、异常数或状态演进数据时不再回填 100%/0 异常/2000 家，卡片与图表统一显示 `—`。
 - 前端构建按库分包（`vite.config.ts` `manualChunks`）：echarts / vue 全家桶 / 地图 GeoJSON / 图标各自独立 chunk，
   业务视图 chunk 从数百 KB 降至数十 KB（改动不再让用户重下 echarts），`chunkSizeWarningLimit` 上调至 700 消除噪音。
   注：`element-plus`、`vxe-table`、`@element-plus/icons-vue` 为未使用依赖，已移除。
 - F 屏 F5 已由“手动点击生成研判”改为纯展示每日自动简报（与 A 屏简报同源、零交互，读 `GET /api/insights/briefing`），
-  A 屏一行摘要、F 屏展示全文，消除两处 LLM 研判入口的重复。
+  A 屏一行摘要、F 屏按成效/瓶颈/行动结构化展示，完整条目保留于卡片提示，消除两处 LLM 研判入口的重复。
 - Cloudflare AI Gateway 用量可只读巡检：`scripts/kiro/inspect_gateway_usage.py`（缓存命中率、累计 token、错误数），
   实测缓存生效、消耗极低，支撑长期演示成本可控。
 - Cloudflare AI 适配器已接入并经 `mod-gateway` 实测可用（生成每日决策简报）；无论 AI 是否启用，都不应把未生成的预测或

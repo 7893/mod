@@ -8,14 +8,6 @@ import {
 } from './theme'
 import { parsePercentage, type CompositionTone } from './panelData'
 
-interface StageSeriesItem {
-  name: string
-  completed: number
-  inProgress: number
-  notStarted: number
-  progress: number
-}
-
 interface RolloutSeriesItem {
   name: string
   launched: number
@@ -104,48 +96,6 @@ export function createOverviewCompositionOption(parts: CompositionPart[], total:
         formatter: `${part.percentage}%`,
       },
     })),
-  }
-}
-
-export function createTaskStageOption(list: StageSeriesItem[]) {
-  return {
-    ...calmAnimation,
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip },
-    legend: compactLegend(['已完成', '进行中', '未开始']),
-    grid: { top: 24, right: 58, bottom: 8, left: 8, containLabel: true },
-    xAxis: { ...valueAxis, axisLabel: { color: chartInk.textMuted, fontSize: 10 } },
-    yAxis: {
-      type: 'category',
-      data: list.map((stage) => stage.name).reverse(),
-      axisTick: { show: false },
-      axisLine: { lineStyle: { color: chartInk.border } },
-      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
-    },
-    series: [
-      {
-        name: '已完成', type: 'bar', stack: 'tasks', barMaxWidth: 14,
-        data: list.map((stage) => stage.completed).reverse(),
-        itemStyle: { color: chartPalette.success },
-      },
-      {
-        name: '进行中', type: 'bar', stack: 'tasks',
-        data: list.map((stage) => stage.inProgress).reverse(),
-        itemStyle: { color: chartPalette.accent },
-      },
-      {
-        name: '未开始', type: 'bar', stack: 'tasks',
-        data: list.map((stage) => stage.notStarted).reverse(),
-        itemStyle: { color: chartPalette.neutral },
-        label: {
-          show: true,
-          position: 'right',
-          color: chartInk.textMuted,
-          fontFamily: 'monospace',
-          fontSize: 10,
-          formatter: (params: any) => `${list[list.length - 1 - params.dataIndex]?.progress ?? 0}%`,
-        },
-      },
-    ],
   }
 }
 
