@@ -411,9 +411,15 @@ def test_runtime_service_successful_writes(tmp_path, monkeypatch):
 
     # Mock slow movie writer and check
     c_mock_res = MagicMock(success=True)
+    last_writer_kwargs = {}
+
+    def mock_c_write(self, evts, execute=True, **kwargs):
+        last_writer_kwargs.update(kwargs)
+        return c_mock_res
+
     monkeypatch.setattr(
         "simulation.runtime_service.ConstructionWriter.write_construction_events",
-        lambda self, evts, execute=True: c_mock_res,
+        mock_c_write,
     )
     monkeypatch.setattr(PostCycleSelfChecker, "check_construction_events", lambda conn, evts: (True, ""))
 
@@ -421,6 +427,44 @@ def test_runtime_service_successful_writes(tmp_path, monkeypatch):
     r2 = service.step_cycle(now=now_hkt)
     assert r2.status == "SUCCESS"
     assert r2.events_written == 1
+    # Verify resident simulation explicitly sets create_backup=False
+    assert last_writer_kwargs.get("create_backup") is False
+
+
+def test_runtime_service_rate_limit_throttle(tmp_path, monkeypatch, caplog):
+    """KI-038: 熔断告警限制频率，相同原因 300s 内只打一条 warning 日志，防止日志刷爆磁盘。"""
+    import logging
+
+    config = SimulatorRuntimeConfig(
+        status_file_path=tmp_path / "status.json",
+        fail_closed_flag_path=tmp_path / "flag.flag",
+    )
+    service = SimulatorRuntimeService(config=config)
+
+    # Mock fuse.can_produce to return False
+    monkeypatch.setattr(service.fuse, "can_produce", lambda now, count: (False, "Daily limit reached: 5000/5000"))
+
+    now_hkt = datetime(2026, 9, 7, 10, 0, 0, tzinfo=HK_TZ)
+
+    with caplog.at_level(logging.WARNING):
+        # Step 1: First hit triggers warning
+        r1 = service.step_cycle(now=now_hkt)
+        assert r1.status == "RATE_LIMITED"
+        fuse_logs = [rec for rec in caplog.records if "[RATE_LIMIT_FUSE]" in rec.message]
+        assert len(fuse_logs) == 1
+
+        # Step 2: Immediate subsequent tick with same reason -> throttled (no new log)
+        r2 = service.step_cycle(now=now_hkt)
+        assert r2.status == "RATE_LIMITED"
+        fuse_logs = [rec for rec in caplog.records if "[RATE_LIMIT_FUSE]" in rec.message]
+        assert len(fuse_logs) == 1
+
+        # Step 3: Change limit reason -> new warning logged
+        monkeypatch.setattr(service.fuse, "can_produce", lambda now, count: (False, "Burst limit reached: 10/10"))
+        r3 = service.step_cycle(now=now_hkt)
+        assert r3.status == "RATE_LIMITED"
+        fuse_logs = [rec for rec in caplog.records if "[RATE_LIMIT_FUSE]" in rec.message]
+        assert len(fuse_logs) == 2
 
 
 def test_runtime_service_run_forever_stop():

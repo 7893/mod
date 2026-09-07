@@ -13,10 +13,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import gzip
 import json
 import logging
 import os
 from pathlib import Path
+import shutil
 import time
 from typing import Any, Dict, List, Optional
 import uuid
@@ -101,13 +103,40 @@ class ConstructionWriter:
             charset="utf8mb4",
         )
 
-    def backup_affected_tables(self, tables: List[str]) -> str:
-        """Create a safety snapshot backup of target tables before writing."""
+    def backup_affected_tables(
+        self,
+        tables: List[str],
+        compress: bool = True,
+        max_backups: int = 3,
+        min_free_bytes: Optional[int] = None,
+    ) -> str:
+        """Create a safety snapshot backup of target tables before writing.
+
+        Guarantees:
+        1. Checks available disk space; raises RuntimeError if below min_free_bytes (fail closed).
+        2. Compresses with gzip by default to prevent disk ballooning.
+        3. Writes to temp file and atomically renames.
+        4. Rotates backups keeping at most max_backups.
+        """
         if not self._backup_dir:
             self._backup_dir = Path("scripts/agy/output/backups")
         self._backup_dir.mkdir(parents=True, exist_ok=True)
+
+        # 1. Disk space check (fail closed if free space < threshold)
+        if min_free_bytes is None:
+            min_free_bytes = int(os.getenv("MOD_BACKUP_MIN_FREE_BYTES", str(5 * 1024 * 1024 * 1024)))
+        usage = shutil.disk_usage(self._backup_dir)
+        if usage.free < min_free_bytes:
+            raise RuntimeError(
+                f"BLOCKED: Insufficient disk space for backup ({usage.free / (1024**3):.2f} GiB free, "
+                f"{min_free_bytes / (1024**3):.2f} GiB required)."
+            )
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_path = self._backup_dir / f"construction_backup_{timestamp}.json"
+        ext = ".json.gz" if compress else ".json"
+        filename = f"construction_backup_{timestamp}{ext}"
+        backup_path = self._backup_dir / filename
+        temp_path = self._backup_dir / f".tmp_{filename}"
 
         conn = self._get_connection()
         backup_data: Dict[str, List[Dict[str, Any]]] = {}
@@ -138,13 +167,49 @@ class ConstructionWriter:
                         serialized_rows.append(sr)
                     backup_data[table] = serialized_rows
 
-            with open(backup_path, "w", encoding="utf-8") as f:
-                json.dump(backup_data, f, ensure_ascii=False, indent=2)
+            if compress:
+                with gzip.open(temp_path, "wt", encoding="utf-8") as f:
+                    json.dump(backup_data, f, ensure_ascii=False)
+            else:
+                with open(temp_path, "w", encoding="utf-8") as f:
+                    json.dump(backup_data, f, ensure_ascii=False, indent=2)
+
+            temp_path.replace(backup_path)
             logger.info(f"Backup created successfully: {backup_path}")
+
+            # Rotate backups: keep only max_backups most recent
+            if max_backups > 0:
+                self._rotate_backups(max_backups)
+
             return str(backup_path)
         finally:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    pass
             if not self._external_conn:
                 conn.close()
+
+    def _rotate_backups(self, max_backups: int) -> None:
+        """Keep at most max_backups construction_backup_* files, removing older ones."""
+        try:
+            existing = [
+                p
+                for p in self._backup_dir.iterdir()
+                if p.is_file()
+                and p.name.startswith("construction_backup_")
+                and (p.name.endswith(".json") or p.name.endswith(".json.gz"))
+            ]
+            existing.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            for old_path in existing[max_backups:]:
+                try:
+                    old_path.unlink()
+                    logger.info(f"Rotated old backup: {old_path.name}")
+                except Exception as ex:
+                    logger.warning(f"Could not remove old backup {old_path}: {ex}")
+        except Exception as ex:
+            logger.warning(f"Backup rotation failed: {ex}")
 
     def _record_audit(self, audit: Dict[str, Any]) -> None:
         """Write structured audit record to local JSONL log file."""
@@ -162,14 +227,14 @@ class ConstructionWriter:
         events: List[object],
         batch_size: int = 500,
         execute: bool = False,
+        create_backup: bool = False,
     ) -> ConstructionWriteResult:
-        """
-        Atomically write a collection of construction event footprints in batches.
+        """Atomically write a collection of construction event footprints in batches.
 
         Requires:
         1. execute=True AND MOD_SIMULATION_ENGINE_ENABLED=true.
         2. Strict validation of every event before any write.
-        3. Automatic pre-write backup.
+        3. create_backup=True only when explicitly requested (decoupled from resident small ticks).
         """
         run_id = f"c_sim_{uuid.uuid4().hex[:12]}"
         t0 = time.perf_counter()
@@ -183,24 +248,36 @@ class ConstructionWriter:
                 duration_ms=(time.perf_counter() - t0) * 1000,
             )
 
+        # 0. Short-circuit if no events: zero DB connection, zero backup, zero audit
+        if not events:
+            return ConstructionWriteResult(
+                success=True,
+                event_count=0,
+                rows_written={},
+                error=None,
+                duration_ms=(time.perf_counter() - t0) * 1000,
+            )
+
         # 1. Deterministic validation of all events in memory
         for ev in events:
             validate_construction_event(ev)
 
-        # 2. Pre-write backup
-        backup_file = self.backup_affected_tables(
-            [
-                "org_unit",
-                "sys_user",
-                "rollout_status_snapshot",
-                "data_readiness",
-                "training",
-                "dual_run_result",
-                "construction_task",
-                "rollout_batch",
-                "daily_stats",
-            ]
-        )
+        # 2. Pre-write backup (only if explicitly requested)
+        backup_file: Optional[str] = None
+        if create_backup:
+            backup_file = self.backup_affected_tables(
+                [
+                    "org_unit",
+                    "sys_user",
+                    "rollout_status_snapshot",
+                    "data_readiness",
+                    "training",
+                    "dual_run_result",
+                    "construction_task",
+                    "rollout_batch",
+                    "daily_stats",
+                ]
+            )
 
         conn = self._get_connection()
         rows_written = {

@@ -255,6 +255,8 @@ class SimulatorRuntimeService:
         self.cycle_count = 0
         self.start_time = time.time()
         self.onboarding_dates: List[Any] = []
+        self._last_rate_limit_reason: Optional[str] = None
+        self._last_rate_limit_warn_time: float = 0.0
 
         # Cache baselines
         self._fast_baseline: Optional[Any] = None
@@ -320,7 +322,12 @@ class SimulatorRuntimeService:
         # 3. Check Fuse Rate Limits
         can_produce, limit_reason = self.fuse.can_produce(now_hkt, burst_count)
         if not can_produce:
-            logger.warning(f"[RATE_LIMIT_FUSE] {limit_reason}. Pausing cycle.")
+            now_mono = time.monotonic()
+            if limit_reason != self._last_rate_limit_reason or (now_mono - self._last_rate_limit_warn_time) >= 300.0:
+                logger.warning(f"[RATE_LIMIT_FUSE] {limit_reason}. Pausing cycle.")
+                self._last_rate_limit_reason = limit_reason
+                self._last_rate_limit_warn_time = now_mono
+
             self._save_status("RATE_LIMITED", intensity, now_hkt, limit_reason)
             return CycleResult(
                 status="RATE_LIMITED",
@@ -330,6 +337,7 @@ class SimulatorRuntimeService:
                 error=limit_reason,
                 cycle_duration_ms=(time.perf_counter() - t0) * 1000,
             )
+        self._last_rate_limit_reason = None
 
         # 4. Check whether database writes are enabled
         engine_enabled = is_simulation_engine_enabled() and not self.config.dry_run
@@ -376,15 +384,18 @@ class SimulatorRuntimeService:
 
             # 5. Real Atomic Write Execution
             if is_construction:
-                c_writer = ConstructionWriter(conn=conn, audit_log_path=str(self.config.audit_log_path))
-                c_res = c_writer.write_construction_events(all_events, execute=True)
-                if not c_res.success:
-                    raise RuntimeError(f"Construction write failed: {c_res.error}")
+                if not all_events:
+                    events_written = 0
+                else:
+                    c_writer = ConstructionWriter(conn=conn, audit_log_path=str(self.config.audit_log_path))
+                    c_res = c_writer.write_construction_events(all_events, execute=True, create_backup=False)
+                    if not c_res.success:
+                        raise RuntimeError(f"Construction write failed: {c_res.error}")
 
-                ok, chk_err = PostCycleSelfChecker.check_construction_events(conn, all_events)
-                if not ok:
-                    raise RuntimeError(f"Post-cycle construction self-check failed: {chk_err}")
-                events_written = len(all_events)
+                    ok, chk_err = PostCycleSelfChecker.check_construction_events(conn, all_events)
+                    if not ok:
+                        raise RuntimeError(f"Post-cycle construction self-check failed: {chk_err}")
+                    events_written = len(all_events)
             else:
                 s_writer = SimulationWriter(conn=conn, audit_log_path=str(self.config.audit_log_path))
                 s_res = s_writer.write_events(all_events)  # type: ignore
