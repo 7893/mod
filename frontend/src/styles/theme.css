@@ -16,8 +16,8 @@
   --grid-template-columns-cockpit: 390px 1fr 370px;   /* 三栏：左固定 中弹性 右固定 */
   --grid-template-rows-cockpit-side: 1.15fr 1fr;       /* 左右列上下两格比例 */
   --grid-template-rows-cockpit-right: 1fr 1.3fr;      /* 右列：运营指标 + 扩大风险预警 (A-3) */
-  --grid-template-columns-construction: minmax(0, 1fr) minmax(0, 1fr) 360px;
-  --grid-template-rows-construction: minmax(0, 1fr) minmax(0, 1.15fr);
+  --grid-template-columns-construction: repeat(12, minmax(0, 1fr));
+  --grid-template-rows-construction: minmax(0, 0.95fr) minmax(0, 1.05fr);
   --grid-template-columns-rollout-mid: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 0.95fr);
   --grid-template-columns-operations: repeat(2, minmax(0, 1fr));
   --grid-template-rows-operations: minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.1fr);
