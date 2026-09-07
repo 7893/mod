@@ -16,9 +16,9 @@
 
 - 2026-09-05 全项目迁移到主运行主机（Always Free 托管环境）。生产运行与源码工作区
   统一在同一台主机，不再区分部署目标与开发机。旧运行环境不再承载 MOD 任何组件。
-- 访客入口 `mod.fuming.name` 经 **AWS CloudFront** 前置（隐藏源站，见下条"源站隐藏架构"），
-  DNS 托管在 Route53（zone `fuming.name`），`mod.fuming.name` 为指向 CloudFront 分发的 Alias 记录，
-  DNS 层查不到源站真实 IP。
+- 访客入口经 **AWS CloudFront** 前置（隐藏源站，见下条"源站隐藏架构"）；DNS 托管在 Route53，
+  站点主机名以指向 CloudFront 分发的 Alias 记录对外解析，DNS 层查不到源站真实 IP。具体域名、分发 ID、
+  回源地址等见部署配置，不写入文档。
 - 数据库为托管 MySQL HeatWave（库 `mod`，Always Free 规格），连接主机、端口与凭据
   仅存于运行主机的本地环境文件，不写入版本库或文档。原运行环境的旧数据库实例已删除。
 - 运行主机使用系统级 systemd 服务 `mod-api.service` 运行项目内 FastAPI 虚拟环境，监听
@@ -58,14 +58,18 @@
 
 ## 功能状态
 
-- 源站隐藏架构（AWS CloudFront 前置，隐藏 jpa 源站 IP）：
-  - 访客 `mod.fuming.name` → Route53 Alias → CloudFront 分发（`E3VGRUTD9T8HPY`，域 `d32qg3wqjwjbek.cloudfront.net`）；
-    CloudFront 回源到隐蔽域名 `origin-mod-k7x9.8n8m.cfd`（Cloudflare 上 DNS-only，指向源站），协议 https-only。
-  - **回源密钥防绕过**：CloudFront 回源时注入自定义头 `X-Origin-Secret`；源站 Nginx 校验该头，
+- 源站隐藏架构（AWS CloudFront 前置，隐藏源站 IP）：
+  - 访客经 Route53 Alias → CloudFront 分发 → 回源到一个隐蔽回源域名（DNS-only，指向源站），回源协议 https-only。
+    （具体站点域名、分发 ID、回源域名、源站 IP 均见部署配置，不入文档。）
+  - **回源密钥防绕过**：CloudFront 回源时注入一个自定义密钥头；源站 Nginx 校验该头，
     无正确密钥的请求（即绕过 CloudFront 直连源站 IP 或回源域名）一律 403。密钥值只存源站 Nginx 与 CloudFront 配置，不入库不入代码。
-  - 效果：`dig mod.fuming.name` 只见 CloudFront IP、查不到源站；直连源站 IP / 回源域名均 403；仅 CloudFront 回源可达。
-  - 证书：viewer 侧用 us-east-1 的 ACM 证书（`mod.fuming.name`，CloudFront 强制 us-east-1）；缓存策略 CachingDisabled（大屏数据动态 + SSE 实时，全站不缓存保证正确性）；SSE 实时投影经 CloudFront 实测正常（回源超时 60s + 转发 Host）。
-  - 未迁移域名托管到 Cloudflare（DNS 在 Route53）；CloudFront 免费额度（1TB/月）远超本项目用量。
+  - 效果：对站点主机名做 DNS 查询只见 CloudFront 的 IP、查不到源站；直连源站 IP / 回源域名均被 403；仅 CloudFront 回源可达。
+  - 证书：viewer 侧用 us-east-1 的 ACM 证书（CloudFront 强制证书位于 us-east-1）；缓存策略 CachingDisabled
+    （大屏数据动态 + SSE 实时，全站不缓存以保证正确性）；SSE 实时投影经 CloudFront 实测正常（回源超时 60s + 转发 Host 头）。
+  - 未迁移域名托管到 Cloudflare（DNS 在 Route53）；CloudFront 免费额度远超本项目用量。
+- DNS 安全（DNSSEC）：站点所在 zone 已在 Route53 启用 DNSSEC 签名（KSK 由一枚 us-east-1 的 KMS 非对称密钥
+  ECC_NIST_P256 / SIGN_VERIFY 承载），并已在域名注册商（TLD 层）登记对应 DS 记录，全链校验通过、多解析器实测 NOERROR。
+  防 DNS 劫持/应答篡改。密钥标识、DS 摘要、KeyTag 等敏感值见云端配置，不入文档。
 - 反检索/反抓取（内部交流系统，谢绝一切采集）：三层防护叠加——`robots.txt`（`Disallow: /` 且显式点名 GPTBot/ClaudeBot/
   PerplexityBot/Google-Extended/Baiduspider 等 AI 与搜索爬虫）、HTML `<meta robots/googlebot/bingbot noindex,nofollow,noarchive,nosnippet,noimageindex>`、
   HTTP 响应头 `X-Robots-Tag` 同值；并在 Nginx 层按 `User-Agent` **硬拦截** AI/检索爬虫直接返回 403（不返回任何内容），
