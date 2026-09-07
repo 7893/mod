@@ -43,4 +43,5 @@
   --text-cockpit-md: 13px;
   --text-cockpit-lg: 15px;
   --text-cockpit-metric: 18px;   /* 关键指标数字 */
+  --text-cockpit-kpi: 24px;      /* 单面板唯一主 KPI */
 }

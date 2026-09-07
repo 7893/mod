@@ -5,6 +5,39 @@ export interface OperationsOverviewCounts {
   businessDocument?: number | null
   accountingVoucher?: number | null
   integrationResult?: number | null
+  dualRunResult?: number | null
+}
+
+interface OutcomeItem {
+  name: string
+  value: number | null | undefined
+  color: string
+}
+
+function createHorizontalVolumeOption(items: OutcomeItem[]) {
+  const safeItems = items.map((item) => ({ ...item, value: item.value ?? 0 }))
+  const max = Math.max(1, ...safeItems.map((item) => item.value))
+  return {
+    ...calmAnimation,
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip },
+    grid: { left: 68, right: 82, top: 8, bottom: 8 },
+    xAxis: { type: 'value', max, show: false },
+    yAxis: {
+      type: 'category', data: safeItems.map((item) => item.name),
+      axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+    },
+    series: [{
+      type: 'bar', barWidth: 12, showBackground: true,
+      backgroundStyle: { color: chartInk.borderSoft, borderRadius: 4 },
+      data: safeItems.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 4 } })),
+      label: {
+        show: true, position: 'right', color: chartInk.textPrimary,
+        fontFamily: 'monospace', fontSize: 10,
+        formatter: (params: any) => Number(params.value).toLocaleString(),
+      },
+    }],
+  }
 }
 
 export function createOperationsOverviewOption(counts: OperationsOverviewCounts) {
@@ -34,6 +67,29 @@ export function createOperationsOverviewOption(counts: OperationsOverviewCounts)
       },
     }],
   }
+}
+
+export function createOperationsFlowOption(counts: OperationsOverviewCounts) {
+  return createHorizontalVolumeOption([
+    { name: '双轨核对', value: counts.dualRunResult, color: chartPalette.neutral },
+    { name: '接口集成', value: counts.integrationResult, color: chartPalette.warning },
+    { name: '会计凭证', value: counts.accountingVoucher, color: chartPalette.success },
+    { name: '业务单据', value: counts.businessDocument, color: chartPalette.accent },
+  ])
+}
+
+export function createIntegrationOutcomeOption(success?: number | null, failed?: number | null) {
+  return createHorizontalVolumeOption([
+    { name: '异常待核', value: failed, color: chartPalette.danger },
+    { name: '成功入账', value: success, color: chartPalette.success },
+  ])
+}
+
+export function createDualRunOutcomeOption(consistent?: number | null, inconsistent?: number | null) {
+  return createHorizontalVolumeOption([
+    { name: '差异待核', value: inconsistent, color: chartPalette.warning },
+    { name: '核对一致', value: consistent, color: chartPalette.success },
+  ])
 }
 
 export function createVoucherQualityOption(

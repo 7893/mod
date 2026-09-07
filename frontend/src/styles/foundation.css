@@ -384,17 +384,17 @@ b, strong { font-weight: 600; }
   min-height: 0;
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   overflow: hidden;
   position: relative;
 }
 
-/* 统一缩放画布：固定 1920×980，居中，transform-origin 居中等比缩放。
-   所有页面内容都落在这张画布内，分辨率差异由缩放兜住。 */
+/* 统一缩放画布：固定 1920×980，水平居中、顶部锚定后等比缩放。
+   宽高比不一致时把不可避免的余量留在底部，避免标题栏下出现大块空白。 */
 .screen-scale-box {
   flex-shrink: 0;
-  transform-origin: center center;
+  transform-origin: top center;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -531,4 +531,3 @@ b, strong { font-weight: 600; }
   flex: 1;
   position: relative;
 }
-

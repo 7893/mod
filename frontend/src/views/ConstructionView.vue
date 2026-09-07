@@ -210,15 +210,15 @@ const readinessPieOption = computed(() => ({
       <!-- B2: 状态矩阵承载 24 个任务数据点，雷达图补充八阶段均衡性判断 -->
       <CockpitPanel title="建设阶段作战矩阵" zone="B2" subtitle="任务状态密度与八阶段完成度轮廓" class="col-span-8">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <section class="col-span-9 flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
-            <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs">
+          <section class="col-span-9 flex flex-col min-h-0 pr-3 border-r border-surface-veil-06">
+            <div class="flex items-center justify-between pb-1 text-cockpit-xs">
               <span class="font-medium text-slate-300">阶段 × 状态任务矩阵</span>
               <span class="font-mono text-slate-500">8 阶段 · 24 数据格</span>
             </div>
             <VChart class="w-full flex-1 min-h-0" :option="stageMatrixOption" autoresize />
           </section>
-          <section class="col-span-3 flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
-            <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs">
+          <section class="col-span-3 flex flex-col min-h-0">
+            <div class="flex items-center justify-between pb-1 text-cockpit-xs">
               <span class="font-medium text-slate-300">阶段均衡轮廓</span>
               <span class="font-mono text-sky-400">{{ constructionSummary?.avgProgress ?? '—' }}%</span>
             </div>
