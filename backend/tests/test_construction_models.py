@@ -472,3 +472,25 @@ def test_batch_rollout_invalid_dates():
 def test_construction_event_type_error():
     with pytest.raises(TypeError, match="Unknown construction event footprint type"):
         validate_construction_event("invalid_event")
+
+
+# ---------------------------------------------------------------------------
+# Regression: NewOrgAdmissionFootprint default end_date factory (KI-035)
+# ---------------------------------------------------------------------------
+
+
+def test_new_org_admission_default_end_date_does_not_raise():
+    """Regression: constructing NewOrgAdmissionFootprint without end_date must not
+    raise NameError. The end_date default_factory uses timedelta, which was missing
+    from the module import and crashed on the default branch.
+    """
+    from datetime import timedelta
+
+    from simulation.construction_models import NewOrgAdmissionFootprint
+
+    footprint = NewOrgAdmissionFootprint(org_id=9999, name="回归测试单位", region="广东")
+
+    assert footprint.batch_id == 8
+    assert footprint.status == "未启动"
+    assert footprint.start_date == date.today()
+    assert footprint.end_date == date.today() + timedelta(days=500)
