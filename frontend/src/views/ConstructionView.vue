@@ -24,7 +24,8 @@ import { buildOverviewComposition, buildTaskStageSeries } from '../charts/panelD
 import {
   createTaskStageOverviewOption,
   createTrainingFunnelOption,
-  createTrainingPerformanceOption,
+  createTrainingConversionOption,
+  createTrainingMixOption,
 } from '../charts/constructionOptions.ts'
 import { useProjectStore } from '../stores/project.ts'
 
@@ -133,7 +134,8 @@ const chartColors = {
 }
 
 const stageDistributionOption = computed(() => createTaskStageOverviewOption(buildTaskStageSeries(taskStages.value)))
-const trainingPerformanceOption = computed(() => createTrainingPerformanceOption(trainingSummary.value?.byType ?? []))
+const trainingConversionOption = computed(() => createTrainingConversionOption(trainingSummary.value?.byType ?? []))
+const trainingMixOption = computed(() => createTrainingMixOption(trainingSummary.value?.byType ?? []))
 const trainingFunnelOption = computed(() => createTrainingFunnelOption(trainingSummary.value))
 
 const readinessPieOption = computed(() => ({
@@ -196,23 +198,32 @@ const readinessPieOption = computed(() => ({
         <StatList :rows="rankRows" ranked density="dense" scroll />
       </CockpitPanel>
 
-      <!-- B4: 培训质量与人次转化双图，避免指标卡占满高度后挤掉图表 -->
-      <CockpitPanel title="培训赋能转化" zone="B4" subtitle="分类通过率与参培转化漏斗" class="col-span-8">
+      <!-- B4: 培训分类转化、场次构成与总体漏斗三图，充分利用主分析面积 -->
+      <CockpitPanel title="培训赋能全景" zone="B4" subtitle="分类人次转化、场次构成与总体认证漏斗" class="col-span-8">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
           <section class="col-span-7 flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
             <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs">
-              <span class="font-medium text-slate-300">分类考核通过率</span>
-              <span class="font-mono text-slate-500">{{ format(trainingSummary?.totalSessions) }} 场</span>
+              <span class="font-medium text-slate-300">四类培训人次转化</span>
+              <span class="font-mono text-slate-500">16 项真实指标</span>
             </div>
-            <VChart class="w-full flex-1 min-h-0" :option="trainingPerformanceOption" autoresize />
+            <VChart class="w-full flex-1 min-h-0" :option="trainingConversionOption" autoresize />
           </section>
-          <section class="col-span-5 flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
-            <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs">
-              <span class="font-medium text-slate-300">参培与认证转化</span>
-              <span class="font-mono text-emerald-400">通过 {{ format(trainingSummary?.totalPassed) }} 人</span>
-            </div>
-            <VChart class="w-full flex-1 min-h-0" :option="trainingFunnelOption" autoresize />
-          </section>
+          <div class="col-span-5 grid grid-rows-2 gap-2 min-h-0">
+            <section class="flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
+              <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs">
+                <span class="font-medium text-slate-300">培训场次构成</span>
+                <span class="font-mono text-sky-400">{{ format(trainingSummary?.totalSessions) }} 场</span>
+              </div>
+              <VChart class="w-full flex-1 min-h-0" :option="trainingMixOption" autoresize />
+            </section>
+            <section class="flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
+              <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs">
+                <span class="font-medium text-slate-300">总体参培与认证漏斗</span>
+                <span class="font-mono text-emerald-400">通过 {{ format(trainingSummary?.totalPassed) }} 人</span>
+              </div>
+              <VChart class="w-full flex-1 min-h-0" :option="trainingFunnelOption" autoresize />
+            </section>
+          </div>
         </div>
       </CockpitPanel>
 

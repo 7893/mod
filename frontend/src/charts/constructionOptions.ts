@@ -114,8 +114,7 @@ const shortTrainingType = (value: string) => value
   .replace('培训', '')
   .replace('与', ' / ')
 
-export function createTrainingPerformanceOption(items: TrainingTypeItem[]) {
-  const list = [...items].reverse()
+export function createTrainingConversionOption(items: TrainingTypeItem[]) {
   return {
     ...calmAnimation,
     tooltip: {
@@ -123,42 +122,70 @@ export function createTrainingPerformanceOption(items: TrainingTypeItem[]) {
       axisPointer: { type: 'shadow' },
       ...chartTooltip,
       formatter: (params: any[]) => {
-        const item = list[params?.[0]?.dataIndex]
+        const item = items[params?.[0]?.dataIndex]
         if (!item) return ''
         const rate = item.actual > 0 ? percent(item.passed, item.actual) : 0
         return `${item.type}<br/>培训场次 <b>${item.count.toLocaleString()}</b><br/>实到 / 应到 <b>${item.actual.toLocaleString()} / ${item.expected.toLocaleString()}</b><br/>考核通过 <b>${item.passed.toLocaleString()}</b> · ${rate}%`
       },
     },
-    grid: { left: 122, right: 48, top: 8, bottom: 18 },
+    legend: {
+      data: ['应到', '实到', '通过', '认证'],
+      top: 2,
+      right: 4,
+      textStyle: { color: chartInk.textMuted, fontSize: 9 },
+      itemWidth: 9,
+      itemHeight: 7,
+    },
+    grid: { left: 42, right: 12, top: 30, bottom: 38 },
     xAxis: {
-      ...valueAxis,
-      min: 0,
-      max: 100,
-      splitNumber: 2,
-      axisLabel: { color: chartInk.textMuted, fontSize: 9, formatter: '{value}%' },
+      type: 'category',
+      data: items.map((item) => shortTrainingType(item.type)),
+      axisLine: { lineStyle: { color: chartInk.border } },
+      axisTick: { show: false },
+      axisLabel: { color: chartInk.textMuted, fontSize: 9, interval: 0 },
     },
     yAxis: {
-      type: 'category',
-      data: list.map((item) => shortTrainingType(item.type)),
-      axisLine: { show: false },
-      axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+      ...valueAxis,
+      splitNumber: 3,
+      axisLabel: {
+        color: chartInk.textMuted,
+        fontSize: 9,
+        formatter: (value: number) => value >= 10_000 ? `${Math.round(value / 1000)}k` : value,
+      },
+    },
+    series: [
+      { name: '应到', type: 'bar', barMaxWidth: 18, data: items.map((item) => item.expected), itemStyle: { color: chartPalette.neutral, borderRadius: [3, 3, 0, 0] } },
+      { name: '实到', type: 'bar', barMaxWidth: 18, data: items.map((item) => item.actual), itemStyle: { color: chartPalette.accent, borderRadius: [3, 3, 0, 0] } },
+      { name: '通过', type: 'bar', barMaxWidth: 18, data: items.map((item) => item.passed), itemStyle: { color: chartPalette.success, borderRadius: [3, 3, 0, 0] } },
+      { name: '认证', type: 'bar', barMaxWidth: 18, data: items.map((item) => item.cert), itemStyle: { color: chartPalette.warning, borderRadius: [3, 3, 0, 0] } },
+    ],
+  }
+}
+
+export function createTrainingMixOption(items: TrainingTypeItem[]) {
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'item',
+      ...chartTooltip,
+      formatter: (params: any) => `${params.name}<br/>培训场次 <b>${Number(params.value).toLocaleString()}</b> · ${params.percent}%`,
     },
     series: [{
-      type: 'bar',
-      barWidth: 16,
-      showBackground: true,
-      backgroundStyle: { color: chartInk.borderSoft, borderRadius: 4 },
-      data: list.map((item) => item.actual > 0 ? percent(item.passed, item.actual) : 0),
-      itemStyle: { color: chartPalette.accent, borderRadius: 4 },
-      label: {
-        show: true,
-        position: 'right',
-        color: chartPalette.success,
-        fontFamily: 'monospace',
-        fontSize: 10,
-        formatter: '{c}%',
-      },
+      type: 'pie',
+      radius: ['48%', '72%'],
+      center: ['42%', '52%'],
+      minAngle: 4,
+      avoidLabelOverlap: true,
+      itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 2 },
+      label: { color: chartInk.textMuted, fontSize: 9, formatter: '{b}\n{d}%' },
+      labelLine: { length: 6, length2: 4, lineStyle: { color: chartInk.border } },
+      data: items.map((item, index) => ({
+        name: shortTrainingType(item.type),
+        value: item.count,
+        itemStyle: {
+          color: [chartPalette.accent, chartPalette.success, chartPalette.warning, chartPalette.neutral][index % 4],
+        },
+      })),
     }],
   }
 }
