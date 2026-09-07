@@ -16,6 +16,7 @@ import {
 import CockpitPanel from '../components/CockpitPanel.vue'
 import ConstructionLedger from '../components/ConstructionLedger.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
+import OverviewBand from '../components/blocks/OverviewBand.vue'
 import StatList from '../components/blocks/StatList.vue'
 import type { MetricItem, StatRow } from '../components/blocks/types.ts'
 import {
@@ -25,7 +26,7 @@ import {
   chartTooltip,
   valueAxis,
 } from '../charts/theme.ts'
-import { buildTaskStageSeries } from '../charts/panelData.ts'
+import { buildOverviewComposition, buildTaskStageSeries } from '../charts/panelData.ts'
 import { createTaskStageOption } from '../charts/panelOptions.ts'
 import { useProjectStore } from '../stores/project.ts'
 
@@ -73,34 +74,27 @@ const constructionSummary = computed(() => store.snapshot.construction)
 const trainingSummary = computed(() => constructionSummary.value?.trainingSummary)
 const readinessSummary = computed(() => constructionSummary.value?.dataReadinessSummary)
 
-const summaryItems = computed<MetricItem[]>(() => [
-  {
-    label: '综合完成率',
-    value: constructionSummary.value?.avgProgress ?? '—',
-    unit: constructionSummary.value ? '%' : undefined,
-    tone: 'accent',
-    hint: '全量建设任务平均进度',
-  },
-  {
-    label: '任务总数',
-    value: format(constructionSummary.value?.totalTasks),
-    unit: constructionSummary.value ? '项' : undefined,
-    hint: `${format(store.snapshot.overview.orgTotal)} 家纳管单位`,
-  },
-  {
-    label: '已完成',
-    value: format(constructionSummary.value?.completedTasks),
-    unit: constructionSummary.value ? '项' : undefined,
-    tone: 'success',
-    hint: '已通过阶段验收',
-  },
-  {
-    label: '进行中',
-    value: format(constructionSummary.value?.inProgressTasks),
-    unit: constructionSummary.value ? '项' : undefined,
-    tone: 'warning',
-    hint: '当前正在推进',
-  },
+const constructionComposition = computed(() => buildOverviewComposition(
+  constructionSummary.value?.totalTasks,
+  [
+    { label: '已完成', value: constructionSummary.value?.completedTasks, tone: 'success' },
+    { label: '进行中', value: constructionSummary.value?.inProgressTasks, tone: 'accent' },
+    { label: '未开始', value: constructionSummary.value?.notStartedTasks, tone: 'neutral' },
+  ],
+))
+
+const b1Primary = computed(() => ({
+  label: '综合完成率',
+  value: constructionSummary.value?.avgProgress ?? '—',
+  unit: constructionSummary.value ? '%' : undefined,
+  tone: 'accent' as const,
+  hint: '全量建设任务平均进度',
+}))
+
+const b1Facts = computed(() => [
+  { label: '任务总数', value: format(constructionSummary.value?.totalTasks), unit: '项' },
+  { label: '纳管单位', value: format(store.snapshot.overview.orgTotal), unit: '家' },
+  { label: '培训场次', value: format(trainingSummary.value?.totalSessions), unit: '场' },
 ])
 
 const RANK_LIMIT = 10
@@ -277,7 +271,13 @@ const readinessPieOption = computed(() => ({
       :subtitle="`${format(store.snapshot.overview.orgTotal)} 家单位 · ${format(constructionSummary?.totalTasks)} 项任务 · ${format(trainingSummary?.totalSessions)} 场培训`"
       class="flex-shrink-0"
     >
-      <MetricGrid :items="summaryItems" variant="inline" :columns="4" />
+      <OverviewBand
+        :primary="b1Primary"
+        chart-label="任务状态构成"
+        :total="constructionComposition.total"
+        :parts="constructionComposition.parts"
+        :facts="b1Facts"
+      />
     </CockpitPanel>
 
     <!-- 建设全景主区 -->

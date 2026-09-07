@@ -6,12 +6,12 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
-import MetricGrid from '../components/blocks/MetricGrid.vue'
 import ChartBlock from '../components/blocks/ChartBlock.vue'
+import OverviewBand from '../components/blocks/OverviewBand.vue'
 import RolloutLedgerTable from '../components/RolloutLedgerTable.vue'
 import type { MetricItem } from '../components/blocks/types.ts'
 import { calmAnimation, chartInk, chartPalette } from '../charts/theme.ts'
-import { buildCoverageComposition, buildRolloutComposition } from '../charts/panelData.ts'
+import { buildCoverageComposition, buildOverviewComposition, buildRolloutComposition } from '../charts/panelData.ts'
 import { createCoverageOption, createRolloutCompositionOption } from '../charts/panelOptions.ts'
 import { useProjectStore } from '../stores/project.ts'
 
@@ -25,33 +25,28 @@ const format = (value: number | undefined) => (
 
 const batches = computed(() => store.snapshot.rollout || [])
 
-const c1SummaryItems = computed<MetricItem[]>(() => [
-  {
-    label: '已上线',
-    value: store.snapshot.overview.launched ? format(store.snapshot.overview.launched) : '—',
-    unit: '家',
-    tone: 'success',
-    hint: `占总纳管 ${store.snapshot.overview.launchedPct || 37.4}%`,
-  },
-  {
-    label: '双轨运行',
-    value: store.snapshot.overview.dual ? format(store.snapshot.overview.dual) : '—',
-    unit: '家',
-    tone: 'warning',
-    hint: '双轨核对平账阶段',
-  },
-  {
-    label: '准备/建设',
-    value: (
-      store.snapshot.overview.orgTotal !== undefined &&
-      store.snapshot.overview.launched !== undefined &&
-      store.snapshot.overview.dual !== undefined
-    )
-      ? format(store.snapshot.overview.orgTotal - store.snapshot.overview.launched - store.snapshot.overview.dual)
-      : '—',
-    unit: '家',
-    hint: '在建联调与储备批次',
-  },
+const rolloutOverviewComposition = computed(() => {
+  const overview = store.snapshot.overview
+  const pending = Math.max(0, (overview.orgTotal ?? 0) - (overview.launched ?? 0) - (overview.dual ?? 0))
+  return buildOverviewComposition(overview.orgTotal, [
+    { label: '已上线', value: overview.launched, tone: 'success' },
+    { label: '双轨运行', value: overview.dual, tone: 'warning' },
+    { label: '待推进', value: pending, tone: 'neutral' },
+  ])
+})
+
+const c1Primary = computed(() => ({
+  label: '总体上线率',
+  value: store.snapshot.overview.launchedPct ?? '—',
+  unit: '%',
+  tone: 'success' as const,
+  hint: '正式上线单位占总纳管比例',
+}))
+
+const c1Facts = computed(() => [
+  { label: '纳管单位', value: format(store.snapshot.overview.orgTotal), unit: '家' },
+  { label: '推广批次', value: batches.value.length, unit: '批' },
+  { label: '覆盖省份', value: 34, unit: '省' },
 ])
 
 // 色值统一取自 charts/theme.ts，避免图表区与页面外壳出现两套蓝绿黄
@@ -201,7 +196,13 @@ const provinceRolloutOption = computed(() => ({
       :subtitle="`${batches.length} 个批次 · ${format(store.snapshot.overview.orgTotal)} 家单位 · 已上线 ${format(store.snapshot.overview.launched)} 家 (${store.snapshot.overview.launchedPct || 37.4}%)`"
       class="flex-shrink-0"
     >
-      <MetricGrid :items="c1SummaryItems" variant="inline" :columns="3" />
+      <OverviewBand
+        :primary="c1Primary"
+        chart-label="推广状态构成"
+        :total="rolloutOverviewComposition.total"
+        :parts="rolloutOverviewComposition.parts"
+        :facts="c1Facts"
+      />
     </CockpitPanel>
 
     <!-- C2: 用批次堆叠图替代 8 张拥挤工序卡 -->

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildBatchProgressSeries,
   buildCoverageComposition,
+  buildOverviewComposition,
   buildRolloutComposition,
   buildTaskStageSeries,
 } from '../panelData'
@@ -40,5 +41,20 @@ describe('charts/panelData', () => {
       { name: '第一批', construction: 100, launched: 82.5 },
       { name: '第二批', construction: 0, launched: 0 },
     ])
+  })
+
+  it('builds honest overview composition percentages from numeric strings', () => {
+    expect(buildOverviewComposition('100', [
+      { label: '已完成', value: '58', tone: 'success' },
+      { label: '进行中', value: 14, tone: 'accent' },
+      { label: '未开始', value: -3, tone: 'neutral' },
+    ])).toEqual({
+      total: 100,
+      parts: [
+        { label: '已完成', value: 58, percentage: 58, tone: 'success' },
+        { label: '进行中', value: 14, percentage: 14, tone: 'accent' },
+        { label: '未开始', value: 0, percentage: 0, tone: 'neutral' },
+      ],
+    })
   })
 })

@@ -1,16 +1,25 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { PieChart } from 'echarts/charts'
+import { TitleComponent, TooltipComponent } from 'echarts/components'
 import { ChevronRight } from 'lucide-vue-next'
 import AnimatedNumber from './AnimatedNumber.vue'
+import CockpitPanel from './CockpitPanel.vue'
 import LiveProjectionIndicator from './LiveProjectionIndicator.vue'
+import CompositionBar from './blocks/CompositionBar.vue'
+import { buildOverviewComposition } from '../charts/panelData.ts'
+import { calmAnimation, chartInk, chartPalette, chartTooltip } from '../charts/theme.ts'
 import type { LiveProjectionCounts, LiveProjectionEvent } from '../composables/useLiveProjection.ts'
 import type { ProjectSnapshot } from '../stores/project.ts'
 
+use([CanvasRenderer, PieChart, TitleComponent, TooltipComponent])
+
 /**
- * A1 顶部指标带（三分天下架构）：
- * 1. 全域模拟数据总量：单位(2000家)、批次(8批)、单据(505万)、凭证(322万)、数据规模(3184.5万行)、建设进度(63.8%)
- * 2. 今日增量动态：单据、凭证、集成实时跳动 + 最近发生事件单位与省份提示
- * 3. 态势与风险闭环：高风险待处置、未解决、闭环率常驻角标
+ * A1 顶部总览带：建设进度与推广构成、今日实时增量、风险闭环三组信息同屏。
+ * 数字用于精确读数，堆叠条与环图分别负责状态构成和闭环关系。
  */
 const props = defineProps<{
   overview: ProjectSnapshot['overview']
@@ -44,143 +53,122 @@ const eventActionText = computed(() => {
   if (ev.increments.integrations > 0) return `完成接口集成 +${ev.increments.integrations} 笔`
   return '业务处理中'
 })
+
+const safeNumber = (value?: number | null) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const constructionProgress = computed(() => Math.max(0, Math.min(100, safeNumber(props.overview.constructionPct))))
+
+const rolloutComposition = computed(() => {
+  const total = safeNumber(props.overview.orgTotal)
+  const launched = safeNumber(props.overview.launched)
+  const dual = safeNumber(props.overview.dual)
+  return buildOverviewComposition(total, [
+    { label: '已上线', value: launched, tone: 'success' },
+    { label: '双轨', value: dual, tone: 'warning' },
+    { label: '待推进', value: Math.max(0, total - launched - dual), tone: 'neutral' },
+  ])
+})
+
+const closeRate = computed(() => Math.max(0, Math.min(100, safeNumber(props.issuesSummary?.closeRate))))
+
+const riskClosureOption = computed(() => ({
+  ...calmAnimation,
+  tooltip: { trigger: 'item', ...chartTooltip },
+  title: {
+    text: `${closeRate.value}%`,
+    subtext: '闭环率',
+    left: 'center',
+    top: '29%',
+    textStyle: { color: chartInk.textPrimary, fontSize: 15, fontFamily: 'monospace' },
+    subtextStyle: { color: chartInk.textMuted, fontSize: 9 },
+  },
+  series: [{
+    name: '问题闭环',
+    type: 'pie',
+    radius: ['60%', '80%'],
+    center: ['50%', '50%'],
+    label: { show: false },
+    data: [
+      { value: safeNumber(props.issuesSummary?.totalResolved), name: '已闭环', itemStyle: { color: chartPalette.success } },
+      { value: safeNumber(props.issuesSummary?.totalUnresolved), name: '未解决', itemStyle: { color: chartPalette.danger } },
+    ],
+  }],
+}))
 </script>
 
 <template>
-  <!-- A1 顶部指标带：三分天下布局 -->
-  <section class="cockpit-top-bar zone-region" data-zone="A1">
-    <!-- 块一：全域模拟数据总量（展示完整全量模拟资产） -->
-    <div class="kpi-cluster kpi-cluster--totals">
-      <div class="kpi-cluster__header">
-        <span class="kpi-cluster__tag">全域总盘</span>
-        <span class="kpi-cluster__title">全域模拟数据总量</span>
-        <span class="kpi-cluster__badge">覆盖 34 省级行政区 · 8 批次</span>
-      </div>
-      <div class="kpi-cluster__items kpi-cluster__items--totals">
-        <div class="metric">
-          <span class="metric__label">纳管单位</span>
-          <div class="metric__value">
-            <AnimatedNumber :value="overview.orgTotal || 0" :duration="numDuration(800)" /><small>家</small>
-          </div>
-          <span class="metric__foot">已上线 {{ overview.launched || 0 }} 家 ({{ overview.launchedPct || 0 }}%)</span>
-        </div>
-
-        <div class="metric">
-          <span class="metric__label">推广批次</span>
-          <div class="metric__value accent">
-            <AnimatedNumber :value="8" :duration="numDuration(600)" /><small>批</small>
-          </div>
-          <span class="metric__foot">1~8批全网贯通</span>
-        </div>
-
-        <div class="metric">
-          <span class="metric__label">业务单据</span>
-          <div class="metric__value">
-            <AnimatedNumber :value="live.docsTotal || overview.docsTotal || 0" :duration="700" /><small>笔</small>
-          </div>
-          <span class="metric__foot">累计全量入库</span>
-        </div>
-
-        <div class="metric">
-          <span class="metric__label">会计凭证</span>
-          <div class="metric__value">
-            <AnimatedNumber :value="live.vouchersTotal || overview.vouchersTotal || 0" :duration="700" /><small>张</small>
-          </div>
-          <span class="metric__foot">入账率 {{ overview.voucherSuccessPct || 0 }}%</span>
-        </div>
-
-        <div class="metric">
-          <span class="metric__label">数据规模</span>
-          <div class="metric__value gold">
-            <AnimatedNumber :value="Number(((meta?.fullRows || 0) / 10000).toFixed(1))" :decimals="1" :duration="numDuration(800)" /><small>万行</small>
-          </div>
-          <span class="metric__foot">{{ (meta?.fullRows || 0).toLocaleString() }} 封版明细</span>
-        </div>
-
-        <div class="metric">
-          <span class="metric__label">建设进度</span>
-          <div class="metric__value gold">
-            <AnimatedNumber :value="overview.constructionPct || 0" :decimals="1" :duration="numDuration(800)" /><small>%</small>
-          </div>
-          <span class="metric__foot">{{ (construction?.totalTasks || 59910).toLocaleString() }} 项任务推进</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 块二：今日增量与实时动态（随 SSE 实时跳动，显示最近单位事件） -->
-    <div class="kpi-cluster kpi-cluster--live">
-      <div class="kpi-cluster__header">
-        <span class="kpi-cluster__tag kpi-cluster__tag--live">实时链路</span>
-        <span class="kpi-cluster__title">今日增量动态</span>
+  <CockpitPanel
+    title="全域建设运行总览"
+    zone="A1"
+    subtitle="34 省级行政区 · 8 批次 · 建设、推广与风险同屏"
+  >
+    <template #actions>
+      <div class="flex items-center gap-2 text-cockpit-xs text-slate-500">
+        <span class="text-emerald-400 font-mono">实时链路</span>
         <LiveProjectionIndicator :connected="projectionConnected" :event="recentEvent" />
       </div>
-      <div class="kpi-cluster__items">
-        <div class="metric">
-          <span class="metric__label">单据</span>
-          <div class="metric__value success">
-            <span class="metric__sign">+</span><AnimatedNumber :value="live.docsTodayAdded || 0" :duration="500" /><small>笔</small>
-          </div>
-          <span class="metric__foot">{{ shortDate(live.docsAddedAsOfDate) }}</span>
-        </div>
-        <div class="metric">
-          <span class="metric__label">凭证</span>
-          <div class="metric__value success">
-            <span class="metric__sign">+</span><AnimatedNumber :value="live.vouchersTodayAdded || 0" :duration="500" /><small>张</small>
-          </div>
-          <span class="metric__foot">{{ shortDate(live.vouchersAddedAsOfDate) }}</span>
-        </div>
-        <div class="metric">
-          <span class="metric__label">集成</span>
-          <div class="metric__value success">
-            <span class="metric__sign">+</span><AnimatedNumber :value="cumulative.integrations || 0" :duration="500" /><small>笔</small>
-          </div>
-          <span class="metric__foot">本次会话</span>
-        </div>
-      </div>
-      <!-- 实时单位动态条（增量来源单位提示） -->
-      <div class="live-ticker" :class="{ 'live-ticker--active': !!recentEvent }">
-        <template v-if="recentEvent && (recentEvent.unitName || recentEvent.province)">
-          <span class="live-ticker__beacon"></span>
-          <span class="live-ticker__prov">[{{ recentEvent.province }}]</span>
-          <span class="live-ticker__unit" :title="recentEvent.unitName">{{ recentEvent.unitName }}</span>
-          <span class="live-ticker__action">{{ eventActionText }}</span>
-        </template>
-        <template v-else>
-          <span class="live-ticker__idle-dot"></span>
-          <span class="live-ticker__idle-text">实时流水线持续监听中 · 触发时地图联动</span>
-        </template>
-      </div>
-    </div>
+    </template>
 
-    <!-- 块三：运行态势与风险闭环（可点击进入问题清单） -->
-    <div class="kpi-cluster kpi-cluster--risk" @click="$emit('openRisk')">
-      <div class="kpi-cluster__header">
-        <span class="kpi-cluster__tag kpi-cluster__tag--risk">态势监控</span>
-        <span class="kpi-cluster__title">风险预警与闭环</span>
-      </div>
-      <div class="risk-card-content">
-        <div class="risk-primary">
-          <div class="risk-dot-pulse"></div>
-          <div class="risk-main-stat">
-            <div class="risk-val">
-              <AnimatedNumber :value="overview.highRisk || 0" :duration="numDuration(600)" />
-            </div>
-            <span class="risk-txt">高风险待处置</span>
+    <div class="grid grid-cols-12 gap-3 h-20 min-h-0">
+      <section class="col-span-5 flex items-stretch gap-3 min-w-0">
+        <div class="w-28 flex-shrink-0 flex flex-col justify-center border-r border-surface-veil-06 pr-3">
+          <span class="text-cockpit-xs text-slate-500">全网建设进度</span>
+          <div class="flex items-baseline gap-1 mt-1">
+            <b class="font-mono text-cockpit-metric text-sky-400"><AnimatedNumber :value="constructionProgress" :decimals="1" :duration="numDuration(800)" /></b>
+            <small class="text-cockpit-xs text-slate-500">%</small>
           </div>
+          <div class="h-1.5 mt-2 rounded-full bg-white/5 overflow-hidden">
+            <div class="h-full rounded-full bg-sky-400" :style="{ width: `${constructionProgress}%` }" />
+          </div>
+          <span class="text-cockpit-xs text-slate-500 mt-1">{{ (construction?.totalTasks || 0).toLocaleString() }} 项任务</span>
         </div>
-        <div class="risk-divider"></div>
-        <div class="risk-subs">
-          <div class="risk-sub-stat">
-            <span class="sub-lbl">未解决</span>
-            <span class="sub-val">{{ (overview.unresolvedIssues || 0).toLocaleString() }}</span>
+
+        <div class="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+          <div class="grid grid-cols-3 gap-2">
+            <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500">业务单据</span><b class="font-mono text-cockpit-md text-slate-100"><AnimatedNumber :value="live.docsTotal || overview.docsTotal || 0" :duration="700" /></b></div>
+            <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500">会计凭证</span><b class="font-mono text-cockpit-md text-slate-100"><AnimatedNumber :value="live.vouchersTotal || overview.vouchersTotal || 0" :duration="700" /></b></div>
+            <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500">数据规模</span><b class="font-mono text-cockpit-md text-amber-400"><AnimatedNumber :value="Number(((meta?.fullRows || 0) / 10000).toFixed(1))" :decimals="1" :duration="numDuration(800)" /><small class="text-cockpit-xs text-slate-500 ml-0.5">万行</small></b></div>
           </div>
-          <div class="risk-sub-stat">
-            <span class="sub-lbl">闭环率</span>
-            <span class="sub-val success">{{ issuesSummary?.closeRate ?? '50.0' }}%</span>
-          </div>
+          <CompositionBar :total="rolloutComposition.total" :parts="rolloutComposition.parts" />
         </div>
-        <ChevronRight :size="14" class="risk-chevron" />
-      </div>
+      </section>
+
+      <section class="col-span-4 flex flex-col justify-center gap-2 px-3 border-x border-surface-veil-06 min-w-0">
+        <div class="grid grid-cols-3 gap-2">
+          <div><span class="block text-cockpit-xs text-slate-500">今日单据</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.docsTodayAdded || 0" :duration="500" /></b></div>
+          <div><span class="block text-cockpit-xs text-slate-500">今日凭证</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.vouchersTodayAdded || 0" :duration="500" /></b></div>
+          <div><span class="block text-cockpit-xs text-slate-500">本次集成</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="cumulative.integrations || 0" :duration="500" /></b></div>
+        </div>
+        <div class="flex items-center gap-1.5 px-2 py-1 rounded bg-sky-500/10 border border-sky-500/20 text-cockpit-xs min-w-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" />
+          <template v-if="recentEvent && (recentEvent.unitName || recentEvent.province)">
+            <span class="text-sky-400 flex-shrink-0">[{{ recentEvent.province }}]</span>
+            <span class="text-slate-200 truncate">{{ recentEvent.unitName }}</span>
+            <span class="text-emerald-400 truncate ml-auto">{{ eventActionText }}</span>
+          </template>
+          <span v-else class="text-slate-500 truncate">实时流水线持续监听中 · {{ shortDate(live.docsAddedAsOfDate) }}</span>
+        </div>
+      </section>
+
+      <button
+        type="button"
+        class="col-span-3 flex items-center min-w-0 rounded-lg bg-rose-950/20 border border-rose-500/20 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
+        title="进入风险中心"
+        @click="$emit('openRisk')"
+      >
+        <div class="h-full w-24 flex-shrink-0">
+          <VChart :option="riskClosureOption" autoresize class="h-full w-full" />
+        </div>
+        <div class="flex-1 min-w-0 grid grid-cols-2 gap-2 pr-2">
+          <div><span class="block text-cockpit-xs text-slate-500">高风险</span><b class="font-mono text-cockpit-lg text-rose-400"><AnimatedNumber :value="overview.highRisk || 0" :duration="numDuration(600)" /></b></div>
+          <div><span class="block text-cockpit-xs text-slate-500">未解决</span><b class="font-mono text-cockpit-lg text-amber-400">{{ (overview.unresolvedIssues || 0).toLocaleString() }}</b></div>
+          <span class="col-span-2 text-cockpit-xs text-slate-500 truncate">风险预警与闭环处置</span>
+        </div>
+        <ChevronRight :size="14" class="text-slate-500 mr-2 flex-shrink-0" />
+      </button>
     </div>
-  </section>
+  </CockpitPanel>
 </template>
