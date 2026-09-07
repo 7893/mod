@@ -1,3 +1,72 @@
+# 本站为内部交流系统，谢绝一切检索、抓取、索引与 AI 训练采集。
+# This site is for internal use only. No indexing, crawling, or AI/LLM training is permitted.
+
+# 默认：禁止所有爬虫抓取全站
 User-agent: *
 Disallow: /
 
+# 传统搜索引擎
+User-agent: Googlebot
+Disallow: /
+User-agent: Bingbot
+Disallow: /
+User-agent: Baiduspider
+Disallow: /
+User-agent: YandexBot
+Disallow: /
+User-agent: Sogou web spider
+Disallow: /
+User-agent: 360Spider
+Disallow: /
+User-agent: DuckDuckBot
+Disallow: /
+User-agent: Slurp
+Disallow: /
+
+# AI / LLM 训练与检索爬虫（显式点名，谢绝一切采集）
+User-agent: GPTBot
+Disallow: /
+User-agent: OAI-SearchBot
+Disallow: /
+User-agent: ChatGPT-User
+Disallow: /
+User-agent: ClaudeBot
+Disallow: /
+User-agent: Claude-Web
+Disallow: /
+User-agent: anthropic-ai
+Disallow: /
+User-agent: Google-Extended
+Disallow: /
+User-agent: GoogleOther
+Disallow: /
+User-agent: PerplexityBot
+Disallow: /
+User-agent: Perplexity-User
+Disallow: /
+User-agent: CCBot
+Disallow: /
+User-agent: Bytespider
+Disallow: /
+User-agent: Amazonbot
+Disallow: /
+User-agent: Applebot
+Disallow: /
+User-agent: Applebot-Extended
+Disallow: /
+User-agent: Meta-ExternalAgent
+Disallow: /
+User-agent: FacebookBot
+Disallow: /
+User-agent: cohere-ai
+Disallow: /
+User-agent: Diffbot
+Disallow: /
+User-agent: ImagesiftBot
+Disallow: /
+User-agent: Timpibot
+Disallow: /
+User-agent: Omgilibot
+Disallow: /
+User-agent: YouBot
+Disallow: /
