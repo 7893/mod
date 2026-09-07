@@ -7,7 +7,8 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
+
 
 from .api import router as router_v2
 from .live_projection import get_live_projection_broker
@@ -93,6 +94,16 @@ class NoIndexMiddleware(BaseHTTPMiddleware):
 app.add_middleware(NoIndexMiddleware)
 
 
+@app.exception_handler(500)
+async def internal_server_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.error("Unhandled server error on %s %s: %s", request.method, request.url.path, exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "内部服务错误，请联系系统管理员"},
+    )
+
+
 @app.get("/")
 def root() -> dict[str, str]:
     return {"service": "MOD API", "status": "ok"}
+

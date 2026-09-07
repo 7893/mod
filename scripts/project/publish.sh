@@ -80,6 +80,7 @@ sleep 4
 
 # 6. 验证
 echo "[6/8] 验证线上服务与接口健康探针..."
+# 探针 1: KI-046 验证 /api/health (HTTP 200 + DB 连接健康)
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL")
 if [ "$HTTP_CODE" != "200" ]; then
     echo "ERROR: /api/health 线上返回 $HTTP_CODE，自动回滚..."
@@ -91,8 +92,30 @@ if [ "$HTTP_CODE" != "200" ]; then
     echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
     exit 1
 fi
-echo "  /api/health OK（HTTP $HTTP_CODE）"
-curl -s "$HEALTH_URL" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'  DB: {d[\"database\"]}  时间: {d[\"now_cst\"]}')" 2>/dev/null || true
+
+HEALTH_BODY=$(curl -s "$HEALTH_URL")
+if ! echo "$HEALTH_BODY" | python3 -c '
+import sys, json
+data = json.load(sys.stdin)
+if data.get("status") != "ok":
+    sys.exit(1)
+db = data.get("database")
+tz = data.get("session_timezone")
+now = data.get("now_cst")
+if not db or not now:
+    sys.exit(1)
+print(f"  Health probe OK: DB={db} tz={tz} now={now}")
+'; then
+    echo "ERROR: /api/health 数据库探针返回异常或非健康状态，自动回滚..."
+    [ -n "$PREV_FE" ] && ln -sfn "$PREV_FE" "$FE_CURRENT"
+    [ -n "$PREV_BE" ] && ln -sfn "$PREV_BE" "$BE_CURRENT"
+    sudo systemctl reload nginx
+    sudo systemctl restart mod-api
+    sudo systemctl restart mod-simulator
+    echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
+    exit 1
+fi
+
 
 # 探针 2: KI-039 验证 /api/simulator/status
 STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$SIMULATOR_STATUS_URL")

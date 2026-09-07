@@ -403,3 +403,121 @@ def test_insights_generate_requires_authentication(monkeypatch):
     assert res.status_code == 200
     assert res.json()["status"] == "ok"
 
+
+def test_health_probe_status_code_when_db_down(monkeypatch):
+    """KI-046: 数据库离线或不可达时，/api/health 必须返回 HTTP 503 明确标识降级故障。"""
+    from app.db import connection
+
+    def mock_offline_connection():
+        yield None
+
+    app.dependency_overrides[connection] = mock_offline_connection
+    try:
+        res = client.get("/api/health")
+        assert res.status_code == 503
+        data = res.json()
+        assert data["status"] == "degraded"
+        assert "Database not reachable" in data["notice"]
+    finally:
+        app.dependency_overrides.pop(connection, None)
+
+
+def test_health_probe_status_code_when_db_healthy(monkeypatch):
+    """KI-046: 数据库正常连通时，/api/health 返回 HTTP 200 及数据库时间与元数据。"""
+    from unittest.mock import MagicMock
+    from app.db import connection
+
+    mock_conn = MagicMock()
+    mock_row = MagicMock()
+    mock_row.mappings.return_value.one.return_value = {
+        "db": "mod",
+        "tz": "+08:00",
+        "now_cst": "2026-09-08 00:44:00",
+    }
+    mock_conn.execute.return_value = mock_row
+
+    def mock_healthy_connection():
+        yield mock_conn
+
+    app.dependency_overrides[connection] = mock_healthy_connection
+    try:
+        res = client.get("/api/health")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "ok"
+        assert data["database"] == "mod"
+        assert data["session_timezone"] == "+08:00"
+        assert data["now_cst"] == "2026-09-08 00:44:00"
+    finally:
+        app.dependency_overrides.pop(connection, None)
+
+
+def test_connection_generator_lifecycle_and_throw():
+    """KI-046: connection() 生成器依赖在下游抛出异常时绝不能二次 yield 触发 generator didn't stop after throw()。"""
+    from unittest.mock import MagicMock, patch
+    from app.db import connection
+
+    mock_engine = MagicMock()
+    mock_conn = MagicMock()
+    mock_engine.connect.return_value = mock_conn
+
+    with patch("app.db.get_engine", return_value=mock_engine):
+        gen = connection()
+        yielded = next(gen)
+        assert yielded is mock_conn
+
+        # 下游抛出异常时，生成器必须执行 finally: close 并正常退出，不得二次 yield
+        test_exc = RuntimeError("simulated business error in route")
+        try:
+            gen.throw(test_exc)
+            assert False, "应当抛出异常退出生成器"
+        except RuntimeError as e:
+            assert e is test_exc
+            mock_conn.close.assert_called()
+
+    # 测试连接建立即失败的情形
+    failing_engine = MagicMock()
+    failing_engine.connect.side_effect = ConnectionRefusedError("db refused")
+    with patch("app.db.get_engine", return_value=failing_engine):
+        gen_fail = connection()
+        val = next(gen_fail)
+        assert val is None
+        # 生成器应当直接 return 结束
+        try:
+            next(gen_fail)
+            assert False, "生成器应当在 yield None 后终止"
+        except StopIteration:
+            pass
+
+
+def test_error_responses_desensitized(monkeypatch):
+    """KI-046: 服务端异常信息脱敏，绝不暴露敏感 SQL、内部连接或堆栈。"""
+    from unittest.mock import MagicMock
+    from app.db import connection
+
+    # 1. /api/health 查询报错时不泄露底层敏感字符串
+    mock_conn = MagicMock()
+    mock_conn.execute.side_effect = Exception("pymysql.err.OperationalError: Table mod.secret_tbl does not exist")
+
+    def mock_failing_connection():
+        yield mock_conn
+
+    app.dependency_overrides[connection] = mock_failing_connection
+    try:
+        res = client.get("/api/health")
+        assert res.status_code == 503
+        data = res.json()
+        assert data["status"] == "degraded"
+        assert "secret_tbl" not in data.get("error", "")
+        assert data["error"] == "Database health check failed"
+    finally:
+        app.dependency_overrides.pop(connection, None)
+
+    # 2. /api/insights/briefing 异常时不泄露内部错误
+    monkeypatch.setattr("app.services.daily_briefing.get_latest", MagicMock(side_effect=Exception("DB syntax error near DROP TABLE")))
+    res_briefing = client.get("/api/insights/briefing")
+    assert res_briefing.status_code == 200
+    assert "DROP TABLE" not in res_briefing.json().get("message", "")
+    assert res_briefing.json()["message"] == "服务端错误，暂无可用简报"
+
+

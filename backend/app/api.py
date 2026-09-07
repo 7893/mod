@@ -1,10 +1,9 @@
-from __future__ import annotations
-
+import logging
 from datetime import datetime
 from threading import Lock
 from time import monotonic
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
@@ -19,6 +18,8 @@ from .services.dashboard import (
     normalize_region,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api")
 
 _snapshot_cache: dict | None = None
@@ -31,9 +32,17 @@ _meta_cached_at = 0.0
 _meta_lock = Lock()
 _META_TTL_SECONDS = 60
 
-@router.get("/health")
-def health(conn: Connection | None = Depends(connection)) -> dict:
+
+@router.get(
+    "/health",
+    responses={
+        200: {"description": "服务与数据库连接健康"},
+        503: {"description": "数据库不可达或处于降级状态"},
+    },
+)
+def health(response: Response, conn: Connection | None = Depends(connection)) -> dict:
     if conn is None:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {
             "status": "degraded",
             "notice": "Database not reachable; operating in verified fallback snapshot mode",
@@ -47,7 +56,10 @@ def health(conn: Connection | None = Depends(connection)) -> dict:
             "now_cst": str(row["now_cst"]),
         }
     except Exception as e:
-        return {"status": "degraded", "error": str(e)}
+        logger.error("Health probe query failed: %s", e)
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"status": "degraded", "error": "Database health check failed"}
+
 
 
 
@@ -250,11 +262,12 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
         base_insights["action_token"] = get_current_action_token()
         return base_insights
     except Exception as e:
+        logger.error("Failed to load insights status: %s", e, exc_info=True)
         snap = dashboard_snapshot(conn)
         base_insights = dict(snap.get("insights", {}))
-        base_insights["hw_ml"] = {"status": "unavailable", "message": f"服务端错误：{e}"}
+        base_insights["hw_ml"] = {"status": "unavailable", "message": "服务端错误，状态不可用"}
         base_insights["cf_ai"] = {"status": "unavailable", "message": "服务端错误，状态不可用"}
-        base_insights["summary"] = f"研判引擎暂时不可用：{e}"
+        base_insights["summary"] = "研判引擎暂时不可用"
         base_insights["action_token"] = get_current_action_token()
         return base_insights
 
@@ -295,9 +308,10 @@ def insights_generate(conn: Connection | None = Depends(connection)) -> dict:
         overview_data: dict = snap.get("overview", {})
         return cf_ai.generate_insights(overview_data)
     except Exception as e:
+        logger.error("Failed to generate insights: %s", e, exc_info=True)
         return {
             "status": "unavailable",
-            "message": f"服务端错误，CF AI 未调用：{e}",
+            "message": "服务端错误，CF AI 调用失败",
         }
 
 
@@ -314,9 +328,10 @@ def insights_latest() -> dict:
         cf_ai = CloudflareAIAdapter()
         return cf_ai.get_latest_cached_insights()
     except Exception as e:
+        logger.error("Failed to fetch latest insights: %s", e, exc_info=True)
         return {
             "status": "unavailable",
-            "message": f"服务端错误：{e}",
+            "message": "服务端错误，无法读取最新洞察",
         }
 
 
@@ -330,7 +345,9 @@ def insights_briefing(conn: Connection | None = Depends(connection)) -> dict:
         from .services.daily_briefing import get_latest
         return get_latest(conn)
     except Exception as e:
-        return {"status": "no_briefing", "message": f"服务端错误：{e}"}
+        logger.error("Failed to fetch briefing: %s", e, exc_info=True)
+        return {"status": "no_briefing", "message": "服务端错误，暂无可用简报"}
+
 
 
 @router.get("/operations/summary")
