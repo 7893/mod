@@ -71,8 +71,10 @@ def verify_baseline() -> bool:
             )
         ).scalar()
 
-        if risk_train_cnt == 1600 and risk_test_cnt == 400 and overlap_risk == 0:
-            logger.info("✅ 风险分类模型 Train/Test 切分合规：训练集 1600 行 (80%)，测试集 400 行 (20%)，交集为 0")
+        total_risk = (risk_train_cnt or 0) + (risk_test_cnt or 0)
+        is_risk_80_20 = total_risk > 0 and abs(risk_train_cnt / total_risk - 0.8) < 0.02
+        if is_risk_80_20 and overlap_risk == 0:
+            logger.info("✅ 风险分类模型 Train/Test 切分合规：训练集 %d 行，测试集 %d 行 (~80%%/20%%)，交集为 0", risk_train_cnt, risk_test_cnt)
         else:
             logger.error("❌ 风险分类切分异常: train=%s, test=%s, overlap=%s", risk_train_cnt, risk_test_cnt, overlap_risk)
             passed = False
@@ -102,8 +104,10 @@ def verify_baseline() -> bool:
         min_train_days = conn.execute(text("SELECT MIN(days_since_go_live) FROM `mod`.`ml_feat_doc_delta_train`")).scalar()
         max_test_days = conn.execute(text("SELECT MAX(days_since_go_live) FROM `mod`.`ml_feat_doc_delta_test`")).scalar()
 
-        if doc_train_cnt == 1600 and doc_test_cnt == 400 and overlap_doc == 0 and min_train_days >= max_test_days:
-            logger.info("✅ 单据量回归模型 时序切分合规：早期 1600 行训练，未来 400 行测试 (days_since_go_live 严格单调无穿越)")
+        total_doc = (doc_train_cnt or 0) + (doc_test_cnt or 0)
+        is_doc_80_20 = total_doc > 0 and abs(doc_train_cnt / total_doc - 0.8) < 0.02
+        if is_doc_80_20 and overlap_doc == 0 and min_train_days >= max_test_days:
+            logger.info("✅ 单据量回归模型 时序切分合规：早期 %d 行训练，未来 %d 行测试 (~80%%/20%%，days_since_go_live 严格单调无穿越)", doc_train_cnt, doc_test_cnt)
         else:
             logger.error("❌ 单据量时序切分异常: train=%s, test=%s, overlap=%s, min_train_days=%s, max_test_days=%s",
                          doc_train_cnt, doc_test_cnt, overlap_doc, min_train_days, max_test_days)

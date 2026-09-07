@@ -160,6 +160,7 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             ROUND(100.0 * ds.integration_success / NULLIF(ds.integration_count, 0), 2) AS integration_success_pct,
             (SELECT SUM(unresolved) FROM issue_metric_snapshot WHERE date = (SELECT MAX(date) FROM issue_metric_snapshot WHERE date <= :anchor_date)) AS unresolved_issues,
             (SELECT SUM(high) FROM risk_metric_snapshot WHERE date = (SELECT MAX(date) FROM risk_metric_snapshot WHERE date <= :anchor_date)) AS high_risk,
+            (SELECT COUNT(*) FROM org_unit WHERE start_date = :anchor_date AND batch_id = 8) AS org_today_added,
             (SELECT COUNT(DISTINCT region) FROM org_unit) AS regions,
             :anchor_date AS as_of_date
         FROM daily_stats ds
@@ -183,13 +184,14 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
                 o.id,
                 o.status,
                 CASE
+                    WHEN o.batch_id = 8 THEN 8
                     WHEN o.status = '稳定运行' AND o.id <= 150 THEN 1
                     WHEN o.status = '稳定运行' AND o.id <= 330 THEN 2
                     WHEN o.status = '稳定运行' THEN 3
                     WHEN o.status = '已上线' AND o.id <= 580 THEN 4
                     WHEN o.status = '已上线' THEN 5
                     WHEN o.status = '双轨运行中' THEN 6
-                    WHEN o.id > 1600 THEN 7
+                    WHEN o.id > 1600 AND o.id <= 2000 THEN 7
                     ELSE 8
                 END AS batchId
             FROM org_unit o
@@ -402,6 +404,7 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
         integration_success_pct = numeric(ov_row["integration_success_pct"])
 
         insights_data = dict(fallback.get("insights", {}))
+        batch_8_count = next((b["total"] for b in rollout_rows if b["batchId"] == 8), 647)
         insights_data["ruleBasedAlerts"] = [
             {
                 "level": "INFO",
@@ -416,9 +419,16 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             {
                 "level": "WARNING",
                 "title": "重点在建批次接口联调与数据准备督导",
-                "detail": "第七批 400 家在建单位平均进度 62.7%，第八批 647 家储备单位进入期初数据准备期，需重点防范接口联调堵点。",
+                "detail": f"第七批 400 家在建单位平均进度 62.7%，第八批 {batch_8_count} 家储备单位进入期初数据准备期，需重点防范接口联调堵点。",
             },
         ]
+
+        org_today_added = int(ov_row.get("org_today_added") or 0)
+        org_added_note = (
+            f"当日新增 {org_today_added} 家单位入池第八批动态储备池"
+            if org_today_added > 0
+            else "储备池动态待命"
+        )
 
         return {
             "meta": {
@@ -435,9 +445,9 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             },
             "overview": {
                 "orgTotal": ov_row["org_total"],
-                "orgTodayAdded": 0,
+                "orgTodayAdded": org_today_added,
                 "orgAddedAsOfDate": as_of_date,
-                "orgAddedNote": "当前封版无可追溯新增单位",
+                "orgAddedNote": org_added_note,
                 "contactsTotal": ov_row["contacts_total"],
                 "contactsCoveredOrgs": contacts_covered_orgs,
                 "contactsCoveragePct": contacts_coverage_pct,

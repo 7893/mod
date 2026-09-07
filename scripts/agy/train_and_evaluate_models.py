@@ -178,8 +178,9 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
     rng = random.Random(seed)
     rng.shuffle(risk_ids)
 
-    train_risk_ids = risk_ids[:1600]
-    test_risk_ids = risk_ids[1600:]
+    split_risk_idx = int(len(risk_ids) * 0.8)
+    train_risk_ids = risk_ids[:split_risk_idx]
+    test_risk_ids = risk_ids[split_risk_idx:]
 
     # Prepare tables
     conn.execute(text("DROP TABLE IF EXISTS `mod`.`ml_feat_risk_train`"))
@@ -233,8 +234,9 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
         )
     ).mappings().all()
 
-    train_doc_ids = [r["id"] for r in doc_rows[:1600]]
-    test_doc_ids = [r["id"] for r in doc_rows[1600:]]
+    split_doc_idx = int(len(doc_rows) * 0.8)
+    train_doc_ids = [r["id"] for r in doc_rows[:split_doc_idx]]
+    test_doc_ids = [r["id"] for r in doc_rows[split_doc_idx:]]
 
     conn.execute(text("DROP TABLE IF EXISTS `mod`.`ml_feat_doc_delta_train`"))
     conn.execute(text("DROP TABLE IF EXISTS `mod`.`ml_feat_doc_delta_test`"))
