@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildBatchOverviewSeries,
   buildBatchProgressSeries,
   buildCoverageComposition,
   buildOverviewComposition,
   buildRolloutComposition,
   buildTaskStageSeries,
+  parsePercentage,
 } from '../panelData'
 
 describe('charts/panelData', () => {
@@ -40,6 +42,24 @@ describe('charts/panelData', () => {
     ])).toEqual([
       { name: '第一批', construction: 100, launched: 82.5 },
       { name: '第二批', construction: 0, launched: 0 },
+    ])
+  })
+
+  it('parses numeric-string percentages without turning missing values into data', () => {
+    expect(parsePercentage('65.4')).toBe(65.4)
+    expect(parsePercentage(108)).toBe(100)
+    expect(parsePercentage(null)).toBeNull()
+    expect(parsePercentage('not-a-number')).toBeNull()
+  })
+
+  it('condenses completed batches while retaining active rollout rows', () => {
+    expect(buildBatchOverviewSeries([
+      { name: '第一批', constructionPct: 100, launchedPct: 100 },
+      { name: '第二批', constructionPct: 100, launchedPct: 100 },
+      { name: '第三批', constructionPct: 72.5, launchedPct: 0 },
+    ])).toEqual([
+      { name: '已完成2批', construction: 100, launched: 100 },
+      { name: '第三批', construction: 72.5, launched: 0 },
     ])
   })
 

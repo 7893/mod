@@ -4,12 +4,9 @@ import { useRouter } from 'vue-router'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, PieChart } from 'echarts/charts'
-import { GridComponent, LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components'
+import { BarChart, GaugeChart } from 'echarts/charts'
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
 import {
-  Database,
-  FileCheck2,
-  TrendingUp,
   ChevronRight,
   ArrowUpRight,
   Users,
@@ -19,18 +16,16 @@ import CockpitTopBar from '../components/CockpitTopBar.vue'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import OverviewTrendChart from '../components/OverviewTrendChart.vue'
 import AnimatedProgress from '../components/AnimatedProgress.vue'
-import MetricGrid from '../components/blocks/MetricGrid.vue'
 import StatusList from '../components/blocks/StatusList.vue'
-import type { MetricItem, StatusRow } from '../components/blocks/types.ts'
-import { buildBatchProgressSeries } from '../charts/panelData.ts'
-import { createBatchProgressOption, createProvinceProfileOption } from '../charts/panelOptions.ts'
+import type { StatusRow } from '../components/blocks/types.ts'
+import { buildBatchOverviewSeries, parsePercentage } from '../charts/panelData.ts'
+import { createBatchProgressOption, createOperationsQualityOption, createProvinceProfileOption } from '../charts/panelOptions.ts'
 import { useLiveProjection } from '../composables/useLiveProjection.ts'
 import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
-import { formatPercent } from '../formatters/metrics.ts'
 import { useLiveProjectionStore } from '../stores/liveProjection.ts'
 import { useProjectStore } from '../stores/project.ts'
 
-use([CanvasRenderer, BarChart, PieChart, GridComponent, LegendComponent, TitleComponent, TooltipComponent])
+use([CanvasRenderer, BarChart, GaugeChart, GridComponent, LegendComponent, TooltipComponent])
 
 const store = useProjectStore()
 const liveStore = useLiveProjectionStore()
@@ -102,31 +97,23 @@ const selectedProvinceData = computed(() => {
 
 const provinceProfileOption = computed(() => createProvinceProfileOption(selectedProvinceData.value.progress))
 const batchProgressOption = computed(() => createBatchProgressOption(
-  buildBatchProgressSeries(store.snapshot.rollout || []),
+  buildBatchOverviewSeries(store.snapshot.rollout || []),
 ))
 
-const opsItems = computed<MetricItem[]>(() => [
+const operationsQualityOption = computed(() => createOperationsQualityOption([
   {
-    label: '双轨运行',
-    value: store.snapshot.overview.dual,
-    icon: Database,
-    hint: '家并行核对中',
-  },
-  {
-    label: '凭证入账率',
-    value: formatPercent(store.snapshot.overview.voucherSuccessPct),
-    icon: FileCheck2,
+    name: '凭证入账',
+    value: parsePercentage(store.snapshot.overview.voucherSuccessPct),
+    detail: `${store.snapshot.overview.voucherTotal?.toLocaleString() ?? '—'} 张`,
     tone: 'success',
-    hint: `${store.snapshot.overview.voucherTotal?.toLocaleString()} 张`,
   },
   {
-    label: '接口成功率',
-    value: formatPercent(store.snapshot.overview.integrationSuccessPct),
-    icon: TrendingUp,
-    tone: 'warning',
-    hint: `${store.snapshot.operations.integrationResult?.toLocaleString()} 笔`,
+    name: '接口集成',
+    value: parsePercentage(store.snapshot.overview.integrationSuccessPct),
+    detail: `${store.snapshot.operations.integrationResult?.toLocaleString() ?? '—'} 笔`,
+    tone: 'accent',
   },
-])
+]))
 
 const riskRows = computed<StatusRow[]>(() =>
   (store.snapshot.issues || []).map((item) => ({
@@ -210,9 +197,9 @@ const chooseProvince = (name: string) => {
                 </button>
               </div>
             </template>
-            <div class="grid grid-cols-2 items-center gap-2 h-24 bg-surface-veil-03 border border-surface-veil-06 rounded-xl p-2">
-              <VChart :option="provinceProfileOption" autoresize class="h-full min-w-0" />
-              <div class="grid grid-rows-3 h-full divide-y divide-white/5 min-w-0">
+            <div class="grid grid-cols-5 items-center gap-2 h-24 bg-surface-veil-03 border border-surface-veil-06 rounded-xl p-2">
+              <VChart :option="provinceProfileOption" autoresize class="col-span-2 h-full min-w-0" />
+              <div class="col-span-3 grid grid-rows-3 h-full divide-y divide-white/5 min-w-0">
                 <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">纳入单位</span><b class="font-mono text-slate-100">{{ selectedProvinceData.total }}</b></div>
                 <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">正式上线</span><b class="font-mono text-emerald-400">{{ selectedProvinceData.launched }}</b></div>
                 <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">双轨运行</span><b class="font-mono text-sky-400">{{ selectedProvinceData.dual }}</b></div>
@@ -224,7 +211,7 @@ const chooseProvince = (name: string) => {
           <CockpitPanel
             title="批次推进阶梯"
             zone="A3"
-            subtitle="全网8批工序推进"
+            subtitle="完成批次合并 · 聚焦在推批次"
             class="flex-1 min-h-0"
           >
             <VChart :option="batchProgressOption" autoresize class="w-full h-full min-h-0" />
@@ -233,19 +220,11 @@ const chooseProvince = (name: string) => {
 
         <!-- 下部分：A4 上线趋势图 + 最新快照小标注 (A-4) -->
         <CockpitPanel
-          title="上线走势与推进速率"
+          title="上线与双轨走势"
           zone="A4"
-          :subtitle="`近7日平稳推进 · 累计上线 ${store.snapshot.overview.launched ?? 0} 家`"
+          :subtitle="`7 个进度节点 · 累计上线 ${store.snapshot.overview.launched ?? 0} 家`"
         >
-          <div class="w-full h-full flex flex-col min-h-0 gap-2">
-            <OverviewTrendChart class="flex-1 min-h-0" :data="store.snapshot.trend" />
-            <!-- A4 数据小标注，消除空旷感 -->
-            <div class="flex items-center justify-between text-cockpit-xs text-slate-400 px-2.5 py-1.5 bg-surface-veil-03 rounded-lg border border-surface-veil-06 flex-shrink-0">
-              <span>正式上线: <b class="font-mono text-sky-400">{{ store.snapshot.overview.launched }}</b> 家</span>
-              <span>双轨核对: <b class="font-mono text-amber-400">{{ store.snapshot.overview.dual }}</b> 家</span>
-              <span>数据基线: <b class="font-mono text-slate-300">{{ shortDate(store.snapshot.overview.docsAddedAsOfDate || store.snapshot.meta.asOfDate) }}</b></span>
-            </div>
-          </div>
+          <OverviewTrendChart class="w-full h-full min-h-0" :data="store.snapshot.trend" />
         </CockpitPanel>
       </aside>
 
@@ -275,11 +254,19 @@ const chooseProvince = (name: string) => {
           <CockpitPanel
             title="全网运营质效"
             zone="A6"
-            subtitle="单据凭证质效"
+            subtitle="运行规模与质量对比"
             class="flex-1 min-h-0"
           >
-            <div class="flex flex-col h-full min-h-0">
-              <MetricGrid :items="opsItems" variant="inline" :columns="1" fill />
+            <div class="grid grid-cols-3 h-full min-h-0 items-stretch">
+              <div class="flex flex-col justify-center border-r border-surface-veil-06 pr-2 min-w-0">
+                <span class="text-cockpit-xs text-slate-500">双轨运行</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <b class="font-mono text-cockpit-metric text-sky-400">{{ store.snapshot.overview.dual ?? '—' }}</b>
+                  <small class="text-cockpit-xs text-slate-500">家</small>
+                </div>
+                <span class="text-cockpit-xs text-slate-500 mt-1">并行核对中</span>
+              </div>
+              <VChart :option="operationsQualityOption" autoresize class="col-span-2 w-full h-full min-w-0 pl-2" />
             </div>
           </CockpitPanel>
 

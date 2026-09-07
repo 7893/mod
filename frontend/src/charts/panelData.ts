@@ -22,6 +22,12 @@ export interface CompositionPartInput {
   tone: CompositionTone
 }
 
+export function parsePercentage(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : null
+}
+
 export function buildOverviewComposition(
   total: number | string | null | undefined,
   parts: CompositionPartInput[],
@@ -78,13 +84,28 @@ export function buildCoverageComposition(total?: number | null, covered?: number
 
 export function buildBatchProgressSeries(batches: Array<{
   name: string
-  constructionPct: number
-  launchedPct: number
+  constructionPct: number | string
+  launchedPct: number | string
 }>) {
-  const normalize = (value: number) => Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0))
   return batches.map((batch) => ({
     name: batch.name,
-    construction: normalize(batch.constructionPct),
-    launched: normalize(batch.launchedPct),
+    construction: parsePercentage(batch.constructionPct) ?? 0,
+    launched: parsePercentage(batch.launchedPct) ?? 0,
   }))
+}
+
+export function buildBatchOverviewSeries(batches: Array<{
+  name: string
+  constructionPct: number | string
+  launchedPct: number | string
+}>) {
+  const list = buildBatchProgressSeries(batches)
+  const completed = list.filter((batch) => batch.construction === 100 && batch.launched === 100)
+  const active = list.filter((batch) => batch.construction !== 100 || batch.launched !== 100)
+
+  if (completed.length <= 1) return list
+  return [
+    { name: `已完成${completed.length}批`, construction: 100, launched: 100 },
+    ...active,
+  ]
 }
