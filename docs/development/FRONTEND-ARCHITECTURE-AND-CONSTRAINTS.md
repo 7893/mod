@@ -1,6 +1,6 @@
 # 前端整体规划与约束规范
 
-更新日期：2026-09-06
+更新日期：2026-09-07
 状态：现行
 适用范围：`frontend/` 下所有页面、组件、样式与状态；约束人类与 AI 的前端改动
 
@@ -124,8 +124,8 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
   `ConstructionView`（B 屏）、`RolloutView`（C 屏）、`OperationsView`（D 屏）、`IssuesView`（E 屏）与 `InsightsView`（F 屏）已按同一契约全量迁移到 `CockpitPanel`、具名 Grid 与集中 Token。
 - 全站存量专属旧 CSS（`rollout.css`、`operations.css`、`issues.css`、`insights.css`）已全部物理清零，旧物料 `components/Panel.vue` 已彻底物理删除；`DataView`（数据台账页）已统一为 `CockpitPanel` + Tailwind 范式，`styles.css` 仅保留基座与通用物料层。
 - 全站各视图整体骨架、物料与 Token 三层契约已全面闭环生效。
-- A1、B1、C1、A2、A3、B2、B4、B5、C2、C5、D4、D6、D7、E4、F3、F4、F5 已完成面板密度图表化：拥挤的横排卡收敛为比较图，空旷数字面板补充构成图，长篇简报转为分组摘要卡，重复信息由图表交互或悬停提示承载；
-  B1/C1 首屏总览统一复用 `OverviewBand` 与 `CompositionBar`，图表派生数据集中在 `charts/`，视觉统一复用 `charts/theme.ts`。
+- A1、B1、C1、D1、E1、F1、A2、A3、B2、B4、B5、C2、C5、D4、D6、D7、E4、F3、F4、F5 已完成面板密度图表化：拥挤的横排卡收敛为比较图，空旷数字面板补充构成、进度或质量图，长篇简报转为分组摘要卡，重复信息由图表交互或悬停提示承载。
+- 六屏主面板采用统一的“领域主图 + 少量精确事实”语言，但不强制同构：A1 为双进度环、运营规模谱和风险闭环，B2 为阶段状态矩阵与八轴轮廓，C1 为上线仪表与推进漏斗，D1 为业务规模谱与结构效率，E1 为合规仪表与监督梯队，F1 为风险构成与模型质量门禁。图表派生数据集中在 `charts/`，视觉统一复用 `charts/theme.ts`。
 
 ## 重构执行顺序（后续 AI 必须按此顺序，不得跳步）
 

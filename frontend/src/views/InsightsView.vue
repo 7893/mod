@@ -5,9 +5,7 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
-  Building,
   CheckCircle2,
-  Database,
   Info,
   Lock,
   RefreshCw,
@@ -17,11 +15,9 @@ import {
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent } from 'echarts/components'
+import { BarChart, PieChart } from 'echarts/charts'
+import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
-import MetricGrid from '../components/blocks/MetricGrid.vue'
-import type { MetricItem } from '../components/blocks/types.ts'
 import ModelContractCard from '../components/ModelContractCard.vue'
 import AtRiskUnitTable, { type AtRiskUnit } from '../components/AtRiskUnitTable.vue'
 import { formatPercent } from '../formatters/metrics.ts'
@@ -38,8 +34,9 @@ import {
 } from '../charts/theme.ts'
 import { buildRiskDimensionBreakdown } from '../utils/qualityMetrics.ts'
 import { parseBriefingSections } from '../utils/briefing.ts'
+import { createRiskOverviewOption } from '../charts/insightsOptions.ts'
 
-use([CanvasRenderer, BarChart, GridComponent, TooltipComponent])
+use([CanvasRenderer, BarChart, PieChart, GridComponent, TitleComponent, TooltipComponent])
 
 const router = useRouter()
 const store = useProjectStore()
@@ -310,24 +307,54 @@ const insights = computed(() => {
   }
 })
 
-const f1SummaryItems = computed<MetricItem[]>(() => [
-  { label: '掉队高危单位', value: format(atRiskUnits.value.length), unit: '家', tone: 'danger', icon: ShieldAlert, hint: '困难户风险预警主场' },
-  { label: '双轨核对差异', value: format(dualDiffCount.value), unit: '家', tone: 'warning', icon: AlertTriangle, hint: '平账凭证率 < 95%' },
-  { label: '建设推进迟滞', value: format(constLagCount.value + prepStuckCount.value), unit: '家', tone: 'warning', icon: Building, hint: '滞后与准备期卡顿单位' },
-  { label: 'AutoML 模型状态', value: insights.value.isReady ? '已就绪 (达标)' : '验证未达标', tone: insights.value.isReady ? 'success' : 'accent', icon: Database, hint: insights.value.isReady ? '独立测试集验证达标 · 库内推理已就绪' : '严守 KI-023/KI-028 真实评估' },
-])
+const riskOverviewOption = computed(() => createRiskOverviewOption([
+  { name: '双轨差异', value: dualDiffCount.value, color: chartPalette.danger },
+  { name: '建设迟滞', value: constLagCount.value, color: chartPalette.warning },
+  { name: '准备卡顿', value: prepStuckCount.value, color: chartPalette.accent },
+]))
+
+const modelQualityRows = computed(() => insights.value.targetModels.map((model) => {
+  const quality = model.quality == null ? null : Math.max(0, Math.min(1, model.quality))
+  const regression = model.type === 'REGRESSION'
+  return {
+    label: regression ? '单据增量回归' : '延期风险分类',
+    value: quality == null ? '—' : (regression ? `R² ${quality.toFixed(4)}` : `Acc ${(quality * 100).toFixed(1)}%`),
+    progress: quality == null ? 0 : quality * 100,
+  }
+}))
+
+const readyModelCount = computed(() => insights.value.targetModels.filter((model) => model.status === '已就绪').length)
 </script>
 
 <template>
   <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="F">
-    <!-- F1: 概览面板 -->
+    <!-- F1: 风险构成与模型质量门禁，替代四张等权指标卡 -->
     <CockpitPanel
-      title="风险预警与重点督导态势"
+      title="风险研判指挥盘"
       zone="F1"
-      subtitle="困难户与掉队风险主场 · 决策支撑指标咬合 · 严守 KI-023/KI-028 真实模型规范"
+      subtitle="困难户风险构成与 AutoML 独立测试集质量同屏"
       class="flex-shrink-0"
     >
-      <MetricGrid :items="f1SummaryItems" variant="inline" :columns="4" />
+      <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
+        <section class="col-span-7 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-h-0">
+          <VChart class="w-full h-full min-h-0" :option="riskOverviewOption" autoresize />
+        </section>
+        <section class="col-span-5 flex flex-col rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2 min-h-0">
+          <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs">
+            <span class="font-medium text-slate-300">AutoML 质量门禁</span>
+            <b class="font-mono" :class="insights.isReady ? 'text-emerald-400' : 'text-amber-400'">{{ readyModelCount }}/{{ insights.targetModels.length }} 可用</b>
+          </div>
+          <div class="grid grid-rows-2 gap-1.5 flex-1 min-h-0 pt-1.5">
+            <div v-for="(model, index) in modelQualityRows" :key="model.label" class="grid grid-cols-12 items-center gap-2 min-w-0">
+              <span class="col-span-4 text-cockpit-xs text-slate-400 truncate">{{ model.label }}</span>
+              <div class="col-span-6 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                <div class="h-full rounded-full" :class="index === 0 ? 'bg-sky-400' : 'bg-emerald-400'" :style="{ width: `${model.progress}%` }" />
+              </div>
+              <b class="col-span-2 font-mono text-cockpit-xs text-slate-200 text-right">{{ model.value }}</b>
+            </div>
+          </div>
+        </section>
+      </div>
     </CockpitPanel>
 
     <!-- 主网格：F2-F5 (2x2 结构) -->

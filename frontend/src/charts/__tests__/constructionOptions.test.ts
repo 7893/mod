@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createTaskStageMatrixOption,
+  createTaskStageRadarOption,
   createTrainingConversionOption,
   createTrainingMixOption,
 } from '../constructionOptions.ts'
+
+const taskStages = Array.from({ length: 8 }, (_, index) => ({
+  name: `阶段${index + 1}`,
+  completed: 60 + index,
+  inProgress: 20,
+  notStarted: 20 - index,
+  progress: 60 + index,
+}))
 
 const trainingTypes = [
   { type: '业务操作培训', count: 12, expected: 120, actual: 110, passed: 105, cert: 80 },
@@ -23,5 +33,24 @@ describe('construction training charts', () => {
     const option = createTrainingMixOption(trainingTypes)
 
     expect(option.series[0].data.map((item) => item.value)).toEqual([12, 8])
+  })
+})
+
+describe('construction command charts', () => {
+  it('renders every stage and status as one matrix cell', () => {
+    const option = createTaskStageMatrixOption(taskStages)
+
+    expect(option.series[0].type).toBe('heatmap')
+    expect(option.series[0].data).toHaveLength(24)
+    expect(option.xAxis.data).toHaveLength(8)
+    expect(option.yAxis.data).toEqual(['已完成', '进行中', '未开始'])
+    expect(option.visualMap.show).toBe(false)
+  })
+
+  it('keeps all eight stages in the completion radar', () => {
+    const option = createTaskStageRadarOption(taskStages)
+
+    expect(option.radar.indicator).toHaveLength(8)
+    expect(option.series[0].data[0].value).toEqual(taskStages.map((stage) => stage.progress))
   })
 })

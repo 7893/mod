@@ -30,83 +30,93 @@ interface TrainingSummaryItem {
   totalCert: number
 }
 
-const compactLegend = (data: string[]) => ({
-  data,
-  top: 0,
-  right: 8,
-  textStyle: { color: chartInk.textMuted, fontSize: 10 },
-  itemWidth: 10,
-  itemHeight: 8,
-})
-
 const percent = (value: number, total: number) => (
   total > 0 ? Math.round((value * 1000) / total) / 10 : 0
 )
 
-export function createTaskStageOverviewOption(list: StageSeriesItem[]) {
-  const stages = list.map((item) => {
-    const total = item.completed + item.inProgress + item.notStarted
+export function createTaskStageMatrixOption(list: StageSeriesItem[]) {
+  const statuses = [
+    { name: '已完成', field: 'completed' as const, color: chartPalette.success },
+    { name: '进行中', field: 'inProgress' as const, color: chartPalette.accent },
+    { name: '未开始', field: 'notStarted' as const, color: chartPalette.neutral },
+  ]
+  const matrix = statuses.flatMap((status, rowIndex) => list.map((stage, columnIndex) => {
+    const total = stage.completed + stage.inProgress + stage.notStarted
+    const count = stage[status.field]
     return {
-      ...item,
-      completedPct: percent(item.completed, total),
-      inProgressPct: percent(item.inProgress, total),
-      notStartedPct: percent(item.notStarted, total),
+      value: [columnIndex, rowIndex, count],
+      percentage: percent(count, total),
+      itemStyle: { color: status.color, opacity: status.field === 'notStarted' ? 0.72 : 0.88 },
     }
-  })
+  }))
+  const maxCount = Math.max(1, ...matrix.map((item) => Number(item.value[2])))
 
   return {
     ...calmAnimation,
     tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
+      trigger: 'item',
       ...chartTooltip,
-      formatter: (params: any[]) => {
-        const item = stages[params?.[0]?.dataIndex]
-        if (!item) return ''
-        return `${item.name}<br/>已完成 <b>${item.completed.toLocaleString()}</b><br/>进行中 <b>${item.inProgress.toLocaleString()}</b><br/>未开始 <b>${item.notStarted.toLocaleString()}</b><br/>阶段完成率 <b>${item.progress}%</b>`
+      formatter: (params: any) => {
+        const [columnIndex, rowIndex, count] = params.value ?? []
+        const stage = list[columnIndex]
+        const status = statuses[rowIndex]
+        return stage && status
+          ? `${stage.name} · ${status.name}<br/><b>${Number(count).toLocaleString()}</b> 项 · ${params.data.percentage}%`
+          : ''
       },
     },
-    legend: compactLegend(['已完成', '进行中', '未开始']),
-    grid: { left: 38, right: 14, top: 28, bottom: 32 },
+    visualMap: {
+      show: false,
+      min: 0,
+      max: maxCount,
+      dimension: 2,
+      seriesIndex: 0,
+      inRange: { opacity: [0.7, 0.96] },
+    },
+    grid: { left: 58, right: 8, top: 10, bottom: 34 },
     xAxis: {
-      type: 'category',
-      data: stages.map((item) => item.name),
-      axisLine: { lineStyle: { color: chartInk.border } },
-      axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10, interval: 0 },
+      type: 'category', data: list.map((stage) => stage.name),
+      axisLine: { lineStyle: { color: chartInk.border } }, axisTick: { show: false },
+      axisLabel: { color: chartInk.textMuted, fontSize: 9, interval: 0 },
     },
     yAxis: {
-      ...valueAxis,
-      min: 0,
-      max: 100,
-      splitNumber: 2,
-      axisLabel: { color: chartInk.textMuted, fontSize: 9, formatter: '{value}%' },
+      type: 'category', data: statuses.map((status) => status.name),
+      axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
     },
-    series: [
-      {
-        name: '已完成', type: 'bar', stack: 'stage', barMaxWidth: 42,
-        data: stages.map((item) => item.completedPct),
+    series: [{
+      type: 'heatmap', data: matrix,
+      label: {
+        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 9,
+        formatter: (params: any) => `${params.data.percentage}%\n${Number(params.value?.[2] ?? 0).toLocaleString()}`,
+      },
+      itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 3, borderRadius: 4 },
+      emphasis: { itemStyle: { borderColor: chartInk.textPrimary, borderWidth: 1 } },
+    }],
+  }
+}
+
+export function createTaskStageRadarOption(list: StageSeriesItem[]) {
+  return {
+    ...calmAnimation,
+    tooltip: { trigger: 'item', ...chartTooltip },
+    radar: {
+      center: ['50%', '53%'], radius: '65%', splitNumber: 3,
+      indicator: list.map((stage) => ({ name: stage.name, max: 100 })),
+      axisName: { color: chartInk.textMuted, fontSize: 8 },
+      axisLine: { lineStyle: { color: chartInk.border } },
+      splitLine: { lineStyle: { color: chartInk.border } },
+      splitArea: { areaStyle: { color: [chartInk.borderSoft, 'transparent'] } },
+    },
+    series: [{
+      name: '阶段完成率', type: 'radar', symbolSize: 4,
+      data: [{
+        value: list.map((stage) => stage.progress), name: '完成率',
+        lineStyle: { color: chartPalette.accent, width: 2 },
         itemStyle: { color: chartPalette.success },
-        label: {
-          show: true,
-          position: 'inside',
-          color: chartInk.textPrimary,
-          fontFamily: 'monospace',
-          fontSize: 9,
-          formatter: (params: any) => Number(params.value) >= 20 ? `${params.value}%` : '',
-        },
-      },
-      {
-        name: '进行中', type: 'bar', stack: 'stage',
-        data: stages.map((item) => item.inProgressPct),
-        itemStyle: { color: chartPalette.accent },
-      },
-      {
-        name: '未开始', type: 'bar', stack: 'stage',
-        data: stages.map((item) => item.notStartedPct),
-        itemStyle: { color: chartPalette.neutral, borderRadius: [3, 3, 0, 0] },
-      },
-    ],
+        areaStyle: { color: chartPalette.accent, opacity: 0.2 },
+      }],
+    }],
   }
 }
 
