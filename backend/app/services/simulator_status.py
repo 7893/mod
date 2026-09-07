@@ -42,7 +42,12 @@ def get_default_status_path() -> Path:
     # In release: <repo>/backend/releases/<ts>/services/simulator_status.py -> parents[4] is <repo>
     for parent in current_file.parents:
         candidate = parent / "output" / "simulator_status.json"
-        if candidate.exists() or (parent / "output").is_dir():
+        if candidate.exists():
+            return candidate
+
+    for parent in current_file.parents:
+        candidate = parent / "output" / "simulator_status.json"
+        if (parent / "output").is_dir():
             return candidate
 
     # Fallback to current working directory / output

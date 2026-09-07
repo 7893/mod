@@ -88,7 +88,34 @@ class SimulationWriter:
         except Exception as ex:  # noqa: BLE001
             logger.warning(f"Failed to record simulation audit trail: {ex}")
 
-    def write_events(self, events: List[EventFootprint]) -> WriteResult:
+    def record_success_audit(self, result: Any, run_id: Optional[str] = None) -> None:
+        """Explicitly record SUCCESS audit entry when caller commits transaction."""
+        audit = SimulationAuditRecord(
+            run_id=run_id or f"sim_{uuid.uuid4().hex[:12]}",
+            timestamp=datetime.now().isoformat(),
+            business_type="费用报销",
+            event_count=getattr(result, "event_count", 0),
+            rows_written=getattr(result, "rows_written", {}),
+            status="SUCCESS",
+            duration_ms=getattr(result, "duration_ms", 0.0),
+        )
+        self._record_audit(audit)
+
+    def record_failure_audit(self, error: str, event_count: int = 0, run_id: Optional[str] = None) -> None:
+        """Explicitly record ROLLED_BACK audit entry when transaction is rolled back."""
+        audit = SimulationAuditRecord(
+            run_id=run_id or f"sim_{uuid.uuid4().hex[:12]}",
+            timestamp=datetime.now().isoformat(),
+            business_type="费用报销",
+            event_count=event_count,
+            rows_written={},
+            status="ROLLED_BACK",
+            error=error,
+            duration_ms=0.0,
+        )
+        self._record_audit(audit)
+
+    def write_events(self, events: List[EventFootprint], auto_commit: bool = True) -> WriteResult:
         """
         Atomically write a list of business event footprints.
 
@@ -301,19 +328,19 @@ class SimulationWriter:
                     )
                 rows_written["daily_stats"] += 1
 
-            conn.commit()
             duration_ms = (time.perf_counter() - start_time) * 1000.0
-
-            audit = SimulationAuditRecord(
-                run_id=run_id,
-                timestamp=datetime.now().isoformat(),
-                business_type="费用报销",
-                event_count=len(events),
-                rows_written=rows_written,
-                status="SUCCESS",
-                duration_ms=round(duration_ms, 2),
-            )
-            self._record_audit(audit)
+            if auto_commit:
+                conn.commit()
+                audit = SimulationAuditRecord(
+                    run_id=run_id,
+                    timestamp=datetime.now().isoformat(),
+                    business_type="费用报销",
+                    event_count=len(events),
+                    rows_written=rows_written,
+                    status="SUCCESS",
+                    duration_ms=round(duration_ms, 2),
+                )
+                self._record_audit(audit)
 
             return WriteResult(
                 success=True,
@@ -323,7 +350,10 @@ class SimulationWriter:
             )
 
         except Exception as ex:
-            conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             duration_ms = (time.perf_counter() - start_time) * 1000.0
             audit = SimulationAuditRecord(
                 run_id=run_id,
@@ -338,5 +368,5 @@ class SimulationWriter:
             self._record_audit(audit)
             raise
         finally:
-            if not self._external_conn:
+            if auto_commit and not self._external_conn:
                 conn.close()

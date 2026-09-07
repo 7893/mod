@@ -279,6 +279,7 @@ def test_runtime_service_dry_run_cycle(tmp_path):
         max_events_per_minute=20,
         max_events_per_day=5000,
         fail_closed_flag_path=tmp_path / "flag.flag",
+        fuse_state_path=tmp_path / "fuse.json",
         status_file_path=tmp_path / "status.json",
         audit_log_path=tmp_path / "audit.log",
         dry_run=True,
@@ -306,6 +307,7 @@ def test_runtime_service_fail_closed_guard(tmp_path):
 
     config = SimulatorRuntimeConfig(
         fail_closed_flag_path=flag,
+        fuse_state_path=tmp_path / "fuse.json",
         status_file_path=tmp_path / "status.json",
         audit_log_path=tmp_path / "audit.log",
     )
@@ -323,6 +325,7 @@ def test_runtime_service_consecutive_failure_trips_flag(tmp_path, monkeypatch):
     config = SimulatorRuntimeConfig(
         consecutive_failure_threshold=3,
         fail_closed_flag_path=flag,
+        fuse_state_path=tmp_path / "fuse.json",
         status_file_path=tmp_path / "status.json",
         audit_log_path=tmp_path / "audit.log",
         dry_run=False,
@@ -368,6 +371,7 @@ def test_runtime_service_rate_limit_cycle(tmp_path):
     config = SimulatorRuntimeConfig(
         max_events_per_minute=0,  # Force immediate rate limit
         fail_closed_flag_path=tmp_path / "flag.flag",
+        fuse_state_path=tmp_path / "fuse.json",
         status_file_path=tmp_path / "status.json",
         audit_log_path=tmp_path / "audit.log",
     )
@@ -386,6 +390,7 @@ def test_runtime_service_successful_writes(tmp_path, monkeypatch):
     config = SimulatorRuntimeConfig(
         slow_movie_interval_cycles=2,
         fail_closed_flag_path=tmp_path / "flag.flag",
+        fuse_state_path=tmp_path / "fuse.json",
         status_file_path=tmp_path / "status.json",
         audit_log_path=tmp_path / "audit.log",
         dry_run=False,
@@ -399,7 +404,7 @@ def test_runtime_service_successful_writes(tmp_path, monkeypatch):
 
     # Mock fast movie writer and check
     mock_res = MagicMock(success=True, written_count=1)
-    monkeypatch.setattr("simulation.runtime_service.SimulationWriter.write_events", lambda self, evts: mock_res)
+    monkeypatch.setattr("simulation.runtime_service.SimulationWriter.write_events", lambda self, evts, **kwargs: mock_res)
     monkeypatch.setattr(PostCycleSelfChecker, "check_fast_movie_events", lambda conn, evts: (True, ""))
 
     # Cycle 1: Fast movie
@@ -438,6 +443,7 @@ def test_runtime_service_rate_limit_throttle(tmp_path, monkeypatch, caplog):
     config = SimulatorRuntimeConfig(
         status_file_path=tmp_path / "status.json",
         fail_closed_flag_path=tmp_path / "flag.flag",
+        fuse_state_path=tmp_path / "fuse.json",
     )
     service = SimulatorRuntimeService(config=config)
 
@@ -467,8 +473,14 @@ def test_runtime_service_rate_limit_throttle(tmp_path, monkeypatch, caplog):
         assert len(fuse_logs) == 2
 
 
-def test_runtime_service_run_forever_stop():
-    config = SimulatorRuntimeConfig(dry_run=True)
+def test_runtime_service_run_forever_stop(tmp_path):
+    config = SimulatorRuntimeConfig(
+        dry_run=True,
+        fail_closed_flag_path=tmp_path / "flag.flag",
+        fuse_state_path=tmp_path / "fuse.json",
+        status_file_path=tmp_path / "status.json",
+        audit_log_path=tmp_path / "audit.log",
+    )
     service = SimulatorRuntimeService(config=config)
     import threading
     stop_event = threading.Event()
@@ -482,6 +494,7 @@ def test_runtime_service_save_status_atomic(tmp_path):
     config = SimulatorRuntimeConfig(
         status_file_path=status_file,
         fail_closed_flag_path=tmp_path / "flag.flag",
+        fuse_state_path=tmp_path / "fuse.json",
     )
     service = SimulatorRuntimeService(config=config)
 
@@ -497,5 +510,89 @@ def test_runtime_service_save_status_atomic(tmp_path):
     assert data["service"] == "mod-simulator"
     assert data["last_cycle_status"] == "SUCCESS"
     assert data["intensity"] == 0.5
+
+
+def test_runtime_service_single_transaction_rollback_on_self_check_failure(tmp_path, monkeypatch):
+    """KI-040: 写入成功但自检失败时，整轮变化完整回滚，零 commit，不消耗每日额度。"""
+    monkeypatch.setenv("MOD_SIMULATION_ENGINE_ENABLED", "true")
+
+    config = SimulatorRuntimeConfig(
+        slow_movie_interval_cycles=2,
+        fail_closed_flag_path=tmp_path / "flag.flag",
+        status_file_path=tmp_path / "status.json",
+        audit_log_path=tmp_path / "audit.log",
+        fuse_state_path=tmp_path / "fuse.json",
+        dry_run=False,
+    )
+    mock_conn = MagicMock()
+    service = SimulatorRuntimeService(config=config, conn=mock_conn, seed=42)
+    service._fast_baseline = _mock_fast_baseline()
+    service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
+    service._construction_baseline = _mock_construction_baseline()
+    service._construction_allocator = IdAllocator(service._construction_baseline.next_ids)
+
+    # Mock fast movie writer to succeed (staged)
+    mock_res = MagicMock(success=True, written_count=3)
+    monkeypatch.setattr("simulation.runtime_service.SimulationWriter.write_events", lambda self, evts, **kwargs: mock_res)
+    # But self checker fails!
+    monkeypatch.setattr(PostCycleSelfChecker, "check_fast_movie_events", lambda conn, evts: (False, "Voucher lines unbalanced"))
+
+    now_hkt = datetime(2026, 9, 7, 10, 0, 0, tzinfo=HK_TZ)
+    res = service.step_cycle(now=now_hkt)
+
+    assert res.status == "ERROR"
+    assert "Voucher lines unbalanced" in (res.error or "")
+    # Single-transaction guarantees:
+    mock_conn.commit.assert_not_called()
+    mock_conn.rollback.assert_called()
+    # Fuse quota NOT consumed
+    metrics = service.fuse.get_metrics()
+    assert metrics["day_count"] == 0
+
+
+def test_rate_limit_fuse_cross_process_persistence_and_restart(tmp_path):
+    """KI-040: 每日熔断跨进程/跨重启持久化，达到硬上限后同日重启仍保持熔断，跨日自动恢复。"""
+    from datetime import timedelta
+
+    fuse_state_file = tmp_path / "fuse_state.json"
+    fuse = RateLimitFuse(max_per_minute=10000, max_per_day=5000, state_file_path=fuse_state_file)
+
+    now_hkt = datetime(2026, 9, 7, 14, 0, 0, tzinfo=HK_TZ)
+
+    # 1. Produce 5000 events
+    ok, msg = fuse.can_produce(now_hkt, count=5000)
+    assert ok is True
+    fuse.record(now_hkt, count=5000, persist=True)
+
+    # 2. Daily limit reached
+    ok, msg = fuse.can_produce(now_hkt, count=1)
+    assert ok is False
+    assert "Daily hard cap reached (5000/5000)" in msg
+
+    # 3. Simulate process restart / new deployment on the same day
+    restarted_fuse = RateLimitFuse(max_per_minute=10000, max_per_day=5000, state_file_path=fuse_state_file)
+    ok2, msg2 = restarted_fuse.can_produce(now_hkt, count=1)
+    assert ok2 is False
+    assert "Daily hard cap reached (5000/5000)" in msg2
+
+    # 4. Advance to next business day
+    next_day_hkt = now_hkt + timedelta(days=1)
+    ok3, msg3 = restarted_fuse.can_produce(next_day_hkt, count=5)
+    assert ok3 is True
+    assert msg3 == ""
+
+
+def test_rate_limit_fuse_corrupted_state_fails_closed(tmp_path):
+    """KI-040: 熔断持久化文件损坏时 fail-closed 阻断写入。"""
+    corrupt_file = tmp_path / "fuse_corrupt.json"
+    corrupt_file.write_text("NOT VALID JSON", encoding="utf-8")
+
+    fuse = RateLimitFuse(max_per_minute=20, max_per_day=5000, state_file_path=corrupt_file)
+    now_hkt = datetime(2026, 9, 7, 14, 0, 0, tzinfo=HK_TZ)
+
+    ok, msg = fuse.can_produce(now_hkt, count=1)
+    assert ok is False
+    assert "fail-closed" in msg
+
 
 

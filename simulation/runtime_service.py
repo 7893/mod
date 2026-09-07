@@ -63,6 +63,7 @@ class SimulatorRuntimeConfig:
     max_events_per_day: int = 5000
     consecutive_failure_threshold: int = 3
     fail_closed_flag_path: Path = field(default_factory=lambda: Path("output/simulator_fail_closed.flag"))
+    fuse_state_path: Path = field(default_factory=lambda: Path("output/simulator_fuse_state.json"))
     status_file_path: Path = field(default_factory=lambda: Path("output/simulator_status.json"))
     audit_log_path: Path = field(default_factory=lambda: Path("output/simulation_audit.log"))
     slow_movie_interval_cycles: int = 6
@@ -133,19 +134,83 @@ class FailClosedManager:
 
 
 class RateLimitFuse:
-    """Sliding rate limiter with minute and daily hard caps."""
+    """Sliding rate limiter with minute and daily hard caps backed by persistent state."""
 
-    def __init__(self, max_per_minute: int = 20, max_per_day: int = 5000):
+    def __init__(
+        self,
+        max_per_minute: int = 20,
+        max_per_day: int = 5000,
+        state_file_path: Optional[Path] = None,
+    ):
         self.max_per_minute = max_per_minute
         self.max_per_day = max_per_day
+        self.state_file_path = Path(state_file_path) if state_file_path else None
         self._current_minute = ""
         self._minute_count = 0
         self._current_day = ""
         self._day_count = 0
+        self._corruption_error: Optional[str] = None
+        self._lock_file_path = (
+            self.state_file_path.with_suffix(".lock") if self.state_file_path else None
+        )
+        self._init_persisted_state()
+
+    def _init_persisted_state(self) -> None:
+        if not self.state_file_path or not self.state_file_path.exists():
+            return
+        try:
+            with open(self.state_file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict) or "business_date" not in data or "day_count" not in data:
+                raise RuntimeError(f"Invalid schema in rate limit state file: {self.state_file_path}")
+            self._current_day = str(data["business_date"])
+            self._day_count = int(data["day_count"])
+        except Exception as ex:
+            logger.error(f"Failed to load rate limit state file: {ex}")
+            self._corruption_error = f"Corrupted rate limit state file: {ex}"
+
+    def _sync_persisted_state(self, day_key: str) -> None:
+        if self._corruption_error:
+            raise RuntimeError(self._corruption_error)
+        if not self.state_file_path or not self.state_file_path.exists():
+            if self._current_day != day_key:
+                self._current_day = day_key
+                self._day_count = 0
+            return
+
+        try:
+            with open(self.state_file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict) or "business_date" not in data or "day_count" not in data:
+                raise RuntimeError(f"Invalid schema in rate limit state file: {self.state_file_path}")
+            file_date = str(data["business_date"])
+            if file_date == day_key:
+                self._current_day = day_key
+                self._day_count = int(data["day_count"])
+            elif file_date < day_key:
+                # Rollover to new business day
+                self._current_day = day_key
+                self._day_count = 0
+            else:
+                # File date is ahead of local clock (clock skew protection)
+                self._current_day = file_date
+                self._day_count = int(data["day_count"])
+        except json.JSONDecodeError as ex:
+            self._corruption_error = f"Corrupted rate limit state file: {self.state_file_path}: {ex}"
+            raise RuntimeError(self._corruption_error) from ex
 
     def can_produce(self, now: datetime, count: int = 1) -> Tuple[bool, str]:
-        minute_key = now.strftime("%Y-%m-%d %H:%M")
-        day_key = now.strftime("%Y-%m-%d")
+        if self._corruption_error:
+            return False, f"Rate limit state error (fail-closed): {self._corruption_error}"
+
+        now_hkt = now.astimezone(HK_TZ) if now.tzinfo else now.replace(tzinfo=HK_TZ)
+        minute_key = now_hkt.strftime("%Y-%m-%d %H:%M")
+        day_key = now_hkt.strftime("%Y-%m-%d")
+
+        try:
+            self._sync_persisted_state(day_key)
+        except Exception as ex:
+            return False, f"Rate limit state error (fail-closed): {ex}"
 
         minute_count = self._minute_count if minute_key == self._current_minute else 0
         day_count = self._day_count if day_key == self._current_day else 0
@@ -158,19 +223,62 @@ class RateLimitFuse:
 
         return True, ""
 
-    def record(self, now: datetime, count: int = 1) -> None:
-        minute_key = now.strftime("%Y-%m-%d %H:%M")
-        day_key = now.strftime("%Y-%m-%d")
+    def record(self, now: datetime, count: int = 1, persist: bool = True) -> None:
+        now_hkt = now.astimezone(HK_TZ) if now.tzinfo else now.replace(tzinfo=HK_TZ)
+        minute_key = now_hkt.strftime("%Y-%m-%d %H:%M")
+        day_key = now_hkt.strftime("%Y-%m-%d")
 
         if minute_key != self._current_minute:
             self._current_minute = minute_key
             self._minute_count = 0
         self._minute_count += count
 
-        if day_key != self._current_day:
-            self._current_day = day_key
-            self._day_count = 0
-        self._day_count += count
+        if not self.state_file_path or not persist:
+            if day_key != self._current_day:
+                self._current_day = day_key
+                self._day_count = 0
+            self._day_count += count
+            return
+
+        import fcntl
+
+        self.state_file_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_file = self._lock_file_path or self.state_file_path.with_suffix(".lock")
+        with open(lock_file, "w") as lock_fd:
+            fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+            try:
+                current_count = 0
+                if self.state_file_path.exists():
+                    try:
+                        with open(self.state_file_path, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                        if data.get("business_date") == day_key:
+                            current_count = int(data.get("day_count", 0))
+                    except json.JSONDecodeError as err:
+                        raise RuntimeError(f"Corrupted rate limit state file: {self.state_file_path}") from err
+
+                new_count = current_count + count
+                self._current_day = day_key
+                self._day_count = new_count
+
+                state_data = {
+                    "business_date": day_key,
+                    "day_count": new_count,
+                    "timezone": "Asia/Hong_Kong",
+                    "updated_at": now_hkt.isoformat(),
+                }
+                tmp_path = self.state_file_path.with_name(f".tmp_{self.state_file_path.name}")
+                with open(tmp_path, "w", encoding="utf-8") as f:
+                    json.dump(state_data, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+                tmp_path.replace(self.state_file_path)
+                try:
+                    self.state_file_path.chmod(0o644)
+                except Exception:
+                    pass
+            finally:
+                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
 
     def get_metrics(self) -> Dict[str, Any]:
         return {
@@ -178,6 +286,7 @@ class RateLimitFuse:
             "max_per_minute": self.max_per_minute,
             "day_count": self._day_count,
             "max_per_day": self.max_per_day,
+            "business_date": self._current_day,
         }
 
 
@@ -250,7 +359,11 @@ class SimulatorRuntimeService:
         self._external_conn = conn
         self.rng = random.Random(seed)
         self.fail_closed_mgr = FailClosedManager(self.config.fail_closed_flag_path, self.config.audit_log_path)
-        self.fuse = RateLimitFuse(self.config.max_events_per_minute, self.config.max_events_per_day)
+        self.fuse = RateLimitFuse(
+            max_per_minute=self.config.max_events_per_minute,
+            max_per_day=self.config.max_events_per_day,
+            state_file_path=self.config.fuse_state_path,
+        )
         self.consecutive_failures = 0
         self.cycle_count = 0
         self.start_time = time.time()
@@ -372,7 +485,7 @@ class SimulatorRuntimeService:
                     f"[DRY-RUN TICK] {now_hkt.strftime('%Y-%m-%d %H:%M:%S')} HKT | "
                     f"Intensity: {intensity:.3f} | Burst: {len(all_events)} events | DB Write: DISABLED"
                 )
-                self.fuse.record(now_hkt, len(all_events))
+                self.fuse.record(now_hkt, len(all_events), persist=False)
                 self._save_status("DRY_RUN", intensity, now_hkt, None)
                 return CycleResult(
                     status="DRY_RUN",
@@ -382,35 +495,45 @@ class SimulatorRuntimeService:
                     cycle_duration_ms=(time.perf_counter() - t0) * 1000,
                 )
 
-            # 5. Real Atomic Write Execution
+            # 5. Real Atomic Write Execution (Single-Transaction Ownership)
+            c_writer: Optional[ConstructionWriter] = None
+            s_writer: Optional[SimulationWriter] = None
+
             if is_construction:
                 if not all_events:
                     events_written = 0
                 else:
                     c_writer = ConstructionWriter(conn=conn, audit_log_path=str(self.config.audit_log_path))
-                    c_res = c_writer.write_construction_events(all_events, execute=True, create_backup=False)
+                    c_res = c_writer.write_construction_events(
+                        all_events, execute=True, create_backup=False, auto_commit=False
+                    )
                     if not c_res.success:
                         raise RuntimeError(f"Construction write failed: {c_res.error}")
 
                     ok, chk_err = PostCycleSelfChecker.check_construction_events(conn, all_events)
                     if not ok:
                         raise RuntimeError(f"Post-cycle construction self-check failed: {chk_err}")
+
+                    conn.commit()
+                    c_writer.record_success_audit(c_res)
                     events_written = len(all_events)
             else:
                 s_writer = SimulationWriter(conn=conn, audit_log_path=str(self.config.audit_log_path))
-                s_res = s_writer.write_events(all_events)  # type: ignore
+                s_res = s_writer.write_events(all_events, auto_commit=False)  # type: ignore
                 if not s_res.success:
                     raise RuntimeError(f"Fast-movie write failed: {s_res.error}")
 
                 ok, chk_err = PostCycleSelfChecker.check_fast_movie_events(conn, all_events)  # type: ignore
                 if not ok:
-                    conn.rollback()
                     raise RuntimeError(f"Post-cycle fast-movie self-check failed: {chk_err}")
+
+                conn.commit()
+                s_writer.record_success_audit(s_res)
                 events_written = len(all_events)
 
             # Success: reset consecutive failures & record fuse
             self.consecutive_failures = 0
-            self.fuse.record(now_hkt, events_written)
+            self.fuse.record(now_hkt, events_written, persist=True)
             self._save_status("SUCCESS", intensity, now_hkt, None)
 
             return CycleResult(
@@ -434,6 +557,15 @@ class SimulatorRuntimeService:
                 f"[CYCLE ERROR] Consecutive failure {self.consecutive_failures}/"
                 f"{self.config.consecutive_failure_threshold}: {err_msg}"
             )
+
+            # Record failure audit if writers were active
+            try:
+                if 'is_construction' in locals() and is_construction and c_writer:
+                    c_writer.record_failure_audit(err_msg, event_count=len(all_events) if 'all_events' in locals() else 0)
+                elif s_writer:
+                    s_writer.record_failure_audit(err_msg, event_count=len(all_events) if 'all_events' in locals() else 0)
+            except Exception:
+                pass
 
             # Check if threshold reached for fail-closed trip
             if self.consecutive_failures >= self.config.consecutive_failure_threshold:
@@ -560,10 +692,16 @@ class SimulatorRuntimeService:
             if res.status == "FAIL_CLOSED":
                 logger.critical(f"Service entering halt sleep: {res.error}")
                 # In fail-closed state, sleep longer before re-checking
-                time.sleep(30.0)
+                if stop_event:
+                    stop_event.wait(30.0)
+                else:
+                    time.sleep(30.0)
                 continue
 
             if stop_event and stop_event.is_set():
                 break
 
-            time.sleep(res.wait_seconds)
+            if stop_event:
+                stop_event.wait(res.wait_seconds)
+            else:
+                time.sleep(res.wait_seconds)

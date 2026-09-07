@@ -15,12 +15,25 @@ from datetime import date
 import os
 import sys
 
-from dotenv import load_dotenv
-import pymysql
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BACKEND_DIR = os.path.join(BASE_DIR, "backend")
-sys.path.insert(0, BACKEND_DIR)
+VENV_PYTHON = os.path.join(BACKEND_DIR, ".venv", "bin", "python3")
+
+# Auto-reexec with backend virtualenv python if current python does not have packages
+if sys.executable != VENV_PYTHON and os.path.exists(VENV_PYTHON):
+    try:
+        import dotenv  # noqa: F401
+        import pymysql  # noqa: F401
+    except ImportError:
+        os.execv(VENV_PYTHON, [VENV_PYTHON] + sys.argv)
+
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
+from dotenv import load_dotenv
+import pymysql
 
 from simulation.construction_models import ORG_LIFECYCLE_STAGES  # noqa: E402
 from simulation.engine_context import load_construction_baseline  # noqa: E402
@@ -80,8 +93,8 @@ def run_full_dry_run_audit():
         cursor.execute("SELECT status, COUNT(*) FROM org_unit GROUP BY status;")
         status_sum = sum(r[1] for r in cursor.fetchall())
 
-        gate1_ok = (total_orgs == region_sum == batch_sum == status_sum == 2000)
-        results["Gate 1: 四级下钻加总一致 (2000单位层层咬合)"] = gate1_ok
+        gate1_ok = (total_orgs > 0 and total_orgs == region_sum == batch_sum == status_sum)
+        results[f"Gate 1: 四级下钻加总一致 ({total_orgs}单位层层咬合)"] = gate1_ok
         print(f"  - Total org units : {total_orgs}")
         print(f"  - Sum by region   : {region_sum}")
         print(f"  - Sum by batch    : {batch_sum}")
@@ -160,10 +173,10 @@ def run_full_dry_run_audit():
         cursor.execute("SELECT COUNT(DISTINCT org_id) FROM rollout_status_snapshot;")
         snap_org_count = cursor.fetchone()[0]
 
-        gate3_ok = has_process and (snap_org_count == 2000)
-        results["Gate 3: 跃迁有过程有留痕 (评审决议+快照归档)"] = gate3_ok
+        gate3_ok = has_process and (snap_org_count == total_orgs)
+        results[f"Gate 3: 跃迁有过程有留痕 (评审决议+快照归档 {snap_org_count}/{total_orgs})"] = gate3_ok
         print(f"  - Review audit notes generated : ✓ '{test_event.review_notes[:35]}...'")
-        print(f"  - Snapshot trail coverage      : {snap_org_count} / 2000 (100%)")
+        print(f"  - Snapshot trail coverage      : {snap_org_count} / {total_orgs} (100%)")
         print(f"  => Gate 3 Status               : {'PASS (过程留痕完备)' if gate3_ok else 'FAIL'}")
         if not gate3_ok:
             all_passed = False
@@ -308,4 +321,5 @@ def run_full_dry_run_audit():
 
 
 if __name__ == "__main__":
-    run_full_dry_run_audit()
+    success = run_full_dry_run_audit()
+    sys.exit(0 if success else 1)

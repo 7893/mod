@@ -138,6 +138,7 @@ def main() -> int:
         max_events_per_minute=args.max_per_minute,
         max_events_per_day=args.max_per_day,
         fail_closed_flag_path=output_dir / "simulator_fail_closed.flag",
+        fuse_state_path=output_dir / "simulator_fuse_state.json",
         status_file_path=output_dir / "simulator_status.json",
         audit_log_path=output_dir / "simulation_audit.log",
         dry_run=args.dry_run,
