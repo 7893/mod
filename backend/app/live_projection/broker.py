@@ -63,13 +63,14 @@ def _load_units_pool() -> list[dict[str, Any]]:
                     o.region,
                     o.status,
                     CASE
+                        WHEN o.batch_id = 8 THEN 8
                         WHEN o.status = '稳定运行' AND o.id <= 150 THEN 1
                         WHEN o.status = '稳定运行' AND o.id <= 330 THEN 2
                         WHEN o.status = '稳定运行' THEN 3
                         WHEN o.status = '已上线' AND o.id <= 580 THEN 4
                         WHEN o.status = '已上线' THEN 5
                         WHEN o.status = '双轨运行中' THEN 6
-                        WHEN o.id > 1600 THEN 7
+                        WHEN o.id > 1600 AND o.id <= 2000 THEN 7
                         ELSE 8
                     END AS batch_id
                 FROM org_unit o
