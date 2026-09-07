@@ -475,3 +475,27 @@ def test_runtime_service_run_forever_stop():
     stop_event.set()  # Stop immediately
     service.run_forever(stop_event=stop_event)
 
+
+def test_runtime_service_save_status_atomic(tmp_path):
+    """KI-039: 状态保存必须通过临时文件原子替换，且不留临时文件残留."""
+    status_file = tmp_path / "output" / "status.json"
+    config = SimulatorRuntimeConfig(
+        status_file_path=status_file,
+        fail_closed_flag_path=tmp_path / "flag.flag",
+    )
+    service = SimulatorRuntimeService(config=config)
+
+    now_hkt = datetime(2026, 9, 7, 12, 0, 0, tzinfo=HK_TZ)
+    service._save_status("SUCCESS", 0.5, now_hkt, None)
+
+    assert status_file.exists()
+    tmp_files = list((tmp_path / "output").glob(".tmp_*"))
+    assert len(tmp_files) == 0
+
+    import json
+    data = json.loads(status_file.read_text(encoding="utf-8"))
+    assert data["service"] == "mod-simulator"
+    assert data["last_cycle_status"] == "SUCCESS"
+    assert data["intensity"] == 0.5
+
+

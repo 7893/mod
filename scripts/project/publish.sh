@@ -34,6 +34,7 @@ FE_CURRENT="$REPO_ROOT/frontend/current"
 FE_RELEASE_DIR="$FE_RELEASES/$TS"
 
 HEALTH_URL="https://mod.fuming.name/api/health"
+SIMULATOR_STATUS_URL="https://mod.fuming.name/api/simulator/status"
 
 echo "=========================================="
 echo "  统一发布  $TS"
@@ -74,10 +75,10 @@ sudo systemctl restart mod-api
 sleep 4
 
 # 6. 验证
-echo "[6/8] 验证线上健康..."
+echo "[6/8] 验证线上服务与接口健康探针..."
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL")
 if [ "$HTTP_CODE" != "200" ]; then
-    echo "ERROR: 线上返回 $HTTP_CODE，自动回滚..."
+    echo "ERROR: /api/health 线上返回 $HTTP_CODE，自动回滚..."
     [ -n "$PREV_FE" ] && ln -sfn "$PREV_FE" "$FE_CURRENT"
     [ -n "$PREV_BE" ] && ln -sfn "$PREV_BE" "$BE_CURRENT"
     sudo systemctl reload nginx
@@ -85,8 +86,43 @@ if [ "$HTTP_CODE" != "200" ]; then
     echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
     exit 1
 fi
-echo "  线上 OK（HTTP $HTTP_CODE）"
+echo "  /api/health OK（HTTP $HTTP_CODE）"
 curl -s "$HEALTH_URL" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'  DB: {d[\"database\"]}  时间: {d[\"now_cst\"]}')" 2>/dev/null || true
+
+# 探针 2: KI-039 验证 /api/simulator/status
+STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$SIMULATOR_STATUS_URL")
+if [ "$STATUS_CODE" != "200" ]; then
+    echo "ERROR: /api/simulator/status 线上返回 $STATUS_CODE，自动回滚..."
+    [ -n "$PREV_FE" ] && ln -sfn "$PREV_FE" "$FE_CURRENT"
+    [ -n "$PREV_BE" ] && ln -sfn "$PREV_BE" "$BE_CURRENT"
+    sudo systemctl reload nginx
+    sudo systemctl restart mod-api
+    echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
+    exit 1
+fi
+
+STATUS_BODY=$(curl -s "$SIMULATOR_STATUS_URL")
+if ! echo "$STATUS_BODY" | python3 -c '
+import sys, json
+data = json.load(sys.stdin)
+required = ["service", "status", "fresh"]
+if not all(k in data for k in required):
+    sys.exit(1)
+if "Internal Server Error" in json.dumps(data):
+    sys.exit(1)
+svc = data.get("service")
+st = data.get("status")
+fr = data.get("fresh")
+print(f"  Simulator probe OK: service={svc} status={st} fresh={fr}")
+'; then
+    echo "ERROR: /api/simulator/status 响应契约异常，自动回滚..."
+    [ -n "$PREV_FE" ] && ln -sfn "$PREV_FE" "$FE_CURRENT"
+    [ -n "$PREV_BE" ] && ln -sfn "$PREV_BE" "$BE_CURRENT"
+    sudo systemctl reload nginx
+    sudo systemctl restart mod-api
+    echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
+    exit 1
+fi
 
 # 7. 清理旧 release（保留最近 5 个）
 echo "[7/8] 清理旧 release（保留最近 5 个）..."
