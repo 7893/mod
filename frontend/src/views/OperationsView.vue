@@ -17,7 +17,7 @@ import {
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, PieChart } from 'echarts/charts'
+import { BarChart, GaugeChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
@@ -35,8 +35,9 @@ import {
   calcDualRunConsistency,
   buildQualityAuditList,
 } from '../utils/qualityMetrics.ts'
+import { createVoucherQualityOption } from '../charts/operationsOptions.ts'
 
-use([CanvasRenderer, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent])
+use([CanvasRenderer, BarChart, GaugeChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent])
 
 const store = useProjectStore()
 const format = formatCount
@@ -113,6 +114,16 @@ const volumeBars = computed(() => {
 })
 
 const integrationTotal = computed(() => ops.value.integrationResult || 0)
+const voucherQualityOption = computed(() => createVoucherQualityOption(
+  store.snapshot.overview.voucherSuccessPct,
+  ops.value.accountingVoucher,
+  ops.value.accountingVoucherLine,
+))
+const averageVoucherLines = computed(() => (
+  ops.value.accountingVoucher
+    ? (ops.value.accountingVoucherLine / ops.value.accountingVoucher).toFixed(2)
+    : '—'
+))
 const integrationRate = computed(() => store.snapshot.overview.integrationSuccessPct ?? 94.67)
 const integrationSuccessCount = computed(() =>
   ops.value.integrationSuccess ?? Math.round((integrationTotal.value * integrationRate.value) / 100)
@@ -379,37 +390,20 @@ const qualityBarOption = computed(() => {
       </CockpitPanel>
 
       <!-- D4: 凭证生成质效 -->
-      <CockpitPanel title="凭证生成质效" zone="D4" subtitle="凭证主表与分录生成率">
-        <div class="flex flex-col justify-between h-full min-h-0 gap-2.5">
-          <div class="grid grid-cols-3 gap-2">
-            <div class="p-2.5 rounded-xl bg-emerald-950/20 border border-emerald-500/20 flex flex-col justify-between">
-              <span class="text-cockpit-xs text-slate-400">生成成功率</span>
-              <b class="font-mono text-cockpit-lg font-bold text-emerald-400 my-0.5">
-                {{ formatPercent(store.snapshot.overview.voucherSuccessPct) }}
-              </b>
-              <small class="text-cockpit-xs text-slate-500 truncate">
-                {{ store.snapshot.overview.voucherSuccessPct == null ? '当前快照未提供' : '快照口径' }}
-              </small>
+      <CockpitPanel title="凭证生成质效" zone="D4" subtitle="成功率、生成规模与凭证结构">
+        <div class="grid grid-cols-12 gap-3 h-full min-h-0">
+          <VChart class="col-span-9 w-full h-full min-h-0" :option="voucherQualityOption" autoresize />
+          <div class="col-span-3 flex flex-col justify-center border-l border-surface-veil-06 pl-3 min-w-0">
+            <span class="text-cockpit-xs text-slate-500">平均每张凭证</span>
+            <div class="flex items-baseline gap-1 mt-1">
+              <b class="font-mono text-cockpit-metric text-sky-400">{{ averageVoucherLines }}</b>
+              <small class="text-cockpit-xs text-slate-500">行分录</small>
             </div>
-            <div class="p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between">
-              <span class="text-cockpit-xs text-slate-400">凭证主表</span>
-              <b class="font-mono text-cockpit-lg font-bold text-slate-200 my-0.5">{{ format(ops.accountingVoucher) }}</b>
-              <small class="text-cockpit-xs text-slate-500 truncate">纳管 {{ format(store.snapshot.overview.orgTotal) }} 家</small>
+            <div class="flex items-center gap-1.5 mt-2 text-cockpit-xs text-emerald-400">
+              <ShieldCheck :size="13" class="flex-shrink-0" />
+              <span class="truncate">借贷平衡规则已启用</span>
             </div>
-            <div class="p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between">
-              <span class="text-cockpit-xs text-slate-400">分录明细</span>
-              <b class="font-mono text-cockpit-lg font-bold text-slate-200 my-0.5">{{ format(ops.accountingVoucherLine) }}</b>
-              <small class="text-cockpit-xs text-slate-500 truncate">
-                平均 {{ ops.accountingVoucher ? (ops.accountingVoucherLine / ops.accountingVoucher).toFixed(2) : '—' }} 行
-              </small>
-            </div>
-          </div>
-          <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-emerald-950/20 border-l-4 border-l-emerald-400 border-y border-r border-emerald-500/20">
-            <ShieldCheck :size="18" class="text-emerald-400 flex-shrink-0" />
-            <div class="min-w-0">
-              <b class="block text-cockpit-sm font-semibold text-emerald-300">借贷平衡校验已纳入质量规则</b>
-              <p class="text-cockpit-xs text-slate-400 mt-0.5">当前接口未提供异常笔数，不展示推断结果</p>
-            </div>
+            <span class="text-cockpit-xs text-slate-500 mt-1 truncate">异常笔数：接口未提供</span>
           </div>
         </div>
       </CockpitPanel>
