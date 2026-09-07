@@ -181,7 +181,7 @@ def load_construction_baseline(conn: Any) -> ConstructionBaseline:
         }
 
     # 5. Query max IDs
-    tables = ["construction_task", "training", "dual_run_result"]
+    tables = ["org_unit", "sys_user", "construction_task", "training", "dual_run_result"]
     next_ids: Dict[str, int] = {}
     for table in tables:
         cursor.execute(f"SELECT COALESCE(MAX(id), 0) FROM {table};")  # noqa: S608

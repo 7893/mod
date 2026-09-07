@@ -40,6 +40,7 @@ from .construction_playbooks import (
     DualRunCheckPlaybook,
     TrainingCertificationPlaybook,
 )
+from .pool_onboarding import ReservePoolAdmissionPlaybook
 from .construction_writer import ConstructionWriter
 from .engine_context import (
     IdAllocator,
@@ -253,6 +254,7 @@ class SimulatorRuntimeService:
         self.consecutive_failures = 0
         self.cycle_count = 0
         self.start_time = time.time()
+        self.onboarding_dates: List[Any] = []
 
         # Cache baselines
         self._fast_baseline: Optional[Any] = None
@@ -446,6 +448,40 @@ class SimulatorRuntimeService:
         """Generate an eligible slow-movie construction event based on current baseline."""
         if not self._construction_baseline:
             return None
+
+        # KI-035: Low-frequency Batch 8 dynamic reserve pool admission (1~3 per week)
+        admissions_in_week = sum(
+            1 for d in self.onboarding_dates if 0 <= (event_date - d).days < 7
+        )
+        days_since_last = (
+            (event_date - self.onboarding_dates[-1]).days
+            if self.onboarding_dates
+            else 999
+        )
+        # Sporadic admission: max 3/week, min 2 days gap, controlled tick probability
+        if admissions_in_week < 3 and days_since_last >= 2 and self.rng.random() < 0.10:
+            pb_onboard = ReservePoolAdmissionPlaybook(
+                baseline=self._construction_baseline,
+                id_allocator=self._construction_allocator,
+                seed=self.rng.randint(1, 1000000),
+            )
+            ev = pb_onboard.generate(event_date=event_date, id_allocator=self._construction_allocator)
+            self.onboarding_dates.append(event_date)
+            # Sync in-memory baseline
+            self._construction_baseline.orgs[ev.org_id] = {
+                "id": ev.org_id,
+                "name": ev.name,
+                "batch_id": 8,
+                "status": "未启动",
+                "region": ev.region,
+                "start_date": ev.start_date,
+                "end_date": ev.end_date,
+            }
+            self._construction_baseline.orgs_by_status.setdefault("未启动", []).append(ev.org_id)
+            self._construction_baseline.org_users[ev.org_id] = [
+                {"name": u.name, "role": u.role} for u in ev.users
+            ]
+            return ev
 
         # Try DualRunCheck for active dual-run org
         dual_orgs = self._construction_baseline.orgs_by_status.get("双轨运行中", [])

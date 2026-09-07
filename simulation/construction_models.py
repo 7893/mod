@@ -105,6 +105,17 @@ class RolloutBatchUpdateFootprint:
 
 
 @dataclass
+class SysUserFootprint:
+    """Footprint for sys_user table."""
+
+    id: int
+    name: str
+    org_id: int
+    role: str
+    job: str
+
+
+@dataclass
 class DataReadinessRecordFootprint:
     """Footprint for data_readiness table."""
 
@@ -247,6 +258,23 @@ class BatchRolloutEventFootprint:
     to_status: str
     batch_update: RolloutBatchUpdateFootprint
     reason: str
+
+
+@dataclass
+class NewOrgAdmissionFootprint:
+    """Event 8 (KI-035): New SOE organization admission into Batch 8 dynamic reserve pool."""
+
+    org_id: int
+    name: str
+    region: str
+    batch_id: int = 8
+    status: str = "未启动"
+    start_date: date = field(default_factory=date.today)
+    end_date: date = field(default_factory=lambda: date.today() + timedelta(days=500))
+    users: List[SysUserFootprint] = field(default_factory=list)
+    tasks: List[ConstructionTaskFootprint] = field(default_factory=list)
+    readiness: Optional[DataReadinessRecordFootprint] = None
+    snapshot: Optional[RolloutStatusSnapshotFootprint] = None
 
 
 # ---------------------------------------------------------------------------
@@ -495,9 +523,83 @@ def validate_batch_rollout(event: BatchRolloutEventFootprint) -> None:
         raise ValueError("Batch transition reason must not be empty")
 
 
+def validate_new_org_admission(event: NewOrgAdmissionFootprint) -> None:
+    """Validate NewOrgAdmissionFootprint consistency and compliance with KI-035."""
+    if event.batch_id != 8:
+        raise ValueError(f"Gate violated: Batch 8 reserve pool admission requires batch_id=8, got {event.batch_id}")
+    if event.status != "未启动":
+        raise ValueError(f"Gate violated: New unit must be '未启动', got {event.status}")
+    if not event.name or not event.name.strip():
+        raise ValueError("Organization name must not be empty")
+    if not event.region or not event.region.strip():
+        raise ValueError("Organization region must not be empty")
+    if event.start_date > event.end_date:
+        raise ValueError(f"Time inversion: start_date ({event.start_date}) > end_date ({event.end_date})")
+
+    # Validate users: 3~5 users, must have 财务总监/管理人员 and 项目经理
+    if len(event.users) < 3:
+        raise ValueError(f"User roster violated: minimum 3 users required, got {len(event.users)}")
+    user_names = set()
+    has_finance_director = False
+    has_project_manager = False
+    for u in event.users:
+        if u.org_id != event.org_id:
+            raise ValueError(f"User org_id mismatch: {u.org_id} != {event.org_id}")
+        if not u.name or not u.name.strip():
+            raise ValueError("User name must not be empty")
+        if u.name in user_names:
+            raise ValueError(f"Duplicate user name {u.name} within org {event.org_id}")
+        user_names.add(u.name)
+        if u.job == "财务总监" or u.role == "管理人员":
+            has_finance_director = True
+        if u.job == "项目经理" or u.role == "项目经理":
+            has_project_manager = True
+    if not has_finance_director:
+        raise ValueError(f"User roster violated: missing 财务总监/管理人员 in org {event.org_id}")
+    if not has_project_manager:
+        raise ValueError(f"User roster violated: missing 项目经理 in org {event.org_id}")
+
+    # Validate tasks: progress must be 0, status '未开始', actual_time None
+    if len(event.tasks) < 20:
+        raise ValueError(f"Construction tasks violated: standard suite requires >= 20 tasks, got {len(event.tasks)}")
+    for t in event.tasks:
+        if t.org_id != event.org_id:
+            raise ValueError(f"Task org_id mismatch: {t.org_id} != {event.org_id}")
+        if t.progress != 0:
+            raise ValueError(f"Unstarted unit task must have progress 0, got {t.progress} on task {t.id}")
+        if t.status != "未开始":
+            raise ValueError(f"Unstarted unit task must have status '未开始', got '{t.status}' on task {t.id}")
+        if t.actual_time is not None:
+            raise ValueError(f"Unstarted unit task actual_time must be None, got {t.actual_time}")
+        if t.owner not in user_names:
+            raise ValueError(f"Task owner '{t.owner}' not found in organization user roster")
+
+    # Validate data readiness: rates must be 0%, status '未收集'
+    if event.readiness:
+        r = event.readiness
+        if r.org_id != event.org_id:
+            raise ValueError(f"Readiness org_id mismatch: {r.org_id} != {event.org_id}")
+        if r.batch_id != 8:
+            raise ValueError(f"Readiness batch_id mismatch: {r.batch_id} != 8")
+        if r.overall_status != "未收集":
+            raise ValueError(f"Readiness overall_status must be '未收集', got '{r.overall_status}'")
+        if r.static_completed != 0 or r.opening_completed != 0 or r.dynamic_completed != 0:
+            raise ValueError("Readiness completed counts must all be 0 for new unstarted unit")
+
+    # Validate rollout snapshot
+    if event.snapshot:
+        s = event.snapshot
+        if s.org_id != event.org_id:
+            raise ValueError(f"Snapshot org_id mismatch: {s.org_id} != {event.org_id}")
+        if s.status != "未启动":
+            raise ValueError(f"Snapshot status must be '未启动', got '{s.status}'")
+
+
 def validate_construction_event(event: object) -> None:
-    """Unified dispatcher to validate any of the 7 construction event footprints."""
-    if isinstance(event, PoolOnboardingEventFootprint):
+    """Unified dispatcher to validate any of the construction event footprints."""
+    if isinstance(event, NewOrgAdmissionFootprint):
+        validate_new_org_admission(event)
+    elif isinstance(event, PoolOnboardingEventFootprint):
         validate_pool_onboarding(event)
     elif isinstance(event, DataReadinessEventFootprint):
         validate_data_readiness(event)
