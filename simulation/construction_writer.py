@@ -124,6 +124,7 @@ class ConstructionWriter:
                         "data_readiness",
                         "training",
                         "dual_run_result",
+                        "daily_stats",
                     ):
                         raise ValueError(f"Unauthorized table backup request: {table}")
                     cursor.execute(f"SELECT * FROM {table};")  # noqa: S608

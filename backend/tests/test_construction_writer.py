@@ -88,7 +88,8 @@ def test_construction_writer_atomic_rollback_on_error(monkeypatch, tmp_path):
 
 
 def test_backup_whitelist_includes_sys_user(tmp_path):
-    """KI-035 回归：入池需写 sys_user，备份白名单必须包含它，否则备份被拒、入池失败。"""
+    """KI-035 回归：入池会写 sys_user / daily_stats 等表，备份白名单必须覆盖所有写入表，
+    否则备份被拒、入池失败。锁死"写入白名单 ⊆ 备份白名单"。"""
     rows = [{"id": 1, "name": "测试单位", "status": "未启动"}]
     mock_cursor = MagicMock()
     mock_cursor.fetchall.return_value = rows
@@ -100,6 +101,11 @@ def test_backup_whitelist_includes_sys_user(tmp_path):
         audit_log_path=str(tmp_path / "audit.log"),
         backup_dir=str(tmp_path / "backups"),
     )
-    # sys_user 必须被允许备份，不得抛 Unauthorized
-    path = writer.backup_affected_tables(["org_unit", "sys_user", "construction_task"])
-    assert path  # 返回备份文件路径即视为通过（未抛异常）
+    # 所有可能被写入的表都必须允许备份，不得抛 Unauthorized
+    all_written_tables = [
+        "org_unit", "sys_user", "construction_task", "rollout_batch",
+        "rollout_status_snapshot", "data_readiness", "training",
+        "dual_run_result", "daily_stats",
+    ]
+    path = writer.backup_affected_tables(all_written_tables)
+    assert path  # 全部允许、返回备份路径即通过（未抛异常）
