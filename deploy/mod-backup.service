@@ -5,11 +5,12 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-WorkingDirectory=${MOD_PROJECT_ROOT}
+WorkingDirectory=${MOD_PROJECT_ROOT}/backend/current
 EnvironmentFile=${MOD_PROJECT_ROOT}/.env.systemd
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONUNBUFFERED=1
-ExecStart=${MOD_PROJECT_ROOT}/backend/.venv/bin/python ${MOD_PROJECT_ROOT}/scripts/ops/backup_pipeline.py
+Environment=PYTHONPATH=${MOD_PROJECT_ROOT}/backend/current
+ExecStart=${MOD_PROJECT_ROOT}/backend/.venv/bin/python ${MOD_PROJECT_ROOT}/backend/current/scripts/ops/backup_pipeline.py
 NoNewPrivileges=true
 PrivateTmp=true
 TimeoutStartSec=900

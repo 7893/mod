@@ -5,15 +5,18 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=${MOD_PROJECT_ROOT}
+WorkingDirectory=${MOD_PROJECT_ROOT}/backend/current
 EnvironmentFile=${MOD_PROJECT_ROOT}/.env.systemd
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONUNBUFFERED=1
-ExecStart=${MOD_PROJECT_ROOT}/backend/.venv/bin/python ${MOD_PROJECT_ROOT}/scripts/agy/run_simulator_service.py
+Environment=PYTHONPATH=${MOD_PROJECT_ROOT}/backend/current
+Environment=MOD_OUTPUT_DIR=${MOD_PROJECT_ROOT}/output
+ExecStart=${MOD_PROJECT_ROOT}/backend/.venv/bin/python ${MOD_PROJECT_ROOT}/backend/current/scripts/agy/run_simulator_service.py
 Restart=always
 RestartSec=10
+TimeoutStopSec=10
 NoNewPrivileges=true
 PrivateTmp=true
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
