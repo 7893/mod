@@ -346,3 +346,60 @@ def test_v2_refresh_meta_total_rows():
     assert data["total_rows"] == snap["meta"]["fullRows"]
     assert data["status"] == "fallback"
     assert data["data_version"] == "frozen"
+
+
+def test_openapi_security_schemes():
+    """KI-041: OpenAPI 文档必须显式声明 securitySchemes 认证体系。"""
+    res = client.get("/api/openapi.json")
+    assert res.status_code == 200
+    spec = res.json()
+    assert "components" in spec
+    assert "securitySchemes" in spec["components"]
+    schemes = spec["components"]["securitySchemes"]
+    assert "ApiKeyAuth" in schemes
+    assert "BearerAuth" in schemes
+    assert "ActionTokenAuth" in schemes
+    assert schemes["ApiKeyAuth"]["type"] == "apiKey"
+    assert schemes["ApiKeyAuth"]["name"] == "X-MOD-Auth-Token"
+
+
+def test_insights_status_provides_action_token():
+    """KI-041: insights/status 接口必须提供短效 action_token 供前端合法会话使用。"""
+    res = client.get("/api/insights/status")
+    assert res.status_code == 200
+    data = res.json()
+    assert "action_token" in data
+    assert isinstance(data["action_token"], str)
+    assert len(data["action_token"]) >= 16
+
+
+def test_insights_generate_requires_authentication(monkeypatch):
+    """KI-041: POST /api/insights/generate 必须强制鉴权，未授权请求拒绝执行外部模型调用。"""
+    from unittest.mock import MagicMock
+
+    # 1. 无任何认证凭据 -> 401
+    res = client.post("/api/insights/generate")
+    assert res.status_code == 401
+
+    # 2. 携带错误凭据 -> 401
+    res = client.post("/api/insights/generate", headers={"X-MOD-Auth-Token": "invalid-token"})
+    assert res.status_code == 401
+
+    # 3. 携带合法 action_token -> 鉴权通过并执行业务逻辑
+    from app.auth import get_current_action_token
+    token = get_current_action_token()
+
+    mock_cf_ai = MagicMock()
+    mock_cf_ai.generate_insights.return_value = {"status": "ok", "content": "Mock insight"}
+    monkeypatch.setattr("app.api.CloudflareAIAdapter", lambda: mock_cf_ai)
+
+    res = client.post("/api/insights/generate", headers={"X-Action-Token": token})
+    assert res.status_code == 200
+    assert res.json()["status"] == "ok"
+
+    # 4. 携带配置的 MOD_INTERNAL_API_KEY -> 鉴权通过
+    monkeypatch.setenv("MOD_INTERNAL_API_KEY", "internal-test-key-999")
+    res = client.post("/api/insights/generate", headers={"X-MOD-Auth-Token": "internal-test-key-999"})
+    assert res.status_code == 200
+    assert res.json()["status"] == "ok"
+
