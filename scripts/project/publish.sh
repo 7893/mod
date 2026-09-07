@@ -48,11 +48,14 @@ mkdir -p "$FE_RELEASE_DIR"
 cp -r "$REPO_ROOT/frontend/dist/." "$FE_RELEASE_DIR/"
 echo "  前端 release: $FE_RELEASE_DIR"
 
-# 2. 复制后端 app/
-echo "[2/8] 复制后端 app/..."
+# 2. 复制后端及后台服务
+echo "[2/8] 打包后端及后台常驻写服务 release..."
 mkdir -p "$BE_RELEASE_DIR"
 cp -r "$REPO_ROOT/backend/app/." "$BE_RELEASE_DIR/"
-echo "  后端 release: $BE_RELEASE_DIR"
+ln -s . "$BE_RELEASE_DIR/app"
+cp -r "$REPO_ROOT/simulation" "$BE_RELEASE_DIR/"
+cp -r "$REPO_ROOT/scripts" "$BE_RELEASE_DIR/"
+echo "  后端与后台写服务 release: $BE_RELEASE_DIR"
 
 # 3. make check
 echo "[3/8] 运行 make check..."
@@ -68,10 +71,11 @@ ln -sfn "$BE_RELEASE_DIR" "$BE_CURRENT"
 echo "  前端: $FE_CURRENT -> $FE_RELEASE_DIR"
 echo "  后端: $BE_CURRENT -> $BE_RELEASE_DIR"
 
-# 5. reload Nginx + restart mod-api
-echo "[5/8] reload Nginx + restart mod-api..."
+# 5. reload Nginx + restart mod-api + restart mod-simulator
+echo "[5/8] reload Nginx + restart mod-api + restart mod-simulator..."
 sudo systemctl reload nginx
 sudo systemctl restart mod-api
+sudo systemctl restart mod-simulator
 sleep 4
 
 # 6. 验证
@@ -83,6 +87,7 @@ if [ "$HTTP_CODE" != "200" ]; then
     [ -n "$PREV_BE" ] && ln -sfn "$PREV_BE" "$BE_CURRENT"
     sudo systemctl reload nginx
     sudo systemctl restart mod-api
+    sudo systemctl restart mod-simulator
     echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
     exit 1
 fi
@@ -97,6 +102,7 @@ if [ "$STATUS_CODE" != "200" ]; then
     [ -n "$PREV_BE" ] && ln -sfn "$PREV_BE" "$BE_CURRENT"
     sudo systemctl reload nginx
     sudo systemctl restart mod-api
+    sudo systemctl restart mod-simulator
     echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
     exit 1
 fi
@@ -120,6 +126,7 @@ print(f"  Simulator probe OK: service={svc} status={st} fresh={fr}")
     [ -n "$PREV_BE" ] && ln -sfn "$PREV_BE" "$BE_CURRENT"
     sudo systemctl reload nginx
     sudo systemctl restart mod-api
+    sudo systemctl restart mod-simulator
     echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
     exit 1
 fi
@@ -137,5 +144,5 @@ echo "[8/8] 完成"
 echo "=========================================="
 echo "  发布成功: $TS"
 echo "  回滚命令（前端）: ln -sfn $FE_RELEASES/<prev_ts> $FE_CURRENT && sudo systemctl reload nginx"
-echo "  回滚命令（后端）: ln -sfn $BE_RELEASES/<prev_ts> $BE_CURRENT && sudo systemctl restart mod-api"
+echo "  回滚命令（后端及常驻）: ln -sfn $BE_RELEASES/<prev_ts> $BE_CURRENT && sudo systemctl restart mod-api mod-simulator"
 echo "=========================================="

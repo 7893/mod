@@ -44,8 +44,15 @@ logger = logging.getLogger("mod-simulator")
 
 
 def load_environment() -> None:
-    for env_file in [BASE_DIR / ".env.systemd", BASE_DIR / ".env.local", BASE_DIR / ".env"]:
-        if env_file.exists():
+    env_candidates = [
+        os.getenv("MOD_ENV_FILE"),
+        Path("/home/ubuntu/mod/.env.systemd"),
+        BASE_DIR / ".env.systemd",
+        BASE_DIR / ".env.local",
+        BASE_DIR / ".env",
+    ]
+    for env_file in env_candidates:
+        if env_file and Path(env_file).exists():
             try:
                 from dotenv import load_dotenv
 
@@ -131,7 +138,7 @@ def main() -> int:
     args = parser.parse_args()
     load_environment()
 
-    output_dir = BASE_DIR / "output"
+    output_dir = Path(os.getenv("MOD_OUTPUT_DIR") or (BASE_DIR / "output")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     config = SimulatorRuntimeConfig(

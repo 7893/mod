@@ -5,15 +5,18 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/ubuntu/mod
+WorkingDirectory=/home/ubuntu/mod/backend/current
 EnvironmentFile=/home/ubuntu/mod/.env.systemd
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/home/ubuntu/mod/backend/.venv/bin/python /home/ubuntu/mod/scripts/agy/run_simulator_service.py
+Environment=PYTHONPATH=/home/ubuntu/mod/backend/current
+Environment=MOD_OUTPUT_DIR=/home/ubuntu/mod/output
+ExecStart=/home/ubuntu/mod/backend/.venv/bin/python /home/ubuntu/mod/backend/current/scripts/agy/run_simulator_service.py
 Restart=always
 RestartSec=10
+TimeoutStopSec=10
 NoNewPrivileges=true
 PrivateTmp=true
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
