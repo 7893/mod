@@ -6,7 +6,7 @@ import {
   chartTooltip,
   valueAxis,
 } from './theme'
-import type { CompositionTone } from './panelData'
+import { parsePercentage, type CompositionTone } from './panelData'
 
 interface StageSeriesItem {
   name: string
@@ -39,6 +39,13 @@ interface BatchProgressItem {
   name: string
   construction: number
   launched: number
+}
+
+interface QualityRateItem {
+  name: string
+  value: number | null
+  detail: string
+  tone: 'accent' | 'success'
 }
 
 interface CompositionPart {
@@ -203,30 +210,46 @@ export function createCoverageOption(coverage: CoverageSeriesItem | null) {
   }
 }
 
-export function createProvinceProfileOption(progress?: number | null) {
-  const hasValue = progress != null && Number.isFinite(progress)
-  const safeProgress = hasValue ? Math.max(0, Math.min(100, progress)) : 0
+export function createProvinceProfileOption(progress?: number | string | null) {
+  const parsedProgress = parsePercentage(progress)
+  const hasValue = parsedProgress !== null
+  const safeProgress = parsedProgress ?? 0
   return {
     ...calmAnimation,
     tooltip: { show: false },
-    title: {
-      text: hasValue ? `${safeProgress}%` : '—',
-      subtext: '建设完成度',
-      left: 'center',
-      top: '31%',
-      textStyle: { color: chartInk.textPrimary, fontSize: 18, fontFamily: 'monospace' },
-      subtextStyle: { color: chartInk.textMuted, fontSize: 10 },
-    },
     series: [{
-      type: 'pie',
-      radius: ['62%', '82%'],
+      type: 'gauge',
+      startAngle: 90,
+      endAngle: -270,
+      radius: '86%',
       center: ['50%', '50%'],
       silent: true,
-      label: { show: false },
-      data: [
-        { value: safeProgress, itemStyle: { color: chartPalette.accent } },
-        { value: 100 - safeProgress, itemStyle: { color: chartPalette.neutral } },
-      ],
+      pointer: { show: false },
+      progress: {
+        show: hasValue,
+        roundCap: true,
+        width: 8,
+        itemStyle: { color: chartPalette.accent },
+      },
+      axisLine: { lineStyle: { width: 8, color: [[1, chartInk.border]] } },
+      axisTick: { show: false },
+      splitLine: { show: false },
+      axisLabel: { show: false },
+      title: {
+        show: true,
+        offsetCenter: [0, '34%'],
+        color: chartInk.textMuted,
+        fontSize: 10,
+      },
+      detail: {
+        valueAnimation: true,
+        offsetCenter: [0, '-8%'],
+        color: chartInk.textPrimary,
+        fontFamily: 'monospace',
+        fontSize: 18,
+        formatter: hasValue ? '{value}%' : '—',
+      },
+      data: [{ value: safeProgress, name: '建设完成度' }],
     }],
   }
 }
@@ -238,15 +261,20 @@ export function createBatchProgressOption(list: BatchProgressItem[]) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      valueFormatter: (value: number) => `${value}%`,
+      formatter: (params: any[]) => {
+        const item = reversed[params?.[0]?.dataIndex]
+        if (!item) return ''
+        return `${item.name}<br/>建设完成度 <b>${item.construction}%</b><br/>上线率 <b>${item.launched}%</b>`
+      },
       ...chartTooltip,
     },
-    legend: compactLegend(['建设进度', '上线率']),
-    grid: { left: 6, right: 10, top: 25, bottom: 4, containLabel: true },
+    legend: compactLegend(['已上线', '已建设待上线', '待完成']),
+    grid: { left: 6, right: 8, top: 25, bottom: 2, containLabel: true },
     xAxis: {
       ...valueAxis,
       min: 0,
       max: 100,
+      splitNumber: 2,
       axisLabel: { color: chartInk.textMuted, fontSize: 9, formatter: '{value}%' },
     },
     yAxis: {
@@ -258,16 +286,72 @@ export function createBatchProgressOption(list: BatchProgressItem[]) {
     },
     series: [
       {
-        name: '建设进度', type: 'bar', barMaxWidth: 8, barGap: '25%',
-        data: reversed.map((batch) => batch.construction),
-        itemStyle: { color: chartPalette.accent, borderRadius: 2 },
+        name: '已上线', type: 'bar', stack: 'phase', barMaxWidth: 14,
+        data: reversed.map((batch) => batch.launched),
+        itemStyle: { color: chartPalette.success, borderRadius: [3, 0, 0, 3] },
       },
       {
-        name: '上线率', type: 'bar', barMaxWidth: 8,
-        data: reversed.map((batch) => batch.launched),
-        itemStyle: { color: chartPalette.success, borderRadius: 2 },
+        name: '已建设待上线', type: 'bar', stack: 'phase',
+        data: reversed.map((batch) => Math.max(0, batch.construction - batch.launched)),
+        itemStyle: { color: chartPalette.accent },
+      },
+      {
+        name: '待完成', type: 'bar', stack: 'phase',
+        data: reversed.map((batch) => Math.max(0, 100 - batch.construction)),
+        itemStyle: { color: chartPalette.neutral, borderRadius: [0, 3, 3, 0] },
       },
     ],
+  }
+}
+
+export function createOperationsQualityOption(list: QualityRateItem[]) {
+  const reversed = [...list].reverse()
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any[]) => {
+        const item = reversed[params?.[0]?.dataIndex]
+        if (!item) return ''
+        const value = item.value === null ? '—' : `${item.value}%`
+        return `${item.name}<br/><b>${value}</b> · ${item.detail}`
+      },
+      ...chartTooltip,
+    },
+    grid: { left: 2, right: 42, top: 3, bottom: 3, containLabel: true },
+    xAxis: { type: 'value', min: 0, max: 100, show: false },
+    yAxis: {
+      type: 'category',
+      data: reversed.map((item) => item.name),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+    },
+    series: [{
+      type: 'bar',
+      barWidth: 10,
+      showBackground: true,
+      backgroundStyle: { color: chartInk.borderSoft, borderRadius: 4 },
+      data: reversed.map((item) => ({
+        value: item.value ?? 0,
+        itemStyle: {
+          color: item.tone === 'success' ? chartPalette.success : chartPalette.accent,
+          borderRadius: 4,
+        },
+      })),
+      label: {
+        show: true,
+        position: 'right',
+        color: chartInk.textPrimary,
+        fontFamily: 'monospace',
+        fontSize: 10,
+        formatter: (params: any) => {
+          const item = reversed[params?.dataIndex]
+          return item?.value === null ? '—' : `${item?.value}%`
+        },
+      },
+    }],
   }
 }
 

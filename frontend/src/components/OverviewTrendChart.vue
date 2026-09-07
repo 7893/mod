@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart } from 'echarts/charts'
+import { BarChart, LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import {
   calmAnimation,
@@ -13,7 +13,7 @@ import {
 } from '../charts/theme.ts'
 import type { TrendItem } from '../stores/project.ts'
 
-use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent])
+use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
 const props = defineProps<{
   data: TrendItem[]
@@ -53,24 +53,13 @@ const trendOption = computed(() => ({
       data: props.data.map((v) => v.launched),
       showSymbol: false,
       lineStyle: { color: '#38bdf8', width: 2.2 },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(56, 189, 248, 0.32)' },
-            { offset: 1, color: 'rgba(56, 189, 248, 0.01)' },
-          ],
-        },
-      },
     },
     {
       name: '双轨核对',
-      type: 'line',
-      smooth: true,
+      type: 'bar',
+      barMaxWidth: 18,
       data: props.data.map((v) => v.dual ?? 0),
-      showSymbol: false,
-      lineStyle: { color: '#fbbf24', width: 2, type: [4, 4] },
+      itemStyle: { color: '#fbbf24', borderRadius: [3, 3, 0, 0], opacity: 0.82 },
     },
   ],
 }))
