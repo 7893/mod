@@ -1,17 +1,25 @@
 # Nginx template for the MOD dashboard host.
-# Copy to mod.conf and replace __PUBLIC_DOMAIN__ with the real domain at deploy time.
-# The real mod.conf is gitignored (carries real domain and cert paths).
+# Copy to mod.conf and replace __PUBLIC_DOMAIN__ and __CLOUDFRONT_ORIGIN_SECRET__ with real credentials.
+# The real mod.conf is gitignored (carries real domain, origin secrets, and cert paths).
 
-# HTTP -> HTTPS redirect
+# HTTP -> HTTPS redirect & ACME challenge
 server {
     listen 80;
     listen [::]:80;
     server_name __PUBLIC_DOMAIN__;
     server_tokens off;
-    return 301 https://__PUBLIC_DOMAIN__$request_uri;
+
+    # ACME challenge for automatic certificate renewal
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://__PUBLIC_DOMAIN__$request_uri;
+    }
 }
 
-# Primary host
+# Primary HTTPS host
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -20,27 +28,33 @@ server {
 
     include /etc/nginx/snippets/cloudflare-realip.conf;
 
-    ssl_certificate /etc/letsencrypt/live/__PUBLIC_DOMAIN__/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/__PUBLIC_DOMAIN__/privkey.pem;
+    ssl_certificate __SSL_CERT_PATH__;
+    ssl_certificate_key __SSL_KEY_PATH__;
 
     add_header Strict-Transport-Security "max-age=31536000; preload" always;
     add_header X-Content-Type-Options nosniff always;
     add_header X-Frame-Options SAMEORIGIN always;
     add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
 
-    # 硬拦截：AI/LLM 训练爬虫与检索爬虫，按 User-Agent 直接 403，连内容都不返回。
-    # robots.txt 只是君子协定；这里是强制层。内部交流系统，谢绝一切采集。
+    # CloudFront 回源密钥校验：只有带正确 X-Origin-Secret 的请求（经 CDN 回源）才放行，
+    # 直连源站绕过 CDN 的请求一律 403 阻断（隐藏源站真实 IP 的强制隔离层）。
+    if ($http_x_origin_secret != "__CLOUDFRONT_ORIGIN_SECRET__") {
+        return 403;
+    }
+
+    # 硬拦截：AI/LLM 训练爬虫与全网检索爬虫，按 User-Agent 直接 403，阻断一切非授权抓取。
     if ($http_user_agent ~* "(GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-Web|anthropic-ai|Google-Extended|GoogleOther|PerplexityBot|Perplexity-User|CCBot|Bytespider|Amazonbot|Applebot-Extended|Meta-ExternalAgent|FacebookBot|cohere-ai|Diffbot|ImagesiftBot|Timpibot|Omgilibot|YouBot|Baiduspider|YandexBot|Sogou|360Spider|DotBot|MJ12bot|AhrefsBot|SemrushBot|DataForSeoBot)") {
         return 403;
     }
 
     location = /robots.txt {
         default_type text/plain;
-        return 200 "# 本站为内部交流系统，谢绝一切检索、抓取、索引与 AI 训练采集。\nUser-agent: *\nDisallow: /\n";
+        return 200 "# 本站为内部系统，谢绝一切检索、抓取、索引与 AI 训练采集。\nUser-agent: *\nDisallow: /\n";
     }
 
-    location = /api/v2/live-projection/events {
-        proxy_pass http://127.0.0.1:8100/api/v2/live-projection/events;
+    # SSE 只读实时投影长链接通道
+    location = /api/live-projection/events {
+        proxy_pass http://127.0.0.1:8100/api/live-projection/events;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -54,6 +68,7 @@ server {
         add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
     }
 
+    # REST API 反向代理
     location ^~ /api/ {
         proxy_pass http://127.0.0.1:8100/api/;
         proxy_set_header Host $host;
@@ -63,16 +78,26 @@ server {
         proxy_read_timeout 30s;
         add_header Cache-Control "no-store" always;
         add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
-        limit_req zone=general burst=20 nodelay;
     }
 
+    # 前端带 Hash 静态资源：长效强缓存
+    location ^~ /assets/ {
+        root /home/ubuntu/mod/frontend/current;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
+        try_files $uri =404;
+    }
+
+    # 前端 SPA 页面路由（基于发布软链 current 目录）
     location / {
-        root /home/ubuntu/mod/frontend/dist;
+        root /home/ubuntu/mod/frontend/current;
         try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache" always;
         add_header Strict-Transport-Security "max-age=31536000; preload" always;
         add_header X-Content-Type-Options nosniff always;
         add_header X-Frame-Options SAMEORIGIN always;
         add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
-        limit_req zone=general burst=20 nodelay;
     }
 }
