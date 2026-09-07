@@ -29,6 +29,7 @@ export function useAiInsights() {
   const aiLatest = ref<AiLatest | null>(null)
   const aiGenerating = ref(false)
   const aiError = ref<string | null>(null)
+  const actionToken = ref<string | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
 
   async function fetchStatus(): Promise<void> {
@@ -37,6 +38,9 @@ export function useAiInsights() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data: AiStatus = await res.json()
       aiStatus.value = data
+      if ((data as any).action_token) {
+        actionToken.value = (data as any).action_token
+      }
       if (aiPhase.value === 'idle' || aiPhase.value === 'loading') {
         if (data.status === 'ok' || (data as any).status === 'ready') {
           await fetchLatest()
@@ -87,15 +91,22 @@ export function useAiInsights() {
     aiPhase.value = 'generating'
     aiError.value = null
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (actionToken.value) {
+        headers['X-Action-Token'] = actionToken.value
+      }
       const res = await fetch(`${apiBase}/insights/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         if (res.status === 429) {
           aiPhase.value = 'rate_limited'
           aiStatus.value = body
+        } else if (res.status === 401) {
+          aiPhase.value = 'error'
+          aiError.value = body?.detail ?? '未授权访问：缺少有效内部操作凭据'
         } else {
           aiPhase.value = 'error'
           aiError.value = body?.message ?? `HTTP ${res.status}`

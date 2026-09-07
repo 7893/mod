@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from .auth import get_current_action_token, verify_internal_auth
 from .db import connection
 from .ml_adapter import HeatWaveMLAdapter, CloudflareAIAdapter
 from .schemas import PageV2
@@ -246,6 +247,7 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
                     tm["algorithm"] = cls_info.get("algorithm", "HeatWave AutoML DecisionTreeClassifier")
                     tm["quality"] = cls_quality  # 真实值或 None，不再硬编码
 
+        base_insights["action_token"] = get_current_action_token()
         return base_insights
     except Exception as e:
         snap = dashboard_snapshot(conn)
@@ -253,6 +255,7 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
         base_insights["hw_ml"] = {"status": "unavailable", "message": f"服务端错误：{e}"}
         base_insights["cf_ai"] = {"status": "unavailable", "message": "服务端错误，状态不可用"}
         base_insights["summary"] = f"研判引擎暂时不可用：{e}"
+        base_insights["action_token"] = get_current_action_token()
         return base_insights
 
 
@@ -266,7 +269,13 @@ def insights_risk_explanation(org_id: int, conn: Connection | None = Depends(con
     return adapter.explain_risk(org_id)
 
 
-@router.post("/insights/generate")
+@router.post(
+    "/insights/generate",
+    dependencies=[Depends(verify_internal_auth)],
+    responses={
+        401: {"description": "未授权访问：高危外部调用接口需要有效的内部访问凭据"},
+    },
+)
 def insights_generate(conn: Connection | None = Depends(connection)) -> dict:
     """
     主动触发 Cloudflare Workers AI 洞察生成。
