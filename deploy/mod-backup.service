@@ -1,0 +1,18 @@
+[Unit]
+Description=MOD Daily Disaster Recovery Backup Service (Logical Dump, Encryption, S3 Sync)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=${MOD_PROJECT_ROOT}
+EnvironmentFile=${MOD_PROJECT_ROOT}/.env.systemd
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=${MOD_PROJECT_ROOT}/backend/.venv/bin/python ${MOD_PROJECT_ROOT}/scripts/ops/backup_pipeline.py
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target
