@@ -3,19 +3,11 @@ import { computed, ref } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart, PieChart } from 'echarts/charts'
+import { BarChart, GaugeChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
-import {
-  AlertTriangle,
-  Building,
-  ClipboardCheck,
-  Search,
-  ShieldAlert,
-} from 'lucide-vue-next'
+import { Search } from 'lucide-vue-next'
 import CockpitPanel from '../components/CockpitPanel.vue'
-import MetricGrid from '../components/blocks/MetricGrid.vue'
 import ChartBlock from '../components/blocks/ChartBlock.vue'
-import type { MetricItem } from '../components/blocks/types.ts'
 import ComplianceInspectDrawer, { type ComplianceIssueUnit } from '../components/ComplianceInspectDrawer.vue'
 import {
   calmAnimation,
@@ -30,8 +22,9 @@ import {
 import { formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import { createBatchComplianceOption } from '../charts/panelOptions.ts'
+import { createComplianceOverviewOption } from '../charts/complianceOptions.ts'
 
-use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
+use([CanvasRenderer, BarChart, GaugeChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
 
 const store = useProjectStore()
 
@@ -105,21 +98,14 @@ const complianceUnits = computed<ComplianceIssueUnit[]>(() => {
   return result
 })
 
-const totalUnits = computed(() => store.snapshot.overview.orgTotal || store.entities.length || 2000)
+const totalUnits = computed(() => store.snapshot.overview.orgTotal ?? store.entities.length)
 const compliantCount = computed(() => Math.max(0, totalUnits.value - complianceUnits.value.length))
 const complianceRate = computed(() =>
-  totalUnits.value > 0 ? ((compliantCount.value / totalUnits.value) * 100).toFixed(1) : '93.9',
+  totalUnits.value > 0 ? ((compliantCount.value / totalUnits.value) * 100).toFixed(1) : null,
 )
 
 const highRiskCount = computed(() => complianceUnits.value.filter((u) => u.level === '高').length)
 const mediumRiskCount = computed(() => complianceUnits.value.filter((u) => u.level === '中').length)
-
-const e1SummaryItems = computed<MetricItem[]>(() => [
-  { label: '全网合规率', value: complianceRate.value, unit: '%', tone: 'accent', icon: ClipboardCheck, hint: `整体合规水位（${format(compliantCount.value)} / ${format(totalUnits.value)} 家）` },
-  { label: '重点监督单位', value: format(complianceUnits.value.length), unit: '家', tone: 'warning', icon: AlertTriangle, hint: '矛与盾读同一事实源' },
-  { label: '高风险隐患', value: format(highRiskCount.value), unit: '家', tone: 'danger', icon: ShieldAlert, hint: '双轨差异 / 超期挂账单位' },
-  { label: '中度瑕疵督导', value: format(mediumRiskCount.value), unit: '家', tone: 'warning', icon: Building, hint: '越级审批 / 预算进度偏离' },
-])
 
 const tagDimensionCounts = computed(() => {
   const counts: Record<string, number> = { 超期挂账: 0, 审批越级: 0, 超预算迹象: 0, 票据异常: 0, 非工作时间大额操作: 0 }
@@ -132,6 +118,17 @@ const tagDimensionCounts = computed(() => {
     { label: '非工作时间大额操作', count: counts['非工作时间大额操作'], color: chartSeriesColors[0] },
   ]
 })
+
+const complianceOverviewOption = computed(() => createComplianceOverviewOption({
+  rate: complianceRate.value == null ? null : Number(complianceRate.value),
+  supervised: complianceUnits.value.length,
+  high: highRiskCount.value,
+  medium: mediumRiskCount.value,
+}))
+
+const dominantComplianceTags = computed(() => [...tagDimensionCounts.value]
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 3))
 
 const tagBarOption = computed(() => ({
   ...calmAnimation,
@@ -192,14 +189,28 @@ const paginatedTableUnits = computed(() => {
 
 <template>
   <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="E">
-    <!-- E1: 概览卡片 -->
+    <!-- E1: 合规仪表、风险分层与主要风险维度 -->
     <CockpitPanel
-      title="合规监督态势全景"
+      title="合规监督指挥盘"
       zone="E1"
-      :subtitle="`全网 ${format(totalUnits)} 家单位建设与运行合规监督 · 真实水位 ${complianceRate}%`"
+      :subtitle="`全网 ${format(totalUnits)} 家单位 · 合规水位、监督梯队与主要风险同屏`"
       class="flex-shrink-0"
     >
-      <MetricGrid :items="e1SummaryItems" variant="inline" :columns="4" />
+      <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
+        <section class="col-span-9 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-h-0">
+          <VChart class="w-full h-full min-h-0" :option="complianceOverviewOption" autoresize />
+        </section>
+        <section class="col-span-3 flex flex-col rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2 min-h-0">
+          <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs"><span class="font-medium text-slate-300">主要风险维度</span><span class="text-slate-500">TOP 3</span></div>
+          <div class="grid grid-rows-3 flex-1 min-h-0">
+            <div v-for="item in dominantComplianceTags" :key="item.label" class="flex items-center gap-2 min-w-0 text-cockpit-xs">
+              <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :style="{ backgroundColor: item.color }" />
+              <span class="text-slate-400 truncate">{{ item.label }}</span>
+              <b class="font-mono text-slate-100 ml-auto">{{ item.count }}</b>
+            </div>
+          </div>
+        </section>
+      </div>
     </CockpitPanel>
 
     <!-- 中部：E2 风险维度分布 + E3 水位构成 (弹性优先，Guardrail 扩大为 min-h-[200px] max-h-[300px]，E-2) -->

@@ -32,6 +32,8 @@ let animationId: number | null = null
 let startTime: number | null = null
 let startValue = 0
 
+const safeValue = () => (Number.isFinite(props.value) ? props.value : 0)
+
 // 缓动函数
 const easingFunctions = {
   linear: (t: number) => t,
@@ -54,7 +56,7 @@ const animate = (timestamp: number) => {
   const progress = Math.min(elapsed / props.duration, 1)
   const easedProgress = easingFunctions[props.easing](progress)
   
-  displayValue.value = startValue + (props.value - startValue) * easedProgress
+  displayValue.value = startValue + (safeValue() - startValue) * easedProgress
   
   if (progress < 1) {
     animationId = requestAnimationFrame(animate)
@@ -63,8 +65,15 @@ const animate = (timestamp: number) => {
 
 // 启动动画
 const startAnimation = () => {
-  if (animationId) {
+  if (animationId !== null) {
     cancelAnimationFrame(animationId)
+  }
+  if (props.duration <= 0) {
+    displayValue.value = safeValue()
+    startValue = displayValue.value
+    startTime = null
+    animationId = null
+    return
   }
   startValue = displayValue.value
   startTime = null
@@ -79,11 +88,11 @@ watch(() => props.value, (newVal, oldVal) => {
 })
 
 onMounted(() => {
-  displayValue.value = props.value
+  displayValue.value = safeValue()
 })
 
 onUnmounted(() => {
-  if (animationId) {
+  if (animationId !== null) {
     cancelAnimationFrame(animationId)
   }
 })

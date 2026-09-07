@@ -5,9 +5,7 @@ import {
   Check,
   CheckCircle2,
   Clock3,
-  Database,
   FileCheck2,
-  Layers,
   Scale,
   ServerCog,
   ShieldCheck,
@@ -20,8 +18,6 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, GaugeChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
-import MetricGrid from '../components/blocks/MetricGrid.vue'
-import type { MetricItem } from '../components/blocks/types.ts'
 import { formatCount, formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import {
@@ -35,7 +31,7 @@ import {
   calcDualRunConsistency,
   buildQualityAuditList,
 } from '../utils/qualityMetrics.ts'
-import { createVoucherQualityOption } from '../charts/operationsOptions.ts'
+import { createOperationsOverviewOption, createVoucherQualityOption } from '../charts/operationsOptions.ts'
 
 use([CanvasRenderer, BarChart, GaugeChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent])
 
@@ -65,35 +61,6 @@ const ops = computed(() => store.snapshot.operations || {
   dualRunResult: 29810,
 })
 
-const d1SummaryItems = computed<MetricItem[]>(() => [
-  {
-    label: '业务单据',
-    value: ops.value.businessDocument !== undefined ? format(ops.value.businessDocument) : '—',
-    unit: '笔',
-    icon: Database,
-  },
-  {
-    label: '会计凭证',
-    value: ops.value.accountingVoucher !== undefined ? format(ops.value.accountingVoucher) : '—',
-    unit: '张',
-    tone: 'accent',
-    icon: FileCheck2,
-  },
-  {
-    label: '接口集成',
-    value: ops.value.integrationResult !== undefined ? format(ops.value.integrationResult) : '—',
-    unit: '笔',
-    icon: Workflow,
-  },
-  {
-    label: 'V2 封版明细',
-    value: store.snapshot.meta?.fullRows !== undefined ? format(store.snapshot.meta.fullRows) : '—',
-    unit: '行',
-    tone: 'warning',
-    icon: Layers,
-  },
-])
-
 const flowSteps = computed(() => [
   { label: '业务单据', value: `${format(ops.value.businessDocument)} 笔`, icon: Check, status: 'done' },
   { label: '单据明细', value: `${format(ops.value.businessDocumentLine)} 行`, icon: Check, status: 'done' },
@@ -114,6 +81,12 @@ const volumeBars = computed(() => {
 })
 
 const integrationTotal = computed(() => ops.value.integrationResult || 0)
+const operationsOverviewOption = computed(() => createOperationsOverviewOption(ops.value))
+const documentLineRatio = computed(() => (
+  ops.value.businessDocument && ops.value.businessDocumentLine != null
+    ? (ops.value.businessDocumentLine / ops.value.businessDocument).toFixed(2)
+    : '—'
+))
 const voucherQualityOption = computed(() => createVoucherQualityOption(
   store.snapshot.overview.voucherSuccessPct,
   ops.value.accountingVoucher,
@@ -325,13 +298,27 @@ const qualityBarOption = computed(() => {
 
 <template>
   <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="D">
-    <!-- D1: 概览卡片 -->
+    <!-- D1: 业务规模谱与结构效率，替代四张等权数字卡 -->
     <CockpitPanel
-      title="单据至凭证全链路运营"
+      title="业务运行规模总盘"
       zone="D1"
-      :subtitle="`统计截至 ${store.snapshot.overview.docsAddedAsOfDate || store.snapshot.meta.asOfDate}，展示只读业务链路汇总`"
+      :subtitle="`主链路规模与数据结构效率 · 截至 ${store.snapshot.overview.docsAddedAsOfDate || store.snapshot.meta.asOfDate}`"
+      class="flex-shrink-0"
     >
-      <MetricGrid :items="d1SummaryItems" variant="inline" :columns="4" />
+      <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
+        <section class="col-span-8 flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
+          <div class="flex items-center justify-between text-cockpit-xs flex-shrink-0">
+            <span class="font-medium text-slate-300">主链路累计规模谱</span>
+            <span class="text-slate-500">单据 / 凭证 / 集成</span>
+          </div>
+          <VChart class="w-full flex-1 min-h-0" :option="operationsOverviewOption" autoresize />
+        </section>
+        <section class="col-span-4 grid grid-cols-3 gap-2 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2 min-h-0">
+          <div class="flex flex-col justify-center border-r border-surface-veil-06 pr-2 min-w-0"><span class="text-cockpit-xs text-slate-500">数据总规模</span><b class="font-mono text-cockpit-md text-amber-400 mt-1 truncate">{{ formatWithUnit(store.snapshot.meta?.fullRows, '行') }}</b></div>
+          <div class="flex flex-col justify-center border-r border-surface-veil-06 pr-2 min-w-0"><span class="text-cockpit-xs text-slate-500">单据平均明细</span><b class="font-mono text-cockpit-metric text-sky-400 mt-1">{{ documentLineRatio }}</b><span class="text-cockpit-xs text-slate-500">行 / 单据</span></div>
+          <div class="flex flex-col justify-center min-w-0"><span class="text-cockpit-xs text-slate-500">凭证平均分录</span><b class="font-mono text-cockpit-metric text-emerald-400 mt-1">{{ averageVoucherLines }}</b><span class="text-cockpit-xs text-slate-500">行 / 凭证</span></div>
+        </section>
+      </div>
     </CockpitPanel>
 
     <!-- D2: 全链路流程条 -->

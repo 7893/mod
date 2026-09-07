@@ -4,8 +4,14 @@ import { useRoute, useRouter } from 'vue-router'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, PieChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+import { BarChart, HeatmapChart, PieChart, RadarChart } from 'echarts/charts'
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  RadarComponent,
+  VisualMapComponent,
+} from 'echarts/components'
 import {
   Database,
 } from 'lucide-vue-next'
@@ -22,14 +28,26 @@ import {
 } from '../charts/theme.ts'
 import { buildOverviewComposition, buildTaskStageSeries } from '../charts/panelData.ts'
 import {
-  createTaskStageOverviewOption,
+  createTaskStageMatrixOption,
+  createTaskStageRadarOption,
   createTrainingFunnelOption,
   createTrainingConversionOption,
   createTrainingMixOption,
 } from '../charts/constructionOptions.ts'
 import { useProjectStore } from '../stores/project.ts'
 
-use([CanvasRenderer, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
+use([
+  CanvasRenderer,
+  BarChart,
+  HeatmapChart,
+  PieChart,
+  RadarChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  RadarComponent,
+  VisualMapComponent,
+])
 
 const route = useRoute()
 const router = useRouter()
@@ -133,7 +151,8 @@ const chartColors = {
   textMuted: chartInk.textMuted,
 }
 
-const stageDistributionOption = computed(() => createTaskStageOverviewOption(buildTaskStageSeries(taskStages.value)))
+const stageMatrixOption = computed(() => createTaskStageMatrixOption(buildTaskStageSeries(taskStages.value)))
+const stageRadarOption = computed(() => createTaskStageRadarOption(buildTaskStageSeries(taskStages.value)))
 const trainingConversionOption = computed(() => createTrainingConversionOption(trainingSummary.value?.byType ?? []))
 const trainingMixOption = computed(() => createTrainingMixOption(trainingSummary.value?.byType ?? []))
 const trainingFunnelOption = computed(() => createTrainingFunnelOption(trainingSummary.value))
@@ -188,9 +207,24 @@ const readinessPieOption = computed(() => ({
 
     <!-- 建设全景主区 -->
     <main v-if="activeTab === 'overview'" class="flex-1 min-h-0 grid grid-cols-construction grid-rows-construction gap-2.5">
-      <!-- B2: 100% 纵向构成柱在有限面积内保留 8 阶段，避免横向长条形成线墙 -->
-      <CockpitPanel title="阶段任务结构" zone="B2" subtitle="各阶段任务完成、推进与待启动占比" class="col-span-8">
-        <VChart class="w-full h-full min-h-0" :option="stageDistributionOption" autoresize />
+      <!-- B2: 状态矩阵承载 24 个任务数据点，雷达图补充八阶段均衡性判断 -->
+      <CockpitPanel title="建设阶段作战矩阵" zone="B2" subtitle="任务状态密度与八阶段完成度轮廓" class="col-span-8">
+        <div class="grid grid-cols-12 gap-3 h-full min-h-0">
+          <section class="col-span-9 flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
+            <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs">
+              <span class="font-medium text-slate-300">阶段 × 状态任务矩阵</span>
+              <span class="font-mono text-slate-500">8 阶段 · 24 数据格</span>
+            </div>
+            <VChart class="w-full flex-1 min-h-0" :option="stageMatrixOption" autoresize />
+          </section>
+          <section class="col-span-3 flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
+            <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs">
+              <span class="font-medium text-slate-300">阶段均衡轮廓</span>
+              <span class="font-mono text-sky-400">{{ constructionSummary?.avgProgress ?? '—' }}%</span>
+            </div>
+            <VChart class="w-full flex-1 min-h-0" :option="stageRadarOption" autoresize />
+          </section>
+        </div>
       </CockpitPanel>
 
       <!-- B3: 省域建设排行 -->

@@ -3,56 +3,35 @@ import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { PieChart } from 'echarts/charts'
-import { TitleComponent, TooltipComponent } from 'echarts/components'
+import { BarChart, PieChart } from 'echarts/charts'
+import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/components'
 import { ChevronRight } from 'lucide-vue-next'
 import AnimatedNumber from './AnimatedNumber.vue'
 import CockpitPanel from './CockpitPanel.vue'
 import LiveProjectionIndicator from './LiveProjectionIndicator.vue'
-import CompositionBar from './blocks/CompositionBar.vue'
-import { buildOverviewComposition } from '../charts/panelData.ts'
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from '../charts/theme.ts'
 import type { LiveProjectionCounts, LiveProjectionEvent } from '../composables/useLiveProjection.ts'
 import type { ProjectSnapshot } from '../stores/project.ts'
 
-use([CanvasRenderer, PieChart, TitleComponent, TooltipComponent])
+use([CanvasRenderer, BarChart, PieChart, GridComponent, TitleComponent, TooltipComponent])
 
 /**
- * A1 顶部总览带：建设进度与推广构成、今日实时增量、风险闭环三组信息同屏。
- * 数字用于精确读数，堆叠条与环图分别负责状态构成和闭环关系。
+ * A1 顶部总览带：双环展示建设/上线水位，规模谱展示运营总量，风险环展示闭环压力。
  */
 const props = defineProps<{
   overview: ProjectSnapshot['overview']
-  meta: ProjectSnapshot['meta']
   issuesSummary?: ProjectSnapshot['issuesSummary']
   construction?: ProjectSnapshot['construction']
+  operations?: ProjectSnapshot['operations']
   live: ProjectSnapshot['overview']
   cumulative: LiveProjectionCounts
   projectionConnected: boolean
   recentEvent: LiveProjectionEvent | null
   /** 首屏之后动效时长归零，避免大屏长期展示时反复播放入场动画 */
   numDuration: (ms: number) => number
-  shortDate: (value?: string) => string
 }>()
 
 defineEmits<{ openRisk: [] }>()
-
-const eventActionText = computed(() => {
-  const ev = props.recentEvent as any
-  if (!ev) return ''
-  if (ev.story_desc) {
-    const amt = ev.amount ? ` · ${ev.amount}` : ''
-    return `${ev.story_desc}${amt}`
-  }
-  const bType = ev.business_type
-  if (bType === 'org_pooled') return '新设单位登记，纳入第八批储备池'
-  if (bType === 'training_certified') return '关键用户通过机房实操上岗认证考试'
-  if (bType === 'dual_run_verified') return '完成 1 笔新老系统凭证借贷比对（一致）'
-  if (ev.increments.vouchers > 0) return `新增会计凭证 +${ev.increments.vouchers} 张`
-  if (ev.increments.documents > 0) return `新增业务单据 +${ev.increments.documents} 笔`
-  if (ev.increments.integrations > 0) return `完成接口集成 +${ev.increments.integrations} 笔`
-  return '业务处理中'
-})
 
 const safeNumber = (value?: number | null) => {
   const parsed = Number(value)
@@ -61,15 +40,61 @@ const safeNumber = (value?: number | null) => {
 
 const constructionProgress = computed(() => Math.max(0, Math.min(100, safeNumber(props.overview.constructionPct))))
 
-const rolloutComposition = computed(() => {
+const rolloutRate = computed(() => {
   const total = safeNumber(props.overview.orgTotal)
   const launched = safeNumber(props.overview.launched)
-  const dual = safeNumber(props.overview.dual)
-  return buildOverviewComposition(total, [
-    { label: '已上线', value: launched, tone: 'success' },
-    { label: '双轨', value: dual, tone: 'warning' },
-    { label: '待推进', value: Math.max(0, total - launched - dual), tone: 'neutral' },
-  ])
+  return total > 0 ? Math.round((launched * 1000) / total) / 10 : 0
+})
+
+const progressRingsOption = computed(() => ({
+  ...calmAnimation,
+  tooltip: { trigger: 'item', ...chartTooltip, formatter: '{b}<br/><b>{c}%</b>' },
+  series: [
+    {
+      name: '建设进度', type: 'pie', radius: ['70%', '88%'], center: ['50%', '50%'],
+      silent: false, label: { show: false }, emphasis: { scale: false },
+      data: [
+        { value: constructionProgress.value, name: '建设完成', itemStyle: { color: chartPalette.accent } },
+        { value: 100 - constructionProgress.value, name: '建设待完成', itemStyle: { color: chartInk.borderSoft } },
+      ],
+    },
+    {
+      name: '推广上线', type: 'pie', radius: ['43%', '59%'], center: ['50%', '50%'],
+      silent: false, label: { show: false }, emphasis: { scale: false },
+      data: [
+        { value: rolloutRate.value, name: '正式上线', itemStyle: { color: chartPalette.success } },
+        { value: 100 - rolloutRate.value, name: '待上线', itemStyle: { color: chartInk.borderSoft } },
+      ],
+    },
+  ],
+}))
+
+const operationsVolumeOption = computed(() => {
+  const items = [
+    { name: '业务单据', value: safeNumber(props.live.docsTotal || props.overview.docsTotal), color: chartPalette.accent },
+    { name: '会计凭证', value: safeNumber(props.live.vouchersTotal || props.overview.vouchersTotal), color: chartPalette.success },
+    { name: '接口集成', value: safeNumber(props.operations?.integrationResult), color: chartPalette.warning },
+  ].reverse()
+  return {
+    ...calmAnimation,
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip },
+    grid: { left: 58, right: 72, top: 3, bottom: 3 },
+    xAxis: { type: 'value', show: false },
+    yAxis: {
+      type: 'category', data: items.map((item) => item.name),
+      axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { color: chartInk.textMuted, fontSize: 9 },
+    },
+    series: [{
+      type: 'bar', barWidth: 10, showBackground: true,
+      backgroundStyle: { color: chartInk.borderSoft, borderRadius: 3 },
+      data: items.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
+      label: {
+        show: true, position: 'right', color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 9,
+        formatter: (params: any) => Number(params.value).toLocaleString(),
+      },
+    }],
+  }
 })
 
 const closeRate = computed(() => Math.max(0, Math.min(100, safeNumber(props.issuesSummary?.closeRate))))
@@ -112,45 +137,23 @@ const riskClosureOption = computed(() => ({
       </div>
     </template>
 
-    <div class="grid grid-cols-12 gap-3 h-20 min-h-0">
-      <section class="col-span-5 flex items-stretch gap-3 min-w-0">
-        <div class="w-28 flex-shrink-0 flex flex-col justify-center border-r border-surface-veil-06 pr-3">
-          <span class="text-cockpit-xs text-slate-500">全网建设进度</span>
-          <div class="flex items-baseline gap-1 mt-1">
-            <b class="font-mono text-cockpit-metric text-sky-400"><AnimatedNumber :value="constructionProgress" :decimals="1" :duration="numDuration(800)" /></b>
-            <small class="text-cockpit-xs text-slate-500">%</small>
-          </div>
-          <div class="h-1.5 mt-2 rounded-full bg-white/5 overflow-hidden">
-            <div class="h-full rounded-full bg-sky-400" :style="{ width: `${constructionProgress}%` }" />
-          </div>
-          <span class="text-cockpit-xs text-slate-500 mt-1">{{ (construction?.totalTasks || 0).toLocaleString() }} 项任务</span>
-        </div>
-
-        <div class="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-          <div class="grid grid-cols-3 gap-2">
-            <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500">业务单据</span><b class="font-mono text-cockpit-md text-slate-100"><AnimatedNumber :value="live.docsTotal || overview.docsTotal || 0" :duration="700" /></b></div>
-            <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500">会计凭证</span><b class="font-mono text-cockpit-md text-slate-100"><AnimatedNumber :value="live.vouchersTotal || overview.vouchersTotal || 0" :duration="700" /></b></div>
-            <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500">数据规模</span><b class="font-mono text-cockpit-md text-amber-400"><AnimatedNumber :value="Number(((meta?.fullRows || 0) / 10000).toFixed(1))" :decimals="1" :duration="numDuration(800)" /><small class="text-cockpit-xs text-slate-500 ml-0.5">万行</small></b></div>
-          </div>
-          <CompositionBar :total="rolloutComposition.total" :parts="rolloutComposition.parts" />
+    <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
+      <section class="col-span-4 grid grid-cols-5 gap-2 min-w-0 rounded-lg bg-surface-veil-03 border border-surface-veil-06 p-2">
+        <VChart class="col-span-2 w-full h-full min-h-0" :option="progressRingsOption" autoresize />
+        <div class="col-span-3 grid grid-rows-3 divide-y divide-surface-veil-06 min-w-0">
+          <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设完成度</span><b class="font-mono text-sky-400"><AnimatedNumber :value="constructionProgress" :decimals="1" :duration="numDuration(800)" />%</b></div>
+          <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">正式上线率</span><b class="font-mono text-emerald-400">{{ rolloutRate }}%</b></div>
+          <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设任务</span><b class="font-mono text-slate-200">{{ (construction?.totalTasks || 0).toLocaleString() }}</b></div>
         </div>
       </section>
 
-      <section class="col-span-4 flex flex-col justify-center gap-2 px-3 border-x border-surface-veil-06 min-w-0">
-        <div class="grid grid-cols-3 gap-2">
+      <section class="col-span-5 flex flex-col min-w-0 rounded-lg bg-surface-veil-03 border border-surface-veil-06 p-2">
+        <div class="grid grid-cols-3 gap-2 flex-shrink-0">
           <div><span class="block text-cockpit-xs text-slate-500">今日单据</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.docsTodayAdded || 0" :duration="500" /></b></div>
           <div><span class="block text-cockpit-xs text-slate-500">今日凭证</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.vouchersTodayAdded || 0" :duration="500" /></b></div>
           <div><span class="block text-cockpit-xs text-slate-500">本次集成</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="cumulative.integrations || 0" :duration="500" /></b></div>
         </div>
-        <div class="flex items-center gap-1.5 px-2 py-1 rounded bg-sky-500/10 border border-sky-500/20 text-cockpit-xs min-w-0">
-          <span class="w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" />
-          <template v-if="recentEvent && (recentEvent.unitName || recentEvent.province)">
-            <span class="text-sky-400 flex-shrink-0">[{{ recentEvent.province }}]</span>
-            <span class="text-slate-200 truncate">{{ recentEvent.unitName }}</span>
-            <span class="text-emerald-400 truncate ml-auto">{{ eventActionText }}</span>
-          </template>
-          <span v-else class="text-slate-500 truncate">实时流水线持续监听中 · {{ shortDate(live.docsAddedAsOfDate) }}</span>
-        </div>
+        <VChart class="w-full flex-1 min-h-0" :option="operationsVolumeOption" autoresize />
       </section>
 
       <button
@@ -159,7 +162,7 @@ const riskClosureOption = computed(() => ({
         title="进入风险中心"
         @click="$emit('openRisk')"
       >
-        <div class="h-full w-24 flex-shrink-0">
+        <div class="h-full w-28 flex-shrink-0">
           <VChart :option="riskClosureOption" autoresize class="h-full w-full" />
         </div>
         <div class="flex-1 min-w-0 grid grid-cols-2 gap-2 pr-2">

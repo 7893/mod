@@ -54,15 +54,6 @@ onMounted(() => {
 })
 const numDuration = (ms: number) => (isFirstLoad.value ? ms : 0)
 
-const shortDate = (value?: string) => {
-  if (!value) return '—'
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-  if (match) {
-    return `${parseInt(match[2], 10)}月${parseInt(match[3], 10)}日`
-  }
-  return value
-}
-
 // 尚未录入项目联系人的纳管单位数量
 const contactGapOrgs = computed(() => {
   const total = store.snapshot.overview.orgTotal ?? 0
@@ -140,15 +131,14 @@ const chooseProvince = (name: string) => {
     <header class="flex-shrink-0">
       <CockpitTopBar
         :overview="store.snapshot.overview"
-        :meta="store.snapshot.meta"
         :issues-summary="store.snapshot.issuesSummary"
         :construction="store.snapshot.construction"
+        :operations="store.snapshot.operations"
         :live="liveStore.liveOverview"
         :cumulative="liveStore.cumulative"
         :projection-connected="projectionConnected"
         :recent-event="recentEvent"
         :num-duration="numDuration"
-        :short-date="shortDate"
         @open-risk="router.push('/f')"
       />
     </header>

@@ -3,19 +3,19 @@ import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart, PieChart } from 'echarts/charts'
+import { BarChart, GaugeChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import ChartBlock from '../components/blocks/ChartBlock.vue'
-import OverviewBand from '../components/blocks/OverviewBand.vue'
 import RolloutLedgerTable from '../components/RolloutLedgerTable.vue'
 import type { MetricItem } from '../components/blocks/types.ts'
 import { calmAnimation, chartInk, chartPalette } from '../charts/theme.ts'
-import { buildCoverageComposition, buildOverviewComposition, buildRolloutComposition } from '../charts/panelData.ts'
+import { buildCoverageComposition, buildRolloutComposition } from '../charts/panelData.ts'
 import { createCoverageOption, createRolloutCompositionOption } from '../charts/panelOptions.ts'
+import { createRolloutCommandOption } from '../charts/rolloutOptions.ts'
 import { useProjectStore } from '../stores/project.ts'
 
-use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent])
+use([CanvasRenderer, BarChart, GaugeChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent])
 
 const store = useProjectStore()
 
@@ -25,29 +25,11 @@ const format = (value: number | undefined) => (
 
 const batches = computed(() => store.snapshot.rollout || [])
 
-const rolloutOverviewComposition = computed(() => {
-  const overview = store.snapshot.overview
-  const pending = Math.max(0, (overview.orgTotal ?? 0) - (overview.launched ?? 0) - (overview.dual ?? 0))
-  return buildOverviewComposition(overview.orgTotal, [
-    { label: '已上线', value: overview.launched, tone: 'success' },
-    { label: '双轨运行', value: overview.dual, tone: 'warning' },
-    { label: '待推进', value: pending, tone: 'neutral' },
-  ])
-})
-
-const c1Primary = computed(() => ({
-  label: '总体上线率',
-  value: store.snapshot.overview.launchedPct ?? '—',
-  unit: '%',
-  tone: 'success' as const,
-  hint: '正式上线单位占总纳管比例',
+const rolloutCommandOption = computed(() => createRolloutCommandOption({
+  total: store.snapshot.overview.orgTotal ?? 0,
+  launched: store.snapshot.overview.launched ?? 0,
+  dual: store.snapshot.overview.dual ?? 0,
 }))
-
-const c1Facts = computed(() => [
-  { label: '纳管单位', value: format(store.snapshot.overview.orgTotal), unit: '家' },
-  { label: '推广批次', value: batches.value.length, unit: '批' },
-  { label: '覆盖省份', value: 34, unit: '省' },
-])
 
 // 色值统一取自 charts/theme.ts，避免图表区与页面外壳出现两套蓝绿黄
 const chartColors = {
@@ -189,20 +171,24 @@ const provinceRolloutOption = computed(() => ({
 
 <template>
   <div class="w-full h-full p-3 bg-surface-base flex flex-col gap-2.5 overflow-hidden" data-zone="C">
-    <!-- C1: 概览指标 -->
+    <!-- C1: 推广仪表与三段状态漏斗，替代通用 OverviewBand -->
     <CockpitPanel
-      title="推广上线与批次台账"
+      title="推广攻坚总盘"
       zone="C1"
-      :subtitle="`${batches.length} 个批次 · ${format(store.snapshot.overview.orgTotal)} 家单位 · 已上线 ${format(store.snapshot.overview.launched)} 家 (${store.snapshot.overview.launchedPct || 37.4}%)`"
+      subtitle="总体上线水位、在途单位结构与推广覆盖上下文"
       class="flex-shrink-0"
     >
-      <OverviewBand
-        :primary="c1Primary"
-        chart-label="推广状态构成"
-        :total="rolloutOverviewComposition.total"
-        :parts="rolloutOverviewComposition.parts"
-        :facts="c1Facts"
-      />
+      <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
+        <section class="col-span-9 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-h-0">
+          <VChart class="w-full h-full min-h-0" :option="rolloutCommandOption" autoresize />
+        </section>
+        <section class="col-span-3 grid grid-cols-2 grid-rows-2 gap-2 min-h-0">
+          <div class="rounded-lg bg-surface-veil-03 border border-surface-veil-06 px-2 py-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">纳管单位</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">{{ format(store.snapshot.overview.orgTotal) }}</b></div>
+          <div class="rounded-lg bg-surface-veil-03 border border-surface-veil-06 px-2 py-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">推广批次</span><b class="font-mono text-cockpit-md text-sky-400 mt-0.5">{{ batches.length }} 批</b></div>
+          <div class="rounded-lg bg-surface-veil-03 border border-surface-veil-06 px-2 py-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">覆盖省份</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">34 省</b></div>
+          <div class="rounded-lg bg-surface-veil-03 border border-surface-veil-06 px-2 py-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">联系人</span><b class="font-mono text-cockpit-md text-emerald-400 mt-0.5">{{ format(store.snapshot.overview.contactsTotal) }}</b></div>
+        </section>
+      </div>
     </CockpitPanel>
 
     <!-- C2: 横向比较各批次单位当前所处推广状态 -->
