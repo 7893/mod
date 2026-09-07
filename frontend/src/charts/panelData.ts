@@ -14,6 +14,37 @@ export interface RolloutBatchDatum {
   dual: number
 }
 
+export type CompositionTone = 'accent' | 'success' | 'warning' | 'danger' | 'neutral'
+
+export interface CompositionPartInput {
+  label: string
+  value?: number | string | null
+  tone: CompositionTone
+}
+
+export function buildOverviewComposition(
+  total: number | string | null | undefined,
+  parts: CompositionPartInput[],
+) {
+  const values = parts.map((part) => {
+    const value = Number(part.value)
+    return Number.isFinite(value) ? Math.max(0, value) : 0
+  })
+  const requestedTotal = Number(total)
+  const safeTotal = Number.isFinite(requestedTotal) && requestedTotal > 0
+    ? requestedTotal
+    : values.reduce((sum, value) => sum + value, 0)
+
+  return {
+    total: safeTotal,
+    parts: parts.map((part, index) => ({
+      ...part,
+      value: values[index],
+      percentage: safeTotal > 0 ? Math.round((values[index] * 1000) / safeTotal) / 10 : 0,
+    })),
+  }
+}
+
 export function buildTaskStageSeries(stages: TaskStageDatum[]) {
   return stages.map((stage) => ({
     name: stage.name,

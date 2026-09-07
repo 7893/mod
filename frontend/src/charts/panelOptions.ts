@@ -6,6 +6,7 @@ import {
   chartTooltip,
   valueAxis,
 } from './theme'
+import type { CompositionTone } from './panelData'
 
 interface StageSeriesItem {
   name: string
@@ -40,6 +41,21 @@ interface BatchProgressItem {
   launched: number
 }
 
+interface CompositionPart {
+  label: string
+  value: number
+  percentage: number
+  tone: CompositionTone
+}
+
+const compositionColors: Record<CompositionTone, string> = {
+  accent: chartPalette.accent,
+  success: chartPalette.success,
+  warning: chartPalette.warning,
+  danger: chartPalette.danger,
+  neutral: chartPalette.neutral,
+}
+
 const compactLegend = (data: string[]) => ({
   data,
   top: 0,
@@ -48,6 +64,41 @@ const compactLegend = (data: string[]) => ({
   itemWidth: 10,
   itemHeight: 8,
 })
+
+export function createOverviewCompositionOption(parts: CompositionPart[], total: number) {
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'item',
+      ...chartTooltip,
+      formatter: (params: any) => {
+        const part = parts[params?.seriesIndex]
+        if (!part) return ''
+        return `${part.label}<br/><b>${part.value.toLocaleString()}</b> · ${part.percentage}%`
+      },
+    },
+    grid: { left: 0, right: 0, top: 0, bottom: 0 },
+    xAxis: { type: 'value', max: total || 1, show: false },
+    yAxis: { type: 'category', data: ['总体'], show: false },
+    series: parts.map((part) => ({
+      name: part.label,
+      type: 'bar',
+      stack: 'overview',
+      barWidth: 18,
+      silent: part.value === 0,
+      data: [part.value],
+      itemStyle: { color: compositionColors[part.tone] },
+      label: {
+        show: part.percentage >= 12,
+        position: 'inside',
+        color: chartInk.textPrimary,
+        fontFamily: 'monospace',
+        fontSize: 10,
+        formatter: `${part.percentage}%`,
+      },
+    })),
+  }
+}
 
 export function createTaskStageOption(list: StageSeriesItem[]) {
   return {
