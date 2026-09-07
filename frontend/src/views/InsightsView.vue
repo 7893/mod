@@ -23,7 +23,6 @@ import CockpitPanel from '../components/CockpitPanel.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
 import type { MetricItem } from '../components/blocks/types.ts'
 import ModelContractCard from '../components/ModelContractCard.vue'
-import MarkdownLite from '../components/MarkdownLite.vue'
 import AtRiskUnitTable, { type AtRiskUnit } from '../components/AtRiskUnitTable.vue'
 import { formatPercent } from '../formatters/metrics.ts'
 import { isRegressionEffective, isClassifierEffective, isAutomlReady } from '../utils/modelEvaluation.ts'
@@ -38,6 +37,7 @@ import {
   calmAnimation,
 } from '../charts/theme.ts'
 import { buildRiskDimensionBreakdown } from '../utils/qualityMetrics.ts'
+import { parseBriefingSections } from '../utils/briefing.ts'
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent])
 
@@ -52,6 +52,7 @@ const { aiStatus } = useAiInsights()
 
 // F5 每日决策简报（后台自动生成，只读展示，零交互）
 const { briefing, loading: briefingLoading } = useDailyBriefing()
+const briefingSections = computed(() => parseBriefingSections(briefing.value?.content).slice(0, 3))
 
 const predictionsMap = computed(() => {
   const map = new Map<number, any>()
@@ -352,23 +353,19 @@ const f1SummaryItems = computed<MetricItem[]>(() => [
             class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-cockpit-xs flex-shrink-0"
           >
             <Lock :size="13" class="flex-shrink-0 text-amber-400" />
-            <span>门禁生效：独立测试集未达标指标不谎报为可信预测能力（KI-023 / KI-028）</span>
+            <span>质量门禁生效 · 未达标指标不作为可信预测能力</span>
           </div>
           <div
             v-else
             class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-cockpit-xs flex-shrink-0"
           >
             <Sparkles :size="13" class="flex-shrink-0 text-emerald-400" />
-            <span>独立测试集验证达标：时序回归 R²>0 与分类泛化已消除过度可分，库内推理与 SHAP 归因就绪</span>
+            <span>独立测试集达标 · 2/2 模型可用 · 库内推理与 SHAP 归因就绪</span>
           </div>
 
           <div class="grid grid-rows-2 gap-2 flex-1 min-h-0">
-            <div class="p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between">
-              <ModelContractCard :model="insights.targetModels[0]" empty-label="验证未达标 (R² ≤ 0)" :ready="insights.isReady && insights.targetModels[0].status === '已就绪'" />
-            </div>
-            <div class="p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between">
-              <ModelContractCard :model="insights.targetModels[1]" empty-label="验证未达标 (标签过度可分)" :ready="insights.isReady && insights.targetModels[1].status === '已就绪'" />
-            </div>
+            <ModelContractCard :model="insights.targetModels[0]" empty-label="验证未达标 (R² ≤ 0)" :ready="insights.isReady && insights.targetModels[0].status === '已就绪'" />
+            <ModelContractCard :model="insights.targetModels[1]" empty-label="验证未达标 (标签过度可分)" :ready="insights.isReady && insights.targetModels[1].status === '已就绪'" />
           </div>
         </div>
       </CockpitPanel>
@@ -425,32 +422,65 @@ const f1SummaryItems = computed<MetricItem[]>(() => [
         zone="F5"
         subtitle="Cloudflare Workers AI · 每日自动生成 · 只读研判"
       >
+        <template #actions>
+          <span v-if="briefing?.briefingDate" class="font-mono text-cockpit-xs text-slate-500">{{ briefing.briefingDate }}</span>
+        </template>
         <div class="flex flex-col h-full min-h-0 gap-2">
           <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/60 border border-white/10 text-slate-400 text-cockpit-xs flex-shrink-0">
             <ShieldAlert :size="12" class="flex-shrink-0 text-sky-400" />
-            <span>AI 辅助研判仅供参考，事实数据均来自库内真实运行指标</span>
+            <span>AI 辅助研判 · 事实数据来自库内运行指标</span>
           </div>
 
-          <div class="flex-1 min-h-0 overflow-y-auto rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2.5">
+          <div class="flex-1 min-h-0">
             <!-- 加载中 -->
-            <div v-if="briefingLoading" class="flex flex-col items-center justify-center h-full text-center gap-2 py-4 text-slate-500">
+            <div v-if="briefingLoading" class="flex flex-col items-center justify-center h-full rounded-xl bg-surface-veil-03 border border-surface-veil-06 text-center gap-2 py-4 text-slate-500">
               <RefreshCw :size="18" class="animate-spin opacity-50 text-sky-400" />
               <span class="text-cockpit-xs">正在读取每日简报…</span>
             </div>
 
             <!-- 已有简报 -->
-            <div v-else-if="briefing?.status === 'ok'" class="flex flex-col gap-2">
-              <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs text-slate-400">
-                <span class="text-emerald-400 flex items-center gap-1 font-medium">
-                  <CheckCircle2 :size="12" /> 每日自动研判
-                </span>
-                <span v-if="briefing.briefingDate" class="font-mono">{{ briefing.briefingDate }}</span>
-              </div>
-              <MarkdownLite class="text-cockpit-xs text-slate-300 leading-relaxed" :content="briefing.content" />
+            <div v-else-if="briefing?.status === 'ok'" class="grid grid-cols-3 gap-2 h-full min-h-0">
+              <section
+                v-for="(section, sectionIndex) in briefingSections"
+                :key="section.title"
+                class="flex flex-col min-h-0 rounded-xl border p-2.5"
+                :title="section.items.join('\n')"
+                :class="sectionIndex === 0
+                  ? 'bg-emerald-950/15 border-emerald-500/20'
+                  : (sectionIndex === 1
+                    ? 'bg-amber-950/15 border-amber-500/20'
+                    : 'bg-sky-950/15 border-sky-500/20')"
+              >
+                <div class="flex items-center justify-between gap-1.5 pb-2 border-b border-surface-veil-06">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <CheckCircle2 v-if="sectionIndex === 0" :size="13" class="text-emerald-400 flex-shrink-0" />
+                    <AlertTriangle v-else-if="sectionIndex === 1" :size="13" class="text-amber-400 flex-shrink-0" />
+                    <Sparkles v-else :size="13" class="text-sky-400 flex-shrink-0" />
+                    <b class="text-cockpit-sm font-semibold text-slate-200 truncate">{{ section.title }}</b>
+                  </div>
+                  <span class="font-mono text-cockpit-xs text-slate-500 flex-shrink-0">{{ section.items.length }}</span>
+                </div>
+                <div class="flex flex-col justify-around gap-1.5 flex-1 min-h-0 pt-2">
+                  <div
+                    v-for="(item, itemIndex) in section.items.slice(0, 3)"
+                    :key="item"
+                    class="flex items-center gap-1.5 min-w-0"
+                    :title="item"
+                  >
+                    <span class="w-4 h-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-mono text-cockpit-xs text-slate-500 flex-shrink-0">
+                      {{ itemIndex + 1 }}
+                    </span>
+                    <span class="text-cockpit-xs text-slate-300 truncate">{{ item }}</span>
+                  </div>
+                  <span v-if="section.items.length > 3" class="text-cockpit-xs text-slate-500 pl-5">
+                    另有 {{ section.items.length - 3 }} 条建议
+                  </span>
+                </div>
+              </section>
             </div>
 
             <!-- 尚无简报（定时任务未生成） -->
-            <div v-else class="flex flex-col items-center justify-center h-full text-center gap-1.5 py-4 text-slate-400">
+            <div v-else class="flex flex-col items-center justify-center h-full rounded-xl bg-surface-veil-03 border border-surface-veil-06 text-center gap-1.5 py-4 text-slate-400">
               <div class="w-8 h-8 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-0.5">
                 <Sparkles :size="15" />
               </div>

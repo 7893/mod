@@ -205,14 +205,14 @@ const provinceRolloutOption = computed(() => ({
       />
     </CockpitPanel>
 
-    <!-- C2: 用批次堆叠图替代 8 张拥挤工序卡 -->
+    <!-- C2: 横向比较各批次单位当前所处推广状态 -->
     <CockpitPanel
-      title="批次推进工序梯队"
+      title="各批次单位推进状态"
       zone="C2"
-      subtitle="8 批次单位构成 · 已上线 / 双轨 / 待推进"
-      class="flex-shrink-0"
+      subtitle="比较每批已上线、双轨运行与待推进单位构成"
+      class="h-44 flex-shrink-0"
     >
-      <VChart class="w-full h-28 min-h-0" :option="batchCompositionOption" autoresize />
+      <VChart class="w-full h-full min-h-0" :option="batchCompositionOption" autoresize />
     </CockpitPanel>
 
     <!-- 中部三栏：C3 上线趋势 + C4 省域上线分布 + C5 项目联系人 (弹性优先，Guardrail 扩大为 min-h-[200px] max-h-[320px]，C-2) -->

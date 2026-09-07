@@ -95,7 +95,8 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 - 颜色、间距、字号、圆角、阴影必须来自集中定义的 Token（`frontend/src/styles/theme.css` 的
   Tailwind 4 `@theme` 块，与 `foundation.css` 的变量层），不得在模板中散写任意值。
 - 已定义的 Token（模板直接引用其工具类，禁止再写等价任意值）：
-  - 骨架：`grid-cols-cockpit`（三栏 390px/1fr/370px）、`grid-rows-cockpit-side`（1.15fr/1fr）。
+  - 骨架：`grid-cols-cockpit`（三栏 390px/1fr/370px）、`grid-rows-cockpit-side`（1.15fr/1fr）、
+    `grid-cols-construction`（B 屏 12 列）与 `grid-rows-construction`（上下 0.95fr/1.05fr）。
   - 表面色：`bg-surface-base`（大屏底色）、`bg-surface-panel`、`border-surface-hairline`、
     `bg-surface-veil-06`、`bg-surface-veil-03`。
   - 字号：`text-cockpit-xs`(10)、`text-cockpit-sm`(11)、`text-cockpit-md`(13)、`text-cockpit-metric`(18)。
@@ -123,7 +124,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
   `ConstructionView`（B 屏）、`RolloutView`（C 屏）、`OperationsView`（D 屏）、`IssuesView`（E 屏）与 `InsightsView`（F 屏）已按同一契约全量迁移到 `CockpitPanel`、具名 Grid 与集中 Token。
 - 全站存量专属旧 CSS（`rollout.css`、`operations.css`、`issues.css`、`insights.css`）已全部物理清零，旧物料 `components/Panel.vue` 已彻底物理删除；`DataView`（数据台账页）已统一为 `CockpitPanel` + Tailwind 范式，`styles.css` 仅保留基座与通用物料层。
 - 全站各视图整体骨架、物料与 Token 三层契约已全面闭环生效。
-- A1、B1、C1、A2、A3、B2、B5、C2、C5、D6、D7、E4、F3、F4 已完成面板密度图表化：拥挤的横排卡收敛为比较图，空旷数字面板补充构成图，重复信息由图表交互承载；
+- A1、B1、C1、A2、A3、B2、B4、B5、C2、C5、D4、D6、D7、E4、F3、F4、F5 已完成面板密度图表化：拥挤的横排卡收敛为比较图，空旷数字面板补充构成图，长篇简报转为分组摘要卡，重复信息由图表交互或悬停提示承载；
   B1/C1 首屏总览统一复用 `OverviewBand` 与 `CompositionBar`，图表派生数据集中在 `charts/`，视觉统一复用 `charts/theme.ts`。
 
 ## 重构执行顺序（后续 AI 必须按此顺序，不得跳步）
