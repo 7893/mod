@@ -8,10 +8,12 @@ from .construction_models import (
     DualRunCheckEventFootprint,
     DualRunResultRecordFootprint,
     InterfaceDebuggingEventFootprint,
+    NewOrgAdmissionFootprint,
     OrgUnitStatusUpdateFootprint,
     PoolOnboardingEventFootprint,
     RolloutBatchUpdateFootprint,
     RolloutStatusSnapshotFootprint,
+    SysUserFootprint,
     TrainingCertificationEventFootprint,
     TrainingRecordFootprint,
     TransitionReviewEventFootprint,
@@ -20,6 +22,7 @@ from .construction_models import (
     validate_data_readiness,
     validate_dual_run_check,
     validate_interface_debugging,
+    validate_new_org_admission,
     validate_pool_onboarding,
     validate_training_certification,
     validate_transition_review,
@@ -79,6 +82,11 @@ from .construction_writer import (
     ConstructionWriter,
     is_construction_writer_enabled,
 )
+from .org_generator import OrgNameGenerator
+from .pool_onboarding import (
+    ReservePoolAdmissionPlaybook,
+    admit_organization_to_reserve_pool,
+)
 from .simulation_writer import SimulationWriter, WriteResult, is_simulation_engine_enabled
 
 __all__ = [
@@ -113,11 +121,14 @@ __all__ = [
     "LifecycleAdvancer",
     "LifecycleThresholds",
     "LinkFootprint",
+    "NewOrgAdmissionFootprint",
     "OrgMetricsSnapshot",
+    "OrgNameGenerator",
     "OrgUnitStatusUpdateFootprint",
     "PoolOnboardingEventFootprint",
     "PoolOnboardingPlaybook",
     "ProbabilityDistributions",
+    "ReservePoolAdmissionPlaybook",
     "RolloutBatchUpdateFootprint",
     "RolloutStatusSnapshotFootprint",
     "ScenarioSystem",
@@ -125,6 +136,7 @@ __all__ = [
     "SimulationAuditRecord",
     "SimulationBaseline",
     "SimulationWriter",
+    "SysUserFootprint",
     "TimePatternSystem",
     "TrainingCertificationEventFootprint",
     "TrainingCertificationPlaybook",
@@ -134,6 +146,7 @@ __all__ = [
     "VoucherFootprint",
     "VoucherLineFootprint",
     "WriteResult",
+    "admit_organization_to_reserve_pool",
     "is_construction_writer_enabled",
     "is_simulation_engine_enabled",
     "load_construction_baseline",
@@ -144,6 +157,7 @@ __all__ = [
     "validate_dual_run_check",
     "validate_footprint",
     "validate_interface_debugging",
+    "validate_new_org_admission",
     "validate_pool_onboarding",
     "validate_training_certification",
     "validate_transition_review",

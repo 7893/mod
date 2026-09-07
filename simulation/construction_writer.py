@@ -28,6 +28,7 @@ from .construction_models import (
     DataReadinessEventFootprint,
     DualRunCheckEventFootprint,
     InterfaceDebuggingEventFootprint,
+    NewOrgAdmissionFootprint,
     PoolOnboardingEventFootprint,
     TrainingCertificationEventFootprint,
     TransitionReviewEventFootprint,
@@ -188,24 +189,28 @@ class ConstructionWriter:
         backup_file = self.backup_affected_tables(
             [
                 "org_unit",
+                "sys_user",
                 "rollout_status_snapshot",
                 "data_readiness",
                 "training",
                 "dual_run_result",
                 "construction_task",
                 "rollout_batch",
+                "daily_stats",
             ]
         )
 
         conn = self._get_connection()
         rows_written = {
             "org_unit": 0,
+            "sys_user": 0,
             "rollout_status_snapshot": 0,
             "data_readiness": 0,
             "training": 0,
             "dual_run_result": 0,
             "construction_task": 0,
             "rollout_batch": 0,
+            "daily_stats": 0,
         }
 
         try:
@@ -310,7 +315,88 @@ class ConstructionWriter:
         rows_written: Dict[str, int],
     ) -> None:
         """Dispatch and insert/update rows for an individual validated event."""
-        if isinstance(ev, PoolOnboardingEventFootprint):
+        if isinstance(ev, NewOrgAdmissionFootprint):
+            # 1. Insert into org_unit
+            cursor.execute(
+                """
+                INSERT INTO org_unit (id, name, batch_id, status, region, start_date, end_date)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                """,
+                (ev.org_id, ev.name, ev.batch_id, ev.status, ev.region, ev.start_date, ev.end_date),
+            )
+            rows_written["org_unit"] += 1
+
+            # 2. Insert users into sys_user
+            for u in ev.users:
+                cursor.execute(
+                    """
+                    INSERT INTO sys_user (id, name, org_id, role, job)
+                    VALUES (%s, %s, %s, %s, %s);
+                    """,
+                    (u.id, u.name, u.org_id, u.role, u.job),
+                )
+                rows_written["sys_user"] += 1
+
+            # 3. Insert tasks into construction_task
+            for t in ev.tasks:
+                self._upsert_task(cursor, t, rows_written)
+
+            # 4. Insert data_readiness
+            if ev.readiness:
+                r = ev.readiness
+                cursor.execute(
+                    """
+                    INSERT INTO data_readiness (
+                        org_id, batch_id, static_total, static_completed, static_rate,
+                        opening_total, opening_completed, opening_rate, opening_diff_amount,
+                        dynamic_total, dynamic_completed, dynamic_sync_success, dynamic_sync_fail,
+                        dynamic_sync_pending, dynamic_rate, last_sync_time, overall_status
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    """,
+                    (
+                        r.org_id, r.batch_id, r.static_total, r.static_completed, r.static_rate,
+                        r.opening_total, r.opening_completed, r.opening_rate, r.opening_diff_amount,
+                        r.dynamic_total, r.dynamic_completed, r.dynamic_sync_success, r.dynamic_sync_fail,
+                        r.dynamic_sync_pending, r.dynamic_rate, r.last_sync_time, r.overall_status,
+                    ),
+                )
+                rows_written["data_readiness"] += 1
+
+            # 5. Insert rollout_status_snapshot
+            if ev.snapshot:
+                cursor.execute(
+                    """
+                    INSERT INTO rollout_status_snapshot (org_id, snapshot_date, status)
+                    VALUES (%s, %s, %s)
+                    ON DUPLICATE KEY UPDATE status = VALUES(status);
+                    """,
+                    (ev.snapshot.org_id, ev.snapshot.snapshot_date, ev.snapshot.status),
+                )
+                rows_written["rollout_status_snapshot"] += 1
+
+            # 6. Synchronously cascade update daily_stats
+            cursor.execute(
+                """
+                UPDATE daily_stats
+                SET org_count = org_count + 1,
+                    user_count = user_count + %s
+                WHERE stat_date >= %s;
+                """,
+                (len(ev.users), ev.start_date),
+            )
+            if cursor.rowcount == 0:
+                cursor.execute(
+                    """
+                    UPDATE daily_stats
+                    SET org_count = org_count + 1,
+                        user_count = user_count + %s
+                    ORDER BY stat_date DESC LIMIT 1;
+                    """,
+                    (len(ev.users),),
+                )
+            rows_written["daily_stats"] += 1
+
+        elif isinstance(ev, PoolOnboardingEventFootprint):
             # Update org_unit
             cursor.execute(
                 "UPDATE org_unit SET status = %s WHERE id = %s;",
