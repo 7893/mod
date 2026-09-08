@@ -167,7 +167,7 @@ if not data.get("operationsTrend"):
 ops = data.get("operations", {})
 if "dualRunConsistent" not in ops or "dualRunInconsistent" not in ops:
     sys.exit(1)
-print(f"  Snapshot contract OK: rolloutTrend={len(data[\"rolloutTrend\"])} opsTrend={len(data[\"operationsTrend\"])}")
+print("  Snapshot contract OK: rolloutTrend=%d opsTrend=%d" % (len(data["rolloutTrend"]), len(data["operationsTrend"])))
 '; then
     echo "ERROR: /api/dashboard/snapshot 契约缺失 (C3/D3/D6 缺失)，自动回滚..."
     [ -n "$PREV_FE" ] && ln -sfn "$PREV_FE" "$FE_CURRENT"
