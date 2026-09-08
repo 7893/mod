@@ -163,3 +163,29 @@
 - 生产只读接口一律 `use_secondary_engine=ON`（自动路由 + 静默降级），**禁用 `FORCED`**（见边界手册六.2）。
 - 任何新大屏指标先问：能否走预聚合？若需即席分组裸扫底表，必须评审并加围栏，不得直接上线。
 - 预聚合表由拟真引擎/后台任务随数据增长增量刷新，保持与底表勾稽一致。
+
+
+---
+
+## 落地实现说明：快照预热采用 SWR 而非「30 秒轮询双缓冲」（2026-09-08，kiro 实现对齐）
+
+「决策 2」与上文优先级表最初设计的措辞为「后台常驻异步任务，每 30 秒轮询预构建并原子切换全局快照引用」。
+实际落地（提交 `858f10e`）改用了更轻量的 **SWR（Stale-While-Revalidate）触发式刷新**，两者目标一致但机制不同，
+在此对齐说明，避免文档与代码产生「事实漂移」：
+
+- **原设计（30 秒轮询双缓冲）**：一个常驻后台线程每 30 秒无条件重算快照并原子切换引用。无论有无流量都在算。
+- **实际实现（SWR 触发式）**：
+  - 服务启动时 `main.py` 的 lifespan 调用 `prewarm_snapshot(sync=False)` 异步预热首份快照（消除开机冷启动）。
+  - 请求进来时若命中未过期热缓存（TTL 60s）→ 微秒级直接返回。
+  - 若缓存已过期 → **立即返回旧缓存**，同时后台线程异步重建并原子替换（`_snapshot_lock` + `_snapshot_refreshing`
+    去重，避免并发重复计算）。前台请求永不被 `build_dashboard_snapshot_v2` 的重算阻塞。
+  - 极冷冷启动（未预热且首访、且无 fallback）才走一次同步加锁计算；模块顶层另有 `load_fallback_snapshot()`
+    做兜底预填。
+
+**为何改用 SWR**：效果与「双缓冲」等价——前台请求 100% 命中热内存、响应恒定在毫秒级（< 100ms），
+达成本 KI 的 SLA 目标；但 SWR 是**流量驱动**的，无流量时不做无谓重算，比固定 30 秒轮询更省 CPU/DB 资源
+（免费层 1 核尤其重要），且实现更简单、无常驻定时器。这是对原设计的合理优化，不改变验收结论。
+
+**代码位置**：`backend/app/api.py`（`prewarm_snapshot` / `_background_refresh_snapshot` / `dashboard_snapshot` 三级
+SWR 逻辑）、`backend/app/main.py`（lifespan 开机预热触发）。回归测试：`backend/tests/test_api.py::
+test_dashboard_snapshot_swr_and_prewarm`（验证预热后 < 100ms 与过期时 SWR 即时返回）。
