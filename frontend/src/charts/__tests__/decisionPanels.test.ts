@@ -13,6 +13,7 @@ describe('decision panel options', () => {
       construction: readFileSync(resolve(process.cwd(), 'src/views/ConstructionView.vue'), 'utf8'),
       rollout: readFileSync(resolve(process.cwd(), 'src/views/RolloutView.vue'), 'utf8'),
       operations: readFileSync(resolve(process.cwd(), 'src/views/OperationsView.vue'), 'utf8'),
+      theme: readFileSync(resolve(process.cwd(), 'src/styles/theme.css'), 'utf8'),
     }
 
     expect(sources.dashboard).toContain('title="运营红线哨位"')
@@ -26,6 +27,15 @@ describe('decision panel options', () => {
     expect(sources.operations).toContain('zone="D3"')
     expect(sources.operations).toContain('zone="D7"')
     expect(sources.operations).not.toContain('title="链路规模对比"')
+    expect(sources.dashboard).toContain('grid-rows-dashboard-stack')
+    expect(sources.dashboard).toContain(':disabled="!briefingSummary"')
+    expect(sources.dashboard).not.toContain('v-if="briefingSummary"')
+    expect(sources.construction).toContain('grid-rows-construction')
+    expect(sources.rollout).toContain('grid-cols-rollout-analysis')
+    expect(sources.rollout).toContain('class="col-span-8 row-span-2"')
+    expect(sources.rollout).not.toContain('ChartBlock :stats="c4Stats"')
+    expect(sources.theme).toContain('--grid-template-rows-construction: minmax(0, 1.1fr) minmax(0, 0.9fr)')
+    expect(sources.theme).toContain('--grid-template-rows-rollout-body: minmax(0, 1.25fr) minmax(0, 0.75fr)')
   })
 
   it('builds the A8 guard chart without converting missing data into a visible count', () => {
@@ -69,6 +79,7 @@ describe('decision panel options', () => {
 
     expect(option.series.map((series) => series.type)).toEqual(['bar', 'bar', 'line'])
     expect(option.series[2].data).toEqual([94.4])
+    expect('legend' in option).toBe(false)
   })
 
   it('uses checked volume rather than four identical compliance bars in D7', () => {

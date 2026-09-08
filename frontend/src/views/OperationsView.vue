@@ -15,6 +15,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, GaugeChart, LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
+import PanelLegend from '../components/PanelLegend.vue'
 import { formatCount, formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import {
@@ -170,6 +171,13 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
     <div class="grid grid-cols-operations grid-rows-operations gap-2.5 flex-1 min-h-0">
       <!-- D3: 日吞吐与集成质量趋势，不重复 D1/D2 累计规模 -->
       <CockpitPanel title="近 7 日业务吞吐" zone="D3" subtitle="单据、凭证日增与集成成功率">
+        <template #actions>
+          <PanelLegend compact :items="[
+            { label: '单据日增', tone: 'accent' },
+            { label: '凭证日增', tone: 'success' },
+            { label: '集成成功率', tone: 'warning' },
+          ]" />
+        </template>
         <VChart v-if="operationsTrend.length" class="w-full h-full min-h-0" :option="operationsTrendOption" autoresize />
         <div v-else class="flex h-full items-center justify-center text-cockpit-xs text-slate-500">暂无连续日吞吐数据</div>
       </CockpitPanel>

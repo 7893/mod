@@ -7,6 +7,7 @@ import { BarChart, GaugeChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import { Search } from 'lucide-vue-next'
 import CockpitPanel from '../components/CockpitPanel.vue'
+import PanelLegend from '../components/PanelLegend.vue'
 import ChartBlock from '../components/blocks/ChartBlock.vue'
 import ComplianceInspectDrawer, { type ComplianceIssueUnit } from '../components/ComplianceInspectDrawer.vue'
 import {
@@ -218,6 +219,12 @@ const paginatedTableUnits = computed(() => {
 
     <!-- 下部：E4 用趋势与柱图替代 8 张横向小卡 -->
     <CockpitPanel title="各批次合规监督概览" zone="E4" subtitle="8 批次合规率与高风险单位分布" class="h-52 flex-shrink-0">
+      <template #actions>
+        <PanelLegend :items="[
+          { label: '合规率', tone: 'success' },
+          { label: '高风险', tone: 'danger' },
+        ]" />
+      </template>
       <VChart class="w-full h-full min-h-0" :option="batchComplianceOption" autoresize />
     </CockpitPanel>
 
