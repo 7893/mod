@@ -19,6 +19,7 @@
 
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
+| KI-060 | Starlette 测试客户端仍依赖已弃用 httpx 兼容路径 | OPEN | P3 | [详情](issues/KI-060-Starlette测试客户端仍依赖已弃用httpx兼容路径.md) |
 | KI-036 | AI 业务数据洞察问答（域内锁定的 NotebookLM 式能力） | DRAFT | P3 | [详情](issues/KI-036-AI业务数据洞察问答.md) |
 | KI-037 | 省级二级单位实体化（组织层级从两层到三层） | DRAFT | P3 | [详情](issues/KI-037-省级二级单位实体化.md) |
 | KI-047 | Oracle 免费向量能力未利用与域内知识检索缺口 | OPEN | P3 | [详情](issues/KI-047-Oracle免费向量能力未利用与域内知识检索缺口.md) |
