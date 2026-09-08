@@ -1,6 +1,6 @@
 # KI-060 · Starlette 测试客户端仍依赖已弃用 httpx 兼容路径
 
-- 状态：OPEN
+- 状态：DONE（2026-09-08）
 - 优先级：P3
 - 更新日期：2026-09-08
 - 适用范围：`backend/pyproject.toml`、`backend/uv.lock`、使用 FastAPI/Starlette `TestClient` 的后端测试及 CI 测试环境
@@ -21,7 +21,7 @@ httpx `0.28.1`。Starlette `1.6.0` 的测试客户端优先导入 `httpx2`；环
 `httpx` 并发出上述警告。仓库多组 API、模拟器状态和 HeatWave 测试均通过
 `fastapi.testclient.TestClient` 使用这条兼容路径。
 
-当前 206 项后端测试全部通过，因此这不是现行功能故障，也不影响生产请求链路；但继续依赖已弃用的
+登记时后端全量测试均可通过，因此这不是现行功能故障，也不影响生产请求链路；但继续依赖已弃用的
 回退路径会使未来依赖升级存在测试基础设施突然失效的风险，并让真正新增的弃用警告被持续噪音掩盖。
 
 ## 根因边界
@@ -47,14 +47,25 @@ httpx `0.28.1`。Starlette `1.6.0` 的测试客户端优先导入 `httpx2`；环
 
 ## 验收标准
 
-- [ ] `backend/pyproject.toml` 与 `backend/uv.lock` 对测试客户端依赖的声明一致，可在干净环境复现安装。
-- [ ] 后端全量测试不再出现本 KI 记录的 `StarletteDeprecationWarning`。
-- [ ] 有自动化回归检查阻止测试客户端重新使用已弃用的 `httpx` 回退路径，且不是通过忽略警告实现。
-- [ ] 现有 API、lifespan、异常传播及相关模拟器测试保持通过。
-- [ ] `make check` 全量通过，无新增依赖冲突或弃用警告。
-- [ ] 若兼容组合或标准安装命令发生变化，同步更新相应现行开发文档。
+- [x] `backend/pyproject.toml` 与 `backend/uv.lock` 对测试客户端依赖的声明一致，可在干净环境复现安装。
+- [x] 后端全量测试不再出现本 KI 记录的 `StarletteDeprecationWarning`。
+- [x] 有自动化回归检查阻止测试客户端重新使用已弃用的 `httpx` 回退路径，且不是通过忽略警告实现。
+- [x] 现有 API、lifespan、异常传播及相关模拟器测试保持通过。
+- [x] `make check` 全量通过，无新增依赖冲突或弃用警告。
+- [x] 若兼容组合或标准安装命令发生变化，同步更新相应现行开发文档。
 
 ## 实施授权边界
 
 本 KI 仅登记已发现的测试依赖技术债，不授权生产发布、服务启停、数据库操作或无关依赖升级。
 实施时须先只读核验目标版本的官方兼容范围，再按依赖变更验证矩阵执行。
+
+## 实施结果（2026-09-08）
+
+- 依据 Starlette 现行依赖说明，将开发依赖 `httpx==0.28.1` 替换为 `httpx2==2.12.0`，并由 `uv`
+  重新生成锁文件；生产依赖未扩大。
+- 为 setuptools 增加明确的 `app*` 包发现范围，排除同机发布目录 `current/`、`releases/` 与测试目录，
+  使标准命令 `uv sync --all-extras --locked` 可重复完成，不再依赖 `--no-install-project` 绕行。
+- 新增 `test_testclient_dependency.py`，直接断言 Starlette 实际使用 `httpx2`；pytest 同时把
+  `StarletteDeprecationWarning` 提升为错误，禁止重新落回旧兼容路径或用过滤器掩盖。
+- 后端全量 208 项测试通过，警告为零；仓库全量检查通过。测试期间观察到的 AnyIO 卡死经最小复现确认
+  只发生在受限执行沙箱内，相同程序在沙箱外立即完成，不归因于 `httpx` 或生产 API。

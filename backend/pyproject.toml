@@ -16,9 +16,13 @@ dependencies = [
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["current*", "releases*", "tests*"]
+
 [project.optional-dependencies]
 dev = [
-  "httpx==0.28.1",
+  "httpx2==2.12.0",
   "pytest>=9.0.3",
   "ruff==0.12.11",
 ]
@@ -30,3 +34,6 @@ target-version = "py312"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["..", "."]
+filterwarnings = [
+  "error::starlette.exceptions.StarletteDeprecationWarning",
+]
