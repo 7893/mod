@@ -1,0 +1,46 @@
+name: Generate changelog artifact
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read changelog baseline
+        id: baseline
+        shell: bash
+        run: echo "value=$(tr -d '\n\r' < .git-cliff-baseline)" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare artifact directory
+        run: mkdir -p generated
+
+      - name: Generate changelog
+        # v4.8.0, pinned to the verified release commit.
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5
+        with:
+          version: v2.13.1
+          config: cliff.toml
+          args: ${{ steps.baseline.outputs.value }}..HEAD --verbose
+        env:
+          OUTPUT: generated/CHANGELOG.md
+
+      - name: Upload changelog artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-${{ github.ref_name }}
+          path: generated/CHANGELOG.md
+          if-no-files-found: error

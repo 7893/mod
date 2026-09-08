@@ -12,6 +12,7 @@
 4. [CURRENT-STATE.md](CURRENT-STATE.md)：当前运行、数据、质量与操作边界的唯一事实入口。
 5. [PROJECT-LAYOUT.md](../PROJECT-LAYOUT.md)：项目目录和运行主机边界。
 6. [KNOWN-ISSUES.md](KNOWN-ISSUES.md)：已知问题看板（已发现问题的看板列表，各 issue 详情见 [issues/](issues/)；新需求/任务用 GitHub Issues 登记）。
+7. [CHANGELOG.md](../CHANGELOG.md)：从公开就绪基线开始、由锁定版本 git-cliff 生成的发布变更快照。
 
 ## 现行维护规范
 
@@ -103,3 +104,5 @@ Worker 均已退出当前运行架构。
 ## 编号说明
 
 历史文档不因目录整理而重编号或删除。存在两个 `10-` 编号文档（现位于 `history/`），其中 `history/10-V2后续实施移交清单_给下一位AI的Prompt.md` 是历史交接提示词，不能替代当前任务书。
+
+新增的脱敏历史治理快照：[2026-09-08 CHANGELOG 机制治理前快照](history/2026-09-08-CHANGELOG机制治理前快照.md)。

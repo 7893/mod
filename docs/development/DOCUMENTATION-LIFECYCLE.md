@@ -51,17 +51,13 @@
 
 ## 四、变更记录（CHANGELOG）
 
-- `CHANGELOG.md` 位于仓库根，**从规范化提交自动生成，不手写**。
-- 前提已具备：提交遵循 Conventional Commits（`feat/fix/docs/refactor/...`，见 commit-msg 闸门）。
-- 起点：从 tag `v0.1.0`（2026-09-04）起计，早期不规范提交不纳入。
-- 工具：git-cliff，配置见根目录 `cliff.toml`；**不安装到本地开发环境**，发版时用二进制临时生成。
-- 生成方式（发版时执行，方案 C）：
-  - 打新版本 tag 后，生成本次区间的条目并前置到 CHANGELOG：
-    `git-cliff --config cliff.toml --tag vX.Y.Z --unreleased --prepend CHANGELOG.md`
-  - 或全量重生成：`git-cliff --config cliff.toml --output CHANGELOG.md`
-  - git-cliff 以二进制运行（按平台架构下载，如 aarch64/x86_64），用后即弃，不进依赖树、不进 PATH。
-- 它回答“版本间变了什么”，与 CURRENT-STATE（“现在什么样”）互补。
-- 未来若需全自动，可另建独立 workflow 并授予最小写权限；当前采用发版手动生成以避免自动提交与写权限复杂度。
+- `CHANGELOG.md` 位于仓库根，是由 git-cliff 生成的发布快照，不是每次提交同步的活文档，不手工编辑其生成段。
+- 生成起点由根目录 `.git-cliff-baseline` 唯一定义，当前指向真实存在的首个公开就绪提交 `35280a1d75e50478bc68dda4d64e7a9ac27f40dc`。不再声称仓库存在尚未创建的 `v0.1.0` tag。
+- 工具版本锁定为 git-cliff `2.13.1`，格式配置见 `cliff.toml`；本地不将它加入项目依赖，用按官方 SHA-256 校验的临时二进制运行。
+- 本地预览或重生成统一通过 `scripts/project/generate_changelog.py`；默认只输出到标准输出，写入文件必须显式给出 `--output`。
+- 普通 `make check` 和质量 CI 通过 `check_changelog.py` 校验配置、基线可达性、生成标记与工具版本，不要求每次提交自动改写 CHANGELOG。
+- `.github/workflows/changelog.yml` 仅在 `v*` tag 推送或人工触发时生成可下载的 CHANGELOG 产物；工作流只有 `contents: read` 权限，不自动提交、推送、创建标签或发布 Release。
+- CHANGELOG 回答“基线或版本之后变了什么”，与 `CURRENT-STATE.md`（“现在什么样”）互补。原错误口径与旧 CHANGELOG 已完整保存在 [2026-09-08 CHANGELOG 机制治理前快照](../history/2026-09-08-CHANGELOG机制治理前快照.md)。
 
 ## 五、放置规则
 

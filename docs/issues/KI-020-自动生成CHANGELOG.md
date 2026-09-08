@@ -2,9 +2,15 @@
 
 - 状态：DONE（2026-09-04，方案 C：工具+规范就位，发版手动生成）
 - 更新日期：2026-09-04
+- 适用范围：CHANGELOG 生成配置、基线与发版流程
 - 关联链接：[已知问题看板](../KNOWN-ISSUES.md)
 
 - 背景：已具备 Conventional Commits 规范与 commit-msg 闸门，但尚无 CHANGELOG，变更历史只能靠 `git log`。
 - 处理：引入 git-cliff（配置 `cliff.toml`），从 tag `v0.1.0` 起计；生成初始 `CHANGELOG.md`；
   发版生成方式写入 `DOCUMENTATION-LIFECYCLE.md` 第四节。工具以二进制临时运行，不装入本地环境、不进依赖树。
 - 未采用 CI 全自动：避免写权限与自动提交复杂度；未来需要时可另建独立 workflow。
+
+## 后续勘误（2026-09-08）
+
+- 后续核查确认仓库并未存在 `v0.1.0` tag，CI 也没有实际执行 git-cliff，因此上述“从 tag 起计”只是当时设计，不是已落地事实。原文作为当时处理记录保留，不删除或改写。
+- 生成基线、版本锁定、只读 CI 产物和自动校验的真正闭环见 [KI-058](KI-058-CHANGELOG基线失真与生成链路未闭环.md)。
