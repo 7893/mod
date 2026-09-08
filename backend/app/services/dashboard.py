@@ -26,7 +26,7 @@ REGION_SUFFIX_RULES = [
 ]
 
 LATEST_COMPLETED_DOCUMENT_DATE_SQL = """
-SELECT MAX(DATE(submit_time)) AS docs_as_of_date
+SELECT DATE(MAX(submit_time)) AS docs_as_of_date
 FROM business_document
 WHERE submit_time < :anchor_date
 """

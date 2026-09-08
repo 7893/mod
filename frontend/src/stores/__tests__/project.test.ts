@@ -3,6 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { flushPromises } from '@vue/test-utils'
 import { useProjectStore } from '../project'
 import snapshotData from '../../data/v2-sim-snapshot.json'
+import { calcDualRunConsistency } from '../../utils/qualityMetrics'
 
 describe('stores/project', () => {
   let store: ReturnType<typeof useProjectStore>
@@ -149,5 +150,41 @@ describe('stores/project', () => {
     await flushPromises()
     expect(store.loading).toBe(false)
     expect(store.entities.length).toBeGreaterThan(0)
+  })
+
+  it('provides complete contract for C3 rolloutTrend, D3 operationsTrend, and D6 dualRun (KI-061)', async () => {
+    store = useProjectStore()
+    await flushPromises()
+
+    // C3: 批次历程走势
+    expect(store.snapshot.rolloutTrend).toBeDefined()
+    expect(store.snapshot.rolloutTrend!.length).toBeGreaterThan(0)
+    const firstRt = store.snapshot.rolloutTrend![0]
+    expect(firstRt.date).toBeDefined()
+    expect(firstRt.batchId).toBeGreaterThan(0)
+    expect(typeof firstRt.launchedPct).toBe('number')
+
+    // D3: 日均吞吐趋势
+    expect(store.snapshot.operationsTrend).toBeDefined()
+    expect(store.snapshot.operationsTrend!.length).toBeGreaterThan(0)
+    const firstOt = store.snapshot.operationsTrend![0]
+    expect(firstOt.date).toBeDefined()
+    expect(firstOt.documents).toBeDefined()
+
+    // D6: 双轨运行核对
+    const ops = store.snapshot.operations
+    expect(ops.dualRunConsistent).toBeDefined()
+    expect(ops.dualRunInconsistent).toBeDefined()
+    expect(ops.dualRunConsistent!).toBeGreaterThan(0)
+    expect(ops.dualRunResult).toBeGreaterThan(0)
+
+    const dualStats = calcDualRunConsistency(
+      ops.dualRunResult,
+      ops.dualRunConsistent,
+      ops.dualRunInconsistent,
+    )
+    expect(dualStats).not.toBeNull()
+    expect(dualStats!.consistent).toBe(ops.dualRunConsistent)
+    expect(dualStats!.consistencyPct).toBeGreaterThanOrEqual(90)
   })
 })

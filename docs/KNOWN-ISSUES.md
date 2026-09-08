@@ -19,7 +19,6 @@
 
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
-| KI-061 | 快照预热慢查询卡死并永久返回过期 fallback | OPEN | P1 | [详情](issues/KI-061-快照预热慢查询卡死并永久返回过期fallback.md) |
 | KI-036 | AI 业务数据洞察问答（域内锁定的 NotebookLM 式能力） | DRAFT | P3 | [详情](issues/KI-036-AI业务数据洞察问答.md) |
 | KI-037 | 省级二级单位实体化（组织层级从两层到三层） | DRAFT | P3 | [详情](issues/KI-037-省级二级单位实体化.md) |
 | KI-047 | Oracle 免费向量能力未利用与域内知识检索缺口 | OPEN | P3 | [详情](issues/KI-047-Oracle免费向量能力未利用与域内知识检索缺口.md) |
@@ -29,6 +28,7 @@
 
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
+| KI-061 | 快照预热慢查询卡死并永久返回过期 fallback | DONE | P1 | [详情](issues/KI-061-快照预热慢查询卡死并永久返回过期fallback.md) |
 | KI-060 | Starlette 测试客户端仍依赖已弃用 httpx 兼容路径 | DONE | P3 | [详情](issues/KI-060-Starlette测试客户端仍依赖已弃用httpx兼容路径.md) |
 | KI-059 | 全场景秒级响应SLA保障与台账筛选分页死锁治理 | DONE | P1 | [详情](issues/KI-059-全场景秒级响应SLA保障与台账筛选分页死锁治理.md) |
 | KI-058 | CHANGELOG 基线失真与生成链路未闭环 | DONE | P2 | [详情](issues/KI-058-CHANGELOG基线失真与生成链路未闭环.md) |

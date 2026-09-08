@@ -1,6 +1,6 @@
 # KI-061 · 快照预热慢查询卡死并永久返回过期 fallback
 
-- 状态：OPEN
+- 状态：DONE
 - 优先级：P1
 - 更新日期：2026-09-08
 - 适用范围：大盘快照日期锚点查询、SWR 预热与刷新状态机、fallback 结构契约、API 健康探针及生产发布验收
@@ -128,15 +128,15 @@ fallback 替换为实时快照。旧 fallback 又未包含后来新增的趋势�
 
 ## 验收标准
 
-- [ ] 原日期锚点 SQL 已改为索引友好写法，`EXPLAIN` 不再扫描约 587 万行的 `business_document`。
-- [ ] 快照构建在约定时限内成功；超时/异常时连接、线程和 `_snapshot_refreshing` 均能可靠恢复。
-- [ ] 连续刷新与服务重启不会新增长期 `executing` 的同类查询，服务可在停止时限内退出。
-- [ ] 实时 `/api/dashboard/snapshot` 返回非空、结构正确的 `rolloutTrend`、`operationsTrend`、
+- [x] 原日期锚点 SQL 已改为索引友好写法，`EXPLAIN` 不再扫描约 587 万行的 `business_document`。
+- [x] 快照构建在约定时限内成功；超时/异常时连接、线程和 `_snapshot_refreshing` 均能可靠恢复。
+- [x] 连续刷新与服务重启不会新增长期 `executing` 的同类查询，服务可在停止时限内退出。
+- [x] 实时 `/api/dashboard/snapshot` 返回非空、结构正确的 `rolloutTrend`、`operationsTrend`、
       `dualRunConsistent` 与 `dualRunInconsistent`，C3、D3、D6 恢复真实数据展示。
-- [ ] fallback 与当前快照字段契约一致，且其来源和新鲜度不会被误报为 live。
-- [ ] `/api/health`、`refresh-meta` 与发布门禁能识别快照陈旧、刷新超时和字段缺失。
-- [ ] 新增自动化回归测试，后端测试、前端契约测试及 `make check` 全量通过。
-- [ ] 生产只读验收确认数据库无本问题遗留的长期扫描，API 延迟与 HeatWave 资源恢复正常。
+- [x] fallback 与当前快照字段契约一致，且其来源和新鲜度不会被误报为 live。
+- [x] `/api/health`、`refresh-meta` 与发布门禁能识别快照陈旧、刷新超时和字段缺失。
+- [x] 新增自动化回归测试，后端测试、前端契约测试及 `make check` 全量通过。
+- [x] 生产只读验收确认数据库无本问题遗留的长期扫描，API 延迟与 HeatWave 资源恢复正常。
 
 ## 实施授权边界
 

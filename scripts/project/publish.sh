@@ -154,6 +154,31 @@ print(f"  Simulator probe OK: service={svc} status={st} fresh={fr}")
     exit 1
 fi
 
+# 探针 3: KI-061 验证 /api/dashboard/snapshot 字段契约 (C3/D3/D6 字段完整)
+SNAPSHOT_URL="https://mod.fuming.name/api/dashboard/snapshot"
+SNAPSHOT_BODY=$(curl -s "$SNAPSHOT_URL")
+if ! echo "$SNAPSHOT_BODY" | python3 -c '
+import sys, json
+data = json.load(sys.stdin)
+if not data.get("rolloutTrend"):
+    sys.exit(1)
+if not data.get("operationsTrend"):
+    sys.exit(1)
+ops = data.get("operations", {})
+if "dualRunConsistent" not in ops or "dualRunInconsistent" not in ops:
+    sys.exit(1)
+print(f"  Snapshot contract OK: rolloutTrend={len(data[\"rolloutTrend\"])} opsTrend={len(data[\"operationsTrend\"])}")
+'; then
+    echo "ERROR: /api/dashboard/snapshot 契约缺失 (C3/D3/D6 缺失)，自动回滚..."
+    [ -n "$PREV_FE" ] && ln -sfn "$PREV_FE" "$FE_CURRENT"
+    [ -n "$PREV_BE" ] && ln -sfn "$PREV_BE" "$BE_CURRENT"
+    sudo systemctl reload nginx
+    sudo systemctl restart mod-api
+    sudo systemctl restart mod-simulator
+    echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
+    exit 1
+fi
+
 # 7. 清理旧 release（保留最近 5 个）
 echo "[7/8] 清理旧 release（保留最近 5 个）..."
 for dir in "$FE_RELEASES" "$BE_RELEASES"; do
