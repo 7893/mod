@@ -61,15 +61,6 @@ const compositionColors: Record<CompositionTone, string> = {
   neutral: chartPalette.neutral,
 }
 
-const compactLegend = (data: string[]) => ({
-  data,
-  top: 0,
-  right: 8,
-  textStyle: { color: chartInk.textMuted, fontSize: 10 },
-  itemWidth: 10,
-  itemHeight: 8,
-})
-
 export function createOverviewCompositionOption(parts: CompositionPart[], total: number) {
   return {
     ...calmAnimation,
@@ -109,8 +100,7 @@ export function createRolloutCompositionOption(list: RolloutSeriesItem[]) {
   return {
     ...calmAnimation,
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip },
-    legend: compactLegend(['已上线', '双轨', '待推进']),
-    grid: { left: 8, right: 12, top: 24, bottom: 6, containLabel: true },
+    grid: { left: 8, right: 12, top: 6, bottom: 6, containLabel: true },
     xAxis: {
       type: 'category',
       data: list.map((batch) => batch.name),
@@ -212,8 +202,7 @@ export function createBatchProgressOption(list: BatchProgressItem[]) {
       },
       ...chartTooltip,
     },
-    legend: compactLegend(['已上线', '已建设待上线', '待完成']),
-    grid: { left: 6, right: 8, top: 25, bottom: 2, containLabel: true },
+    grid: { left: 6, right: 8, top: 4, bottom: 2, containLabel: true },
     xAxis: {
       ...valueAxis,
       min: 0,
@@ -348,8 +337,7 @@ export function createBatchComplianceOption(list: ComplianceSeriesItem[]) {
   return {
     ...calmAnimation,
     tooltip: { trigger: 'axis', ...chartTooltip },
-    legend: compactLegend(['合规率', '高风险']),
-    grid: { left: 8, right: 8, top: 24, bottom: 6, containLabel: true },
+    grid: { left: 8, right: 8, top: 6, bottom: 6, containLabel: true },
     xAxis: {
       ...categoryAxis,
       data: list.map((batch) => batch.name),

@@ -13,6 +13,7 @@ import {
 import ChinaMap from '../components/ChinaMap.vue'
 import CockpitTopBar from '../components/CockpitTopBar.vue'
 import CockpitPanel from '../components/CockpitPanel.vue'
+import PanelLegend from '../components/PanelLegend.vue'
 import OverviewTrendChart from '../components/OverviewTrendChart.vue'
 import StatusList from '../components/blocks/StatusList.vue'
 import type { StatusRow } from '../components/blocks/types.ts'
@@ -164,30 +165,30 @@ const chooseProvince = (name: string) => {
 
     <!-- 每日指挥部智能简报（后台 AI 生成，一行摘要，点击进 F 屏看全文） -->
     <button
-      v-if="briefingSummary"
       type="button"
-      class="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-left hover:bg-sky-500/15 transition-colors cursor-pointer w-full min-w-0"
-      title="点击查看智能研判全文"
+      class="h-8 flex-shrink-0 flex items-center justify-center gap-2 px-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-center hover:bg-sky-500/15 transition-colors cursor-pointer w-full min-w-0 disabled:invisible disabled:pointer-events-none"
+      :disabled="!briefingSummary"
+      :title="briefingSummary ? '点击查看智能研判全文' : undefined"
       @click="router.push('/f')"
     >
       <span class="flex-shrink-0 font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">AI 简报</span>
-      <span class="text-cockpit-sm text-slate-300 truncate min-w-0">{{ briefingSummary }}</span>
-      <ChevronRight :size="13" class="flex-shrink-0 text-sky-400 ml-auto" />
+      <span class="text-cockpit-sm text-slate-300 truncate min-w-0 max-w-4xl">{{ briefingSummary }}</span>
+      <ChevronRight :size="13" class="flex-shrink-0 text-sky-400" />
     </button>
 
     <!-- 三栏主体：严格固定 Grid 物理防爆舱 (左右比例一致，绝对水平对齐) -->
     <main class="flex-1 grid grid-cols-cockpit gap-2.5 min-h-0">
       
-      <!-- 左列：推广与推进中枢 (上下 1.15 : 1 分割) -->
-      <aside class="grid grid-rows-cockpit-side gap-2.5 min-h-0">
+      <!-- 左列：A2/A3 承担密集分析，A4 保持紧凑趋势画布 -->
+      <aside class="grid grid-rows-dashboard-left gap-2.5 min-h-0">
         <!-- 上部分：拆分为 A2 省域指标与 A3 批次推进 两个独立面板 (A-1) -->
-        <div class="flex flex-col gap-2.5 min-h-0">
+        <div class="grid grid-rows-dashboard-stack gap-2.5 min-h-0">
           <!-- A2: 省域核心指标 -->
           <CockpitPanel
             title="省域核心指标"
             zone="A2"
             :subtitle="selectedProvince === '全国' ? '全国总体概览' : `${selectedProvince}省域下钻`"
-            class="flex-shrink-0"
+            class="min-h-0"
           >
             <template #actions>
               <div class="flex items-center gap-1.5">
@@ -206,8 +207,8 @@ const chooseProvince = (name: string) => {
                 </button>
               </div>
             </template>
-            <div class="grid grid-cols-5 items-center gap-3 h-24">
-              <div class="col-span-2 h-full min-w-0 border-r border-surface-veil-06 pr-3">
+            <div class="grid grid-cols-5 items-center gap-2 h-full min-h-0">
+              <div class="col-span-2 h-full min-w-0 border-r border-surface-veil-06 pr-2">
                 <VChart :option="provinceProfileOption" autoresize class="h-full w-full min-w-0" />
               </div>
               <div class="col-span-3 grid grid-rows-4 h-full divide-y divide-white/5 min-w-0">
@@ -226,6 +227,13 @@ const chooseProvince = (name: string) => {
             subtitle="完成批次合并 · 聚焦在推批次"
             class="flex-1 min-h-0"
           >
+            <template #actions>
+              <PanelLegend compact :items="[
+                { label: '已上线', tone: 'success' },
+                { label: '已建设待上线', tone: 'accent' },
+                { label: '待完成', tone: 'neutral' },
+              ]" />
+            </template>
             <VChart :option="batchProgressOption" autoresize class="w-full h-full min-h-0" />
           </CockpitPanel>
         </div>
@@ -236,6 +244,12 @@ const chooseProvince = (name: string) => {
           zone="A4"
           :subtitle="`7 个进度节点 · 累计上线 ${store.snapshot.overview.launched ?? 0} 家`"
         >
+          <template #actions>
+            <PanelLegend compact :items="[
+              { label: '正式上线', tone: 'accent' },
+              { label: '双轨核对', tone: 'warning' },
+            ]" />
+          </template>
           <OverviewTrendChart class="w-full h-full min-h-0" :data="store.snapshot.trend" />
         </CockpitPanel>
       </aside>

@@ -98,11 +98,7 @@ export function createOperationsTrendOption(points: OperationsTrendPoint[]) {
   return {
     ...calmAnimation,
     tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, ...chartTooltip },
-    legend: {
-      data: ['单据日增', '凭证日增', '集成成功率'], top: 0, right: 4,
-      textStyle: { color: chartInk.textMuted, fontSize: 9 }, itemWidth: 9, itemHeight: 7,
-    },
-    grid: { left: 46, right: 40, top: 28, bottom: 26 },
+    grid: { left: 46, right: 40, top: 8, bottom: 26 },
     xAxis: {
       type: 'category', data: points.map((point) => point.date),
       axisLine: { lineStyle: { color: chartInk.border } }, axisTick: { show: false },

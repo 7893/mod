@@ -41,21 +41,21 @@ export function createRolloutTrendMatrixOption(points: RolloutTrendPoint[]) {
       show: false, min: 0, max: 100, dimension: 2,
       inRange: { color: [chartInk.borderSoft, chartPalette.accent, chartPalette.success] },
     },
-    grid: { left: 48, right: 8, top: 6, bottom: 25 },
+    grid: { left: 52, right: 10, top: 8, bottom: 28 },
     xAxis: {
       type: 'category', data: dates,
       axisLine: { lineStyle: { color: chartInk.border } }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 9 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
     },
     yAxis: {
       type: 'category', data: batches.map((batch) => batch.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 9 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
     },
     series: [{
       type: 'heatmap', data: matrix,
       label: {
-        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 8,
+        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 9,
         formatter: (params: any) => `${params.value?.[2] ?? 0}%`,
       },
       itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 2, borderRadius: 3 },

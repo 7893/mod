@@ -22,15 +22,7 @@ const props = defineProps<{
 const trendOption = computed(() => ({
   ...calmAnimation,
   tooltip: { trigger: 'axis', ...chartTooltip },
-  grid: { top: 22, bottom: 22, left: 38, right: 12 },
-  legend: {
-    show: true,
-    right: 8,
-    top: 0,
-    itemWidth: 10,
-    itemHeight: 3,
-    textStyle: { color: '#94a3b8', fontSize: 10 },
-  },
+  grid: { top: 6, bottom: 22, left: 38, right: 12 },
   xAxis: {
     ...categoryAxis,
     data: props.data.map((v) => v.date),

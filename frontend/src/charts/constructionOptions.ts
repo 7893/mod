@@ -45,11 +45,7 @@ export function createLaunchGateOption(items: GateStageItem[]) {
           : ''
       },
     },
-    legend: {
-      data: ['已完成', '进行中', '待启动'], top: 0, right: 4,
-      textStyle: { color: chartInk.textMuted, fontSize: 9 }, itemWidth: 9, itemHeight: 7,
-    },
-    grid: { left: 58, right: 42, top: 28, bottom: 10 },
+    grid: { left: 58, right: 42, top: 8, bottom: 10 },
     xAxis: { type: 'value', max: 100, show: false },
     yAxis: {
       type: 'category', data: reversed.map((item) => item.name),
@@ -189,15 +185,7 @@ export function createTrainingConversionOption(items: TrainingTypeItem[]) {
         return `${item.type}<br/>培训场次 <b>${item.count.toLocaleString()}</b><br/>实到 / 应到 <b>${item.actual.toLocaleString()} / ${item.expected.toLocaleString()}</b><br/>考核通过 <b>${item.passed.toLocaleString()}</b> · ${rate}%`
       },
     },
-    legend: {
-      data: ['应到', '实到', '通过', '认证'],
-      top: 2,
-      right: 4,
-      textStyle: { color: chartInk.textMuted, fontSize: 9 },
-      itemWidth: 9,
-      itemHeight: 7,
-    },
-    grid: { left: 42, right: 12, top: 30, bottom: 38 },
+    grid: { left: 42, right: 12, top: 8, bottom: 38 },
     xAxis: {
       type: 'category',
       data: items.map((item) => shortTrainingType(item.type)),

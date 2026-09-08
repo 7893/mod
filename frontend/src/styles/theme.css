@@ -14,11 +14,14 @@
 @theme {
   /* 骨架契约：驾驶舱固定分区，受保护结构，改比例即结构变更 */
   --grid-template-columns-cockpit: 390px 1fr 370px;   /* 三栏：左固定 中弹性 右固定 */
-  --grid-template-rows-cockpit-side: 1.15fr 1fr;       /* 左右列上下两格比例 */
+  --grid-template-rows-dashboard-left: minmax(0, 1.2fr) minmax(0, 0.8fr); /* A2/A3 分析区 + A4 趋势区 */
+  --grid-template-rows-dashboard-stack: minmax(0, 0.85fr) minmax(0, 1.15fr); /* A2 指标 + A3 批次 */
   --grid-template-rows-cockpit-right: 1fr 1.3fr;      /* 右列：运营指标 + 扩大风险预警 (A-3) */
   --grid-template-columns-construction: repeat(12, minmax(0, 1fr));
-  --grid-template-rows-construction: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  --grid-template-columns-rollout-mid: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 0.95fr);
+  --grid-template-rows-construction: minmax(0, 1.1fr) minmax(0, 0.9fr); /* B2/B3 主分析稍大，B4/B5 辅助区稍小 */
+  --grid-template-rows-rollout-body: minmax(0, 1.25fr) minmax(0, 0.75fr); /* C3-C5 分析区 + C6 台账 */
+  --grid-template-columns-rollout-analysis: repeat(12, minmax(0, 1fr)); /* C3 主区 8 列，C4/C5 辅区 4 列 */
+  --grid-template-rows-rollout-analysis: minmax(0, 1.2fr) minmax(0, 0.8fr); /* C4 排行略高，C5 环图摘要更紧凑 */
   --grid-template-columns-operations: repeat(2, minmax(0, 1fr));
   --grid-template-rows-operations: minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.1fr);
   --grid-template-columns-issues-top: minmax(0, 1.35fr) minmax(0, 0.95fr);

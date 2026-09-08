@@ -16,6 +16,7 @@ import {
   Database,
 } from 'lucide-vue-next'
 import CockpitPanel from '../components/CockpitPanel.vue'
+import PanelLegend from '../components/PanelLegend.vue'
 import ConstructionLedger from '../components/ConstructionLedger.vue'
 import OverviewBand from '../components/blocks/OverviewBand.vue'
 import StatList from '../components/blocks/StatList.vue'
@@ -209,8 +210,8 @@ const readinessPieOption = computed(() => ({
     <!-- 建设全景主区 -->
     <main v-if="activeTab === 'overview'" class="flex-1 min-h-0 grid grid-cols-construction grid-rows-construction gap-2.5">
       <!-- B2: 状态矩阵承载 24 个任务数据点，雷达图补充八阶段均衡性判断 -->
-      <CockpitPanel title="建设阶段作战矩阵" zone="B2" subtitle="任务状态密度与八阶段完成度轮廓" class="col-span-8">
-        <div class="grid grid-cols-12 gap-3 h-full min-h-0">
+      <CockpitPanel title="建设阶段作战矩阵" zone="B2" subtitle="任务状态密度与八阶段完成度轮廓" class="col-span-8 min-h-0">
+        <div class="grid grid-cols-12 gap-2 h-full min-h-0">
           <section class="col-span-9 flex flex-col min-h-0 pr-3 border-r border-surface-veil-06">
             <div class="flex items-center justify-between pb-1 text-cockpit-xs">
               <span class="font-medium text-slate-300">阶段 × 状态任务矩阵</span>
@@ -234,8 +235,15 @@ const readinessPieOption = computed(() => ({
       </CockpitPanel>
 
       <!-- B4: 关键上线门禁为主，培训只保留总体转化漏斗 -->
-      <CockpitPanel title="上线门禁攻坚" zone="B4" subtitle="关键任务推进与参培认证转化" class="col-span-8">
-        <div class="grid grid-cols-12 gap-3 h-full min-h-0">
+      <CockpitPanel title="上线门禁攻坚" zone="B4" subtitle="关键任务推进与参培认证转化" class="col-span-8 min-h-0">
+        <template #actions>
+          <PanelLegend :items="[
+            { label: '已完成', tone: 'success' },
+            { label: '进行中', tone: 'accent' },
+            { label: '待启动', tone: 'neutral' },
+          ]" />
+        </template>
+        <div class="grid grid-cols-12 gap-2 h-full min-h-0">
           <section class="col-span-8 flex flex-col min-h-0 pr-3 border-r border-surface-veil-06">
             <div class="flex items-center justify-between pb-1 text-cockpit-xs">
               <span class="font-medium text-slate-300">四道关键上线门禁</span>
