@@ -23,9 +23,21 @@ describe('ConstructionLedger', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders filter options with counts and resets page on filter change', async () => {
+  it('renders B6, B7, B8 zones and filter options with counts', async () => {
     const wrapper = mount(ConstructionLedger)
     await flushPromises()
+
+    // Panel zones B6, B7, B8
+    expect(wrapper.find('[data-zone="B6"]').exists()).toBe(true)
+    expect(wrapper.find('[data-zone="B7"]').exists()).toBe(true)
+    expect(wrapper.find('[data-zone="B8"]').exists()).toBe(true)
+
+    // Select options with counts: batch (0), province (1), status (2)
+    const selects = wrapper.findAll('select')
+    expect(selects[0].text()).toContain('全部批次')
+    expect(selects[1].text()).toContain('全部省份')
+    expect(selects[2].text()).toContain('全部状态')
+    expect(selects[2].text()).toContain('准备中')
 
     // Page 2
     const nextBtn = wrapper.findAll('button').find((b) => b.text().includes('下一页'))
@@ -34,9 +46,8 @@ describe('ConstructionLedger', () => {
 
     expect(wrapper.text()).toContain('第 2 /')
 
-    // Change batch
-    const batchSelect = wrapper.findAll('select')[1]
-    await batchSelect.setValue('第一批')
+    // Change batch (select[0])
+    await selects[0].setValue('第一批')
     await flushPromises()
 
     // Resets to page 1
@@ -48,7 +59,7 @@ describe('ConstructionLedger', () => {
     const wrapper = mount(ConstructionLedger)
     await flushPromises()
 
-    const provinceSelect = wrapper.findAll('select')[2]
+    const provinceSelect = wrapper.findAll('select')[1]
     await provinceSelect.setValue('北京')
     await flushPromises()
 
@@ -59,4 +70,28 @@ describe('ConstructionLedger', () => {
 
     expect(wrapper.findAll('button').find((b) => b.text().includes('重置'))).toBeUndefined()
   })
+
+  it('supports filtering by status and searching by ID or name', async () => {
+    const wrapper = mount(ConstructionLedger)
+    await flushPromises()
+
+    const statusSelect = wrapper.findAll('select')[2]
+    await statusSelect.setValue('已上线')
+    await flushPromises()
+
+    const rows = wrapper.findAll('tbody tr')
+    expect(rows.length).toBeGreaterThan(0)
+    for (const row of rows) {
+      expect(row.text()).toContain('已上线')
+    }
+
+    // Search by ID
+    const searchInput = wrapper.find('input[placeholder*="搜索单位"]')
+    await searchInput.setValue('MOD-1')
+    await flushPromises()
+
+    const searchRows = wrapper.findAll('tbody tr')
+    expect(searchRows.length).toBeGreaterThan(0)
+  })
 })
+

@@ -63,10 +63,18 @@ const batchOptions = computed(() => {
 })
 
 const filteredEntities = computed(() => {
+  const q = query.value.trim().toLowerCase()
   return store.entities.filter((row) => {
     const matchBatch = selectedBatch.value === '全部' || row.batch === selectedBatch.value
     const matchProv = selectedProvince.value === '全部' || row.province === selectedProvince.value
-    const matchQuery = !query.value || `${row.name}${row.owner}${row.province}${row.batch}`.includes(query.value)
+    const matchQuery = !q || (
+      row.name.toLowerCase().includes(q) ||
+      row.owner.toLowerCase().includes(q) ||
+      row.province.toLowerCase().includes(q) ||
+      row.batch.toLowerCase().includes(q) ||
+      String(row.id).includes(q) ||
+      `mod-${row.id}`.includes(q)
+    )
     return matchBatch && matchProv && matchQuery
   })
 })
@@ -203,7 +211,7 @@ function save() {
                     'bg-emerald-950/40 text-emerald-400 border-emerald-500/30': row.status === '已上线',
                     'bg-sky-950/40 text-sky-400 border-sky-500/30': row.status === '双轨运行',
                     'bg-amber-950/40 text-amber-400 border-amber-500/30': row.status === '建设中',
-                    'bg-slate-800/60 text-slate-400 border-white/10': row.status === '准备中',
+                    'bg-slate-800/60 text-slate-400 border-white/10': row.status === '准备中' || row.status === '未启动',
                   }"
                 >
                   {{ row.status }}
@@ -295,6 +303,7 @@ function save() {
             v-model="draft.status"
             class="px-3 py-1.5 rounded-lg bg-slate-800 border border-white/10 text-slate-200 focus:outline-none focus:border-sky-500/40"
           >
+            <option>未启动</option>
             <option>准备中</option>
             <option>建设中</option>
             <option>双轨运行</option>

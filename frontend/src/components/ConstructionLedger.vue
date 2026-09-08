@@ -29,13 +29,23 @@ watch(() => props.initialFilter, (val) => {
   if (val) selectedStatus.value = val
 })
 
-const filtered = computed(() => store.entities.filter((row) => {
-  const matchProvince = province.value === '全部' || row.province === province.value
-  const matchBatch = selectedBatch.value === '全部' || row.batch === selectedBatch.value
-  const matchStatus = selectedStatus.value === '全部' || row.status === selectedStatus.value
-  const matchQuery = !query.value || `${row.name}${row.owner}${row.province}${row.batch}`.includes(query.value)
-  return matchProvince && matchBatch && matchStatus && matchQuery
-}))
+const filtered = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  return store.entities.filter((row) => {
+    const matchProvince = province.value === '全部' || row.province === province.value
+    const matchBatch = selectedBatch.value === '全部' || row.batch === selectedBatch.value
+    const matchStatus = selectedStatus.value === '全部' || row.status === selectedStatus.value
+    const matchQuery = !q || (
+      row.name.toLowerCase().includes(q) ||
+      row.owner.toLowerCase().includes(q) ||
+      row.province.toLowerCase().includes(q) ||
+      row.batch.toLowerCase().includes(q) ||
+      String(row.id).includes(q) ||
+      `mod-${row.id}`.includes(q)
+    )
+    return matchProvince && matchBatch && matchStatus && matchQuery
+  })
+})
 
 const NATIONAL_PROVINCE_ORDER = [
   '北京', '天津', '河北', '山西', '内蒙古',
@@ -85,7 +95,28 @@ const batches = computed(() => {
   ]
 })
 
-const statuses = ['全部', '准备中', '建设中', '双轨运行', '已上线']
+const STATUS_ORDER = ['未启动', '准备中', '建设中', '双轨运行', '已上线']
+const statusOptions = computed(() => {
+  const counts = new Map<string, number>()
+  store.entities.forEach((row) => {
+    counts.set(row.status, (counts.get(row.status) || 0) + 1)
+  })
+  const ordered = STATUS_ORDER.map((s) => ({
+    value: s,
+    label: `${s} (${counts.get(s) || 0}家)`,
+  }))
+  const remaining = [...counts.keys()]
+    .filter((s) => !STATUS_ORDER.includes(s))
+    .map((s) => ({
+      value: s,
+      label: `${s} (${counts.get(s)}家)`,
+    }))
+  return [
+    { value: '全部', label: `全部状态 (${store.entities.length}家)` },
+    ...ordered,
+    ...remaining,
+  ]
+})
 
 const totalPages = computed(() => Math.ceil(filtered.value.length / pageSize.value) || 1)
 
@@ -176,7 +207,7 @@ function save() {
     <!-- 概览与下钻导航 -->
     <CockpitPanel
       title="数据准备台账与单位状态"
-      zone="B-LEDGER"
+      zone="B6"
       :subtitle="`${store.entities.length.toLocaleString()} 家单位建设完成度、期初数据状态与审计留痕`"
       class="flex-shrink-0"
     >
@@ -196,37 +227,37 @@ function save() {
     <!-- 台账主表 -->
     <CockpitPanel
       title="单位建设与期初数据台账"
-      zone="B-T1"
+      zone="B7"
       :subtitle="isFiltered ? `筛选出 ${filtered.length} 家 / 共 ${store.entities.length} 家纳管单位` : `全量纳管单位建设完成度、期初数据与推进状态维护（共 ${store.entities.length} 家）`"
       class="flex-1 min-h-0"
     >
       <template #actions>
-        <div class="flex items-center gap-2 flex-wrap">
-          <label class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-300">
+        <div class="flex items-center gap-2">
+          <label class="flex items-center gap-1.5 px-2.5 py-1 text-cockpit-xs rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-300">
             <Search :size="13" class="text-slate-400" />
             <input
               v-model="query"
-              placeholder="搜索单位或联系人"
-              class="bg-transparent border-none outline-none text-slate-200 placeholder-slate-500 w-36 text-cockpit-xs"
+              placeholder="搜索单位、联系人或编码"
+              class="bg-transparent border-none outline-none text-slate-200 placeholder-slate-500 w-40 text-cockpit-xs"
             />
           </label>
           <select
-            v-model="selectedStatus"
-            class="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-200 focus:outline-none focus:border-sky-500/40"
-          >
-            <option v-for="s in statuses" :key="s" :value="s">{{ s === '全部' ? '全部状态' : s }}</option>
-          </select>
-          <select
             v-model="selectedBatch"
-            class="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-200 focus:outline-none focus:border-sky-500/40"
+            class="px-2.5 py-1 text-cockpit-xs rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-200 focus:outline-none focus:border-sky-500/40 transition-colors cursor-pointer"
           >
-            <option v-for="b in batches" :key="b.value" :value="b.value">{{ b.label }}</option>
+            <option v-for="b in batches" :key="b.value" :value="b.value" class="bg-slate-900 text-slate-200">{{ b.label }}</option>
           </select>
           <select
             v-model="province"
-            class="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-200 focus:outline-none focus:border-sky-500/40"
+            class="px-2.5 py-1 text-cockpit-xs rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-200 focus:outline-none focus:border-sky-500/40 transition-colors cursor-pointer"
           >
-            <option v-for="p in provinces" :key="p.value" :value="p.value">{{ p.label }}</option>
+            <option v-for="p in provinces" :key="p.value" :value="p.value" class="bg-slate-900 text-slate-200">{{ p.label }}</option>
+          </select>
+          <select
+            v-model="selectedStatus"
+            class="px-2.5 py-1 text-cockpit-xs rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-200 focus:outline-none focus:border-sky-500/40 transition-colors cursor-pointer"
+          >
+            <option v-for="s in statusOptions" :key="s.value" :value="s.value" class="bg-slate-900 text-slate-200">{{ s.label }}</option>
           </select>
           <button
             v-if="isFiltered"
@@ -282,7 +313,7 @@ function save() {
                       'bg-emerald-950/40 text-emerald-400 border-emerald-500/30': row.status === '已上线',
                       'bg-sky-950/40 text-sky-400 border-sky-500/30': row.status === '双轨运行',
                       'bg-amber-950/40 text-amber-400 border-amber-500/30': row.status === '建设中',
-                      'bg-slate-800/60 text-slate-400 border-white/10': row.status === '准备中',
+                      'bg-slate-800/60 text-slate-400 border-white/10': row.status === '准备中' || row.status === '未启动',
                     }"
                   >
                     {{ row.status }}
@@ -353,7 +384,7 @@ function save() {
     </CockpitPanel>
 
     <!-- 最近操作记录 -->
-    <CockpitPanel title="最近操作记录" zone="B-T2" subtitle="台账变更审计留痕" class="flex-shrink-0">
+    <CockpitPanel title="最近操作记录" zone="B8" subtitle="台账变更审计留痕" class="flex-shrink-0">
       <template #actions><History :size="16" class="text-slate-400" /></template>
       <div class="flex flex-col gap-1.5 divide-y divide-surface-veil-06">
         <div v-for="audit in store.audits.slice(0, 5)" :key="audit.id" class="flex items-center gap-3 py-1 text-cockpit-xs text-slate-300 flex-wrap">
@@ -392,6 +423,7 @@ function save() {
               v-model="draft.status"
               class="px-3 py-1.5 rounded-lg bg-slate-800 border border-white/10 text-slate-200 focus:outline-none focus:border-sky-500/40"
             >
+              <option>未启动</option>
               <option>准备中</option>
               <option>建设中</option>
               <option>双轨运行</option>
