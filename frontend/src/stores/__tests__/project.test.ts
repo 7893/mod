@@ -123,4 +123,31 @@ describe('stores/project', () => {
     expect(store.connectionError).toContain('数据刷新受阻（Gateway timeout），当前维持上一有效快照')
     expect(store.snapshot.overview.docsTotal).toBe(previousDocsTotal)
   })
+
+  it('never shows loading spinner while snapshot request is pending (KI-059 no-spinner)', async () => {
+    // 后端快照即使冷启动 >1s，只要已有兜底/上一份快照可展示，前台就绝不转圈。
+    let resolveFetch: (value: unknown) => void = () => {}
+    const pending = new Promise((resolve) => {
+      resolveFetch = resolve
+    })
+    globalThis.fetch = vi.fn().mockReturnValue(pending)
+
+    store = useProjectStore()
+    // 初始已用内置兜底快照预填，entities 非空
+    expect(store.entities.length).toBeGreaterThan(0)
+
+    // 主动触发一次非 silent 刷新，模拟首屏加载；请求仍在途中
+    const refreshPromise = store.refresh()
+    await flushPromises()
+
+    // 关键断言：请求 pending 期间 loading 始终为 false（顶栏不转圈、内容区照常展示兜底数据）
+    expect(store.loading).toBe(false)
+
+    // 请求返回后仍不转圈
+    resolveFetch({ ok: true, json: async () => snapshotData })
+    await refreshPromise
+    await flushPromises()
+    expect(store.loading).toBe(false)
+    expect(store.entities.length).toBeGreaterThan(0)
+  })
 })
