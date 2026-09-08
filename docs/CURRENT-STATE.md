@@ -45,6 +45,11 @@
   特征表（`ml_feat_risk` / `ml_feat_doc_delta`，`FROM org_unit` 无范围限制），使模型每次自动纳入
   当前全部单位与最新业务数据，不再训练冻结的历史特征。数据扩充后模型质量随真实全量数据提升
   （分类约 90%、回归 $R^2$ 约 0.88，真值以 `ml_model_metadata` 落库记录为准），评分覆盖当前全部单位。
+- **批次映射对新增单位修正（KI-056）**：`dashboard.py` 与 `dashboard_sections.py` 的 `batch_mapped`
+  原按旧 2000 家的 id 区间硬编码，导致 KI-051 新增单位（id > 2005）被 `ELSE 8` 全部错归第八批，
+  C6 单位台账等面板出现"仅第八批有数据、省份筛选为空"。已修正为：存量单位（id ≤ 2005）保留原
+  status+id 映射，新增单位直接采用 `org_unit.batch_id` 真实批次，双轨/第八批优先判定；修复后 C6
+  八个批次与 34 省份均有数据。
 - 数据库为托管 MySQL HeatWave（库 `mod`，Always Free 规格），连接主机、端口与凭据
   仅存于运行主机的本地环境文件，不写入版本库或文档。原运行环境的旧数据库实例已删除。
 - 运行主机使用系统级 systemd 服务 `mod-api.service` 运行项目内 FastAPI 虚拟环境，监听
