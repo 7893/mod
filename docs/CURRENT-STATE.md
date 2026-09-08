@@ -41,6 +41,10 @@
   加班概率显著升高。逻辑见 `simulation/models.py`（时间系数）与 `simulation/expense_playbook.py`
   （`_sample_worktime`）。
 - HeatWave 列存对核心大表加速仍有效，容量健康（扩充后列存占用在 16GB 集群内）。
+- **ML 特征表动态重建（KI-055）**：每日重训（`mod-ml-retrain`）流程首步已改为从当前业务表重建
+  特征表（`ml_feat_risk` / `ml_feat_doc_delta`，`FROM org_unit` 无范围限制），使模型每次自动纳入
+  当前全部单位与最新业务数据，不再训练冻结的历史特征。数据扩充后模型质量随真实全量数据提升
+  （分类约 90%、回归 $R^2$ 约 0.88，真值以 `ml_model_metadata` 落库记录为准），评分覆盖当前全部单位。
 - 数据库为托管 MySQL HeatWave（库 `mod`，Always Free 规格），连接主机、端口与凭据
   仅存于运行主机的本地环境文件，不写入版本库或文档。原运行环境的旧数据库实例已删除。
 - 运行主机使用系统级 systemd 服务 `mod-api.service` 运行项目内 FastAPI 虚拟环境，监听
