@@ -68,10 +68,12 @@ const provinceRolloutRanking = computed(() => {
 
 const topProvinces = computed(() => provinceRolloutRanking.value.slice(0, 6))
 
+const coveredProvinceCount = computed(() => new Set(store.provinceSummary.map((p) => p.name)).size)
+
 const c4Stats = computed<MetricItem[]>(() => [
-  { label: '覆盖省份', value: 34 },
+  { label: '覆盖省份', value: coveredProvinceCount.value },
   { label: '最高上线', value: topProvinces.value[0]?.name || '—' },
-  { label: '平均上线率', value: String(store.snapshot.overview.launchedPct || 37.4), unit: '%' },
+  { label: '平均上线率', value: store.snapshot.overview.launchedPct != null ? String(store.snapshot.overview.launchedPct) : '—', unit: store.snapshot.overview.launchedPct != null ? '%' : undefined },
 ])
 
 const provinceRolloutOption = computed(() => ({
@@ -148,7 +150,7 @@ const provinceRolloutOption = computed(() => ({
         <section class="col-span-3 grid grid-cols-2 grid-rows-2 min-h-0">
           <div class="pr-2 pb-1 border-r border-b border-surface-veil-06 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">纳管单位</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">{{ format(store.snapshot.overview.orgTotal) }}</b></div>
           <div class="pl-2 pb-1 border-b border-surface-veil-06 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">推广批次</span><b class="font-mono text-cockpit-md text-sky-400 mt-0.5">{{ batches.length }} 批</b></div>
-          <div class="pr-2 pt-1 border-r border-surface-veil-06 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">覆盖省份</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">34 省</b></div>
+          <div class="pr-2 pt-1 border-r border-surface-veil-06 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">覆盖省份</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">{{ coveredProvinceCount }} 省</b></div>
           <div class="pl-2 pt-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">联系人</span><b class="font-mono text-cockpit-md text-emerald-400 mt-0.5">{{ format(store.snapshot.overview.contactsTotal) }}</b></div>
         </section>
       </div>

@@ -73,7 +73,7 @@ const atRiskUnits = computed<AtRiskUnit[]>(() => {
   store.entities.forEach((row) => {
     const isDualDiff = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < 95)
     const isConstructionLag = row.construction < 88 && (row.status === '建设中' || row.status === '双轨运行')
-    const isPrepStuck = row.status === '准备中' && (row.batchId ? row.batchId <= 6 : row.id <= 1000)
+    const isPrepStuck = row.status === '准备中' && (row.batchId != null && row.batchId <= 7)
 
     const pred = predictionsMap.value.get(row.id)
     const stagnantDays = pred?.stagnantDays ?? (row.status === '准备中' ? 14 : row.status === '建设中' ? 8 : 2)
@@ -299,11 +299,7 @@ const insights = computed(() => {
     ],
     ruleBasedAlerts: store.snapshot.insights?.ruleBasedAlerts?.length
       ? store.snapshot.insights.ruleBasedAlerts
-      : [
-          { level: 'WARNING', title: '第六批双轨核对不一致攻坚', detail: '第六批存在 25 家单位双轨比对凭证率低于 95%，需重点核查往来会计科目平账试算。' },
-          { level: 'WARNING', title: '重点在建批次接口联调与数据准备督导', detail: '第七批 238 家在建单位平均进度滞后，第八批 257 家储备单位期初数据收集受阻。' },
-          { level: 'SUCCESS', title: '前五批 748 家推广单位已达成稳定运行', detail: '第一至第四批单位已全量正式投产，财务凭证入账率与业务流稳定一致。' },
-        ],
+      : [],
   }
 })
 
@@ -445,6 +441,9 @@ const readyModelCount = computed(() => insights.value.targetModels.filter((model
                 <b class="text-cockpit-sm font-semibold text-slate-200 truncate">{{ alert.title }}</b>
               </div>
               <p class="text-cockpit-xs text-slate-400 leading-relaxed">{{ alert.detail }}</p>
+            </div>
+            <div v-if="!insights.ruleBasedAlerts.length" class="flex flex-1 items-center justify-center text-cockpit-xs text-slate-500">
+              暂无确定性规则告警
             </div>
           </div>
         </div>
