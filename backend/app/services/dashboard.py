@@ -102,6 +102,41 @@ def normalize_operations_dict(ops: dict) -> dict:
     return normalized
 
 
+def build_operations_trend(rows: list[dict]) -> list[dict]:
+    """Derive recent daily flow and integration quality from cumulative daily_stats rows."""
+    ordered = sorted(rows, key=lambda row: str(row["fullDate"]))
+    result = []
+    previous_integration = None
+    previous_success = None
+    for row in ordered:
+        integration_total = numeric(row.get("integrationTotal"))
+        integration_success = numeric(row.get("integrationSuccess"))
+        integration_today = None
+        success_today = None
+        if previous_integration is not None and integration_total is not None:
+            integration_today = max(0, integration_total - previous_integration)
+        if previous_success is not None and integration_success is not None:
+            success_today = max(0, integration_success - previous_success)
+        integration_rate = (
+            round(success_today * 100 / integration_today, 2)
+            if integration_today and success_today is not None
+            else None
+        )
+        result.append({
+            "date": row["date"],
+            "fullDate": row["fullDate"],
+            "documents": numeric(row.get("documents")),
+            "vouchers": numeric(row.get("vouchers")),
+            "integrations": integration_today,
+            "integrationSuccessPct": integration_rate,
+        })
+        previous_integration = integration_total
+        previous_success = integration_success
+
+    # The earliest row exists only to calculate the first visible daily integration delta.
+    return result[1:][-7:] if len(result) > 1 else result
+
+
 def load_fallback_snapshot() -> dict:
     for path in FALLBACK_SNAPSHOT_PATHS:
         if path and os.path.exists(path):
@@ -258,12 +293,11 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             SUM(status IN ('已上线', '稳定运行')) AS launched,
             SUM(status = '双轨运行中') AS `dual`
         FROM rollout_status_snapshot
-        WHERE snapshot_date <= '2026-08-30'
-          AND snapshot_date >= '2026-07-25'
+        WHERE snapshot_date <= :anchor_date
         GROUP BY snapshot_date
         ORDER BY snapshot_date DESC
         LIMIT 6
-        """)
+        """, {"anchor_date": anchor_date})
         trend_rows.reverse()
         for r in trend_rows:
             r["launched"] = numeric(r["launched"])
@@ -281,6 +315,56 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             })
         if len(trend_rows) > 7:
             trend_rows = trend_rows[-7:]
+
+        rollout_trend_rows = mappings(conn, """
+        WITH recent_dates AS (
+            SELECT DISTINCT snapshot_date
+            FROM rollout_status_snapshot
+            WHERE snapshot_date <= :anchor_date
+            ORDER BY snapshot_date DESC
+            LIMIT 7
+        ),
+        batch_mapped AS (
+            SELECT
+                o.id,
+                CASE
+                    WHEN o.batch_id = 8 THEN 8
+                    WHEN o.status = '稳定运行' AND o.id <= 150 THEN 1
+                    WHEN o.status = '稳定运行' AND o.id <= 330 THEN 2
+                    WHEN o.status = '稳定运行' THEN 3
+                    WHEN o.status = '已上线' AND o.id <= 580 THEN 4
+                    WHEN o.status = '已上线' THEN 5
+                    WHEN o.status = '双轨运行中' THEN 6
+                    WHEN o.id > 1600 AND o.id <= 2000 THEN 7
+                    ELSE 8
+                END AS batchId
+            FROM org_unit o
+        ),
+        batch_names AS (
+            SELECT 1 AS id, '第一批' AS name UNION ALL
+            SELECT 2, '第二批' UNION ALL SELECT 3, '第三批' UNION ALL
+            SELECT 4, '第四批' UNION ALL SELECT 5, '第五批' UNION ALL
+            SELECT 6, '第六批' UNION ALL SELECT 7, '第七批' UNION ALL
+            SELECT 8, '第八批'
+        )
+        SELECT
+            DATE_FORMAT(r.snapshot_date, '%m-%d') AS date,
+            DATE_FORMAT(r.snapshot_date, '%Y-%m-%d') AS fullDate,
+            bm.batchId AS batchId,
+            bn.name AS name,
+            COUNT(*) AS total,
+            ROUND(100.0 * SUM(r.status IN ('已上线', '稳定运行')) / COUNT(*), 1) AS launchedPct,
+            ROUND(100.0 * SUM(r.status = '双轨运行中') / COUNT(*), 1) AS dualPct
+        FROM rollout_status_snapshot r
+        JOIN recent_dates d ON d.snapshot_date = r.snapshot_date
+        JOIN batch_mapped bm ON bm.id = r.org_id
+        JOIN batch_names bn ON bn.id = bm.batchId
+        GROUP BY r.snapshot_date, bm.batchId, bn.name
+        ORDER BY r.snapshot_date, bm.batchId
+        """, {"anchor_date": anchor_date})
+        for row in rollout_trend_rows:
+            for key in ("batchId", "total", "launchedPct", "dualPct"):
+                row[key] = numeric(row[key])
 
         # 34 Provinces - aggregate the latest completed business day once per organization.
         region_rows = mappings(conn, REGION_SUMMARY_SQL, sql_params)
@@ -354,6 +438,20 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             "integrationFailed": max(0, ops["integration_count"] - ops["integration_success"]),
             "dualRunResult": ops["dual_run_count"],
         }
+        operation_trend_source = mappings(conn, """
+        SELECT
+            DATE_FORMAT(stat_date, '%m-%d') AS date,
+            DATE_FORMAT(stat_date, '%Y-%m-%d') AS fullDate,
+            doc_today AS documents,
+            voucher_today AS vouchers,
+            integration_count AS integrationTotal,
+            integration_success AS integrationSuccess
+        FROM daily_stats
+        WHERE stat_date <= :anchor_date
+        ORDER BY stat_date DESC
+        LIMIT 8
+        """, {"anchor_date": anchor_date})
+        operations_trend = build_operations_trend(operation_trend_source)
         dual_counts = {
             row["result"]: row["count"]
             for row in mappings(conn, "SELECT result, COUNT(*) AS count FROM dual_run_result GROUP BY result")
@@ -478,11 +576,13 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             },
             "rollout": rollout_rows,
             "trend": trend_rows,
+            "rolloutTrend": rollout_trend_rows,
             "provinces": provinces,
             "entities": entities,
             "issues": issues,
             "issuesSummary": issues_summary,
             "operations": operations,
+            "operationsTrend": operations_trend,
             "quality": quality,
             "construction": construction,
             "insights": insights_data,

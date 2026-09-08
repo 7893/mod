@@ -49,6 +49,25 @@ export interface TrendItem {
   dual?: number
 }
 
+export interface RolloutTrendItem {
+  date: string
+  fullDate: string
+  batchId: number
+  name: string
+  total: number
+  launchedPct: number
+  dualPct: number
+}
+
+export interface OperationsTrendItem {
+  date: string
+  fullDate: string
+  documents: number | null
+  vouchers: number | null
+  integrations: number | null
+  integrationSuccessPct: number | null
+}
+
 export interface ProvinceItem {
   name: string
   region: string
@@ -222,6 +241,7 @@ export interface ProjectSnapshot {
   }
   rollout: RolloutBatchItem[]
   trend: TrendItem[]
+  rolloutTrend?: RolloutTrendItem[]
   provinces: ProvinceItem[]
   entities: EntityRow[]
   issues: IssueItem[]
@@ -240,6 +260,7 @@ export interface ProjectSnapshot {
     dualRunInconsistent?: number
     dualRunConsistencyPct?: number
   }
+  operationsTrend?: OperationsTrendItem[]
   quality: {
     voucherBalanceErrors: number
     timeOrderErrors: number

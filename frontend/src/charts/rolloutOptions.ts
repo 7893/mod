@@ -6,6 +6,63 @@ export interface RolloutCommandSummary {
   dual: number
 }
 
+export interface RolloutTrendPoint {
+  date: string
+  batchId: number
+  name: string
+  total: number
+  launchedPct: number
+  dualPct: number
+}
+
+export function createRolloutTrendMatrixOption(points: RolloutTrendPoint[]) {
+  const dates = [...new Set(points.map((point) => point.date))]
+  const batches = [...new Map(
+    points.map((point) => [point.batchId, { id: point.batchId, name: point.name }]),
+  ).values()].sort((a, b) => a.id - b.id)
+  const matrix = points.map((point) => ({
+    value: [dates.indexOf(point.date), batches.findIndex((batch) => batch.id === point.batchId), point.launchedPct],
+    point,
+  }))
+
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'item',
+      ...chartTooltip,
+      formatter: (params: any) => {
+        const point = params.data?.point as RolloutTrendPoint | undefined
+        return point
+          ? `${point.date} · ${point.name}<br/>上线率 <b>${point.launchedPct}%</b><br/>双轨率 <b>${point.dualPct}%</b> · ${point.total.toLocaleString()} 家`
+          : ''
+      },
+    },
+    visualMap: {
+      show: false, min: 0, max: 100, dimension: 2,
+      inRange: { color: [chartInk.borderSoft, chartPalette.accent, chartPalette.success] },
+    },
+    grid: { left: 48, right: 8, top: 6, bottom: 25 },
+    xAxis: {
+      type: 'category', data: dates,
+      axisLine: { lineStyle: { color: chartInk.border } }, axisTick: { show: false },
+      axisLabel: { color: chartInk.textMuted, fontSize: 9 },
+    },
+    yAxis: {
+      type: 'category', data: batches.map((batch) => batch.name),
+      axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { color: chartInk.textMuted, fontSize: 9 },
+    },
+    series: [{
+      type: 'heatmap', data: matrix,
+      label: {
+        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 8,
+        formatter: (params: any) => `${params.value?.[2] ?? 0}%`,
+      },
+      itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 2, borderRadius: 3 },
+    }],
+  }
+}
+
 export function createRolloutCommandOption(summary: RolloutCommandSummary) {
   const pending = Math.max(0, summary.total - summary.launched - summary.dual)
   const rate = summary.total > 0 ? Math.round((summary.launched * 1000) / summary.total) / 10 : 0

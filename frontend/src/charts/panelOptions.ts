@@ -40,6 +40,12 @@ interface QualityRateItem {
   tone: 'accent' | 'success'
 }
 
+interface OperationalGuardItem {
+  name: string
+  value: number | null
+  tone: 'danger' | 'warning' | 'accent'
+}
+
 interface CompositionPart {
   label: string
   value: number
@@ -287,6 +293,51 @@ export function createOperationsQualityOption(list: QualityRateItem[]) {
         formatter: (params: any) => {
           const item = reversed[params?.dataIndex]
           return item?.value === null ? '—' : `${item?.value}%`
+        },
+      },
+    }],
+  }
+}
+
+export function createOperationalGuardOption(list: OperationalGuardItem[]) {
+  const colors = {
+    danger: chartPalette.danger,
+    warning: chartPalette.warning,
+    accent: chartPalette.accent,
+  }
+  const reversed = [...list].reverse()
+  const max = Math.max(1, ...reversed.map((item) => item.value ?? 0))
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any[]) => {
+        const item = reversed[params?.[0]?.dataIndex]
+        return item ? `${item.name}<br/><b>${item.value == null ? '—' : item.value.toLocaleString()}</b> 项` : ''
+      },
+      ...chartTooltip,
+    },
+    grid: { left: 4, right: 38, top: 2, bottom: 2, containLabel: true },
+    xAxis: { type: 'value', max, show: false },
+    yAxis: {
+      type: 'category', data: reversed.map((item) => item.name),
+      axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { color: chartInk.textMuted, fontSize: 9 },
+    },
+    series: [{
+      type: 'bar', barWidth: 8, showBackground: true,
+      backgroundStyle: { color: chartInk.borderSoft, borderRadius: 4 },
+      data: reversed.map((item) => ({
+        value: item.value ?? 0,
+        itemStyle: { color: colors[item.tone], borderRadius: 4 },
+      })),
+      label: {
+        show: true, position: 'right', color: chartInk.textPrimary,
+        fontFamily: 'monospace', fontSize: 9,
+        formatter: (params: any) => {
+          const item = reversed[params?.dataIndex]
+          return item?.value == null ? '—' : item.value.toLocaleString()
         },
       },
     }],
