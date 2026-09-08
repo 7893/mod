@@ -9,17 +9,20 @@ import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/compon
 import {
   ChevronRight,
   ArrowUpRight,
-  Users,
 } from 'lucide-vue-next'
 import ChinaMap from '../components/ChinaMap.vue'
 import CockpitTopBar from '../components/CockpitTopBar.vue'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import OverviewTrendChart from '../components/OverviewTrendChart.vue'
-import AnimatedProgress from '../components/AnimatedProgress.vue'
 import StatusList from '../components/blocks/StatusList.vue'
 import type { StatusRow } from '../components/blocks/types.ts'
 import { buildBatchOverviewSeries, parsePercentage } from '../charts/panelData.ts'
-import { createBatchProgressOption, createOperationsQualityOption, createProvinceProfileOption } from '../charts/panelOptions.ts'
+import {
+  createBatchProgressOption,
+  createOperationalGuardOption,
+  createOperationsQualityOption,
+  createProvinceProfileOption,
+} from '../charts/panelOptions.ts'
 import { useLiveProjection } from '../composables/useLiveProjection.ts'
 import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
 import { useLiveProjectionStore } from '../stores/liveProjection.ts'
@@ -53,13 +56,6 @@ onMounted(() => {
   window.setTimeout(() => { isFirstLoad.value = false }, 1200)
 })
 const numDuration = (ms: number) => (isFirstLoad.value ? ms : 0)
-
-// 尚未录入项目联系人的纳管单位数量
-const contactGapOrgs = computed(() => {
-  const total = store.snapshot.overview.orgTotal ?? 0
-  const covered = store.snapshot.overview.contactsCoveredOrgs ?? 0
-  return Math.max(total - covered, 0)
-})
 
 const selectedProvinceData = computed(() => {
   if (selectedProvince.value === '全国') {
@@ -105,6 +101,29 @@ const operationsQualityOption = computed(() => createOperationsQualityOption([
     tone: 'accent',
   },
 ]))
+
+const qualityErrorCount = computed<number | null>(() => {
+  const quality = store.snapshot.quality
+  const values = [quality?.voucherBalanceErrors, quality?.timeOrderErrors, quality?.orphanLinkErrors]
+  return values.every((value) => value != null)
+    ? values.reduce<number>((sum, value) => sum + Number(value), 0)
+    : null
+})
+
+const operationalGuardItems = computed(() => [
+  { name: '接口失败', value: store.snapshot.operations?.integrationFailed ?? null, tone: 'danger' as const },
+  { name: '双轨差异', value: store.snapshot.operations?.dualRunInconsistent ?? null, tone: 'warning' as const },
+  { name: '金标异常', value: qualityErrorCount.value, tone: 'accent' as const },
+])
+
+const operationalGuardTotal = computed<number | null>(() => {
+  const values = operationalGuardItems.value.map((item) => item.value)
+  return values.every((value) => value != null)
+    ? values.reduce<number>((sum, value) => sum + Number(value), 0)
+    : null
+})
+
+const operationalGuardOption = computed(() => createOperationalGuardOption(operationalGuardItems.value))
 
 const riskRows = computed<StatusRow[]>(() =>
   (store.snapshot.issues || []).map((item) => ({
@@ -263,33 +282,28 @@ const chooseProvince = (name: string) => {
             </div>
           </CockpitPanel>
 
-          <!-- A8: 项目联系人覆盖 -->
+          <!-- A8: 聚合运营异常，不与 C5 联系人面板重复 -->
           <CockpitPanel
-            title="项目联系人覆盖"
+            title="运营红线哨位"
             zone="A8"
-            subtitle="纳管覆盖率"
+            subtitle="接口、核对与金标异常"
             class="flex-shrink-0"
           >
-            <div class="bg-surface-veil-03 border border-surface-veil-06 rounded-xl p-2.5 flex flex-col gap-1.5">
-              <div class="flex items-center justify-between text-cockpit-sm">
-                <span class="text-slate-400 flex items-center gap-1.5">
-                  <Users :size="14" class="text-emerald-400" /> 联系人覆盖率
-                </span>
-                <span class="font-semibold text-emerald-400 font-mono text-cockpit-md">
-                  {{ store.snapshot.overview.contactsCoveragePct ?? 0 }}%
+            <div class="grid grid-cols-4 h-20 min-h-0 items-stretch">
+              <div class="flex flex-col justify-center border-r border-surface-veil-06 pr-2 min-w-0">
+                <span class="text-cockpit-xs text-slate-500">异常总数</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <b
+                    class="font-mono text-cockpit-metric"
+                    :class="operationalGuardTotal == null ? 'text-slate-400' : (operationalGuardTotal === 0 ? 'text-emerald-400' : 'text-rose-400')"
+                  >{{ operationalGuardTotal ?? '—' }}</b>
+                  <small class="text-cockpit-xs text-slate-500">项</small>
+                </div>
+                <span class="text-cockpit-xs mt-1" :class="operationalGuardTotal == null ? 'text-slate-500' : (operationalGuardTotal === 0 ? 'text-emerald-400' : 'text-amber-400')">
+                  {{ operationalGuardTotal == null ? '数据未完整' : (operationalGuardTotal === 0 ? '三道门禁通过' : '需要核查') }}
                 </span>
               </div>
-              <AnimatedProgress
-                :value="store.snapshot.overview.contactsCoveragePct ?? 0"
-                color="#34d399"
-                :height="4"
-                :duration="numDuration(900)"
-              />
-              <div class="flex items-center justify-between text-cockpit-xs text-slate-400">
-                <span>已覆盖 <b class="font-mono text-slate-200">{{ store.snapshot.overview.contactsCoveredOrgs ?? 0 }}</b> 家</span>
-                <span v-if="contactGapOrgs > 0" class="text-amber-400/80">缺口 {{ contactGapOrgs }} 家</span>
-                <span>总纳管 <b class="font-mono text-slate-200">{{ store.snapshot.overview.orgTotal }}</b> 家</span>
-              </div>
+              <VChart class="col-span-3 w-full h-full min-h-0 pl-2" :option="operationalGuardOption" autoresize />
             </div>
           </CockpitPanel>
         </div>

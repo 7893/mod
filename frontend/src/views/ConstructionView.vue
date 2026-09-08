@@ -31,8 +31,7 @@ import {
   createTaskStageMatrixOption,
   createTaskStageRadarOption,
   createTrainingFunnelOption,
-  createTrainingConversionOption,
-  createTrainingMixOption,
+  createLaunchGateOption,
 } from '../charts/constructionOptions.ts'
 import { useProjectStore } from '../stores/project.ts'
 
@@ -153,8 +152,10 @@ const chartColors = {
 
 const stageMatrixOption = computed(() => createTaskStageMatrixOption(buildTaskStageSeries(taskStages.value)))
 const stageRadarOption = computed(() => createTaskStageRadarOption(buildTaskStageSeries(taskStages.value)))
-const trainingConversionOption = computed(() => createTrainingConversionOption(trainingSummary.value?.byType ?? []))
-const trainingMixOption = computed(() => createTrainingMixOption(trainingSummary.value?.byType ?? []))
+const launchGateStages = computed(() => buildTaskStageSeries(taskStages.value).filter((stage) => (
+  ['期初数据', '接口联调', '双轨验证', '用户培训'].includes(stage.name)
+)))
+const launchGateOption = computed(() => createLaunchGateOption(launchGateStages.value))
 const trainingFunnelOption = computed(() => createTrainingFunnelOption(trainingSummary.value))
 
 const readinessPieOption = computed(() => ({
@@ -232,32 +233,25 @@ const readinessPieOption = computed(() => ({
         <StatList :rows="rankRows" ranked density="dense" scroll />
       </CockpitPanel>
 
-      <!-- B4: 培训分类转化、场次构成与总体漏斗三图，充分利用主分析面积 -->
-      <CockpitPanel title="培训赋能全景" zone="B4" subtitle="分类人次转化、场次构成与总体认证漏斗" class="col-span-8">
+      <!-- B4: 关键上线门禁为主，培训只保留总体转化漏斗 -->
+      <CockpitPanel title="上线门禁攻坚" zone="B4" subtitle="关键任务推进与参培认证转化" class="col-span-8">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <section class="col-span-7 flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
-            <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06 text-cockpit-xs">
-              <span class="font-medium text-slate-300">四类培训人次转化</span>
-              <span class="font-mono text-slate-500">16 项真实指标</span>
+          <section class="col-span-8 flex flex-col min-h-0 pr-3 border-r border-surface-veil-06">
+            <div class="flex items-center justify-between pb-1 text-cockpit-xs">
+              <span class="font-medium text-slate-300">四道关键上线门禁</span>
+              <span class="font-mono text-slate-500">完成 / 推进 / 待启动</span>
             </div>
-            <VChart class="w-full flex-1 min-h-0" :option="trainingConversionOption" autoresize />
+            <VChart v-if="launchGateStages.length" class="w-full flex-1 min-h-0" :option="launchGateOption" autoresize />
+            <div v-else class="flex flex-1 items-center justify-center text-cockpit-xs text-slate-500">暂无关键门禁任务数据</div>
           </section>
-          <div class="col-span-5 grid grid-rows-2 gap-2 min-h-0">
-            <section class="flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
-              <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs">
-                <span class="font-medium text-slate-300">培训场次构成</span>
-                <span class="font-mono text-sky-400">{{ format(trainingSummary?.totalSessions) }} 场</span>
-              </div>
-              <VChart class="w-full flex-1 min-h-0" :option="trainingMixOption" autoresize />
-            </section>
-            <section class="flex flex-col min-h-0 rounded-xl bg-surface-veil-03 border border-surface-veil-06 p-2">
-              <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs">
-                <span class="font-medium text-slate-300">总体参培与认证漏斗</span>
-                <span class="font-mono text-emerald-400">通过 {{ format(trainingSummary?.totalPassed) }} 人</span>
-              </div>
-              <VChart class="w-full flex-1 min-h-0" :option="trainingFunnelOption" autoresize />
-            </section>
-          </div>
+          <section class="col-span-4 flex flex-col min-h-0">
+            <div class="flex items-center justify-between pb-1 text-cockpit-xs">
+              <span class="font-medium text-slate-300">参培认证漏斗</span>
+              <span class="font-mono text-emerald-400">通过 {{ format(trainingSummary?.totalPassed) }} 人</span>
+            </div>
+            <VChart v-if="trainingSummary" class="w-full flex-1 min-h-0" :option="trainingFunnelOption" autoresize />
+            <div v-else class="flex flex-1 items-center justify-center text-cockpit-xs text-slate-500">暂无培训转化数据</div>
+          </section>
         </div>
       </CockpitPanel>
 

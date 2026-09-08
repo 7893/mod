@@ -12,18 +12,11 @@ import {
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, GaugeChart } from 'echarts/charts'
+import { BarChart, GaugeChart, LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import { formatCount, formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
-import {
-  chartPalette,
-  chartInk,
-  chartTooltip,
-  valueAxis,
-  calmAnimation,
-} from '../charts/theme.ts'
 import {
   calcDualRunConsistency,
   buildQualityAuditList,
@@ -31,12 +24,13 @@ import {
 import {
   createDualRunOutcomeOption,
   createIntegrationOutcomeOption,
-  createOperationsFlowOption,
   createOperationsOverviewOption,
+  createOperationsTrendOption,
+  createQualityAuditVolumeOption,
   createVoucherQualityOption,
 } from '../charts/operationsOptions.ts'
 
-use([CanvasRenderer, BarChart, GaugeChart, GridComponent, TooltipComponent])
+use([CanvasRenderer, BarChart, GaugeChart, LineChart, GridComponent, TooltipComponent])
 
 const store = useProjectStore()
 const format = formatCount
@@ -46,15 +40,7 @@ const formatWithUnit = (value: number | null | undefined, unit: string) => {
   return s === '—' ? '—' : `${s} ${unit}`
 }
 
-const ops = computed(() => store.snapshot.operations || {
-  businessDocument: 5050416,
-  businessDocumentLine: 10066501,
-  accountingVoucher: 3223900,
-  accountingVoucherLine: 6418622,
-  documentVoucherLink: 3201490,
-  integrationResult: 3031157,
-  dualRunResult: 29810,
-})
+const ops = computed(() => store.snapshot.operations)
 
 const flowSteps = computed(() => [
   { label: '业务单据', value: `${format(ops.value.businessDocument)} 笔`, icon: Check, status: 'done' },
@@ -67,7 +53,8 @@ const flowSteps = computed(() => [
 
 const integrationTotal = computed(() => ops.value.integrationResult || 0)
 const operationsOverviewOption = computed(() => createOperationsOverviewOption(ops.value))
-const operationsFlowOption = computed(() => createOperationsFlowOption(ops.value))
+const operationsTrend = computed(() => store.snapshot.operationsTrend ?? [])
+const operationsTrendOption = computed(() => createOperationsTrendOption(operationsTrend.value))
 const documentLineRatio = computed(() => (
   ops.value.businessDocument && ops.value.businessDocumentLine != null
     ? (ops.value.businessDocumentLine / ops.value.businessDocument).toFixed(2)
@@ -130,101 +117,7 @@ const qualityAuditList = computed(() => {
   )
 })
 
-const qualityBarOption = computed(() => {
-  const list = [...qualityAuditList.value].reverse()
-  return {
-    ...calmAnimation,
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      ...chartTooltip,
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params
-        const raw = list[p?.dataIndex]
-        if (!raw) return ''
-        return `
-          <div style="font-size: 12px; line-height: 1.6;">
-            <div style="font-weight: 600; color: ${chartInk.textPrimary}; margin-bottom: 4px;">${raw.rule}</div>
-            <div style="color: ${chartInk.textMuted};">稽核规模: <b style="color: ${chartInk.textPrimary}; font-family: monospace;">${format(raw.total)} ${raw.unit}</b></div>
-            <div style="color: ${chartInk.textMuted};">检出异常: <b style="color: ${raw.errors === 0 ? chartPalette.success : chartPalette.warning}; font-family: monospace;">${raw.errors != null ? `${raw.errors} 笔` : '—'}</b></div>
-            <div style="color: ${chartInk.textMuted};">合规达成率: <b style="color: ${chartPalette.success}; font-family: monospace;">${raw.rate != null ? `${raw.rate}%` : '—'}</b></div>
-            <div style="color: ${chartInk.textMuted}; margin-top: 4px; border-top: 1px dashed ${chartInk.borderSoft}; padding-top: 4px;">${raw.hint}</div>
-          </div>
-        `
-      },
-    },
-    grid: {
-      top: 10,
-      bottom: 20,
-      left: 80,
-      right: 120,
-      containLabel: true,
-    },
-    xAxis: {
-      ...valueAxis,
-      max: 100,
-      splitNumber: 4,
-      axisLabel: {
-        color: chartInk.textMuted,
-        fontSize: 10,
-        fontFamily: 'monospace',
-        formatter: '{value}%',
-      },
-      splitLine: {
-        lineStyle: {
-          color: chartInk.borderSoft,
-          type: 'dashed',
-        },
-      },
-    },
-    yAxis: {
-      type: 'category',
-      data: list.map((i) => i.rule),
-      axisLabel: {
-        color: chartInk.textMuted,
-        fontSize: 11,
-      },
-      axisTick: { show: false },
-      axisLine: {
-        lineStyle: { color: chartInk.border },
-      },
-    },
-    series: [
-      {
-        name: '合规率',
-        type: 'bar',
-        barWidth: 12,
-        data: list.map((item) => ({
-          value: item.rate,
-          itemStyle: {
-            borderRadius: [0, 4, 4, 0],
-            color: item.status === 'pass'
-              ? chartPalette.success
-              : (item.status === 'unknown' ? chartPalette.neutral : chartPalette.warning),
-          },
-        })),
-        label: {
-          show: true,
-          position: 'right',
-          color: chartPalette.success,
-          fontFamily: 'monospace',
-          fontSize: 11,
-          fontWeight: 'bold',
-          formatter: (params: any) => {
-            const raw = list[params.dataIndex]
-            if (!raw || raw.rate == null) return '—'
-            return `${raw.rate}% (${raw.errors ?? '—'}异常)`
-          },
-        },
-        showBackground: true,
-        backgroundStyle: {
-          color: 'rgba(255, 255, 255, 0.03)',
-          borderRadius: [0, 4, 4, 0],
-        },
-      },
-    ],
-  }
-})
+const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualityAuditList.value))
 </script>
 
 <template>
@@ -275,9 +168,10 @@ const qualityBarOption = computed(() => {
 
     <!-- 主网格：D3-D7 -->
     <div class="grid grid-cols-operations grid-rows-operations gap-2.5 flex-1 min-h-0">
-      <!-- D3: 链路规模对比 -->
-      <CockpitPanel title="链路规模对比" zone="D3" subtitle="单据与下游凭证/集成数据量阶梯">
-        <VChart class="w-full h-full min-h-0" :option="operationsFlowOption" autoresize />
+      <!-- D3: 日吞吐与集成质量趋势，不重复 D1/D2 累计规模 -->
+      <CockpitPanel title="近 7 日业务吞吐" zone="D3" subtitle="单据、凭证日增与集成成功率">
+        <VChart v-if="operationsTrend.length" class="w-full h-full min-h-0" :option="operationsTrendOption" autoresize />
+        <div v-else class="flex h-full items-center justify-center text-cockpit-xs text-slate-500">暂无连续日吞吐数据</div>
       </CockpitPanel>
 
       <!-- D4: 凭证生成质效 -->
@@ -346,7 +240,14 @@ const qualityBarOption = computed(() => {
             >
               <div class="flex items-center justify-between gap-2">
                 <span class="text-cockpit-xs text-slate-300 font-medium truncate">{{ item.rule }}</span>
-                <span class="font-mono text-cockpit-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span
+                  class="font-mono text-cockpit-xs px-1.5 py-0.5 rounded border"
+                  :class="item.status === 'pass'
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : (item.status === 'unknown'
+                      ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                      : 'bg-amber-500/10 text-amber-400 border-amber-500/20')"
+                >
                   {{ item.errors === 0 ? '0 异常' : (item.errors != null ? `${item.errors} 异常` : '—') }}
                 </span>
               </div>
@@ -357,8 +258,12 @@ const qualityBarOption = computed(() => {
             </div>
           </div>
 
-          <div class="flex-1 min-h-0">
-            <VChart class="w-full h-full min-h-0" :option="qualityBarOption" autoresize />
+          <div class="flex flex-1 min-h-0 flex-col">
+            <div class="flex items-center justify-between px-1 text-cockpit-xs flex-shrink-0">
+              <span class="font-medium text-slate-300">实际核验覆盖规模</span>
+              <span class="font-mono text-slate-500">对数尺度 · 标签为真实数量</span>
+            </div>
+            <VChart class="w-full flex-1 min-h-0" :option="qualityVolumeOption" autoresize />
           </div>
         </div>
       </CockpitPanel>

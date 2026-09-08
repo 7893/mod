@@ -30,6 +30,57 @@ interface TrainingSummaryItem {
   totalCert: number
 }
 
+export type GateStageItem = StageSeriesItem
+
+export function createLaunchGateOption(items: GateStageItem[]) {
+  const reversed = [...items].reverse()
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip,
+      formatter: (params: any[]) => {
+        const item = reversed[params?.[0]?.dataIndex]
+        return item
+          ? `${item.name}<br/>完成 <b>${item.completed.toLocaleString()}</b> · 进行中 ${item.inProgress.toLocaleString()} · 待启动 ${item.notStarted.toLocaleString()}<br/>总体完成率 <b>${item.progress}%</b>`
+          : ''
+      },
+    },
+    legend: {
+      data: ['已完成', '进行中', '待启动'], top: 0, right: 4,
+      textStyle: { color: chartInk.textMuted, fontSize: 9 }, itemWidth: 9, itemHeight: 7,
+    },
+    grid: { left: 58, right: 42, top: 28, bottom: 10 },
+    xAxis: { type: 'value', max: 100, show: false },
+    yAxis: {
+      type: 'category', data: reversed.map((item) => item.name),
+      axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+    },
+    series: [
+      {
+        name: '已完成', type: 'bar', stack: 'gate', barWidth: 13,
+        data: reversed.map((item) => percent(item.completed, item.completed + item.inProgress + item.notStarted)),
+        itemStyle: { color: chartPalette.success, borderRadius: [3, 0, 0, 3] },
+      },
+      {
+        name: '进行中', type: 'bar', stack: 'gate',
+        data: reversed.map((item) => percent(item.inProgress, item.completed + item.inProgress + item.notStarted)),
+        itemStyle: { color: chartPalette.accent },
+      },
+      {
+        name: '待启动', type: 'bar', stack: 'gate',
+        data: reversed.map((item) => percent(item.notStarted, item.completed + item.inProgress + item.notStarted)),
+        itemStyle: { color: chartPalette.neutral, borderRadius: [0, 3, 3, 0] },
+        label: {
+          show: true, position: 'right', color: chartInk.textPrimary,
+          fontFamily: 'monospace', fontSize: 9,
+          formatter: (params: any) => `${reversed[params.dataIndex]?.progress ?? 0}%`,
+        },
+      },
+    ],
+  }
+}
+
 const percent = (value: number, total: number) => (
   total > 0 ? Math.round((value * 1000) / total) / 10 : 0
 )

@@ -3,8 +3,8 @@ import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, GaugeChart, LineChart, PieChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
+import { BarChart, GaugeChart, HeatmapChart, PieChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, VisualMapComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import ChartBlock from '../components/blocks/ChartBlock.vue'
 import RolloutLedgerTable from '../components/RolloutLedgerTable.vue'
@@ -12,10 +12,10 @@ import type { MetricItem } from '../components/blocks/types.ts'
 import { calmAnimation, chartInk, chartPalette } from '../charts/theme.ts'
 import { buildCoverageComposition, buildRolloutComposition } from '../charts/panelData.ts'
 import { createCoverageOption, createRolloutCompositionOption } from '../charts/panelOptions.ts'
-import { createRolloutCommandOption } from '../charts/rolloutOptions.ts'
+import { createRolloutCommandOption, createRolloutTrendMatrixOption } from '../charts/rolloutOptions.ts'
 import { useProjectStore } from '../stores/project.ts'
 
-use([CanvasRenderer, BarChart, GaugeChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent])
+use([CanvasRenderer, BarChart, GaugeChart, HeatmapChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, VisualMapComponent])
 
 const store = useProjectStore()
 
@@ -52,45 +52,8 @@ const contactCoverage = computed(() => buildCoverageComposition(
 
 const contactCoverageOption = computed(() => createCoverageOption(contactCoverage.value))
 
-const batchChartOption = computed(() => ({
-  ...calmAnimation,
-  tooltip: {
-    trigger: 'axis',
-    backgroundColor: chartColors.bg,
-    borderColor: chartColors.border,
-    textStyle: { color: chartInk.textPrimary, fontSize: 12 },
-  },
-  grid: { left: 12, right: 12, top: 24, bottom: 24, containLabel: true },
-  xAxis: {
-    type: 'category',
-    data: batches.value.map((v) => v.name),
-    axisLine: { lineStyle: { color: chartColors.border } },
-    axisLabel: { color: chartColors.textMuted, fontSize: 11 },
-  },
-  yAxis: {
-    type: 'value',
-    max: 100,
-    splitLine: { lineStyle: { color: chartColors.border, opacity: 0.4 } },
-    axisLabel: { color: chartColors.textMuted, fontSize: 11, formatter: '{value}%' },
-  },
-  series: [
-    {
-      name: '上线率',
-      type: 'bar',
-      data: batches.value.map((v) => v.launchedPct),
-      barWidth: '34%', barMaxWidth: 34,
-      itemStyle: { color: chartColors.accent, borderRadius: [3, 3, 0, 0] },
-    },
-    {
-      name: '建设完成度',
-      type: 'line',
-      data: batches.value.map((v) => v.constructionPct),
-      symbolSize: 5,
-      lineStyle: { color: chartColors.warning, width: 2 },
-      itemStyle: { color: chartColors.warning },
-    },
-  ],
-}))
+const rolloutTrend = computed(() => store.snapshot.rolloutTrend ?? [])
+const rolloutTrendOption = computed(() => createRolloutTrendMatrixOption(rolloutTrend.value))
 
 const provinceRolloutRanking = computed(() => {
   const list = [...store.provinceSummary]
@@ -203,8 +166,9 @@ const provinceRolloutOption = computed(() => ({
 
     <!-- 中部三栏：C3 上线趋势 + C4 省域上线分布 + C5 项目联系人 (弹性优先，Guardrail 扩大为 min-h-[200px] max-h-[320px]，C-2) -->
     <div class="grid grid-cols-rollout-mid gap-2.5 min-h-[200px] max-h-[320px] flex-1">
-      <CockpitPanel title="上线趋势" zone="C3" subtitle="批次演进与完成度">
-        <VChart class="w-full h-full min-h-0" :option="batchChartOption" autoresize />
+      <CockpitPanel title="批次上线爬坡矩阵" zone="C3" subtitle="历史快照中的批次上线率与双轨率">
+        <VChart v-if="rolloutTrend.length" class="w-full h-full min-h-0" :option="rolloutTrendOption" autoresize />
+        <div v-else class="flex h-full items-center justify-center text-cockpit-xs text-slate-500">暂无批次历史快照</div>
       </CockpitPanel>
 
       <CockpitPanel title="省域上线分布" zone="C4" subtitle="34 省上线率排行">
