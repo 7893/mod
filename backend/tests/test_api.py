@@ -521,3 +521,32 @@ def test_error_responses_desensitized(monkeypatch):
     assert res_briefing.json()["message"] == "服务端错误，暂无可用简报"
 
 
+def test_dashboard_snapshot_swr_and_prewarm(monkeypatch):
+    """KI-059: 验证快照开机预热与 Stale-While-Revalidate (SWR) 毫秒级保障。"""
+    import time
+    from app.api import prewarm_snapshot, dashboard_snapshot
+    import app.api as api_mod
+
+    # 1. 测试同步预热入口
+    prewarm_snapshot(sync=True)
+    assert api_mod._snapshot_cache is not None
+
+    # 2. 验证直接调用与 HTTP 端点均极速返回 (< 100ms)
+    t0 = time.monotonic()
+    snap = dashboard_snapshot(None)
+    duration = time.monotonic() - t0
+    assert duration < 0.1, f"Expected < 100ms response, took {duration:.3f}s"
+    assert "overview" in snap
+    assert "entities" in snap
+
+    # 3. 模拟缓存过期，验证 SWR 异步刷新且立即返回旧缓存
+    api_mod._snapshot_cached_at = time.monotonic() - 1000.0  # 过期
+    t0 = time.monotonic()
+    res = client.get("/api/dashboard/snapshot")
+    duration = time.monotonic() - t0
+    assert res.status_code == 200
+    assert duration < 0.1, f"Expected instant SWR response < 100ms, took {duration:.3f}s"
+    assert res.json()["overview"]["orgTotal"] > 0
+
+
+
