@@ -377,7 +377,13 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   async function refresh(silent = false) {
-    if (!silent) loading.value = true
+    // KI-059：绝不整屏/顶栏转圈。首屏与轮询始终已有兜底或上一份有效快照可展示，
+    // 因此只在“完全没有任何可展示数据”这种极端情况下才显示 loading。
+    // 由于 store 初始即用内置兜底快照预填 entities，正常运行下 loading 永不被置真，
+    // 后端快照冷启动（即使 >1s）也只是静默替换数据，用户看不到转圈。
+    const hasDisplayableData = entities.value.length > 0
+    const showLoading = !silent && !hasDisplayableData
+    if (showLoading) loading.value = true
     try {
       const response = await fetch(`${import.meta.env.BASE_URL}api/dashboard/snapshot`, {
         cache: 'no-store',
@@ -395,7 +401,7 @@ export const useProjectStore = defineStore('project', () => {
       const msg = error instanceof Error ? error.message : '网络连接异常'
       connectionError.value = `数据刷新受阻（${msg}），当前维持上一有效快照`
     } finally {
-      if (!silent) loading.value = false
+      if (showLoading) loading.value = false
     }
   }
 
