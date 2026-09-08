@@ -58,6 +58,12 @@ jobs:
           if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
             base="HEAD~1"
           fi
+          # 若基线提交在当前 checkout 中不可达（force push / rebase 覆盖了旧历史），
+          # 回退到 HEAD~1，避免后续 --base diff 因 "bad object" 而崩溃。
+          if ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "comparison base ${base} unreachable (likely force-push); falling back to HEAD~1"
+            base="HEAD~1"
+          fi
           echo "base=$base" >> "$GITHUB_OUTPUT"
 
       - name: Scan changed lines for credentials
