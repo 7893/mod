@@ -296,6 +296,39 @@ def cmd_verify() -> int:
         return 1
 
 
+def cmd_watchdog() -> int:
+    """检查 MOD 核心表加载状态，若有缺失或未就绪自动触发 SECONDARY_LOAD 补偿自愈。"""
+    print("================================================================================")
+    print("                  MySQL HeatWave (RAPID) 看门狗巡检与自愈                      ")
+    print("================================================================================")
+    try:
+        conn = get_db_connection()
+    except Exception as e:
+        print(f"[ERROR] 看门狗无法连接数据库: {e}")
+        return 1
+
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT i.TABLE_NAME, t.LOAD_STATUS
+            FROM performance_schema.rpd_tables t
+            JOIN performance_schema.rpd_table_id i ON t.ID = i.ID
+            WHERE i.SCHEMA_NAME = 'mod' AND t.LOAD_STATUS = 'AVAIL_RPDGSTABSTATE'
+        """)
+        loaded = {r["TABLE_NAME"] for r in cur.fetchall()}
+        missing = [t for t in TARGET_MOD_TABLES if t not in loaded]
+
+        if not missing:
+            print(f"[OK] HeatWave 内存加速正常，全部 {len(TARGET_MOD_TABLES)} 张核心表已就绪 (AVAIL_RPDGSTABSTATE)。")
+            conn.close()
+            return 0
+
+        print(f"[WARN] 检测到 HeatWave 内存加速缺失 ({len(loaded)}/{len(TARGET_MOD_TABLES)} 就绪): {missing}")
+        print("开始触发自愈补载流程...")
+
+    conn.close()
+    return cmd_load()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Oracle MySQL HeatWave (RAPID) 运维管理工具")
     subparsers = parser.add_subparsers(dest="command", help="子命令")
@@ -303,6 +336,7 @@ def main() -> int:
     subparsers.add_parser("status", help="查看 HeatWave 节点容量、已加载表及运行状态")
     subparsers.add_parser("load", help="对所有 MOD 核心表执行 SECONDARY_ENGINE 与 SECONDARY_LOAD")
     subparsers.add_parser("verify", help="使用 FORCED 验证查询执行计划是否下推至 RAPID")
+    subparsers.add_parser("watchdog", help="巡检核心表加载状态并在缺失时自动触发自愈补载")
 
     args = parser.parse_args()
     if args.command == "status":
@@ -311,6 +345,8 @@ def main() -> int:
         return cmd_load()
     elif args.command == "verify":
         return cmd_verify()
+    elif args.command == "watchdog":
+        return cmd_watchdog()
     else:
         parser.print_help()
         return 1

@@ -29,6 +29,7 @@
 
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
+| KI-049 | HeatWave 内存加速看门狗与自愈机制缺失 | DONE | P2 | [详情](issues/KI-049-HeatWave内存加速看门狗与自愈机制缺失.md) |
 | KI-045 | HeatWave 内存集群未加载 MOD 表与加速失真 | DONE | P1 | [详情](issues/KI-045-HeatWave内存集群未加载MOD表与加速失真.md) |
 | KI-046 | 数据库依赖双重 yield 与发布健康探针掩盖故障 | DONE | P1 | [详情](issues/KI-046-数据库依赖双重yield与发布健康探针掩盖故障.md) |
 

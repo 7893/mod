@@ -9,6 +9,7 @@ from sqlalchemy.engine import Connection
 
 from .auth import get_current_action_token, verify_internal_auth
 from .db import connection
+from .heatwave_watchdog import get_heatwave_status
 from .ml_adapter import HeatWaveMLAdapter, CloudflareAIAdapter
 from .schemas import PageV2
 from .services.dashboard import (
@@ -49,11 +50,13 @@ def health(response: Response, conn: Connection | None = Depends(connection)) ->
         }
     try:
         row = conn.execute(text("SELECT DATABASE() db, @@session.time_zone tz, NOW() now_cst")).mappings().one()
+        hw = get_heatwave_status(conn)
         return {
             "status": "ok",
             "database": row["db"],
             "session_timezone": row["tz"],
             "now_cst": str(row["now_cst"]),
+            "heatwave": hw,
         }
     except Exception as e:
         logger.error("Health probe query failed: %s", e)
