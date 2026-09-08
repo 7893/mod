@@ -9,6 +9,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional
 
 from .engine_context import IdAllocator, SimulationBaseline
+from .accounting_subjects import build_lines as build_voucher_lines
 from .footprint_models import (
     DocumentFootprint,
     DocumentLineFootprint,
@@ -54,6 +55,61 @@ class ExpensePlaybook:
         self.id_allocator = id_allocator
         self.rng = random.Random(seed)
 
+    def _sample_worktime(self, target_date: datetime) -> datetime:
+        """采样一个真实的提交时刻。
+
+        真实作息：核心 8:30-11:30 与 13:30-17:00；允许少量早到/加班/夜间，
+        但为偶发、随机、不成固定规律（避免"每周六8点加班"这类机械模式）。
+        财务周期性：月末结账、季度末、报税期（每月上旬）等高强度时段，加班概率升高。
+        """
+        y, mo, d = target_date.year, target_date.month, target_date.day
+        wd = target_date.weekday()  # 0=周一 6=周日
+
+        # 财务高强度诱因：月末(26-31)、季度末月(3/6/9/12)的月末、报税期(每月1-15)
+        is_month_end = d >= 26
+        is_quarter_end = mo in (3, 6, 9, 12) and d >= 24
+        is_tax_period = 1 <= d <= 15  # 申报期通常月中前
+        intensity = 0.0
+        if is_month_end:
+            intensity += 0.35
+        if is_quarter_end:
+            intensity += 0.25
+        if is_tax_period:
+            intensity += 0.10
+
+        # 加班概率：基础很低，受强度诱因抬升；周末/夜间加班更罕见但强度期会出现
+        # 用日期特征 + 随机，保证不成固定模式
+        overtime_prob = min(0.45, 0.04 + intensity)
+        early_prob = min(0.20, 0.03 + intensity * 0.3)
+
+        r = self.rng.random()
+        if r < early_prob:
+            # 少量早到：8:00-8:30 之间（强度期偶尔更早 7:30）
+            if intensity > 0.3 and self.rng.random() < 0.3:
+                base = time(7, self.rng.randint(30, 59))
+            else:
+                base = time(8, self.rng.randint(0, 29))
+            hh, mm = base.hour, base.minute
+        elif r < early_prob + overtime_prob:
+            # 加班：17:00 后，强度越高拖得越晚（偶发到 19-21 点，极少更晚）
+            if intensity > 0.4 and self.rng.random() < 0.35:
+                hh = self.rng.choice([18, 19, 20]) if self.rng.random() < 0.6 else self.rng.choice([20, 21])
+            else:
+                hh = 17 if self.rng.random() < 0.6 else 18
+            mm = self.rng.randint(0, 59)
+        else:
+            # 核心工作时段：8:30-11:30 或 13:30-17:00，按上午/下午真实占比
+            if self.rng.random() < 0.52:  # 上午
+                total_min = self.rng.randint(0, 179)  # 8:30 起 3 小时
+                hh, mm = divmod(510 + total_min, 60)  # 510=8:30
+            else:  # 下午 13:30-17:00 (3.5h)
+                total_min = self.rng.randint(0, 209)
+                hh, mm = divmod(810 + total_min, 60)  # 810=13:30
+
+        ss = self.rng.randint(0, 59)
+        # 周末/节假日：绝大多数不加班；仅在强度诱因下小概率保留（否则挪回工作日语义由上层配额控制）
+        return datetime(y, mo, d, int(hh), int(mm), ss)
+
     def generate_event(self, target_date: Optional[datetime] = None) -> EventFootprint:
         """Generate a single complete, valid, balanced event footprint."""
         # 1. Determine timeline
@@ -70,14 +126,7 @@ class ExpensePlaybook:
         if target_date.hour != 0 or target_date.minute != 0 or target_date.second != 0:
             submit_time = target_date
         else:
-            hour = self.rng.choices(
-                [9, 10, 11, 14, 15, 16, 17],
-                weights=[0.20, 0.25, 0.15, 0.15, 0.15, 0.08, 0.02],
-                k=1,
-            )[0]
-            minute = self.rng.randint(0, 59)
-            second = self.rng.randint(0, 59)
-            submit_time = datetime(target_date.year, target_date.month, target_date.day, hour, minute, second)
+            submit_time = self._sample_worktime(target_date)
 
         if submit_time <= baseline_dt:
             submit_time = baseline_dt + timedelta(seconds=self.rng.randint(60, 3600))
@@ -205,29 +254,24 @@ class ExpensePlaybook:
             retry_count = self.rng.randint(1, 3)
             err_code, err_msg = self.rng.choice(FAIL_REASONS)
 
-        # 7. Voucher & voucher lines (Debit: 1002 银行存款, Credit: 2202 应付账款)
+        # 7. Voucher & voucher lines —— KI-052 真实多科目分录（按单据类型+明细类别，含税，借贷平衡）
         voucher_no = f"V-{vch_id}"
-        vl1_id = self.id_allocator.next_id("accounting_voucher_line")
-        vl2_id = self.id_allocator.next_id("accounting_voucher_line")
-
-        voucher_lines = [
-            VoucherLineFootprint(
-                id=vl1_id,
-                voucher_id=vch_id,
-                subject_code="1002",
-                subject_name="银行存款",
-                debit=total_amount,
-                credit=Decimal("0.00"),
-            ),
-            VoucherLineFootprint(
-                id=vl2_id,
-                voucher_id=vch_id,
-                subject_code="2202",
-                subject_name="应付账款",
-                debit=Decimal("0.00"),
-                credit=total_amount,
-            ),
-        ]
+        item_names = [ln.item_name for ln in doc_lines]
+        subject_lines = build_voucher_lines("费用报销单", total_amount, item_names, self.rng)
+        voucher_lines = []
+        for (code, name, dr, cr) in subject_lines:
+            voucher_lines.append(
+                VoucherLineFootprint(
+                    id=self.id_allocator.next_id("accounting_voucher_line"),
+                    voucher_id=vch_id,
+                    subject_code=code,
+                    subject_name=name,
+                    debit=dr,
+                    credit=cr,
+                )
+            )
+        vch_debit = sum(l.debit for l in voucher_lines)
+        vch_credit = sum(l.credit for l in voucher_lines)
 
         voucher = VoucherFootprint(
             id=vch_id,
@@ -237,8 +281,8 @@ class ExpensePlaybook:
             gen_time=gen_time,
             int_time=int_time,
             status=vch_status,
-            debit=total_amount,
-            credit=total_amount,
+            debit=vch_debit,
+            credit=vch_credit,
             lines=voucher_lines,
         )
 
