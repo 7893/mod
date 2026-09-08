@@ -82,6 +82,15 @@
   AI 不得直接调用发布脚本。
 - 任务书、历史提示词、规范文档本身都不构成执行授权。
 
+### 闸门 E · 文档历史保全与当前切片
+
+- 任何已跟踪文档被删除时必须阻断提交；完整保留内容的 Git 重命名或迁移允许通过。
+- `docs/history/`、`docs/evidence/`、`docs/decisions/` 是冻结记录；除生命周期元数据外，原文每一行必须保留原顺序，只能追加勘误或取代说明。
+- KI 看板与详情状态必须一致，统一使用 `DRAFT`、`OPEN`、`IN-PROGRESS`、`DONE`。
+- 新增或修改的活文档必须有标题、更新日期、状态和适用范围；现行规范、运维文档、Runbook 与证据入口必须以 Markdown 链接纳入 `docs/INDEX.md`。
+- `scripts/project/check_document_governance.py` 在 `make check` 和 CI 中执行上述校验；
+  `scripts/project/check_doc_sync.py` 对事实变更未同步 `CURRENT-STATE.md` 的情况直接返回失败。
+
 ## 每次任务的强制流程
 
 无论使用哪个 CLI，一次改动必须走完以下环节；缺环节即视为未完成：

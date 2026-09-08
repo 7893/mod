@@ -1,4 +1,4 @@
-.PHONY: check backend-check frontend-check
+.PHONY: check backend-check frontend-check doc-check
 
 check: backend-check frontend-check doc-check
 
@@ -14,3 +14,6 @@ frontend-check:
 
 doc-check:
 	python3 scripts/project/check_doc_links.py
+	python3 scripts/project/check_document_governance.py
+	python3 scripts/project/check_doc_sync.py
+	python3 -m unittest discover -s scripts/project/tests -p 'test_*.py'

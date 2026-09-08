@@ -2,10 +2,10 @@
 """
 Check whether core codebase changes are accompanied by docs/CURRENT-STATE.md updates.
 
-Enforces semi-mechanism for KI-025 and ENFORCEMENT.md Gate C:
-- If changes touch backend/app/, deploy/, or schema without modifying docs/CURRENT-STATE.md,
-  emits a GitHub Actions warning annotation.
-- Non-blocking: always exits with code 0 so as not to block builds or PRs.
+Enforces KI-054 and ENFORCEMENT.md Gate C:
+- If behavior-bearing code, deployment configuration, or schema changes without
+  docs/CURRENT-STATE.md, fail the check.
+- The check is read-only and runs both locally and in CI.
 """
 
 from __future__ import annotations
@@ -27,11 +27,20 @@ def get_changed_files(base: str | None = None, head: str = "HEAD") -> list[str]:
             ).stdout.strip()
         command.extend([base, head])
     else:
-        command.append("--cached")
+        command.append("HEAD")
 
     try:
         res = subprocess.run(command, capture_output=True, text=True, check=True)
-        return [line.strip() for line in res.stdout.splitlines() if line.strip()]
+        files = [line.strip() for line in res.stdout.splitlines() if line.strip()]
+        if not base:
+            untracked = subprocess.run(
+                ["git", "ls-files", "--others", "--exclude-standard"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.splitlines()
+            files.extend(line.strip() for line in untracked if line.strip())
+        return sorted(set(files))
     except subprocess.CalledProcessError:
         try:
             res = subprocess.run(
@@ -46,13 +55,11 @@ def get_changed_files(base: str | None = None, head: str = "HEAD") -> list[str]:
 
 
 def is_core_file(path: str) -> bool:
-    """Check if file is in backend/app/, deploy/, or relates to schema."""
+    """Check whether a path may change current behavior or operating facts."""
     p = path.lower()
-    if path.startswith("backend/app/"):
+    if path.startswith(("backend/app/", "frontend/src/", "simulation/", "deploy/")):
         return True
-    if path.startswith("deploy/"):
-        return True
-    if "schema" in p:
+    if path.startswith("database/") or "schema" in p:
         return True
     return False
 
@@ -74,11 +81,12 @@ def main() -> int:
 
     if check_sync(changed_files):
         msg = (
-            "Changes detected in core backend/schema/deploy files without modifying docs/CURRENT-STATE.md. "
-            "Please verify whether architectural, data scale, or operational facts need to be synced (see ENFORCEMENT.md Gate C)."
+            "Behavior or operating facts changed without docs/CURRENT-STATE.md. "
+            "Synchronize the current snapshot in the same change (ENFORCEMENT.md Gate C)."
         )
-        print(f"::warning title=CURRENT-STATE Sync Notice::{msg}")
-        print(f"[notice] {msg}", file=sys.stderr)
+        print(f"::error title=CURRENT-STATE Sync Required::{msg}")
+        print(f"[doc-sync] {msg}", file=sys.stderr)
+        return 1
     else:
         print("[notice] CURRENT-STATE sync check passed (no unsynced core changes).")
 

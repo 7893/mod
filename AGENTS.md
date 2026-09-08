@@ -88,6 +88,13 @@ retired to the ignored `archive/legacy-db-scripts/` — data is now produced by 
 - `docs/CURRENT-STATE.md` records current facts only. Historical decisions and evidence must be clearly labeled and
   must not override current code, tests, or deployment configuration.
 - New maintained documents need a title, updated date, status, scope, relative links, and no secrets or personal data.
+- **Never delete tracked documentation or historical content.** Obsolete material must be marked as superseded or
+  moved intact with Git history. Frozen records under `docs/history/`, `docs/evidence/`, and `docs/decisions/` may
+  only receive lifecycle metadata, supersession links, or additive errata; their original body must not be removed,
+  rewritten, or silently corrected.
+- Before replacing obsolete facts in `docs/CURRENT-STATE.md`, preserve the displaced material in a dated history
+  snapshot in the same commit. Keep the current-state entry concise after preservation; Git history alone is not a
+  substitute for the repository-visible historical record.
 - Never edit historical evidence to make it appear current. Add a current correction or an explicit historical notice.
 - **KI vs feature discipline (four iron rules):**
   1. Never log new feature requests in `docs/KNOWN-ISSUES.md`; use GitHub Issues (`feature_request.md`/`task.md`)
