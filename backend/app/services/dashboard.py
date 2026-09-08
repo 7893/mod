@@ -220,13 +220,14 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
                 o.status,
                 CASE
                     WHEN o.batch_id = 8 THEN 8
-                    WHEN o.status = '稳定运行' AND o.id <= 150 THEN 1
-                    WHEN o.status = '稳定运行' AND o.id <= 330 THEN 2
-                    WHEN o.status = '稳定运行' THEN 3
-                    WHEN o.status = '已上线' AND o.id <= 580 THEN 4
-                    WHEN o.status = '已上线' THEN 5
                     WHEN o.status = '双轨运行中' THEN 6
-                    WHEN o.id > 1600 AND o.id <= 2000 THEN 7
+                    WHEN o.id <= 2005 AND o.status = '稳定运行' AND o.id <= 150 THEN 1
+                    WHEN o.id <= 2005 AND o.status = '稳定运行' AND o.id <= 330 THEN 2
+                    WHEN o.id <= 2005 AND o.status = '稳定运行' THEN 3
+                    WHEN o.id <= 2005 AND o.status = '已上线' AND o.id <= 580 THEN 4
+                    WHEN o.id <= 2005 AND o.status = '已上线' THEN 5
+                    WHEN o.id <= 2005 AND o.id > 1600 AND o.id <= 2000 THEN 7
+                    WHEN o.batch_id BETWEEN 1 AND 7 THEN o.batch_id
                     ELSE 8
                 END AS batchId
             FROM org_unit o
@@ -329,13 +330,14 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
                 o.id,
                 CASE
                     WHEN o.batch_id = 8 THEN 8
-                    WHEN o.status = '稳定运行' AND o.id <= 150 THEN 1
-                    WHEN o.status = '稳定运行' AND o.id <= 330 THEN 2
-                    WHEN o.status = '稳定运行' THEN 3
-                    WHEN o.status = '已上线' AND o.id <= 580 THEN 4
-                    WHEN o.status = '已上线' THEN 5
                     WHEN o.status = '双轨运行中' THEN 6
-                    WHEN o.id > 1600 AND o.id <= 2000 THEN 7
+                    WHEN o.id <= 2005 AND o.status = '稳定运行' AND o.id <= 150 THEN 1
+                    WHEN o.id <= 2005 AND o.status = '稳定运行' AND o.id <= 330 THEN 2
+                    WHEN o.id <= 2005 AND o.status = '稳定运行' THEN 3
+                    WHEN o.id <= 2005 AND o.status = '已上线' AND o.id <= 580 THEN 4
+                    WHEN o.id <= 2005 AND o.status = '已上线' THEN 5
+                    WHEN o.id <= 2005 AND o.id > 1600 AND o.id <= 2000 THEN 7
+                    WHEN o.batch_id BETWEEN 1 AND 7 THEN o.batch_id
                     ELSE 8
                 END AS batchId
             FROM org_unit o
