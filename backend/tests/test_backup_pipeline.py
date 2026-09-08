@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pytest
 
-# Import functions from scripts.ops
+# Import functions from scripts.project
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(REPO_ROOT / "scripts" / "ops"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "project"))
 
 from backup_pipeline import (  # noqa: E402
     calculate_sha256,

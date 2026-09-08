@@ -13,7 +13,7 @@ Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONPATH=/home/ubuntu/mod/backend/current
 Environment=PATH=/home/ubuntu/mod/backend/.venv/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/home/ubuntu/mod/backend/.venv/bin/python /home/ubuntu/mod/backend/current/scripts/ops/backup_pipeline.py
+ExecStart=/home/ubuntu/mod/backend/.venv/bin/python /home/ubuntu/mod/backend/current/scripts/project/backup_pipeline.py
 NoNewPrivileges=true
 PrivateTmp=true
 TimeoutStartSec=900

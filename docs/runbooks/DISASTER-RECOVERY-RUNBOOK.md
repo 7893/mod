@@ -131,11 +131,11 @@ SELECT COUNT(*) FROM MODEL_CATALOG;            -- 检查 AutoML 模型目录
 
 ## 3. 自动化演练工具
 
-项目提供了开箱即用的自动化演练工具 `scripts/ops/verify_and_restore.py`，主控可在任何受控测试机上一键拉取 Cloudflare R2 备份并自动化完成解密与数据结构抽检：
+项目提供了开箱即用的自动化演练工具 `scripts/project/verify_and_restore.py`，主控可在任何受控测试机上一键拉取 Cloudflare R2 备份并自动化完成解密与数据结构抽检：
 
 ```bash
 # 执行端到端只读演练（从 Cloudflare R2 拉取、校验 SHA256、解密、校验 gzip、扫描 42 张表结构）
-python3 scripts/ops/verify_and_restore.py \
+python3 scripts/project/verify_and_restore.py \
     --input s3://mod-backup/backups/mod_backup_20260908_092008.sql.gz.enc
 ```
 

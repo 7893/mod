@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-scripts/ops/heatwave_manager.py
+scripts/project/heatwave_manager.py
 
 HeatWave 内存分析集群（RAPID 引擎）运维管理与监控脚本：
 - status: 检查集群节点内存、健康度、已加载表及全局查询下推计数

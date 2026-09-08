@@ -31,7 +31,7 @@
    - 排查发现后端 SQLAlchemy 默认以隐式事务 `autocommit=0` 发起查询，触发 HeatWave 优化器硬限制导致无法下推；
    - 在 `backend/app/db.py` 的 `create_engine` 中配置 `execution_options={"isolation_level": "AUTOCOMMIT"}`，并在连接建立时显式注入 `SET use_secondary_engine = ON`，彻底打通 API 到 RAPID 的下推管道。
 3. **运维工具与执行计划验证闭环**：
-   - 实现运维工具 [`scripts/ops/heatwave_manager.py`](../../scripts/ops/heatwave_manager.py)，提供 `status`、`load`、`verify` 三大指令；
+   - 实现运维工具 [`scripts/project/heatwave_manager.py`](../../scripts/project/heatwave_manager.py)，提供 `status`、`load`、`verify` 三大指令；
    - 使用 `verify` 模块强制校验（`use_secondary_engine = FORCED`），7 项核心业务聚合查询 100% 出现 `Using secondary engine RAPID`，消除了虚假加速与降级损耗；
    - 增加单元测试 [`backend/tests/test_heatwave_manager.py`](../../backend/tests/test_heatwave_manager.py) 并通过全量校验。
 
