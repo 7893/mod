@@ -13,6 +13,8 @@
 - `check_doc_links.py`：只读检查 Markdown 相对链接是否指向现存文件。
 - `check_document_governance.py`：只读阻断文档删除、冻结正文减损、KI 状态分裂、必需元数据缺失和现行索引漏项。
 - `check_doc_sync.py`：只读检查行为与运行事实变更是否在同一改动中同步 `docs/CURRENT-STATE.md`；未同步时阻断。
+- `check_changelog.py`：只读校验 git-cliff 版本契约、基线提交可达性、TOML 配置和 CHANGELOG 生成标记。
+- `generate_changelog.py`：用锁定的 git-cliff 2.13.1 从 `.git-cliff-baseline` 到指定 revision 生成变更日志；默认只输出 stdout。
 
 ## 文档治理检查
 
@@ -27,3 +29,18 @@ python3 scripts/project/check_doc_sync.py --base <base> --head <head>
 ```
 
 两个工具只读取文件与 Git 差异，不修改文档、提交、数据库或生产环境。工具回归测试位于 `scripts/project/tests/`，由 `make check` 自动执行。
+
+## CHANGELOG 生成
+
+```bash
+# MOD_GIT_CLIFF_BIN 必须指向经官方 SHA-256 校验的 git-cliff 2.13.1
+MOD_GIT_CLIFF_BIN=/tmp/git-cliff python3 scripts/project/generate_changelog.py
+
+# 显式输出到文件；生成前按文档保全规则保存上一版快照
+MOD_GIT_CLIFF_BIN=/tmp/git-cliff python3 scripts/project/generate_changelog.py --output /tmp/CHANGELOG.md
+```
+
+Linux aarch64 官方 `2.13.1` 压缩包 SHA-256 为
+`9619b7f0c584229f8a2331c1905afe88bd938bdc9102926c2073836a42f02455`；其他架构必须以同版本官方 Release 列出的校验值为准。
+
+版本 tag 或人工触发的 `.github/workflows/changelog.yml` 使用同一基线和 git-cliff 2.13.1，仅上传可下载产物，不提交、推送、打标签或创建 Release。
