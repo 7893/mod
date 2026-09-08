@@ -63,6 +63,19 @@ def test_heal_heatwave_tables():
     assert mock_conn.execute.call_count >= 2
 
 
+def test_heal_heatwave_tables_readonly_permission_denied():
+    mock_conn = MagicMock()
+    missing = ["business_document"]
+    # 模拟只读账号执行 ALTER TABLE 时抛出 MySQL 1142 权限拒绝异常
+    mock_conn.execute.side_effect = RuntimeError("1142: ALTER command denied to user 'mod_readonly'@'%'")
+
+    result = heal_heatwave_tables(mock_conn, missing)
+    assert result["healed"] == []
+    assert len(result["failed"]) == 1
+    assert result["failed"][0]["table"] == "business_document"
+    assert "只读账号无 ALTER 权限" in result["failed"][0]["error"]
+
+
 def test_check_and_heal_when_healthy():
     mock_conn = MagicMock()
     mock_conn.execute.return_value.fetchall.return_value = [

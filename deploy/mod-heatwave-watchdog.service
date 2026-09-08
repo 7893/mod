@@ -1,0 +1,22 @@
+[Unit]
+Description=MOD HeatWave RAPID Accelerator Watchdog & Self-Healing Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=${MOD_PROJECT_ROOT}/backend/current
+EnvironmentFile=${MOD_PROJECT_ROOT}/.env.systemd
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=${MOD_PROJECT_ROOT}/backend/current
+Environment=PATH=${MOD_PROJECT_ROOT}/backend/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=${MOD_PROJECT_ROOT}/backend/.venv/bin/python ${MOD_PROJECT_ROOT}/backend/current/scripts/project/heatwave_manager.py watchdog
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

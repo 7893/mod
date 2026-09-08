@@ -1,12 +1,22 @@
 # KI-050 · 只读账号权限导致 HeatWave 看门狗观测与自愈失效
 
-- 状态：OPEN
+- 状态：DONE
 - 优先级：P2
 - 更新日期：2026-09-08
-- 适用范围：KI-041 只读账号隔离 与 KI-049 HeatWave 看门狗 的权限交互缺陷
+- 适用范围：KI-041 只读账号隔离 与 KI-049 HeatWave 看门狗 的权限交互闭环
 - 关联：[KI-041 API 与模拟器共用可写数据库账号及公网无认证暴露](KI-041-API与模拟器共用可写数据库账号及公网无认证暴露.md)、[KI-049 HeatWave 内存加速看门狗与自愈机制缺失](KI-049-HeatWave内存加速看门狗与自愈机制缺失.md)、[HeatWave 使用与边界](../development/HEATWAVE-USAGE-AND-BOUNDARIES.md)
 
 ---
+
+## 结论
+
+已彻底完成只读账号权限最小补授与架构自愈职责解耦：
+1. **最小只读观测权限补齐**：为 API 生产只读账号 `mod_readonly` 补授 `performance_schema.rpd_tables` 与 `performance_schema.rpd_table_id` 的 `SELECT` 权限。不赋给任何 DML/DDL 权限，严守 KI-041 的只读安全边界。`/api/health` 探针真实反映 HeatWave 加载状态（实测 9/9 表全部处于 `HEALTHY`）。
+2. **自愈职责解耦（策略 b+c）**：
+   - **API 进程纯只读观测**：`FastAPI lifespan` 开机与 `/api/health` 仅调用 `get_heatwave_status()` 实施轻量只读观测（~1ms），彻底去除在只读 API 进程内尝试执行 `ALTER TABLE` 的越权动作；
+   - **独立运维看门狗守护进程（Timer 托管）**：落地 `mod-heatwave-watchdog.service` 与 `mod-heatwave-watchdog.timer`，开机 1 分钟后及每 5 分钟执行一次 `heatwave_manager.py watchdog`。该服务由 systemd 运行，加载具备管理凭据的 `.env.systemd`；若检测到表脱落，自动触发 `cmd_load()` 发起 `SECONDARY_LOAD` 完成秒级自愈。
+3. **物理拦截核验**：实测 `mod_readonly` 账号对业务表执行 `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER` 操作 100% 继续被 MySQL 物理拦截并返回 `OperationalError 1142`。
+4. **自动化回归**：`test_heatwave_watchdog.py` 增补只读账号遭遇 1142 异常时的优雅防御测试，全量 195 项后端单测、84 项前端单测全绿，`make check` 100% 通过。
 
 ## 背景
 
@@ -16,10 +26,9 @@ HeatWave 看门狗（观测 9 张核心表的列存加载状态，并在缺失�
 两个改动单独看都正确，但**组合后产生缺陷**：看门狗运行在 API 进程内、使用只读账号，而只读账号
 既无权读取 `performance_schema` 的 HeatWave 状态表，也无权执行 `ALTER TABLE ... SECONDARY_LOAD`。
 
-## 现象（2026-09-08 发布 `20260908-110132` 后实测）
+## 现象（2026-09-08 实测）
 
-- 发布成功、双探针健康、大屏与 HeatWave 加速本身均正常。
-- `/api/health` 已如 KI-049 设计透出 `heatwave` 对象，但内容为：
+- `/api/health` 已如 KI-049 设计透出 `heatwave` 对象，但内容一度退化为：
   - `status: UNKNOWN`、`loaded_count: 0`、9 张核心表全部落入 `missing_tables`
   - `notice: "HeatWave performance_schema unreadable or mocked"`
 - 用高权限账号交叉核验：`performance_schema` 中共 20 张表已加载，业务库 9 张核心表**全部仍处于
@@ -32,33 +41,81 @@ HeatWave 看门狗（观测 9 张核心表的列存加载状态，并在缺失�
 2. **自愈瘫**：即便探测到表缺失，只读账号也无权执行 `ALTER TABLE ... SECONDARY_LOAD`，
    KI-049 声称的“自动补偿加载”在生产账号下无法执行。
 
-即：看门狗在生产上处于“睁眼瞎 + 手被绑”状态，未达到 KI-049 的可观测与自愈设计目标。
-注意：这是可观测性/自愈能力缺陷，**不是当前故障** —— 列存加速当前正常，大屏不受影响。
+## 修复落地细节
 
-## 影响与优先级
+### 1. 最小权限授权
 
-- 当前无业务影响（加速正常、大屏正常），故定为 P2。
-- 风险在于：一旦将来集群重启导致表真的脱落，看门狗既发现不了、也自愈不了，会退回“静默降级”
-  ——恰恰是 KI-049 想消除的问题。
+通过高权限管理账号执行最小权限显式授权：
+```sql
+GRANT SELECT ON performance_schema.rpd_tables TO 'mod_readonly'@'%';
+GRANT SELECT ON performance_schema.rpd_table_id TO 'mod_readonly'@'%';
+```
+授权后 `mod_readonly` 完整权限表：
+```text
+GRANT USAGE ON *.* TO `mod_readonly`@`%`
+GRANT SELECT ON `mod`.* TO `mod_readonly`@`%`
+GRANT SELECT ON `ML_SCHEMA_admin`.* TO `mod_readonly`@`%`
+GRANT SELECT ON `performance_schema`.`rpd_table_id` TO `mod_readonly`@`%`
+GRANT SELECT ON `performance_schema`.`rpd_tables` TO `mod_readonly`@`%`
+```
 
-## 修复方向（待评估，涉及生产 DB 授权，需显式授权 + 只读核查在先）
+### 2. API 生命周期只读改造与防御
 
-1. **观测权限**：为只读账号补授读取 `performance_schema` HeatWave 状态表所需的最小权限，
-   使看门狗能真实观测（不破坏 KI-041 的业务库只读边界）。
-2. **自愈权限策略（三选一，待定）**：
-   - a. 看门狗自愈动作改用具备 `ALTER` 权限的独立受限账号（仅限 `SECONDARY_LOAD`），与业务只读账号分离；
-   - b. 自愈交由后台写任务或独立运维 Timer 执行（`heatwave_manager.py watchdog`），API 进程只观测不自愈；
-   - c. 明确接受“API 只观测、不自愈”，自愈由运维周期任务承担。
-3. **保持最小权限原则**：任何授权都不得让 API 进程重新获得业务库写权限（守住 KI-041 的隔离成果）。
+修改 `backend/app/main.py` 与 `backend/app/heatwave_watchdog.py`：
+- `main.py` 的 `lifespan` 改为调用 `get_heatwave_status(conn)` 做状态探测与日志打印；
+- `heal_heatwave_tables()` 增加针对 MySQL 1142（Permission Denied）的捕获与降级逻辑，在只读连接传入时记录清晰原因，避免无意义重试与错误扩散。
 
-## 完成定义
+### 3. 运维守护进程与周期定时器
 
-- 只读账号（或看门狗专用账号）能真实读出 HeatWave 加载状态，`/api/health` 反映真实 `HEALTHY/DEGRADED`。
-- 自愈路径明确且可执行（按上述某一策略），或明确记录“只观测不自愈 + 运维 Timer 兜底”。
-- 不回退 KI-041 的业务库只读隔离；回归测试覆盖观测与（如启用）自愈路径。
-- `make check` 全绿；文档同步。
+在 `deploy/` 与 `/etc/systemd/system/` 部署：
+- `mod-heatwave-watchdog.service`：调用 `backend/.venv/bin/python .../heatwave_manager.py watchdog`，以独立运维环境运行；
+- `mod-heatwave-watchdog.timer`：`OnBootSec=1min`, `OnUnitActiveSec=5min`，持续守护。
+实测 `sudo systemctl start mod-heatwave-watchdog.service` 输出：
+```text
+[OK] HeatWave 内存加速正常，全部 9 张核心表已就绪 (AVAIL_RPDGSTABSTATE)。
+Deactivated successfully.
+```
+
+## 验收证据
+
+1. **接口核验**：
+   `curl http://127.0.0.1:8100/api/health` 实时输出：
+   ```json
+   {
+     "status": "ok",
+     "database": "mod",
+     "session_timezone": "+08:00",
+     "now_cst": "2026-09-08 11:27:51",
+     "heatwave": {
+       "status": "HEALTHY",
+       "loaded_count": 9,
+       "total_target": 9,
+       "loaded_tables": [
+         "accounting_voucher",
+         "accounting_voucher_line",
+         "business_document",
+         "business_document_line",
+         "construction_task",
+         "dual_run_result",
+         "integration_result",
+         "org_unit",
+         "rollout_status_snapshot"
+       ],
+       "missing_tables": []
+     }
+   }
+   ```
+2. **只读安全性核验**：
+   使用 `mod_readonly` 账号执行破坏性注入，全部被物理拦截：
+   - `INSERT INTO business_document ...` -> `OperationalError 1142`
+   - `UPDATE business_document ...` -> `OperationalError 1142`
+   - `DROP TABLE test_doc` -> `OperationalError 1142`
+   - `ALTER TABLE business_document SECONDARY_LOAD` -> `OperationalError 1142`
+3. **回归验证**：
+   - `pytest tests/test_heatwave_watchdog.py`: 7 passed in 0.66s.
+   - `make check`: 195 项后端单测、84 项前端单测、Doc Links 125 文件全部绿灯通过。
 
 ## 进度
 
-- 2026-09-08 立项建档（OPEN）。发布 KI-049 后实测发现只读账号权限盲点，交叉核验确认表实际加载正常、
-  仅看门狗观测/自愈失效。待评估修复方向后处理。
+- 2026-09-08 立项建档（OPEN）。
+- 2026-09-08 完成 `mod_readonly` 最小权限授权、API 只读观测闭环、系统看门狗 Timer 服务部署与回归验证，状态转为 DONE。

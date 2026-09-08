@@ -31,20 +31,28 @@ async def lifespan(app: FastAPI):
     await live_projection.start()
     logger.info("只读实时投影%s", "已启动" if live_projection.enabled else "未启用")
 
-    # HeatWave 内存加速看门狗开机自检与自愈 (KI-049)
+    # HeatWave 内存加速状态开机只读观测 (KI-049/KI-050: 遵循只读账号边界，自愈由系统看门狗服务托管)
     try:
         from .db import get_engine
-        from .heatwave_watchdog import check_and_heal
+        from .heatwave_watchdog import get_heatwave_status
         with get_engine().connect() as conn:
-            hw_info = check_and_heal(conn)
-            logger.info(
-                "HeatWave 看门狗启动自检完成: status=%s, loaded=%s/%s",
-                hw_info.get("status"),
-                hw_info.get("loaded_count", 0),
-                hw_info.get("total_target", 9),
-            )
+            hw_info = get_heatwave_status(conn)
+            if hw_info.get("status") == "HEALTHY":
+                logger.info(
+                    "HeatWave 内存加速启动自检就绪: status=HEALTHY, loaded=%s/%s",
+                    hw_info.get("loaded_count", 0),
+                    hw_info.get("total_target", 9),
+                )
+            else:
+                logger.warning(
+                    "HeatWave 内存加速状态非 HEALTHY: status=%s, loaded=%s/%s, 缺失表=%s (自愈由 mod-heatwave-watchdog.timer 托管)",
+                    hw_info.get("status"),
+                    hw_info.get("loaded_count", 0),
+                    hw_info.get("total_target", 9),
+                    hw_info.get("missing_tables", []),
+                )
     except Exception as e:
-        logger.warning("HeatWave 看门狗开机自检跳过或异常: %s", e)
+        logger.warning("HeatWave 状态开机自检跳过或异常: %s", e)
 
     yield
 
