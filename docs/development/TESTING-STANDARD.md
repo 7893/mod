@@ -53,6 +53,14 @@ git diff
 git status --short
 ```
 
+文档变更的 `make check` 必须同时通过：
+
+- Markdown 相对链接检查；
+- 文档删除与冻结正文保全检查；
+- KI 看板/详情状态一致性、必需元数据与索引覆盖检查；
+- 核心行为变更与 `CURRENT-STATE.md` 同步的阻断检查；
+- `scripts/project/tests/` 下文档治理工具的回归测试。
+
 检查结果必须对应当前工作树，不能引用修改前或旧提交的结果。
 
 ## 生产验收

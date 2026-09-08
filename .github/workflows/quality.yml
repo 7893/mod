@@ -72,8 +72,11 @@ jobs:
       - name: Check documentation links
         run: python3 scripts/project/check_doc_links.py
 
-      - name: Check CURRENT-STATE sync notice
+      - name: Enforce CURRENT-STATE sync
         run: python3 scripts/project/check_doc_sync.py --base "${{ steps.comparison.outputs.base }}"
+
+      - name: Enforce documentation governance
+        run: python3 scripts/project/check_document_governance.py --base "${{ steps.comparison.outputs.base }}"
 
       - name: Run repository checks
         run: make check

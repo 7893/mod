@@ -200,9 +200,11 @@
 
 ## 本地质量基线
 
-- 前端：Vue 3、TypeScript、Vite；当前 84 项 Vitest 单测、类型检查与生产构建通过。
-- 后端：FastAPI、SQLAlchemy；当前 139 项 pytest 测试通过。
+- 2026-09-07 记录的旧质量基线为前端 84 项 Vitest、后端 139 项 pytest；该数字作为历史增长节点保留，不再代表当前总数。
+- 前端：Vue 3、TypeScript、Vite；当前 16 个测试文件、90 项 Vitest 单测、类型检查与生产构建通过。
+- 后端：FastAPI、SQLAlchemy；当前 206 项 pytest 测试通过。
 - Ruff 检查已清零并纳入 `make check`。
+- 文档治理闸门已纳入 `make check` 与 CI：阻断已跟踪文档删除、冻结正文减损、KI 状态分裂、必需元数据缺失与现行索引漏项；核心行为变更未同步本文时直接失败，不再仅输出警告。
 - 本地 Git hooks 已强制执行凭据扫描、`make check` 和提交信息格式；GitHub Actions workflow 已在仓库
   落地，远端启用后在拉取请求和推送中复用同一闸门，不包含部署或生产访问。
 - 本目录已开始采用 Git 管理；大体积 CSV、原始参考材料、构建产物和本地密钥不纳入版本库。

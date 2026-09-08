@@ -1,8 +1,9 @@
 # KI-045 · HeatWave 内存集群未加载 MOD 表与加速失真
 
-- 状态：RESOLVED
+- 状态：DONE
 - 优先级：P1
 - 更新日期：2026-09-08
+- 适用范围：MOD 库 HeatWave RAPID 表加载、查询下推、运维核验与加速口径
 - 关联：[已知问题看板](../KNOWN-ISSUES.md)、[HEATWAVE使用与边界](../development/HEATWAVE-USAGE-AND-BOUNDARIES.md)
 
 ## 结论
@@ -39,4 +40,3 @@
 
 - 2026-09-07：现场核验并立项。
 - 2026-09-08：完成全量 9 张核心表载入 HeatWave 内存集群，排查并修复后端 SQLAlchemy AUTOCOMMIT 阻断，实现管理工具与执行计划 100% RAPID 验证，问题关闭。
-

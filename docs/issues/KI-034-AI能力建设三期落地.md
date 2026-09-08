@@ -1,8 +1,9 @@
 # KI-034 · AI 能力建设三期落地
 
-- 状态：COMPLETED（2026-09-06 一、二、三期全部落地）
+- 状态：DONE（2026-09-06 一、二、三期全部落地）
 - 优先级：P1
 - 更新日期：2026-09-06
+- 适用范围：HeatWave AutoML、LLM 决策简报与拟真业务语料生态三期能力建设
 - 关联：[ADR-0010 项目AI能力建设总纲](../decisions/0010-项目AI能力建设总纲.md)、[HeatWave AutoML 能力手册](../development/HEATWAVE-AUTOML-CAPABILITIES.md)、[ML-AI 数据边界](../development/ML-AI-DATA-BOUNDARY.md)
 
 ## 目标
