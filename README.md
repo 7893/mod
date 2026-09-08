@@ -1,78 +1,243 @@
-# MOD — 业务系统建设推广大屏
+<div align="center">
+  <h1>MOD</h1>
+  <h3>Enterprise System Rollout Command Center</h3>
+  <p>
+    An AI-assisted command-center dashboard for enterprise system rollout, operations, risk, and compliance,<br>
+    powered by high-fidelity synthetic data.
+  </p>
+  <p>
+    <a href="#english">English</a> ·
+    <a href="#简体中文">简体中文</a> ·
+    <a href="docs/INDEX.md">Documentation</a> ·
+    <a href="docs/KNOWN-ISSUES.md">Known Issues</a>
+  </p>
+</div>
 
-更新日期：2026-09-06
-状态：现行项目概览
-适用范围：项目定位、运行架构和开发入口
+> [!IMPORTANT]
+> MOD is a demonstration and engineering-research project. All organizations, people, transactions, and
+> operational events shown by the system are fictional synthetic data.
 
-MOD 是一个面向**业务系统建设与推广管控**的领导驾驶舱大屏项目，覆盖建设进度、上线推广、
-风险预警、合规监督与业务运营的全生命周期展示。所有业务内容均为虚构模拟数据。
+<a id="english"></a>
 
-## 核心定位
+## English
 
-- **建设管控驾驶舱**：核心观众是懂业务的高层管理者，他们会主动下钻验证。
-  主线是"各单位建设/推广/上线/双轨的进展与风险"，业务单据是次线佐证。
-- **高仿真业务模拟**：由常驻后台服务（`mod-simulator`）按香港时区作息节律 7×24 持续产生
-  自洽的业务足迹（单据、凭证、建设事件、生命周期推进），数据实时增长，经得起下钻验证。
-- **AI 协作工程实践**：设计与决策由人主导，实现由 AI 执行；配套契约、CI 闸门、签名提交、
-  ADR 决策记录与文档生命周期规范，让多 Agent 协作在可控、可审计的轨道上进行。
+Updated: 2026-09-08 · Status: Active project overview<br>
+Scope: Product positioning, architecture, development entry points, and repository navigation
 
-## 技术栈
+### Overview
 
-- **前端**：Vue 3 + TypeScript + ECharts + Tailwind，六屏驾驶舱（项目总览 / 建设进度 /
-  上线推广 / 风险预警 / 合规监督 / 业务运营），含 34 省地图下钻、实时投影、
-  骨架/物料/Token 三层契约（`CockpitPanel` + 集中 Design Token）
-- **后端**：FastAPI 只读 API（`/api/*`），连接信息仅存主机本地环境文件
-- **数据库**：托管 MySQL HeatWave（库 `mod`，Always Free），HeatWave 承担大规模聚合分析
-- **模拟引擎**：常驻 systemd 服务 `mod-simulator`，按实时香港时区心跳持续产生业务足迹
+MOD turns a complex, multi-stage enterprise system rollout into a decision-ready visual command center.
+It connects construction progress, rollout readiness, operational evidence, compliance signals, and risk
+follow-up into one coherent management narrative instead of presenting a collection of disconnected metrics.
 
-## 运行架构
+The project is designed for leaders and operators who need both an immediate overview and the ability to drill
+down into the organizations, batches, stages, and evidence behind every conclusion.
 
-```text
-浏览器 → Nginx → frontend/current/（软链，原子发布）
-               → /api/* → FastAPI → MySQL (mod)
-                                  → mod-simulator（后台常驻，持续写入）
+### Six coordinated views
+
+| View | Decision focus |
+|---|---|
+| **A · Overview** | Program health, rollout momentum, operating scale, and closure signals |
+| **B · Construction** | Stage completion, task structure, training, readiness, and unit-level ledgers |
+| **C · Rollout** | Batch progression, regional coverage, dual-run status, and deployment backlog |
+| **D · Operations** | Documents, vouchers, integrations, trends, and data-quality evidence |
+| **E · Compliance** | Compliance posture, supervision layers, batch comparison, and exceptions |
+| **F · Risk & Intelligence** | Risk concentration, model quality, explainability, and daily decision briefings |
+
+### What makes MOD different
+
+- **Management-first storytelling** — every panel supports a decision, comparison, drill-down, or operational action.
+- **High-fidelity synthetic operations** — a governed simulation engine produces internally consistent rollout,
+  document, voucher, integration, training, and lifecycle events without using real business data.
+- **Dense but readable visualization** — Vue and ECharts power a responsive six-screen cockpit with a 34-region map,
+  coordinated filters, cross-panel navigation, and a shared visual contract.
+- **Analytics with evidence** — MySQL HeatWave supports large-scale aggregation, in-memory acceleration, AutoML
+  scoring, and explainability while the UI distinguishes measured facts from unavailable data.
+- **Resilient presentation** — bundled fallback snapshots and read-only live projection keep the dashboard useful
+  during backend refreshes or data-source interruptions.
+- **Auditable AI-assisted engineering** — repository rules, signed commits, CI gates, regression tests, ADRs, known
+  issues, and document-preservation checks keep human decisions and AI implementation traceable.
+
+### Architecture
+
+```mermaid
+flowchart LR
+    V[Visitor] --> CF[Route 53 + CloudFront]
+    CF --> N[Nginx origin gate]
+    N --> UI[Vue dashboard]
+    N --> API[FastAPI read-only API]
+    API --> DB[(MySQL HeatWave)]
+    SIM[Governed simulation service] --> DB
+    UI -. fallback .-> SNAP[Bundled synthetic snapshot]
 ```
 
-- 生产与源码工作区同机（见 `docs/decisions/0006-生产与工作区合并到单一运行主机.md`）
-- 前后端均通过软链发布隔离（`frontend/current`、`backend/current` → `releases/<ts>/`），
-  工作区修改不影响生产，发布由主控运行 `scripts/project/publish.sh` 原子切换
-- 连接异常时前端自动降级为内置模拟快照
+Production artifacts are isolated behind atomic release symlinks. Source edits and local builds do not become a
+production release automatically. Runtime credentials remain outside Git.
 
-## 项目入口
+### Technology
 
-| 文件 | 用途 |
-|------|------|
-| `AGENTS.md` | 所有人和 Agent 必须遵守的仓库硬约束（最高优先级） |
-| `CONTRIBUTING.md` | 接手、开发、验证、提交流程 |
-| `ENFORCEMENT.md` | 约束如何在动作点被强制执行（闸门） |
-| `docs/CURRENT-STATE.md` | 当前运行、数据与架构事实的唯一入口 |
-| `docs/INDEX.md` | 所有现行规范与历史资料索引 |
-| `docs/KNOWN-ISSUES.md` | 已知问题看板（详情见 `docs/issues/`） |
+| Layer | Main technologies |
+|---|---|
+| Frontend | Vue 3, TypeScript, Pinia, ECharts, Tailwind CSS, Vite |
+| Backend | FastAPI, Python 3.12+, SQLAlchemy, Uvicorn |
+| Data and analytics | MySQL HeatWave, HeatWave AutoML |
+| Quality | Pytest, Vitest, Ruff, vue-tsc, repository governance checks |
+| Delivery | Nginx, systemd, atomic release symlinks, GitHub Actions |
 
-新需求/任务用 GitHub Issues 登记；已知问题与技术债务登记于 `docs/KNOWN-ISSUES.md`。
+### Local development
 
-## 本地开发
+Prerequisites: Python 3.12+, [`uv`](https://docs.astral.sh/uv/), Node.js, pnpm, and Make.
 
 ```bash
-# 前端开发服务
-cd frontend && pnpm install && pnpm dev
-# 访问：http://127.0.0.1:4173/
+# Terminal 1 — API
+cd backend
+uv sync --all-extras
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8100
 
-# 后端环境
-cd backend && uv sync --all-extras
+# Terminal 2 — dashboard
+cd frontend
+pnpm install
+pnpm dev
+# http://127.0.0.1:4173/
+```
 
-# 提交前全量检查（必须全绿）
+The dashboard includes a synthetic fallback snapshot. Database-backed runtime features require local environment
+configuration managed outside the repository.
+
+Run the complete quality gate before committing:
+
+```bash
 make check
 ```
 
-## 发布
+### Repository guide
 
-```bash
-# 主控授权后运行，原子切换前后端软链、验证线上、失败自动回滚
-bash scripts/project/publish.sh
+| Entry | Purpose |
+|---|---|
+| [AGENTS.md](AGENTS.md) | Mandatory repository rules for people and coding agents |
+| [ENFORCEMENT.md](ENFORCEMENT.md) | Action-time safety and consistency gates |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development, validation, documentation, and commit workflow |
+| [Current state](docs/CURRENT-STATE.md) | Canonical source for current runtime and architecture facts |
+| [Documentation index](docs/INDEX.md) | Maintained standards, operations, decisions, evidence, and history |
+| [Known issues](docs/KNOWN-ISSUES.md) | Defect and technical-debt board with detailed KI records |
+| [Changelog](CHANGELOG.md) | Generated release history from the verified Git baseline |
 
-# 查看实时数据状态
-python3 scripts/project/inspect_state.py
+Feature requests and planned work belong in GitHub Issues. Confirmed defects and technical debt are tracked on the
+repository's known-issues board.
+
+### License
+
+MOD is available under the [MIT License](LICENSE).
+
+---
+
+<a id="简体中文"></a>
+
+## 简体中文
+
+更新日期：2026-09-08 · 状态：现行项目概览<br>
+适用范围：产品定位、运行架构、开发入口与仓库导航
+
+> [!IMPORTANT]
+> MOD 是用于演示和工程研究的项目。系统展示的组织、人员、交易与运行事件全部是虚构的合成数据。
+
+### 项目概述
+
+MOD 将复杂、多阶段的业务系统建设推广过程，转化为一套面向决策的可视化指挥驾驶舱。它把建设进度、
+上线准备、运营佐证、合规信号和风险闭环连接成一条完整管理主线，而不是简单堆放彼此割裂的指标。
+
+项目面向需要快速掌握全局、同时会主动下钻核验的管理者与运营人员。每项结论都可以继续追溯到相关单位、
+批次、建设阶段和业务证据。
+
+### 六屏协同视图
+
+| 屏幕 | 决策重点 |
+|---|---|
+| **A · 项目总览** | 项目健康度、推广节奏、运营规模与风险闭环 |
+| **B · 建设进度** | 阶段完成度、任务结构、培训、数据准备与单位台账 |
+| **C · 上线推广** | 批次推进、区域覆盖、双轨状态与上线积压 |
+| **D · 业务运营** | 单据、凭证、接口集成、运行趋势与数据质量证据 |
+| **E · 合规监督** | 合规态势、监督分层、批次比较与异常情况 |
+| **F · 风险与智能研判** | 风险集中度、模型质量、可解释性与每日决策简报 |
+
+### MOD 的核心特点
+
+- **围绕管理决策组织叙事**：每个面板都服务于决策、比较、下钻或后续行动。
+- **高仿真合成业务运行**：受治理的拟真引擎持续生成相互勾稽的建设、单据、凭证、接口、培训和生命周期
+  事件，全程不使用真实业务数据。
+- **高密度但可读的可视化**：Vue 与 ECharts 构成响应式六屏驾驶舱，支持 34 省级区域地图、联动筛选、
+  跨面板跳转和统一视觉契约。
+- **有证据的分析能力**：MySQL HeatWave 承担大规模聚合、内存加速、AutoML 评分与模型解释；界面严格区分
+  已测量事实、零值和暂未提供的数据。
+- **稳定的展示体验**：内置降级快照与只读实时投影，使后端刷新或数据源短暂异常时仍能持续展示。
+- **可审计的 AI 协作工程**：仓库规则、签名提交、CI 闸门、回归测试、ADR、KI 和文档保全检查，让人的决策
+  与 AI 的实现都有迹可循。
+
+### 运行架构
+
+```mermaid
+flowchart LR
+    V[访问者] --> CF[Route 53 + CloudFront]
+    CF --> N[Nginx 源站门禁]
+    N --> UI[Vue 驾驶舱]
+    N --> API[FastAPI 只读接口]
+    API --> DB[(MySQL HeatWave)]
+    SIM[受治理的拟真服务] --> DB
+    UI -. 降级 .-> SNAP[内置合成快照]
 ```
 
-当前运行事实以 `docs/CURRENT-STATE.md` 为准。
+生产文件通过原子软链与源码工作区隔离，修改源码或执行本地构建不会自动形成生产发布；运行凭据始终保留在
+Git 仓库之外。
+
+### 技术栈
+
+| 层级 | 主要技术 |
+|---|---|
+| 前端 | Vue 3、TypeScript、Pinia、ECharts、Tailwind CSS、Vite |
+| 后端 | FastAPI、Python 3.12+、SQLAlchemy、Uvicorn |
+| 数据与分析 | MySQL HeatWave、HeatWave AutoML |
+| 质量保障 | Pytest、Vitest、Ruff、vue-tsc、仓库治理检查 |
+| 交付运行 | Nginx、systemd、原子发布软链、GitHub Actions |
+
+### 本地开发
+
+前置条件：Python 3.12+、[`uv`](https://docs.astral.sh/uv/)、Node.js、pnpm 和 Make。
+
+```bash
+# 终端 1——后端接口
+cd backend
+uv sync --all-extras
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8100
+
+# 终端 2——前端驾驶舱
+cd frontend
+pnpm install
+pnpm dev
+# http://127.0.0.1:4173/
+```
+
+驾驶舱自带合成数据降级快照。需要访问数据库的运行能力必须使用仓库外管理的本地环境配置。
+
+提交前运行完整质量闸门：
+
+```bash
+make check
+```
+
+### 仓库导航
+
+| 入口 | 用途 |
+|---|---|
+| [AGENTS.md](AGENTS.md) | 所有人和编码 Agent 必须遵守的仓库硬约束 |
+| [ENFORCEMENT.md](ENFORCEMENT.md) | 在动作发生时生效的安全与一致性闸门 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 开发、验证、文档和提交流程 |
+| [当前状态](docs/CURRENT-STATE.md) | 当前运行与架构事实的唯一权威入口 |
+| [文档索引](docs/INDEX.md) | 现行规范、运维、决策、证据与历史资料入口 |
+| [已知问题](docs/KNOWN-ISSUES.md) | 缺陷与技术债务看板，以及各 KI 详情 |
+| [变更记录](CHANGELOG.md) | 从已核验 Git 基线生成的发布历史 |
+
+新功能和计划任务使用 GitHub Issues 登记；已确认缺陷和技术债务进入仓库内的已知问题看板。
+
+### 开源许可
+
+MOD 使用 [MIT License](LICENSE)。
