@@ -31,6 +31,21 @@ async def lifespan(app: FastAPI):
     await live_projection.start()
     logger.info("只读实时投影%s", "已启动" if live_projection.enabled else "未启用")
 
+    # HeatWave 内存加速看门狗开机自检与自愈 (KI-049)
+    try:
+        from .db import get_engine
+        from .heatwave_watchdog import check_and_heal
+        with get_engine().connect() as conn:
+            hw_info = check_and_heal(conn)
+            logger.info(
+                "HeatWave 看门狗启动自检完成: status=%s, loaded=%s/%s",
+                hw_info.get("status"),
+                hw_info.get("loaded_count", 0),
+                hw_info.get("total_target", 9),
+            )
+    except Exception as e:
+        logger.warning("HeatWave 看门狗开机自检跳过或异常: %s", e)
+
     yield
 
     await live_projection.stop()
