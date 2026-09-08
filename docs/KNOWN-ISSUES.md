@@ -24,12 +24,12 @@
 | KI-037 | 省级二级单位实体化（组织层级从两层到三层） | DRAFT | P3 | [详情](issues/KI-037-省级二级单位实体化.md) |
 | KI-047 | Oracle 免费向量能力未利用与域内知识检索缺口 | OPEN | P3 | [详情](issues/KI-047-Oracle免费向量能力未利用与域内知识检索缺口.md) |
 | KI-048 | 驾驶舱低效面板治理与高价值业务重构 | OPEN | P2 | [详情](issues/KI-048-驾驶舱低效面板治理与高价值业务重构.md) |
-| KI-050 | 只读账号权限导致 HeatWave 看门狗观测与自愈失效 | OPEN | P2 | [详情](issues/KI-050-只读账号权限导致HeatWave看门狗失效.md) |
 
 ## 已关闭问题（DONE）
 
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
+| KI-050 | 只读账号权限导致 HeatWave 看门狗观测与自愈失效 | DONE | P2 | [详情](issues/KI-050-只读账号权限导致HeatWave看门狗失效.md) |
 | KI-049 | HeatWave 内存加速看门狗与自愈机制缺失 | DONE | P2 | [详情](issues/KI-049-HeatWave内存加速看门狗与自愈机制缺失.md) |
 | KI-045 | HeatWave 内存集群未加载 MOD 表与加速失真 | DONE | P1 | [详情](issues/KI-045-HeatWave内存集群未加载MOD表与加速失真.md) |
 | KI-046 | 数据库依赖双重 yield 与发布健康探针掩盖故障 | DONE | P1 | [详情](issues/KI-046-数据库依赖双重yield与发布健康探针掩盖故障.md) |

@@ -1,0 +1,11 @@
+[Unit]
+Description=MOD HeatWave RAPID Accelerator Watchdog Timer (Every 5 Minutes)
+PartOf=mod-heatwave-watchdog.service
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -95,8 +95,16 @@ def heal_heatwave_tables(conn: Connection, missing_tables: Sequence[str]) -> dic
             healed.append(table)
             logger.info("HeatWave 看门狗自愈成功: mod.%s 已加载", table)
         except Exception as e:
-            logger.error("HeatWave 看门狗自愈失败: mod.%s: %s", table, e)
-            failed.append({"table": table, "error": str(e)})
+            err_msg = str(e)
+            if "1142" in err_msg or "denied" in err_msg.lower():
+                logger.warning(
+                    "HeatWave 看门狗自愈跳过: 当前连接账号无 ALTER 权限（只读隔离正常生效），自愈由后台运维看门狗 (heatwave_manager.py watchdog) 接管: mod.%s",
+                    table,
+                )
+                failed.append({"table": table, "error": "只读账号无 ALTER 权限，由后台运维看门狗托管"})
+            else:
+                logger.error("HeatWave 看门狗自愈失败: mod.%s: %s", table, e)
+                failed.append({"table": table, "error": err_msg})
 
     return {"healed": healed, "failed": failed}
 
