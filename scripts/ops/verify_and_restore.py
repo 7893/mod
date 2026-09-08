@@ -34,25 +34,40 @@ logging.basicConfig(
 logger = logging.getLogger("mod.verify_and_restore")
 
 
+def load_environment_config() -> Dict[str, str]:
+    """Load configuration from env files and process environment."""
+    env_vars: Dict[str, str] = {}
+    candidates = [
+        "/home/ubuntu/mod/.env",
+        "/home/ubuntu/mod/.env.systemd",
+        os.getenv("MOD_ENV_FILE"),
+    ]
+    for candidate in candidates:
+        if candidate and os.path.isfile(candidate):
+            try:
+                with open(candidate, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            env_vars[k.strip()] = v.strip().strip("'\"")
+            except Exception:
+                pass
+    for k, v in os.environ.items():
+        if k.startswith("MOD_") or k.startswith("AWS_") or k.startswith("R2_") or k.startswith("CF_"):
+            env_vars[k] = v
+    return env_vars
+
+
 def load_encryption_key(cli_key: Optional[str] = None) -> str:
     """Resolve encryption key from CLI, environment, or secure fallback file."""
     if cli_key:
         return cli_key
 
-    env_key = os.getenv("MOD_BACKUP_ENCRYPTION_KEY")
+    env = load_environment_config()
+    env_key = env.get("MOD_BACKUP_ENCRYPTION_KEY")
     if env_key:
         return env_key
-
-    # Check env files
-    for path in ["/home/ubuntu/mod/.env.systemd", "/home/ubuntu/mod/.env"]:
-        if os.path.isfile(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    for line in f:
-                        if line.strip().startswith("MOD_BACKUP_ENCRYPTION_KEY="):
-                            return line.split("=", 1)[1].strip().strip("'\"")
-            except Exception:
-                pass
 
     key_file = Path("/home/ubuntu/mod/.backup_key")
     if key_file.is_file():
@@ -73,12 +88,39 @@ def calculate_sha256(filepath: Path) -> str:
     return h.hexdigest()
 
 
-def fetch_from_s3(s3_uri: str, target_dir: Path, s3_region: str = "us-west-2") -> Path:
-    """Download an S3 object to local target directory."""
+def get_aws_cli_bin() -> str:
+    """Resolve aws binary location reliably across systemd and shell environments."""
+    candidate = shutil.which("aws")
+    if candidate:
+        return candidate
+    for p in [
+        "/usr/local/bin/aws",
+        "/home/ubuntu/.asdf/shims/aws",
+        "/home/ubuntu/.asdf/installs/awscli/2.36.40/bin/aws",
+    ]:
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    return "aws"
+
+
+def fetch_from_s3(
+    s3_uri: str,
+    target_dir: Path,
+    s3_region: str = "auto",
+    endpoint_url: Optional[str] = None,
+    profile: Optional[str] = None,
+) -> Path:
+    """Download an S3 / Cloudflare R2 object to local target directory."""
+    aws_bin = get_aws_cli_bin()
     filename = s3_uri.rstrip("/").split("/")[-1]
     local_path = target_dir / filename
-    cmd = ["aws", "s3", "cp", s3_uri, str(local_path), "--region", s3_region]
-    logger.info("Fetching S3 artifact: %s -> %s...", s3_uri, local_path)
+    cmd = [aws_bin, "s3", "cp", s3_uri, str(local_path), "--region", s3_region]
+    if endpoint_url:
+        cmd.extend(["--endpoint-url", endpoint_url])
+    if profile:
+        cmd.extend(["--profile", profile])
+
+    logger.info("Fetching remote storage artifact: %s -> %s...", s3_uri, local_path)
     res = subprocess.run(cmd, capture_output=True, text=True)
     if res.returncode != 0:
         raise RuntimeError(f"Failed to fetch {s3_uri}: {res.stderr.strip()}")
@@ -187,10 +229,35 @@ def verify_backup_bundle(args: argparse.Namespace) -> Dict[str, Any]:
 
         # 1. Obtain local file
         if enc_source.startswith("s3://"):
-            local_enc = fetch_from_s3(enc_source, tmp_dir, s3_region=args.s3_region)
+            env = load_environment_config()
+            s3_region = args.s3_region or env.get("MOD_BACKUP_S3_REGION", "auto")
+            s3_endpoint = (
+                args.s3_endpoint
+                or env.get("MOD_BACKUP_S3_ENDPOINT")
+                or env.get("R2_ENDPOINT")
+                or env.get("AWS_ENDPOINT_URL")
+            )
+            s3_profile = (
+                args.s3_profile
+                or env.get("MOD_BACKUP_S3_PROFILE")
+                or env.get("AWS_PROFILE")
+            )
+            local_enc = fetch_from_s3(
+                enc_source,
+                tmp_dir,
+                s3_region=s3_region,
+                endpoint_url=s3_endpoint,
+                profile=s3_profile,
+            )
             sha_source = enc_source.replace(".sql.gz.enc", ".sha256")
             try:
-                local_sha = fetch_from_s3(sha_source, tmp_dir, s3_region=args.s3_region)
+                local_sha = fetch_from_s3(
+                    sha_source,
+                    tmp_dir,
+                    s3_region=s3_region,
+                    endpoint_url=s3_endpoint,
+                    profile=s3_profile,
+                )
             except Exception:
                 local_sha = None
         else:
@@ -253,7 +320,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input", required=True, help="Path to .sql.gz.enc file or s3:// URI")
     parser.add_argument("--encryption-key", help="Decryption key (defaults to env or .backup_key)")
     parser.add_argument("--output-file", help="Destination to copy decrypted .sql.gz")
-    parser.add_argument("--s3-region", default="us-west-2", help="AWS S3 region (default: us-west-2)")
+    parser.add_argument("--s3-region", default="auto", help="S3 / Cloudflare R2 region (default: auto)")
+    parser.add_argument("--s3-endpoint", help="S3-compatible endpoint URL (e.g. Cloudflare R2 endpoint)")
+    parser.add_argument("--s3-profile", help="AWS CLI profile name (e.g. r2)")
     return parser
 
 

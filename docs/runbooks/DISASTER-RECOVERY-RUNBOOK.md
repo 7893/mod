@@ -14,8 +14,8 @@ flowchart TD
     A["生产 MySQL HeatWave 实例"] -->|mysqldump 逻辑导出| B["本地流式压缩 gzip"]
     B -->|AES-256-CBC PBKDF2 零知识加密| C["加密灾备包 .sql.gz.enc"]
     C -->|生成 SHA-256 签名| D["签名文件 .sha256"]
-    C -->|AWS CLI 异机跨云传输| E["AWS S3 灾备存储桶<br/>(us-west-2 俄勒冈)"]
-    D -->|AWS CLI 异机跨云传输| E
+    C -->|AWS CLI S3 兼容 API 跨云传输| E["Cloudflare R2 灾备存储桶<br/>(s3://mod-backup)"]
+    D -->|AWS CLI S3 兼容 API 跨云传输| E
     E -->|异机拉取 + 校验签名| F["冷备/重建新主机"]
     F -->|密钥解密 + gzip 校验| G["还原至目标 MySQL 实例"]
     G -->|启动服务与数据勾稽| H["生产服务恢复 (RTO &lt; 30min)"]
@@ -24,7 +24,7 @@ flowchart TD
 ### 恢复指标 (SLA)
 - **RPO (Recovery Point Objective)**：$\le 24$ 小时（每日凌晨 03:00 HKT 离峰定时全量增量归档）。
 - **RTO (Recovery Time Objective)**：$\le 30$ 分钟（从全新裸机到数据库还原及应用完全上线）。
-- **灾备目标地**：AWS S3 专用存储桶 `s3://mod-backup-015590450538/backups/`（位于美国俄勒冈 `us-west-2`，跨大洲、跨云厂商物理隔离，开启默认 SSE-AES256 加密与公网阻断）。
+- **灾备目标地**：Cloudflare R2 专用私有存储桶 `s3://mod-backup/backups/`（基于全球分布式高可用存储，跨云服务商、全球多区域物理隔离，默认免出口流量费，强加密与公网阻断）。
 
 ---
 
@@ -38,28 +38,40 @@ flowchart TD
 sudo apt-get update && sudo apt-get install -y mysql-client gzip openssl awscli
 ```
 
-#### 第 2 步：配置 AWS S3 访问凭据
-配置具备该灾备存储桶读取权限的 AWS 访问凭证：
-```bash
-aws configure set region us-west-2
-# 填入 AWS_ACCESS_KEY_ID 与 AWS_SECRET_ACCESS_KEY
+#### 第 2 步：配置 Cloudflare R2 访问凭据与存储目录
+配置具备该灾备存储桶读写权限的凭据。凭据保存目录说明：
+- **目录 1（推荐后台服务）：`/home/ubuntu/mod/.env.systemd`（权限 0600）**：供 systemd 自动化定时任务（`mod-backup.service`）读取。
+- **目录 2（推荐 CLI 操作）：`/home/ubuntu/.aws/credentials` 与 `config`（权限 0600）**：配置 `[profile r2]`。
+- **目录 3（应用配置）：`/home/ubuntu/.config/mod/`（权限 0700/0600）**：供本地运维脚本使用。
+
+AWS CLI 配置示例（`~/.aws/config` 与 `~/.aws/credentials`）：
+```ini
+# ~/.aws/config
+[profile r2]
+region = auto
+endpoint_url = https://<CF_ACCOUNT_ID>.r2.cloudflarestorage.com
+
+# ~/.aws/credentials
+[r2]
+aws_access_key_id = <R2_ACCESS_KEY_ID>  # secret-scan: allow
+aws_secret_access_key = <R2_SECRET_ACCESS_KEY>  # secret-scan: allow
 ```
 
 #### 第 3 步：拉取最新异机加密备份与校验文件
-查看 S3 上的最新备份清单：
+查看 Cloudflare R2 上的最新备份清单：
 ```bash
-aws s3 ls s3://mod-backup-015590450538/backups/
+aws s3 ls s3://mod-backup/backups/ --profile r2
 ```
-下载最新一期备份包（以 `mod_backup_latest` 为例）：
+下载最新一期备份包（以最新备份包为例）：
 ```bash
 mkdir -p /tmp/mod_recovery && cd /tmp/mod_recovery
-aws s3 cp s3://mod-backup-015590450538/backups/mod_backup_20260908_002729.sql.gz.enc ./
-aws s3 cp s3://mod-backup-015590450538/backups/mod_backup_20260908_002729.sha256 ./
+aws s3 cp s3://mod-backup/backups/mod_backup_20260908_092008.sql.gz.enc ./ --profile r2
+aws s3 cp s3://mod-backup/backups/mod_backup_20260908_092008.sha256 ./ --profile r2
 ```
 
 #### 第 4 步：校验 SHA-256 完整性
 ```bash
-sha256sum -c mod_backup_20260908_002729.sha256
+sha256sum -c mod_backup_20260908_092008.sha256
 # 输出必须包含：OK
 ```
 
@@ -119,12 +131,12 @@ SELECT COUNT(*) FROM MODEL_CATALOG;            -- 检查 AutoML 模型目录
 
 ## 3. 自动化演练工具
 
-项目提供了开箱即用的自动化演练工具 `scripts/ops/verify_and_restore.py`，主控可在任何受控测试机上一键拉取 S3 备份并自动化完成解密与数据结构抽检：
+项目提供了开箱即用的自动化演练工具 `scripts/ops/verify_and_restore.py`，主控可在任何受控测试机上一键拉取 Cloudflare R2 备份并自动化完成解密与数据结构抽检：
 
 ```bash
-# 执行端到端只读演练（从 S3 拉取、校验 SHA256、解密、校验 gzip、扫描 42 张表结构）
+# 执行端到端只读演练（从 Cloudflare R2 拉取、校验 SHA256、解密、校验 gzip、扫描 42 张表结构）
 python3 scripts/ops/verify_and_restore.py \
-    --input s3://mod-backup-015590450538/backups/mod_backup_20260908_002729.sql.gz.enc
+    --input s3://mod-backup/backups/mod_backup_20260908_092008.sql.gz.enc
 ```
 
 ---
@@ -136,7 +148,7 @@ python3 scripts/ops/verify_and_restore.py \
 - 触发服务：`mod-backup.service`
 - 定时表达式：`OnCalendar=*-*-* 03:00:00 Asia/Hong_Kong` (Persistent=true)
 - 本地保留策略：保留最近 7 天的每日备份（防止撑爆主机根分区）。
-- 远端 S3 保留策略：保留最近 30 天的每日加密备份；历史基线备份（`historical/`）永久归档。
+- 远端 R2 保留策略：保留最近 30 天的每日加密备份；历史基线备份（`historical/`）永久归档。
 
 ---
 

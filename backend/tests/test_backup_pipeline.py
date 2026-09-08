@@ -148,4 +148,103 @@ def test_load_environment_config(tmp_path, monkeypatch):
 
     cfg = load_environment_config(str(env_file))
     assert cfg.get("MOD_DB_HOST") == "10.0.0.99"
-    assert cfg.get("MOD_BACKUP_ENCRYPTION_KEY") == "testkey123"
+    assert cfg.get("MOD_BACKUP_ENCRYPTION_KEY") == "testkey123"  # secret-scan: allow
+
+
+def test_load_environment_config_r2(monkeypatch):
+    """Ensure R2 and CF prefixed environment variables are retained."""
+    monkeypatch.setenv("MOD_BACKUP_STORAGE", "r2")
+    monkeypatch.setenv("MOD_BACKUP_S3_ENDPOINT", "https://example.r2.cloudflarestorage.com")
+    monkeypatch.setenv("MOD_BACKUP_S3_PROFILE", "r2")
+
+    cfg = load_environment_config()
+    assert cfg.get("MOD_BACKUP_STORAGE") == "r2"
+    assert cfg.get("MOD_BACKUP_S3_ENDPOINT") == "https://example.r2.cloudflarestorage.com"
+    assert cfg.get("MOD_BACKUP_S3_PROFILE") == "r2"
+
+
+def test_get_aws_cli_bin():
+    """get_aws_cli_bin should return a resolvable binary path or command."""
+    from backup_pipeline import get_aws_cli_bin
+
+    bin_path = get_aws_cli_bin()
+    assert bin_path is not None
+    assert "aws" in bin_path
+
+
+def test_upload_to_s3_command_args(tmp_path, monkeypatch):
+    """upload_to_s3 should include --endpoint-url and --profile when provided."""
+    from backup_pipeline import upload_to_s3
+    import subprocess
+
+    dummy_file = tmp_path / "test.enc"
+    dummy_file.write_bytes(b"enc data")
+
+    executed_cmds = []
+
+    def mock_run(cmd, *args, **kwargs):
+        executed_cmds.append(cmd)
+        class Res:
+            returncode = 0
+            stdout = "2026-09-08 00:00:00 test.enc"
+            stderr = ""
+        return Res()
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    dest = upload_to_s3(
+        file_path=dummy_file,
+        s3_bucket="mod-backup",
+        s3_prefix="backups",
+        s3_region="auto",
+        endpoint_url="https://r2.example.com",
+        profile="r2",
+    )
+
+    assert dest == "s3://mod-backup/backups/test.enc"
+    assert len(executed_cmds) == 2  # cp and ls
+    cp_cmd = executed_cmds[0]
+    assert "--endpoint-url" in cp_cmd
+    assert "https://r2.example.com" in cp_cmd
+    assert "--profile" in cp_cmd
+    assert "r2" in cp_cmd
+    assert "--region" in cp_cmd
+    assert "auto" in cp_cmd
+
+
+def test_fetch_from_s3_command_args(tmp_path, monkeypatch):
+    """fetch_from_s3 should include --endpoint-url and --profile when provided."""
+    from verify_and_restore import fetch_from_s3
+    import subprocess
+
+    executed_cmds = []
+
+    def mock_run(cmd, *args, **kwargs):
+        executed_cmds.append(cmd)
+        target = Path(cmd[4])
+        target.write_bytes(b"downloaded content")
+        class Res:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        return Res()
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    out = fetch_from_s3(
+        s3_uri="s3://mod-backup/backups/test.enc",
+        target_dir=tmp_path,
+        s3_region="auto",
+        endpoint_url="https://r2.example.com",
+        profile="r2",
+    )
+
+    assert out.name == "test.enc"
+    assert len(executed_cmds) == 1
+    cmd = executed_cmds[0]
+    assert "--endpoint-url" in cmd
+    assert "https://r2.example.com" in cmd
+    assert "--profile" in cmd
+    assert "r2" in cmd
+    assert "--region" in cmd
+    assert "auto" in cmd

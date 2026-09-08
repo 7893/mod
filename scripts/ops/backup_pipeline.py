@@ -59,7 +59,7 @@ def load_environment_config(env_file: Optional[str] = None) -> Dict[str, str]:
 
     # Process environment takes highest precedence over files
     for k, v in os.environ.items():
-        if k.startswith("MOD_") or k.startswith("AWS_"):
+        if k.startswith("MOD_") or k.startswith("AWS_") or k.startswith("R2_") or k.startswith("CF_"):
             env_vars[k] = v
 
     # Read .backup_key fallback if encryption key is still unset
@@ -71,6 +71,21 @@ def load_environment_config(env_file: Optional[str] = None) -> Dict[str, str]:
             logger.warning("Failed to read fallback key file %s: %s", key_file, e)
 
     return env_vars
+
+
+def get_aws_cli_bin() -> str:
+    """Resolve aws binary location reliably across systemd and shell environments."""
+    candidate = shutil.which("aws")
+    if candidate:
+        return candidate
+    for p in [
+        "/usr/local/bin/aws",
+        "/home/ubuntu/.asdf/shims/aws",
+        "/home/ubuntu/.asdf/installs/awscli/2.36.40/bin/aws",
+    ]:
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    return "aws"
 
 
 def check_disk_space(target_dir: Path, min_free_mb: int = 2048) -> None:
@@ -232,15 +247,18 @@ def upload_to_s3(
     file_path: Path,
     s3_bucket: str,
     s3_prefix: str,
-    s3_region: str = "us-west-2",
+    s3_region: str = "auto",
+    endpoint_url: Optional[str] = None,
+    profile: Optional[str] = None,
 ) -> str:
     """
-    Upload file to AWS S3 destination using aws CLI.
+    Upload file to AWS S3 / Cloudflare R2 destination using aws CLI.
     Returns destination S3 URI.
     """
+    aws_bin = get_aws_cli_bin()
     dest_uri = f"s3://{s3_bucket}/{s3_prefix.strip('/')}/{file_path.name}"
     cmd = [
-        "aws",
+        aws_bin,
         "s3",
         "cp",
         str(file_path),
@@ -249,19 +267,27 @@ def upload_to_s3(
         s3_region,
         "--only-show-errors",
     ]
+    if endpoint_url:
+        cmd.extend(["--endpoint-url", endpoint_url])
+    if profile:
+        cmd.extend(["--profile", profile])
 
-    logger.info("Shipping %s to S3: %s...", file_path.name, dest_uri)
+    logger.info("Shipping %s to S3/R2: %s...", file_path.name, dest_uri)
     res = subprocess.run(cmd, capture_output=True, text=True)
     if res.returncode != 0:
-        raise RuntimeError(f"AWS S3 upload failed (code {res.returncode}): {res.stderr.strip()}")
+        raise RuntimeError(f"Remote storage upload failed (code {res.returncode}): {res.stderr.strip()}")
 
-    # Verify presence on S3
-    verify_cmd = ["aws", "s3", "ls", dest_uri, "--region", s3_region]
+    # Verify presence on S3/R2
+    verify_cmd = [aws_bin, "s3", "ls", dest_uri, "--region", s3_region]
+    if endpoint_url:
+        verify_cmd.extend(["--endpoint-url", endpoint_url])
+    if profile:
+        verify_cmd.extend(["--profile", profile])
     v_res = subprocess.run(verify_cmd, capture_output=True, text=True)
     if v_res.returncode != 0 or not v_res.stdout.strip():
-        raise RuntimeError(f"Failed to verify S3 upload at {dest_uri}")
+        raise RuntimeError(f"Failed to verify remote storage upload at {dest_uri}")
 
-    logger.info("S3 shipment verified: %s", dest_uri)
+    logger.info("Remote storage shipment verified: %s", dest_uri)
     return dest_uri
 
 
@@ -288,12 +314,15 @@ def prune_remote_backups(
     s3_prefix: str,
     s3_region: str,
     retention_days: int,
+    endpoint_url: Optional[str] = None,
+    profile: Optional[str] = None,
 ) -> List[str]:
-    """Prune S3 backup objects older than retention_days."""
+    """Prune remote S3 / Cloudflare R2 backup objects older than retention_days."""
+    aws_bin = get_aws_cli_bin()
     cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=retention_days)
     prefix = s3_prefix.strip("/") + "/"
     list_cmd = [
-        "aws",
+        aws_bin,
         "s3api",
         "list-objects-v2",
         "--bucket",
@@ -305,9 +334,14 @@ def prune_remote_backups(
         "--output",
         "json",
     ]
+    if endpoint_url:
+        list_cmd.extend(["--endpoint-url", endpoint_url])
+    if profile:
+        list_cmd.extend(["--profile", profile])
+
     res = subprocess.run(list_cmd, capture_output=True, text=True)
     if res.returncode != 0:
-        logger.warning("Failed to list S3 objects for pruning: %s", res.stderr.strip())
+        logger.warning("Failed to list remote objects for pruning: %s", res.stderr.strip())
         return []
 
     try:
@@ -330,18 +364,22 @@ def prune_remote_backups(
             mtime = datetime.datetime.fromisoformat(last_modified_str.replace("Z", "+00:00"))
             if mtime < cutoff:
                 del_cmd = [
-                    "aws",
+                    aws_bin,
                     "s3",
                     "rm",
                     f"s3://{s3_bucket}/{key}",
                     "--region",
                     s3_region,
                 ]
+                if endpoint_url:
+                    del_cmd.extend(["--endpoint-url", endpoint_url])
+                if profile:
+                    del_cmd.extend(["--profile", profile])
                 subprocess.run(del_cmd, capture_output=True)
                 pruned.append(key)
-                logger.info("Pruned remote S3 backup: %s", key)
+                logger.info("Pruned remote backup: %s", key)
         except Exception as e:
-            logger.warning("Error evaluating S3 object %s: %s", key, e)
+            logger.warning("Error evaluating remote object %s: %s", key, e)
 
     return pruned
 
@@ -394,19 +432,44 @@ def execute_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     sha_path.write_text(f"{sha256_val}  {enc_path.name}\n", encoding="utf-8")
     logger.info("Checksum written: %s (%s)", sha_path.name, sha256_val)
 
-    # Step 4: Ship to S3
-    s3_bucket = args.s3_bucket or env.get("MOD_BACKUP_S3_BUCKET", "mod-backup-015590450538")
-    s3_region = args.s3_region or env.get("MOD_BACKUP_S3_REGION", "us-west-2")
+    # Step 4: Ship to S3 / Cloudflare R2
+    s3_bucket = args.s3_bucket or env.get("MOD_BACKUP_S3_BUCKET", "mod-backup")
+    s3_region = args.s3_region or env.get("MOD_BACKUP_S3_REGION", "auto")
     s3_prefix = args.s3_prefix or env.get("MOD_BACKUP_S3_PREFIX", "backups")
+    s3_endpoint = (
+        args.s3_endpoint
+        or env.get("MOD_BACKUP_S3_ENDPOINT")
+        or env.get("R2_ENDPOINT")
+        or env.get("AWS_ENDPOINT_URL")
+    )
+    s3_profile = (
+        args.s3_profile
+        or env.get("MOD_BACKUP_S3_PROFILE")
+        or env.get("AWS_PROFILE")
+    )
 
     s3_enc_uri = None
     s3_sha_uri = None
     if not args.local_only and s3_bucket:
         try:
-            s3_enc_uri = upload_to_s3(enc_path, s3_bucket, s3_prefix, s3_region)
-            s3_sha_uri = upload_to_s3(sha_path, s3_bucket, s3_prefix, s3_region)
+            s3_enc_uri = upload_to_s3(
+                enc_path,
+                s3_bucket,
+                s3_prefix,
+                s3_region=s3_region,
+                endpoint_url=s3_endpoint,
+                profile=s3_profile,
+            )
+            s3_sha_uri = upload_to_s3(
+                sha_path,
+                s3_bucket,
+                s3_prefix,
+                s3_region=s3_region,
+                endpoint_url=s3_endpoint,
+                profile=s3_profile,
+            )
         except Exception as e:
-            logger.error("Failed to upload backup to S3: %s", e)
+            logger.error("Failed to upload backup to remote storage: %s", e)
             if args.strict_remote:
                 raise
 
@@ -417,7 +480,14 @@ def execute_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     pruned_remote = []
     if not args.local_only and s3_bucket:
         remote_retention = args.retention_remote or int(env.get("MOD_BACKUP_REMOTE_RETENTION_DAYS", 30))
-        pruned_remote = prune_remote_backups(s3_bucket, s3_prefix, s3_region, remote_retention)
+        pruned_remote = prune_remote_backups(
+            s3_bucket,
+            s3_prefix,
+            s3_region=s3_region,
+            retention_days=remote_retention,
+            endpoint_url=s3_endpoint,
+            profile=s3_profile,
+        )
 
     summary = {
         "status": "success",
@@ -450,13 +520,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--schemas", nargs="+", help="Schemas to dump (default: mod ML_SCHEMA_admin)")
     parser.add_argument("--output-dir", help="Local backup output directory")
     parser.add_argument("--encryption-key", help="AES encryption key")
-    parser.add_argument("--s3-bucket", help="AWS S3 destination bucket")
-    parser.add_argument("--s3-region", help="AWS S3 region")
-    parser.add_argument("--s3-prefix", help="AWS S3 prefix")
-    parser.add_argument("--local-only", action="store_true", help="Skip remote S3 upload")
-    parser.add_argument("--strict-remote", action="store_true", help="Fail if remote S3 upload fails")
+    parser.add_argument("--s3-bucket", help="AWS S3 / Cloudflare R2 destination bucket (default: mod-backup)")
+    parser.add_argument("--s3-region", help="S3 / R2 region (default: auto)")
+    parser.add_argument("--s3-prefix", help="S3 / R2 prefix (default: backups)")
+    parser.add_argument("--s3-endpoint", help="S3-compatible endpoint URL (e.g. Cloudflare R2 endpoint)")
+    parser.add_argument("--s3-profile", help="AWS CLI profile name (e.g. r2)")
+    parser.add_argument("--local-only", action="store_true", help="Skip remote S3/R2 upload")
+    parser.add_argument("--strict-remote", action="store_true", help="Fail if remote S3/R2 upload fails")
     parser.add_argument("--retention-local", type=int, help="Days to retain local backups (default: 7)")
-    parser.add_argument("--retention-remote", type=int, help="Days to retain remote S3 backups (default: 30)")
+    parser.add_argument("--retention-remote", type=int, help="Days to retain remote S3/R2 backups (default: 30)")
     parser.add_argument("--min-free-mb", type=int, default=2048, help="Minimum free disk space in MB")
     return parser
 
