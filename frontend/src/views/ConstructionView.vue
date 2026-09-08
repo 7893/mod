@@ -74,8 +74,8 @@ function handleReadinessClick(params: { name?: string }) {
   const filters: Record<string, string> = {
     已导入: '已上线',
     已校验: '已上线',
-    收集中: '建设中',
-    未收集: '准备中',
+    收集中: '准备中',
+    未收集: '未启动',
   }
   if (params.name && filters[params.name]) openLedgerWithFilter(filters[params.name])
 }

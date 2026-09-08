@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import snapshotData from '../data/v2-sim-snapshot.json'
 
-export type RolloutStatus = '准备中' | '建设中' | '双轨运行' | '已上线'
+export type RolloutStatus = '未启动' | '准备中' | '建设中' | '双轨运行' | '已上线'
 
 export interface EntityRow {
   id: number
