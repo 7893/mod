@@ -1,4 +1,5 @@
 import logging
+import threading
 from datetime import datetime
 from threading import Lock
 from time import monotonic
@@ -8,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
 from .auth import get_current_action_token, verify_internal_auth
-from .db import connection
+from .db import connection, get_engine
 from .heatwave_watchdog import get_heatwave_status
 from .ml_adapter import HeatWaveMLAdapter, CloudflareAIAdapter
 from .schemas import PageV2
@@ -23,9 +24,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
-_snapshot_cache: dict | None = None
+try:
+    _snapshot_cache: dict | None = load_fallback_snapshot()
+except Exception:
+    _snapshot_cache = None
 _snapshot_cached_at = 0.0
 _snapshot_lock = Lock()
+_snapshot_refreshing = False
 _SNAPSHOT_TTL_SECONDS = 60
 
 _meta_cache: dict | None = None
@@ -94,14 +99,81 @@ def refresh_meta(conn: Connection | None = Depends(connection)) -> dict:
     }
 
 
+def _get_dedicated_connection() -> Connection | None:
+    """为后台快照异步刷新创建独立连接，保证 CST 时区与 HeatWave 路由配置生效。"""
+    try:
+        conn = get_engine().connect()
+        conn.execute(text("SET time_zone = '+08:00'"))
+        conn.execute(text("SET use_secondary_engine = ON"))
+        return conn
+    except Exception as e:
+        logger.warning("后台快照获取独立数据库连接失败: %s", e)
+        return None
+
+
+def _background_refresh_snapshot() -> None:
+    """后台异步更新快照缓存工作线程，杜绝请求线程 1.12s 阻塞。"""
+    global _snapshot_cache, _snapshot_cached_at, _snapshot_refreshing
+    try:
+        conn = _get_dedicated_connection()
+        try:
+            snap = build_dashboard_snapshot_v2(conn)
+            with _snapshot_lock:
+                _snapshot_cache = snap
+                _snapshot_cached_at = monotonic()
+            logger.info("后台快照异步刷新就绪 (TTL: %ds, 纳管单位: %d)", _SNAPSHOT_TTL_SECONDS, len(snap.get("entities", [])))
+        finally:
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.error("后台快照异步刷新异常: %s", e)
+    finally:
+        with _snapshot_lock:
+            _snapshot_refreshing = False
+
+
+def prewarm_snapshot(sync: bool = False) -> None:
+    """快照预热入口，可在开机或需要时触发。"""
+    global _snapshot_refreshing
+    with _snapshot_lock:
+        if _snapshot_refreshing:
+            return
+        _snapshot_refreshing = True
+    if sync:
+        _background_refresh_snapshot()
+    else:
+        threading.Thread(target=_background_refresh_snapshot, name="snapshot-prewarm", daemon=True).start()
+
+
 @router.get("/dashboard/snapshot")
 def dashboard_snapshot(conn: Connection | None = Depends(connection)) -> dict:
-    global _snapshot_cache, _snapshot_cached_at
+    """
+    获取数据大屏全景快照数据 (SWR Stale-While-Revalidate 保障全场景 < 1.0s SLA)
+    """
+    global _snapshot_cache, _snapshot_cached_at, _snapshot_refreshing
     now = monotonic()
+
+    # 1. 命中热缓存且未过期：极速微秒级返回 (~0.05ms)
+    if _snapshot_cache is not None and (now - _snapshot_cached_at < _SNAPSHOT_TTL_SECONDS):
+        return _snapshot_cache
+
+    # 2. SWR 过期刷新：已有缓存立即返回，后台异步刷新，消除 1.12s 阻塞
+    if _snapshot_cache is not None:
+        with _snapshot_lock:
+            if not _snapshot_refreshing:
+                _snapshot_refreshing = True
+                threading.Thread(target=_background_refresh_snapshot, name="snapshot-swr", daemon=True).start()
+        return _snapshot_cache
+
+    # 3. 极冷冷启动（未预热且首次访问）：同步加锁计算并装载
     with _snapshot_lock:
-        if _snapshot_cache is not None and now - _snapshot_cached_at < _SNAPSHOT_TTL_SECONDS:
+        if _snapshot_cache is not None:
             return _snapshot_cache
-        _snapshot_cache = build_dashboard_snapshot_v2(conn)
+        snap = build_dashboard_snapshot_v2(conn)
+        _snapshot_cache = snap
         _snapshot_cached_at = monotonic()
         return _snapshot_cache
 

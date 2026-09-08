@@ -54,6 +54,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("HeatWave 状态开机自检跳过或异常: %s", e)
 
+    # KI-059: 全场景秒级响应 SLA 保证 —— 开机快照后台异步预热
+    try:
+        from .api import prewarm_snapshot
+        prewarm_snapshot(sync=False)
+        logger.info("开机快照异步预热已触发")
+    except Exception as e:
+        logger.warning("开机快照预热触发异常: %s", e)
+
     yield
 
     await live_projection.stop()

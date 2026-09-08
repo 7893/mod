@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ArrowLeft, Building, CheckCircle2, Database, Filter, History, Search, X } from 'lucide-vue-next'
+import { ArrowLeft, Building, CheckCircle2, Database, Filter, History, RotateCcw, Search, X } from 'lucide-vue-next'
 import CockpitPanel from './CockpitPanel.vue'
 import MetricGrid from './blocks/MetricGrid.vue'
 import type { MetricItem } from './blocks/types.ts'
@@ -48,27 +48,76 @@ const NATIONAL_PROVINCE_ORDER = [
 ]
 
 const provinces = computed(() => {
-  const existing = new Set(store.entities.map((row) => row.province))
-  const ordered = NATIONAL_PROVINCE_ORDER.filter((p) => existing.has(p))
-  const remaining = [...existing].filter((p) => !NATIONAL_PROVINCE_ORDER.includes(p))
-  return ['全部', ...ordered, ...remaining]
+  const counts = new Map<string, number>()
+  store.entities.forEach((row) => {
+    counts.set(row.province, (counts.get(row.province) || 0) + 1)
+  })
+  const ordered = NATIONAL_PROVINCE_ORDER.filter((p) => counts.has(p)).map((p) => ({
+    value: p,
+    label: `${p} (${counts.get(p)}家)`,
+  }))
+  const remaining = [...counts.keys()]
+    .filter((p) => !NATIONAL_PROVINCE_ORDER.includes(p))
+    .map((p) => ({
+      value: p,
+      label: `${p} (${counts.get(p)}家)`,
+    }))
+  return [
+    { value: '全部', label: `全部省份 (${store.entities.length}家)` },
+    ...ordered,
+    ...remaining,
+  ]
 })
 
 const BATCH_ORDER = ['第一批', '第二批', '第三批', '第四批', '第五批', '第六批', '第七批', '第八批']
 const batches = computed(() => {
-  const existing = new Set(store.entities.map((row) => row.batch))
-  const ordered = BATCH_ORDER.filter((b) => existing.has(b))
-  return ['全部', ...ordered]
+  const counts = new Map<string, number>()
+  store.entities.forEach((row) => {
+    counts.set(row.batch, (counts.get(row.batch) || 0) + 1)
+  })
+  const ordered = BATCH_ORDER.filter((b) => counts.has(b)).map((b) => ({
+    value: b,
+    label: `${b} (${counts.get(b)}家)`,
+  }))
+  return [
+    { value: '全部', label: `全部批次 (${store.entities.length}家)` },
+    ...ordered,
+  ]
 })
 
 const statuses = ['全部', '准备中', '建设中', '双轨运行', '已上线']
 
-const paginated = computed(() => {
-  const start = (page.value - 1) * pageSize.value
-  return filtered.value.slice(start, start + pageSize.value)
+const totalPages = computed(() => Math.ceil(filtered.value.length / pageSize.value) || 1)
+
+// 关键修复：筛选条件变动时强制归位第 1 页，彻底根除“分页死锁”
+watch([province, selectedBatch, selectedStatus, query], () => {
+  page.value = 1
 })
 
-const totalPages = computed(() => Math.ceil(filtered.value.length / pageSize.value) || 1)
+// 边界保护：总页数变化时安全钳位
+watch(totalPages, (newTotal) => {
+  if (page.value > newTotal) {
+    page.value = Math.max(1, newTotal)
+  }
+})
+
+const isFiltered = computed(() => (
+  province.value !== '全部' || selectedBatch.value !== '全部' || selectedStatus.value !== '全部' || !!query.value
+))
+
+function resetFilters() {
+  province.value = '全部'
+  selectedBatch.value = '全部'
+  selectedStatus.value = '全部'
+  query.value = ''
+  page.value = 1
+}
+
+const paginated = computed(() => {
+  const safePage = Math.min(Math.max(1, page.value), totalPages.value)
+  const start = (safePage - 1) * pageSize.value
+  return filtered.value.slice(start, start + pageSize.value)
+})
 
 const summaryItems = computed<MetricItem[]>(() => [
   {
@@ -148,7 +197,7 @@ function save() {
     <CockpitPanel
       title="单位建设与期初数据台账"
       zone="B-T1"
-      subtitle="全量纳管单位建设完成度、期初数据与推进状态维护"
+      :subtitle="isFiltered ? `筛选出 ${filtered.length} 家 / 共 ${store.entities.length} 家纳管单位` : `全量纳管单位建设完成度、期初数据与推进状态维护（共 ${store.entities.length} 家）`"
       class="flex-1 min-h-0"
     >
       <template #actions>
@@ -171,14 +220,24 @@ function save() {
             v-model="selectedBatch"
             class="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-200 focus:outline-none focus:border-sky-500/40"
           >
-            <option v-for="b in batches" :key="b" :value="b">{{ b === '全部' ? '全部批次' : b }}</option>
+            <option v-for="b in batches" :key="b.value" :value="b.value">{{ b.label }}</option>
           </select>
           <select
             v-model="province"
             class="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-200 focus:outline-none focus:border-sky-500/40"
           >
-            <option v-for="p in provinces" :key="p" :value="p">{{ p === '全部' ? '全部省份' : p }}</option>
+            <option v-for="p in provinces" :key="p.value" :value="p.value">{{ p.label }}</option>
           </select>
+          <button
+            v-if="isFiltered"
+            type="button"
+            class="flex items-center gap-1 px-2.5 py-1 text-cockpit-xs rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            title="重置所有筛选条件"
+            @click="resetFilters"
+          >
+            <RotateCcw :size="12" />
+            <span>重置</span>
+          </button>
         </div>
       </template>
 
@@ -251,7 +310,19 @@ function save() {
                 </td>
               </tr>
               <tr v-if="!paginated.length">
-                <td colspan="10" class="px-3 py-8 text-center text-slate-500">无匹配单位记录</td>
+                <td colspan="10" class="px-3 py-10 text-center text-slate-500">
+                  <div class="flex flex-col items-center justify-center gap-2">
+                    <p>无匹配单位记录（当前筛选条件下未检索到数据）</p>
+                    <button
+                      v-if="isFiltered"
+                      type="button"
+                      class="px-3 py-1 text-cockpit-xs rounded bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30 transition-colors cursor-pointer"
+                      @click="resetFilters"
+                    >
+                      清除筛选条件并返回全部
+                    </button>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
