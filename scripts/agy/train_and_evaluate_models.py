@@ -48,6 +48,14 @@ BACKEND_DIR = BASE_DIR / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
 from app.db import get_engine  # noqa: E402
+from app.integrations.heatwave_sql import (  # noqa: E402
+    FEAT_TABLE_CLASSIFIER,
+    FEAT_TABLE_REGRESSION,
+    _DDL_FEAT_CLASSIFIER,
+    _DDL_FEAT_REGRESSION,
+    _INSERT_FEAT_CLASSIFIER,
+    _INSERT_FEAT_REGRESSION,
+)
 from sqlalchemy import text  # noqa: E402
 
 HK_TZ = ZoneInfo("Asia/Hong_Kong")
@@ -119,6 +127,35 @@ def ensure_metadata_tables(conn: Any) -> None:
         )
     )
     conn.commit()
+
+
+def rebuild_feature_tables(conn: Any) -> dict[str, int]:
+    """从当前业务表重建特征表，动态纳入全部单位（含新增单位）。
+
+    这是让"数据增长自动进模型"的关键步骤：每次重训先按当前 org_unit 及业务表
+    重算全部单位的特征（DELETE 后重新 INSERT），使模型始终覆盖最新单位规模，
+    而非训练一批冻结的历史特征。覆盖写入，特征 SQL 见 heatwave_sql.py。
+    """
+    logger.info("Rebuilding feature tables from current business data (dynamic unit coverage)...")
+    # 回归特征表
+    conn.execute(text(_DDL_FEAT_REGRESSION))
+    conn.execute(text(f"DELETE FROM `{FEAT_TABLE_REGRESSION}`"))
+    conn.execute(text(_INSERT_FEAT_REGRESSION))
+    reg_rows = conn.execute(text(f"SELECT COUNT(*) FROM `{FEAT_TABLE_REGRESSION}`")).scalar()
+    # 分类特征表
+    conn.execute(text(_DDL_FEAT_CLASSIFIER))
+    conn.execute(text(f"DELETE FROM `{FEAT_TABLE_CLASSIFIER}`"))
+    conn.execute(text(_INSERT_FEAT_CLASSIFIER))
+    cls_rows = conn.execute(text(f"SELECT COUNT(*) FROM `{FEAT_TABLE_CLASSIFIER}`")).scalar()
+    try:
+        conn.commit()
+    except Exception:
+        pass
+    logger.info(
+        "Feature tables rebuilt: %s (%d rows), %s (%d rows) — now covering all current units",
+        FEAT_TABLE_REGRESSION, reg_rows, FEAT_TABLE_CLASSIFIER, cls_rows,
+    )
+    return {"regression_rows": reg_rows, "classifier_rows": cls_rows}
 
 
 def check_feature_integrity(conn: Any) -> dict[str, Any]:
@@ -820,6 +857,7 @@ def run_full_pipeline(run_type: str = "manual") -> dict[str, Any]:
 
     with engine.connect() as conn:
         ensure_metadata_tables(conn)
+        rebuild_feature_tables(conn)
         check_feature_integrity(conn)
         split_info = split_datasets(conn)
         train_heatwave_models(conn)
