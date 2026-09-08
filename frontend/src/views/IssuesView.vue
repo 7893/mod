@@ -39,8 +39,8 @@ const format = (value: number | undefined) => (
 )
 
 /**
- * 矛与盾咬合：从 2000 家实体中识别困难户，派生单位级合规监督标签
- * 整体合规率约 92%~96%，有风险问题的单位与掉队、双轨不一致、卡审批高度重合
+ * 矛与盾咬合：从全量实体中识别困难户，派生单位级合规监督标签。
+ * 仅依据真实运行指标（凭证率、建设进度、期初数据、状态、批次）判定，不使用 id 机械规则造标签。
  */
 const complianceUnits = computed<ComplianceIssueUnit[]>(() => {
   const result: ComplianceIssueUnit[] = []
@@ -48,7 +48,7 @@ const complianceUnits = computed<ComplianceIssueUnit[]>(() => {
     const isDualInconsistent = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < 95)
     const isConstructionLag = row.construction < 88 && (row.status === '建设中' || row.status === '双轨运行')
     const isOpeningDataLag = row.openingData < 88 && (row.status === '建设中' || row.status === '双轨运行')
-    const isStuckPrep = row.status === '准备中' && (row.batchId ? row.batchId <= 6 : row.id <= 1000)
+    const isStuckPrep = row.status === '准备中' && (row.batchId != null && row.batchId <= 7)
 
     if (isDualInconsistent || isConstructionLag || isOpeningDataLag || isStuckPrep) {
       const tags: string[] = []
@@ -65,14 +65,6 @@ const complianceUnits = computed<ComplianceIssueUnit[]>(() => {
       if (isDualInconsistent) {
         tags.push('票据异常')
         detailNote += `双轨比对入账凭证率仅 ${formatPercent(row.voucherRate)}，存在借贷试算不平迹象。`
-      }
-      if (row.id % 7 === 0) {
-        tags.push('审批越级')
-        detailNote += '流程存在未按组织权限矩阵跳级审批的管控穿透风险。'
-      }
-      if (row.id % 11 === 0) {
-        tags.push('非工作时间大额操作')
-        detailNote += '非工作时段发生批量业务凭证密集入账，系统触发预警。'
       }
 
       if (!tags.length) tags.push('建设进度滞后')
@@ -108,14 +100,12 @@ const highRiskCount = computed(() => complianceUnits.value.filter((u) => u.level
 const mediumRiskCount = computed(() => complianceUnits.value.filter((u) => u.level === '中').length)
 
 const tagDimensionCounts = computed(() => {
-  const counts: Record<string, number> = { 超期挂账: 0, 审批越级: 0, 超预算迹象: 0, 票据异常: 0, 非工作时间大额操作: 0 }
+  const counts: Record<string, number> = { 超期挂账: 0, 超预算迹象: 0, 票据异常: 0 }
   complianceUnits.value.forEach((u) => { u.tags.forEach((t) => { if (counts[t] !== undefined) counts[t]++ }) })
   return [
     { label: '超期挂账', count: counts['超期挂账'], color: chartSeriesColors[3] },
-    { label: '审批越级', count: counts['审批越级'], color: chartSeriesColors[1] },
     { label: '超预算迹象', count: counts['超预算迹象'], color: chartSeriesColors[4] },
     { label: '票据异常', count: counts['票据异常'], color: chartSeriesColors[2] },
-    { label: '非工作时间大额操作', count: counts['非工作时间大额操作'], color: chartSeriesColors[0] },
   ]
 })
 
@@ -215,7 +205,7 @@ const paginatedTableUnits = computed(() => {
 
     <!-- 中部：E2 风险维度分布 + E3 水位构成 (弹性优先，Guardrail 扩大为 min-h-[200px] max-h-[300px]，E-2) -->
     <div class="grid grid-cols-issues-top gap-2.5 min-h-[200px] max-h-[300px] flex-1">
-      <CockpitPanel title="单位级合规风险标签分布" zone="E2" subtitle="挂账/越级/预算/票据/非工作操作 5 大维度">
+      <CockpitPanel title="单位级合规风险标签分布" zone="E2" subtitle="挂账 / 预算 / 票据 三类真实指标维度">
         <VChart class="w-full h-full min-h-0" :option="tagBarOption" autoresize />
       </CockpitPanel>
 
@@ -254,10 +244,8 @@ const paginatedTableUnits = computed(() => {
           >
             <option>全部标签</option>
             <option>超期挂账</option>
-            <option>审批越级</option>
             <option>超预算迹象</option>
             <option>票据异常</option>
-            <option>非工作时间大额操作</option>
           </select>
         </div>
       </template>
