@@ -327,6 +327,8 @@ def test_v2_snapshot_internal_consistency_contract():
 
 def test_v2_region_query_derives_document_additions():
     assert "submit_time < :anchor_date" in LATEST_COMPLETED_DOCUMENT_DATE_SQL
+    assert "DATE(MAX(submit_time))" in LATEST_COMPLETED_DOCUMENT_DATE_SQL
+    assert "MAX(DATE(" not in LATEST_COMPLETED_DOCUMENT_DATE_SQL
     assert "0 AS todayAdded" not in REGION_SUMMARY_SQL
     assert "COUNT(*) AS docs_today_added" in REGION_SUMMARY_SQL
     assert "submit_time >= :docs_as_of_date" in REGION_SUMMARY_SQL
@@ -547,6 +549,160 @@ def test_dashboard_snapshot_swr_and_prewarm(monkeypatch):
     assert res.status_code == 200
     assert duration < 0.1, f"Expected instant SWR response < 100ms, took {duration:.3f}s"
     assert res.json()["overview"]["orgTotal"] > 0
+
+
+def test_ki061_fallback_snapshot_contracts():
+    """KI-061: 验证 fallback 快照包含全部必需字段，杜绝 C3/D3/D6 空白面板。"""
+    from app.services.dashboard import load_fallback_snapshot
+    snap = load_fallback_snapshot()
+
+    # C3: rolloutTrend
+    assert "rolloutTrend" in snap, "fallback 快照必须包含 rolloutTrend，防止 C3 暂无批次历史快照空态"
+    assert isinstance(snap["rolloutTrend"], list)
+    assert len(snap["rolloutTrend"]) > 0
+    first_rt = snap["rolloutTrend"][0]
+    for field in ("date", "fullDate", "batchId", "name", "total", "launchedPct", "dualPct"):
+        assert field in first_rt, f"rolloutTrend 元素必须包含 {field}"
+    assert isinstance(first_rt["batchId"], int)
+    assert isinstance(first_rt["launchedPct"], (int, float))
+
+    # D3: operationsTrend
+    assert "operationsTrend" in snap, "fallback 快照必须包含 operationsTrend，防止 D3 暂无连续日吞吐数据空态"
+    assert isinstance(snap["operationsTrend"], list)
+    assert len(snap["operationsTrend"]) > 0
+    first_ot = snap["operationsTrend"][0]
+    for field in ("date", "fullDate", "documents", "vouchers", "integrations"):
+        assert field in first_ot, f"operationsTrend 元素必须包含 {field}"
+
+    # D6: operations dualRun fields
+    ops = snap.get("operations", {})
+    for field in ("dualRunResult", "dualRunConsistent", "dualRunInconsistent", "dualRunConsistencyPct", "integrationSuccess", "integrationFailed"):
+        assert field in ops, f"operations 必须包含 {field}，防止 D6 当前快照未提供双轨明细空态"
+    assert ops["dualRunConsistent"] > 0
+    assert ops["dualRunConsistent"] + ops["dualRunInconsistent"] == ops["dualRunResult"]
+    assert 0 <= ops["dualRunConsistencyPct"] <= 100
+
+
+def test_ki061_refresh_meta_and_health_probe_source_distinction(monkeypatch):
+    """KI-061: 健康探针与 refresh-meta 必须真实反映快照来源，连接健康但处于 fallback 时不得谎报 live。"""
+    import time
+    from unittest.mock import MagicMock
+    import app.api as api_mod
+    from app.db import connection
+
+    # 1. 模拟 DB 连通，但快照处于 fallback 状态
+    mock_conn = MagicMock()
+    mock_row = MagicMock()
+    mock_row.mappings.return_value.one.return_value = {
+        "db": "mod",
+        "tz": "+08:00",
+        "now_cst": "2026-09-08 00:44:00",
+    }
+    mock_conn.execute.return_value = mock_row
+
+    def mock_healthy_connection():
+        yield mock_conn
+
+    app.dependency_overrides[connection] = mock_healthy_connection
+    try:
+        # 重置快照为 fallback 状态
+        api_mod._snapshot_source = "fallback"
+        api_mod._snapshot_cached_at = 0.0
+        api_mod._snapshot_last_error = None
+
+        res_meta = client.get("/api/dashboard/refresh-meta")
+        assert res_meta.status_code == 200
+        meta_data = res_meta.json()
+        assert meta_data["data_version"] == "frozen", "快照为 fallback 时，即便 DB 连通也不得谎报 live"
+        assert meta_data["status"] == "fallback"
+
+        res_health = client.get("/api/health")
+        assert res_health.status_code == 200
+        health_data = res_health.json()
+        assert "snapshot" in health_data
+        snap_h = health_data["snapshot"]
+        assert snap_h["source"] == "fallback"
+        assert snap_h["status"] == "fallback"
+
+        # 2. 模拟快照升级为 live 状态
+        api_mod._snapshot_source = "live"
+        api_mod._snapshot_cached_at = time.monotonic()
+
+        res_meta_live = client.get("/api/dashboard/refresh-meta")
+        meta_data_live = res_meta_live.json()
+        assert meta_data_live["data_version"] == "live"
+        assert meta_data_live["status"] == "ok"
+
+        res_health_live = client.get("/api/health")
+        snap_h_live = res_health_live.json()["snapshot"]
+        assert snap_h_live["source"] == "live"
+        assert snap_h_live["status"] == "ok"
+        assert snap_h_live["is_stale"] is False
+
+        # 3. 模拟快照过期 (stale)
+        api_mod._snapshot_cached_at = time.monotonic() - 1000.0
+        res_meta_stale = client.get("/api/dashboard/refresh-meta")
+        assert res_meta_stale.json()["status"] == "stale"
+        snap_h_stale = client.get("/api/health").json()["snapshot"]
+        assert snap_h_stale["status"] == "stale"
+        assert snap_h_stale["is_stale"] is True
+
+    finally:
+        app.dependency_overrides.pop(connection, None)
+        api_mod._snapshot_source = "fallback"
+        api_mod._snapshot_cached_at = 0.0
+
+
+def test_ki061_swr_timeout_and_error_recovery(monkeypatch):
+    """KI-061: 验证快照异步构建异常或超时时状态机能有界恢复，不堆积死锁。"""
+    import time
+    from unittest.mock import MagicMock
+    import app.api as api_mod
+
+    api_mod._snapshot_consecutive_failures = 0
+    api_mod._snapshot_last_error = None
+
+    # 1. 模拟后台构建抛出超时异常 (3024)
+    def mock_hang_query():
+        raise Exception("(pymysql.err.OperationalError) (3024, 'Query execution was interrupted, maximum statement execution time exceeded')")
+
+    monkeypatch.setattr(api_mod, "_get_dedicated_connection", mock_hang_query)
+
+    api_mod._snapshot_refreshing = True
+    api_mod._snapshot_refresh_started_at = time.monotonic()
+    api_mod._background_refresh_snapshot()
+
+    # 验证状态已恢复
+    assert api_mod._snapshot_refreshing is False, "构建异常后 _snapshot_refreshing 必须被可靠重置为 False"
+    assert api_mod._snapshot_consecutive_failures == 1
+    assert api_mod._snapshot_last_error is not None
+    assert "QueryTimeout" in api_mod._snapshot_last_error
+    assert "SELECT" not in api_mod._snapshot_last_error
+
+    # 2. 验证退避保护：短时间内 prewarm 不会重复触发
+    api_mod.prewarm_snapshot(sync=True)
+    assert api_mod._snapshot_consecutive_failures == 1
+
+    # 3. 验证超时死锁发现：如果由于外部未知原因 _snapshot_refreshing 停留超过 20s
+    api_mod._snapshot_refreshing = True
+    api_mod._snapshot_refresh_started_at = time.monotonic() - 30.0
+    api_mod._snapshot_consecutive_failures = 0
+
+    triggered = False
+
+    def mock_dummy_thread(*args, **kwargs):
+        nonlocal triggered
+        triggered = True
+        return MagicMock()
+
+    monkeypatch.setattr("threading.Thread", mock_dummy_thread)
+    api_mod.dashboard_snapshot(None)
+    assert triggered is True, "超过超时时间后，SWR 必须强行重置并允许拉起新的刷新"
+
+    api_mod._snapshot_refreshing = False
+    api_mod._snapshot_consecutive_failures = 0
+    api_mod._snapshot_last_error = None
+
 
 
 

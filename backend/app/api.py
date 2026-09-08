@@ -26,17 +26,56 @@ router = APIRouter(prefix="/api")
 
 try:
     _snapshot_cache: dict | None = load_fallback_snapshot()
+    _snapshot_source: str = "fallback"
 except Exception:
     _snapshot_cache = None
+    _snapshot_source = "none"
+
 _snapshot_cached_at = 0.0
 _snapshot_lock = Lock()
 _snapshot_refreshing = False
+_snapshot_refresh_started_at = 0.0
+_snapshot_last_refreshed_at: str | None = None
+_snapshot_last_refresh_duration_ms: float | None = None
+_snapshot_last_error: str | None = None
+_snapshot_last_failed_at = 0.0
+_snapshot_consecutive_failures = 0
 _SNAPSHOT_TTL_SECONDS = 60
+_REFRESH_TIMEOUT_SECONDS = 20.0
+_REFRESH_BACKOFF_SECONDS = 15.0
 
 _meta_cache: dict | None = None
 _meta_cached_at = 0.0
 _meta_lock = Lock()
 _META_TTL_SECONDS = 60
+
+
+def _get_snapshot_health_info() -> dict:
+    now = monotonic()
+    is_stale = (_snapshot_source == "live") and (now - _snapshot_cached_at > _SNAPSHOT_TTL_SECONDS * 3)
+    if _snapshot_source == "live":
+        status_val = "stale" if is_stale else "ok"
+    elif _snapshot_source == "fallback":
+        status_val = "fallback"
+    else:
+        status_val = "none"
+
+    refresh_status = "idle"
+    if _snapshot_refreshing:
+        refresh_status = "refreshing"
+    elif _snapshot_last_error is not None:
+        refresh_status = "error"
+
+    return {
+        "source": _snapshot_source,
+        "status": status_val,
+        "refresh_status": refresh_status,
+        "last_refreshed_at": _snapshot_last_refreshed_at,
+        "last_refresh_duration_ms": _snapshot_last_refresh_duration_ms,
+        "last_error": _snapshot_last_error,
+        "is_stale": is_stale,
+        "consecutive_failures": _snapshot_consecutive_failures,
+    }
 
 
 @router.get(
@@ -47,11 +86,13 @@ _META_TTL_SECONDS = 60
     },
 )
 def health(response: Response, conn: Connection | None = Depends(connection)) -> dict:
+    snap_info = _get_snapshot_health_info()
     if conn is None:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {
             "status": "degraded",
             "notice": "Database not reachable; operating in verified fallback snapshot mode",
+            "snapshot": snap_info,
         }
     try:
         row = conn.execute(text("SELECT DATABASE() db, @@session.time_zone tz, NOW() now_cst")).mappings().one()
@@ -62,49 +103,50 @@ def health(response: Response, conn: Connection | None = Depends(connection)) ->
             "session_timezone": row["tz"],
             "now_cst": str(row["now_cst"]),
             "heatwave": hw,
+            "snapshot": snap_info,
         }
     except Exception as e:
         logger.error("Health probe query failed: %s", e)
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return {"status": "degraded", "error": "Database health check failed"}
-
-
+        return {
+            "status": "degraded",
+            "error": "Database health check failed",
+            "snapshot": snap_info,
+        }
 
 
 @router.get("/dashboard/refresh-meta")
 def refresh_meta(conn: Connection | None = Depends(connection)) -> dict:
     snap = dashboard_snapshot(conn)
     meta = snap.get("meta", {})
-    
-    # In fallback mode, conn will be None or dashboard_snapshot handles fallback internally.
-    # To determine status correctly, we can rely on conn.
-    status = "ok" if conn is not None else "fallback"
-    data_version = "live" if conn is not None else "frozen"
 
-    if conn is not None:
-        try:
-            # Just a quick check to see if DB is really alive
-            conn.execute(text("SELECT 1")).scalar()
-        except Exception:
-            status = "fallback"
-            data_version = "frozen"
+    now = monotonic()
+    is_stale = (_snapshot_source == "live") and (now - _snapshot_cached_at > _SNAPSHOT_TTL_SECONDS * 3)
+
+    if _snapshot_source == "live":
+        meta_status = "stale" if is_stale else "ok"
+        data_version = "live"
+    else:
+        meta_status = "fallback"
+        data_version = "frozen"
 
     return {
         "data_version": data_version,
         "as_of_date": meta.get("asOfDate", "2026-08-30"),
         "last_updated_at": meta.get("generatedAt", datetime.now().isoformat()),
         "total_rows": meta.get("fullRows", 1685923),
-        "status": status,
+        "status": meta_status,
         "seed": meta.get("seed", 42),
     }
 
 
 def _get_dedicated_connection() -> Connection | None:
-    """为后台快照异步刷新创建独立连接，保证 CST 时区与 HeatWave 路由配置生效。"""
+    """为后台快照异步刷新创建独立连接，保证 CST 时区与 HeatWave 路由配置生效，并设置严格会话超时。"""
     try:
         conn = get_engine().connect()
         conn.execute(text("SET time_zone = '+08:00'"))
         conn.execute(text("SET use_secondary_engine = ON"))
+        conn.execute(text("SET SESSION max_execution_time = 15000"))
         return conn
     except Exception as e:
         logger.warning("后台快照获取独立数据库连接失败: %s", e)
@@ -112,36 +154,75 @@ def _get_dedicated_connection() -> Connection | None:
 
 
 def _background_refresh_snapshot() -> None:
-    """后台异步更新快照缓存工作线程，杜绝请求线程 1.12s 阻塞。"""
-    global _snapshot_cache, _snapshot_cached_at, _snapshot_refreshing
+    """后台异步更新快照缓存工作线程，杜绝请求线程阻塞，具有严格超时与异常熔断保护。"""
+    global _snapshot_cache, _snapshot_cached_at, _snapshot_refreshing, _snapshot_source
+    global _snapshot_last_refreshed_at, _snapshot_last_refresh_duration_ms, _snapshot_last_error
+    global _snapshot_last_failed_at, _snapshot_consecutive_failures
+    t0 = monotonic()
+    conn = None
     try:
         conn = _get_dedicated_connection()
-        try:
-            snap = build_dashboard_snapshot_v2(conn)
-            with _snapshot_lock:
-                _snapshot_cache = snap
-                _snapshot_cached_at = monotonic()
-            logger.info("后台快照异步刷新就绪 (TTL: %ds, 纳管单位: %d)", _SNAPSHOT_TTL_SECONDS, len(snap.get("entities", [])))
-        finally:
-            if conn is not None:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
+        if conn is None:
+            raise RuntimeError("Unable to acquire dedicated DB connection")
+        snap = build_dashboard_snapshot_v2(conn)
+        duration_ms = round((monotonic() - t0) * 1000, 2)
+        with _snapshot_lock:
+            _snapshot_cache = snap
+            _snapshot_cached_at = monotonic()
+            _snapshot_source = "live"
+            _snapshot_last_refreshed_at = datetime.now().isoformat()
+            _snapshot_last_refresh_duration_ms = duration_ms
+            _snapshot_last_error = None
+            _snapshot_consecutive_failures = 0
+        logger.info(
+            "后台快照异步刷新就绪 (耗时: %.1fms, TTL: %ds, 纳管单位: %d)",
+            duration_ms,
+            _SNAPSHOT_TTL_SECONDS,
+            len(snap.get("entities", [])),
+        )
     except Exception as e:
-        logger.error("后台快照异步刷新异常: %s", e)
+        duration_ms = round((monotonic() - t0) * 1000, 2)
+        err_msg = str(e)
+        if "3024" in err_msg or "execution time exceeded" in err_msg.lower():
+            err_category = "QueryTimeout"
+        elif "connection" in err_msg.lower() or "2003" in err_msg:
+            err_category = "ConnectionFailed"
+        else:
+            err_category = type(e).__name__
+        with _snapshot_lock:
+            _snapshot_last_failed_at = monotonic()
+            _snapshot_consecutive_failures += 1
+            _snapshot_last_error = f"{err_category}: 快照刷新超时或执行异常"
+            _snapshot_last_refresh_duration_ms = duration_ms
+        logger.error(
+            "后台快照异步刷新异常 (耗时: %.1fms, 连续失败: %d): %s",
+            duration_ms,
+            _snapshot_consecutive_failures,
+            err_category,
+        )
     finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
         with _snapshot_lock:
             _snapshot_refreshing = False
 
 
 def prewarm_snapshot(sync: bool = False) -> None:
     """快照预热入口，可在开机或需要时触发。"""
-    global _snapshot_refreshing
+    global _snapshot_refreshing, _snapshot_refresh_started_at
     with _snapshot_lock:
+        now = monotonic()
         if _snapshot_refreshing:
+            if now - _snapshot_refresh_started_at < _REFRESH_TIMEOUT_SECONDS:
+                return
+            logger.warning("前次快照刷新已超过 %.1fs 未完成，强制重置刷新状态", _REFRESH_TIMEOUT_SECONDS)
+        if _snapshot_consecutive_failures > 0 and (now - _snapshot_last_failed_at < _REFRESH_BACKOFF_SECONDS):
             return
         _snapshot_refreshing = True
+        _snapshot_refresh_started_at = now
     if sync:
         _background_refresh_snapshot()
     else:
@@ -153,18 +234,28 @@ def dashboard_snapshot(conn: Connection | None = Depends(connection)) -> dict:
     """
     获取数据大屏全景快照数据 (SWR Stale-While-Revalidate 保障全场景 < 1.0s SLA)
     """
-    global _snapshot_cache, _snapshot_cached_at, _snapshot_refreshing
+    global _snapshot_cache, _snapshot_cached_at, _snapshot_refreshing, _snapshot_refresh_started_at
+    global _snapshot_source
     now = monotonic()
 
     # 1. 命中热缓存且未过期：极速微秒级返回 (~0.05ms)
-    if _snapshot_cache is not None and (now - _snapshot_cached_at < _SNAPSHOT_TTL_SECONDS):
+    if _snapshot_cache is not None and (now - _snapshot_cached_at < _SNAPSHOT_TTL_SECONDS) and (_snapshot_source == "live"):
         return _snapshot_cache
 
-    # 2. SWR 过期刷新：已有缓存立即返回，后台异步刷新，消除 1.12s 阻塞
+    # 2. SWR 过期刷新或 fallback 升级：已有缓存立即返回，后台异步刷新，消除阻塞
     if _snapshot_cache is not None:
         with _snapshot_lock:
+            should_refresh = False
             if not _snapshot_refreshing:
+                if _snapshot_consecutive_failures == 0 or (now - _snapshot_last_failed_at >= _REFRESH_BACKOFF_SECONDS):
+                    should_refresh = True
+            elif now - _snapshot_refresh_started_at >= _REFRESH_TIMEOUT_SECONDS:
+                logger.warning("SWR 发现前次刷新超时 (%.1fs)，重置并重新触发异步刷新", now - _snapshot_refresh_started_at)
+                should_refresh = True
+
+            if should_refresh:
                 _snapshot_refreshing = True
+                _snapshot_refresh_started_at = now
                 threading.Thread(target=_background_refresh_snapshot, name="snapshot-swr", daemon=True).start()
         return _snapshot_cache
 
@@ -175,6 +266,7 @@ def dashboard_snapshot(conn: Connection | None = Depends(connection)) -> dict:
         snap = build_dashboard_snapshot_v2(conn)
         _snapshot_cache = snap
         _snapshot_cached_at = monotonic()
+        _snapshot_source = "live" if conn is not None else "fallback"
         return _snapshot_cache
 
 

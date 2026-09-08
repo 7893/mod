@@ -113,7 +113,7 @@ LEFT JOIN (
     SELECT org_id, COUNT(*) AS cnt
     FROM business_document
     WHERE submit_time >= DATE_SUB(
-        (SELECT MAX(DATE(submit_time)) FROM business_document),
+        (SELECT DATE(MAX(submit_time)) FROM business_document),
         INTERVAL 30 DAY
     )
     GROUP BY org_id
@@ -122,7 +122,7 @@ LEFT JOIN (
     SELECT org_id, COUNT(*) AS cnt
     FROM accounting_voucher
     WHERE gen_time >= DATE_SUB(
-        (SELECT MAX(DATE(gen_time)) FROM accounting_voucher),
+        (SELECT DATE(MAX(gen_time)) FROM accounting_voucher),
         INTERVAL 30 DAY
     )
     GROUP BY org_id
@@ -133,7 +133,7 @@ LEFT JOIN (
     JOIN accounting_voucher av ON av.id = ir.voucher_id
     WHERE ir.status != 'SUCCESS'
       AND ir.integration_time >= DATE_SUB(
-          (SELECT MAX(DATE(integration_time)) FROM integration_result),
+          (SELECT DATE(MAX(integration_time)) FROM integration_result),
           INTERVAL 30 DAY
       )
     GROUP BY av.org_id
@@ -214,7 +214,7 @@ LEFT JOIN (
     SELECT org_id,
            CASE WHEN COUNT(CASE WHEN progress < 100 THEN 1 END) = 0 THEN 0
                 ELSE GREATEST(0, DATEDIFF(
-                    (SELECT MAX(DATE(submit_time)) FROM business_document),
+                    (SELECT DATE(MAX(submit_time)) FROM business_document),
                     COALESCE(MAX(CASE WHEN progress < 100 THEN update_time END), '2025-11-01')
                 ))
            END AS stagnant_days
@@ -224,7 +224,7 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT org_id,
            ROUND(COALESCE(SUM(CASE WHEN update_time >= DATE_SUB(
-               (SELECT MAX(DATE(submit_time)) FROM business_document),
+               (SELECT DATE(MAX(submit_time)) FROM business_document),
                INTERVAL 14 DAY
            ) THEN progress ELSE 0 END) / NULLIF(COUNT(id), 0) / 14.0, 0.0), 2) AS progress_slope_14d
     FROM construction_task
