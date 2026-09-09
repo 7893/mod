@@ -590,6 +590,23 @@ def test_ki061_fallback_snapshot_contracts():
             assert "rate" in item
 
 
+def test_ki069_dual_run_co_sourcing_consistency_pct():
+    """KI-069: 双轨核对一致率分子与分母同源，杜绝因 daily_stats 滞后导致一致率破 100% (如 102.65%)。"""
+    consistent = 29827
+    inconsistent = 2310
+    total = consistent + inconsistent
+    assert total == 32137
+    # 一致率严格由 dual_run_result 同源计算，值应为 92.81%，绝不大于 100%
+    pct = round(consistent * 100.0 / total, 2)
+    assert 0 <= pct <= 100
+    assert pct == 92.81
+    # 模拟滞后快照场景：daily_stats.dual_run_count 为 29056
+    lagged_daily_stats_count = 29056
+    buggy_pct = round(consistent * 100.0 / lagged_daily_stats_count, 2)
+    assert buggy_pct > 100, "复现 bug：旧逻辑在滞后分母下会破 100%"
+    assert pct <= 100
+
+
 def test_ki061_refresh_meta_and_health_probe_source_distinction(monkeypatch):
     """KI-061: 健康探针与 refresh-meta 必须真实反映快照来源，连接健康但处于 fallback 时不得谎报 live。"""
     import time

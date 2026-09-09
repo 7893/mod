@@ -49,11 +49,13 @@ export function calcDualRunConsistency(
   if (consistent === null || consistent === undefined || !Number.isFinite(consistent)) {
     return null
   }
-  const c = Math.max(0, Math.min(total, consistent))
+  const c = Math.max(0, consistent)
+  // KI-069: 分子分母严格同源防护，若传入 total 小于 consistent 则自动归一，确保一致率 ∈ [0, 100]
+  const safeTotal = Math.max(total, c)
   const inc = inconsistent !== null && inconsistent !== undefined && Number.isFinite(inconsistent)
     ? Math.max(0, inconsistent)
-    : Math.max(0, total - c)
-  const pct = Math.round((c / total) * 10000) / 100
+    : Math.max(0, safeTotal - c)
+  const pct = Math.max(0, Math.min(100, Math.round((c / safeTotal) * 10000) / 100))
   return {
     consistent: c,
     inconsistent: inc,

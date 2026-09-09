@@ -52,6 +52,16 @@ describe('utils/qualityMetrics', () => {
       expect(calcDualRunConsistency(null, 10, 0)).toBeNull()
       expect(calcDualRunConsistency(100, null, 0)).toBeNull()
     })
+
+    it('prevents consistency percentage exceeding 100% when total lags behind consistent (KI-069)', () => {
+      // 滞后快照场景：total (29056) 小于实时一致数 (29827)
+      const res = calcDualRunConsistency(29056, 29827, 2310)
+      expect(res).not.toBeNull()
+      expect(res!.consistent).toBe(29827)
+      expect(res!.inconsistent).toBe(2310)
+      expect(res!.consistencyPct).toBeLessThanOrEqual(100)
+      expect(res!.consistencyPct).toBe(100)
+    })
   })
 
   describe('buildQualityAuditList', () => {
