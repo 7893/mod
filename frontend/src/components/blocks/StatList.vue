@@ -10,8 +10,10 @@ withDefaults(
     density?: 'dense' | 'normal'
     /** 超出高度时是否允许滚动，否则等分压缩。 */
     scroll?: boolean
+    /** 平铺形态：去掉行底色与描边，行间只用细分隔线。 */
+    flat?: boolean
   }>(),
-  { ranked: false, density: 'normal', scroll: false },
+  { ranked: false, density: 'normal', scroll: false, flat: false },
 )
 
 function clamp(n: number | undefined) {
@@ -20,7 +22,7 @@ function clamp(n: number | undefined) {
 </script>
 
 <template>
-  <div class="stat-list" :class="[`stat-list--${density}`, { 'stat-list--scroll': scroll }]">
+  <div class="stat-list" :class="[`stat-list--${density}`, { 'stat-list--scroll': scroll, 'stat-list--flat': flat }]">
     <div
       v-for="(row, idx) in rows"
       :key="row.id ?? row.label"

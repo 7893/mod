@@ -101,6 +101,19 @@
 .metric-grid--sm .metric-cell__value { font-size: var(--text-cockpit-lg); }
 .metric-grid--lg .metric-cell__value { font-size: var(--text-cockpit-kpi); }
 
+/* 平铺形态：指挥带侧栏与面板内事实栏不做卡片，只用细分隔线切分。 */
+.metric-grid--flat { gap: 0; }
+.metric-grid--flat .metric-cell {
+  padding: --spacing(1) --spacing(2);
+  background: none;
+  border: 0;
+  border-right: 1px solid var(--color-surface-veil-06);
+  border-radius: 0;
+}
+.metric-grid--flat .metric-cell:last-child { border-right: 0; }
+.metric-grid--flat .metric-cell__label { font-size: var(--text-cockpit-xs); color: var(--color-slate-500); }
+.metric-grid--xs .metric-cell__value { font-size: var(--text-cockpit-md); }
+
 /* 进度条：宽度由数据驱动，轨道本身不参与高度收缩。 */
 .metric-cell__track {
   margin-top: --spacing(2);
@@ -283,6 +296,19 @@
 .stat-row.is-warning .stat-row__fill { background: var(--color-amber-400); }
 .stat-row.is-danger  .stat-row__fill { background: var(--color-rose-500); }
 
+/* 平铺形态：事实行不做卡片，行间只用细分隔线。 */
+.stat-list--flat { gap: 0; }
+.stat-list--flat .stat-row {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--color-surface-veil-06);
+  border-radius: 0;
+}
+.stat-list--flat .stat-row:last-child { border-bottom: 0; }
+.stat-list--flat .stat-row__label { font-size: var(--text-cockpit-xs); color: var(--color-slate-400); }
+.stat-list--flat .stat-row__value { font-size: var(--text-cockpit-sm); }
+
 /* ── ChartBlock ───────────────────────────────────────────────────────────── */
 
 .chart-block {
@@ -384,7 +410,11 @@
   text-overflow: ellipsis;
 }
 
+.status-list--wrap .status-row__desc { white-space: normal; }
 .status-row__chevron { flex-shrink: 0; color: var(--color-slate-600); }
+.status-row.is-success .status-row__icon { color: var(--color-emerald-400); }
+.status-row.is-warning .status-row__icon { color: var(--color-amber-400); }
+.status-row.is-danger  .status-row__icon { color: var(--color-rose-500); }
 
 .status-row.is-accent  .status-row__dot { background: var(--color-sky-400); }
 .status-row.is-success .status-row__dot { background: var(--color-emerald-400); }

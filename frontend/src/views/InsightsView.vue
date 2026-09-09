@@ -18,10 +18,15 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
+import CommandBand from '../components/blocks/CommandBand.vue'
+import EmptyNote from '../components/blocks/EmptyNote.vue'
+import MetricGrid from '../components/blocks/MetricGrid.vue'
+import NoteBanner from '../components/blocks/NoteBanner.vue'
+import StatusList from '../components/blocks/StatusList.vue'
+import type { BlockTone, MetricItem, StatusRow } from '../components/blocks/types.ts'
 import ModelContractCard from '../components/ModelContractCard.vue'
 import AtRiskUnitTable, { type AtRiskUnit } from '../components/AtRiskUnitTable.vue'
 import AiQuotaCapsule from '../components/AiQuotaCapsule.vue'
-import { formatPercent } from '../formatters/metrics.ts'
 import { isRegressionEffective, isClassifierEffective, isAutomlReady } from '../utils/modelEvaluation.ts'
 import { useProjectStore } from '../stores/project.ts'
 import { useAiInsights } from '../composables/useAiInsights.ts'
@@ -34,6 +39,7 @@ import {
   calmAnimation,
 } from '../charts/theme.ts'
 import { buildRiskDimensionBreakdown } from '../utils/qualityMetrics.ts'
+import { deriveAtRiskUnits, indexPredictions } from '../utils/riskRules.ts'
 import { parseBriefingSections } from '../utils/briefing.ts'
 import { createRiskOverviewOption } from '../charts/insightsOptions.ts'
 
@@ -42,108 +48,20 @@ use([CanvasRenderer, BarChart, PieChart, GridComponent, TitleComponent, TooltipC
 const router = useRouter()
 const store = useProjectStore()
 
-const format = (value: number | undefined) => (
-  value === undefined ? '—' : new Intl.NumberFormat('zh-CN').format(value)
-)
-
 const { aiStatus } = useAiInsights()
 
 // F5 每日决策简报（后台自动生成，只读展示，零交互）
 const { briefing, loading: briefingLoading } = useDailyBriefing()
 const briefingSections = computed(() => parseBriefingSections(briefing.value?.content).slice(0, 3))
 
-const predictionsMap = computed(() => {
-  const map = new Map<number, any>()
-  const preds = (aiStatus.value as any)?.predictions || (store.snapshot.insights as any)?.predictions || []
-  if (Array.isArray(preds)) {
-    preds.forEach((p: any) => {
-      if (p && p.orgId != null) {
-        map.set(Number(p.orgId), p)
-      }
-    })
-  }
-  return map
-})
+const predictionsMap = computed(() => indexPredictions(
+  (aiStatus.value as any)?.predictions || (store.snapshot.insights as any)?.predictions,
+))
 
-/**
- * 风险主场核心：从真实实体指标中筛选困难户（矛与盾读同一事实源）
- * 与生命周期推进器 (Advancer) 和合规监督 (Issues) 统一判定标准
- */
-const atRiskUnits = computed<AtRiskUnit[]>(() => {
-  const list: AtRiskUnit[] = []
-  const rules = store.snapshot.businessRules
-  store.entities.forEach((row) => {
-    const isDualDiff = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < rules.lifecycle.dualRunConsistencyRateMin)
-    const isConstructionLag = row.construction < rules.risk.constructionLagRate && (row.status === '建设中' || row.status === '双轨运行')
-    const isPrepStuck = row.status === '准备中' && (row.batchId != null && row.batchId <= rules.risk.lastActiveBatchId)
-
-    const pred = predictionsMap.value.get(row.id)
-    const stagnantDays = pred?.stagnantDays
-    const progressSlope14d = pred?.progressSlope14d
-    const trainingErrorScissors = pred?.trainingErrorScissors
-    const handlerConcentration = pred?.handlerConcentration
-
-    if (isDualDiff) {
-      list.push({
-        id: row.id,
-        name: row.name,
-        province: row.province,
-        batch: row.batch,
-        owner: row.owner,
-        status: row.status,
-        construction: row.construction,
-        openingData: row.openingData,
-        voucherRate: row.voucherRate,
-        riskType: '双轨核对差异',
-        riskLevel: '高危',
-        reason: `双轨入账凭证率仅 ${formatPercent(row.voucherRate)}，未达 ${rules.lifecycle.dualRunConsistencyRateMin}% 门禁，存在借贷试算不平风险`,
-        stagnantDays,
-        progressSlope14d,
-        trainingErrorScissors,
-        handlerConcentration,
-      })
-    } else if (isConstructionLag) {
-      list.push({
-        id: row.id,
-        name: row.name,
-        province: row.province,
-        batch: row.batch,
-        owner: row.owner,
-        status: row.status,
-        construction: row.construction,
-        openingData: row.openingData,
-        voucherRate: row.voucherRate,
-        riskType: '建设严重滞后',
-        riskLevel: row.construction < 80 ? '高危' : '重点关注',
-        reason: `建设完成度 (${row.construction}%) 显著落后于批次推进均值，存在阶段脱轨掉队风险`,
-        stagnantDays,
-        progressSlope14d,
-        trainingErrorScissors,
-        handlerConcentration,
-      })
-    } else if (isPrepStuck) {
-      list.push({
-        id: row.id,
-        name: row.name,
-        province: row.province,
-        batch: row.batch,
-        owner: row.owner,
-        status: row.status,
-        construction: row.construction,
-        openingData: row.openingData,
-        voucherRate: row.voucherRate,
-        riskType: '准备期卡顿',
-        riskLevel: '重点关注',
-        reason: '属于已推进批次但仍停留在准备中，期初数据收集或基础环境尚未打通',
-        stagnantDays,
-        progressSlope14d,
-        trainingErrorScissors,
-        handlerConcentration,
-      })
-    }
-  })
-  return list
-})
+// 风险主场核心：与 E 屏合规监督、生命周期推进器共用 utils/riskRules 同一判定标准
+const atRiskUnits = computed<AtRiskUnit[]>(() =>
+  deriveAtRiskUnits(store.entities, store.snapshot.businessRules, predictionsMap.value),
+)
 
 const dualDiffCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '双轨核对差异').length)
 const constLagCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '建设严重滞后').length)
@@ -325,6 +243,20 @@ const modelQualityRows = computed(() => insights.value.targetModels.map((model) 
 }))
 
 const readyModelCount = computed(() => insights.value.targetModels.filter((model) => model.status === '已就绪').length)
+
+const riskHeadline = computed<MetricItem[]>(() => [
+  { label: '风险单位', value: riskUnitTotal.value, tone: 'danger', hint: '三类风险合计' },
+])
+
+const ALERT_TONE: Record<string, BlockTone> = { SUCCESS: 'success', WARNING: 'warning' }
+const ALERT_ICON: Record<string, typeof Info> = { SUCCESS: CheckCircle2, WARNING: AlertCircle }
+const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map((alert) => ({
+  id: alert.title,
+  title: alert.title,
+  desc: alert.detail,
+  tone: ALERT_TONE[alert.level] ?? 'accent',
+  icon: ALERT_ICON[alert.level] ?? Info,
+})))
 </script>
 
 <template>
@@ -336,16 +268,14 @@ const readyModelCount = computed(() => insights.value.targetModels.filter((model
       subtitle="困难户风险构成与 AutoML 独立测试集质量同屏"
       class="flex-shrink-0"
     >
-      <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
-        <section class="col-span-7 grid grid-cols-12 min-h-0 pr-3 border-r border-surface-veil-06">
-          <div class="col-span-3 flex flex-col justify-center min-w-0">
-            <span class="text-cockpit-xs text-slate-500">风险单位</span>
-            <b class="font-mono text-cockpit-metric text-rose-400 mt-1">{{ riskUnitTotal }}</b>
-            <span class="text-cockpit-xs text-slate-500 mt-1">三类风险合计</span>
+      <CommandBand :chart-span="7">
+        <template #chart>
+          <div class="grid grid-cols-12 h-full min-h-0">
+            <MetricGrid class="col-span-3" :items="riskHeadline" flat fill />
+            <VChart class="col-span-9 w-full h-full min-h-0" :option="riskOverviewOption" autoresize />
           </div>
-          <VChart class="col-span-9 w-full h-full min-h-0" :option="riskOverviewOption" autoresize />
-        </section>
-        <section class="col-span-5 flex flex-col min-h-0">
+        </template>
+        <template #aside>
           <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs">
             <span class="font-medium text-slate-300">AutoML 质量门禁</span>
             <b class="font-mono" :class="insights.isReady ? 'text-emerald-400' : 'text-amber-400'">{{ readyModelCount }}/{{ insights.targetModels.length }} 可用</b>
@@ -359,8 +289,8 @@ const readyModelCount = computed(() => insights.value.targetModels.filter((model
               <b class="col-span-3 font-mono text-cockpit-xs text-slate-200 text-right whitespace-nowrap">{{ model.value }}</b>
             </div>
           </div>
-        </section>
-      </div>
+        </template>
+      </CommandBand>
     </CockpitPanel>
 
     <!-- 主网格：F2-F5 (2x2 结构) -->
@@ -381,20 +311,12 @@ const readyModelCount = computed(() => insights.value.targetModels.filter((model
         subtitle="Oracle HeatWave 库内机器学习 · 严守真实评估门禁"
       >
         <div class="flex flex-col h-full min-h-0 gap-2">
-          <div
-            v-if="!insights.isReady"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-cockpit-xs flex-shrink-0"
-          >
-            <Lock :size="13" class="flex-shrink-0 text-amber-400" />
-            <span>质量门禁生效 · 未达标指标不作为可信预测能力</span>
-          </div>
-          <div
-            v-else
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-cockpit-xs flex-shrink-0"
-          >
-            <Sparkles :size="13" class="flex-shrink-0 text-emerald-400" />
-            <span>独立测试集达标 · {{ readyModelCount }}/{{ insights.targetModels.length }} 模型可用 · 仅对已验证模型提供推理</span>
-          </div>
+          <NoteBanner v-if="!insights.isReady" :icon="Lock" tone="warning">
+            质量门禁生效 · 未达标指标不作为可信预测能力
+          </NoteBanner>
+          <NoteBanner v-else :icon="Sparkles" tone="success">
+            独立测试集达标 · {{ readyModelCount }}/{{ insights.targetModels.length }} 模型可用 · 仅对已验证模型提供推理
+          </NoteBanner>
 
           <div class="grid grid-rows-2 gap-2 flex-1 min-h-0">
             <ModelContractCard :model="insights.targetModels[0]" empty-label="验证未达标 (R² ≤ 0)" :ready="insights.isReady && insights.targetModels[0].status === '已就绪'" />
@@ -420,34 +342,15 @@ const readyModelCount = computed(() => insights.value.targetModels.filter((model
               <VChart class="w-full h-full min-h-0" :option="riskDistChartOption" autoresize />
             </div>
             <div class="flex items-center justify-between pt-1 border-t border-surface-veil-06 text-cockpit-xs text-slate-500">
-              <span>门禁：凭证率 &lt; 95% / 进度 &lt; 88%</span>
+              <span>门禁：凭证率 &lt; {{ store.snapshot.businessRules.lifecycle.dualRunConsistencyRateMin }}% / 进度 &lt; {{ store.snapshot.businessRules.risk.constructionLagRate }}%</span>
               <span class="font-mono text-slate-400">{{ dualDiffCount + constLagCount }} 家高危</span>
             </div>
           </div>
 
-          <!-- 右侧：确定性规则告警卡 -->
-          <div class="col-span-7 flex flex-col gap-2 h-full min-h-0 overflow-y-auto pr-1">
-            <div
-              v-for="alert in insights.ruleBasedAlerts"
-              :key="alert.title"
-              class="flex flex-col gap-1 p-2.5 rounded-xl border flex-1 justify-center"
-              :class="alert.level === 'SUCCESS'
-                ? 'bg-emerald-950/15 border-emerald-500/20'
-                : (alert.level === 'WARNING'
-                  ? 'bg-amber-950/15 border-amber-500/20'
-                  : 'bg-surface-veil-03 border-surface-veil-06')"
-            >
-              <div class="flex items-center gap-1.5">
-                <CheckCircle2 v-if="alert.level === 'SUCCESS'" :size="14" class="text-emerald-400 flex-shrink-0" />
-                <AlertCircle v-else-if="alert.level === 'WARNING'" :size="14" class="text-amber-400 flex-shrink-0" />
-                <Info v-else :size="14" class="text-sky-400 flex-shrink-0" />
-                <b class="text-cockpit-sm font-semibold text-slate-200 truncate">{{ alert.title }}</b>
-              </div>
-              <p class="text-cockpit-xs text-slate-400 leading-relaxed">{{ alert.detail }}</p>
-            </div>
-            <div v-if="!insights.ruleBasedAlerts.length" class="flex flex-1 items-center justify-center text-cockpit-xs text-slate-500">
-              暂无确定性规则告警
-            </div>
+          <!-- 右侧：确定性规则告警 -->
+          <div class="col-span-7 flex flex-col h-full min-h-0">
+            <StatusList v-if="alertRows.length" :rows="alertRows" wrap />
+            <EmptyNote v-else>暂无确定性规则告警</EmptyNote>
           </div>
         </div>
       </CockpitPanel>
@@ -465,10 +368,7 @@ const readyModelCount = computed(() => insights.value.targetModels.filter((model
           </div>
         </template>
         <div class="flex flex-col h-full min-h-0 gap-2">
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/60 border border-white/10 text-slate-400 text-cockpit-xs flex-shrink-0">
-            <ShieldAlert :size="12" class="flex-shrink-0 text-sky-400" />
-            <span>AI 辅助研判 · 事实数据来自库内运行指标</span>
-          </div>
+          <NoteBanner :icon="ShieldAlert">AI 辅助研判 · 事实数据来自库内运行指标</NoteBanner>
 
           <div class="flex-1 min-h-0">
             <!-- 加载中 -->

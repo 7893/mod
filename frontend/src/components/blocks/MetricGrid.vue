@@ -12,13 +12,15 @@ const props = withDefaults(
      */
     variant?: 'inline' | 'stacked'
     /** 数值字号档位。 */
-    size?: 'sm' | 'md' | 'lg'
+    size?: 'xs' | 'sm' | 'md' | 'lg'
     /** 单行最多几列；实际列数由 balancedColumns 按项数取整除值。 */
     maxPerRow?: number
     /** 固定列数，给了就不再自动推导（如强制 2×2）。 */
     columns?: number
     /** 卡片是否平分容器高度。列表型区块给 true，页首指标带给 false。 */
     fill?: boolean
+    /** 平铺形态：去掉卡片底色与描边，单元格之间只用细分隔线。用于指挥带侧栏与面板内的事实栏。 */
+    flat?: boolean
   }>(),
   { variant: 'stacked', size: 'md', maxPerRow: 4, fill: false },
 )
@@ -31,7 +33,7 @@ const gridStyle = computed(() => ({
 <template>
   <div
     class="metric-grid"
-    :class="[`metric-grid--${variant}`, `metric-grid--${size}`, { 'metric-grid--fill': fill }]"
+    :class="[`metric-grid--${variant}`, `metric-grid--${size}`, { 'metric-grid--fill': fill, 'metric-grid--flat': flat }]"
     :style="gridStyle"
   >
     <div
