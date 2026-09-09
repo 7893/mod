@@ -1,3 +1,4 @@
+import { formatCount } from '../formatters/metrics'
 import { parsePercentage } from './panelData'
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from './theme'
 
@@ -50,7 +51,7 @@ function createHorizontalVolumeOption(items: OutcomeItem[]) {
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
         fontFamily: 'monospace', fontSize: 10,
-        formatter: (params: any) => Number(params.value).toLocaleString(),
+        formatter: (params: any) => formatCount(params.value),
       },
     }],
   }
@@ -79,7 +80,7 @@ export function createOperationsOverviewOption(counts: OperationsOverviewCounts)
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
         fontFamily: 'monospace', fontSize: 9,
-        formatter: (params: any) => Number(params.value).toLocaleString(),
+        formatter: (params: any) => formatCount(params.value),
       },
     }],
   }
@@ -126,7 +127,7 @@ export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
       formatter: (params: any[]) => {
         const item = reversed[params?.[0]?.dataIndex]
         if (!item) return ''
-        return `${item.rule}<br/>核验规模 <b>${item.total == null ? '—' : item.total.toLocaleString()} ${item.unit}</b><br/>检出异常 <b>${item.errors == null ? '—' : item.errors.toLocaleString()}</b> · 合规率 ${item.rate == null ? '—' : `${item.rate}%`}<br/><span style="color:${chartInk.textMuted}">柱长为对数尺度，仅比较数量级</span>`
+        return `${item.rule}<br/>核验规模 <b>${formatCount(item.total)} ${item.unit}</b><br/>检出异常 <b>${formatCount(item.errors)}</b> · 合规率 ${item.rate == null ? '—' : `${item.rate}%`}<br/><span style="color:${chartInk.textMuted}">柱长为对数尺度，仅比较数量级</span>`
       },
     },
     grid: { left: 78, right: 84, top: 8, bottom: 8 },
@@ -154,7 +155,7 @@ export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
         fontFamily: 'monospace', fontSize: 10,
         formatter: (params: any) => {
           const item = reversed[params.dataIndex]
-          return item?.total == null ? '—' : item.total.toLocaleString()
+          return formatCount(item?.total)
         },
       },
     }],
@@ -196,7 +197,7 @@ export function createVoucherQualityOption(
       ...chartTooltip,
       formatter: (params: any[]) => {
         const item = volumes[params?.[0]?.dataIndex]
-        return item ? `${item.name}<br/><b>${item.value.toLocaleString()}</b>` : ''
+        return item ? `${item.name}<br/><b>${formatCount(item.value)}</b>` : ''
       },
     },
     grid: { left: '35%', right: 66, top: 16, bottom: 16, containLabel: true },
@@ -253,7 +254,7 @@ export function createVoucherQualityOption(
           color: chartInk.textPrimary,
           fontFamily: 'monospace',
           fontSize: 10,
-          formatter: (params: any) => Number(params.value).toLocaleString(),
+          formatter: (params: any) => formatCount(params.value),
         },
       },
     ],

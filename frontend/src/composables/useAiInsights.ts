@@ -1,3 +1,4 @@
+import { formatDateTime } from '../formatters/metrics.ts'
 import { computed, onMounted, onUnmounted, ref } from "vue"
 
 export function useAiInsights() {
@@ -161,11 +162,7 @@ export function useAiInsights() {
   const generatedAt = computed(() => {
     const raw = aiLatest.value?.generated_at
     if (!raw) return null
-    try {
-      return new Date(raw).toLocaleString('zh-CN', {
-        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-      })
-    } catch { return raw }
+    return formatDateTime(raw)
   })
 
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CompositionBar from './CompositionBar.vue'
+import { formatCount } from '../../formatters/metrics.ts'
 import type { CompositionTone } from '../../charts/panelData.ts'
 
 defineProps<{
@@ -42,7 +43,7 @@ const valueClasses = {
     <div class="col-span-7 flex flex-col justify-center px-1 min-w-0">
       <div class="flex items-center justify-between mb-1 text-cockpit-xs">
         <span class="text-slate-400">{{ chartLabel }}</span>
-        <span class="font-mono text-slate-500">总计 {{ total.toLocaleString() }}</span>
+        <span class="font-mono text-slate-500">总计 {{ formatCount(total) }}</span>
       </div>
       <CompositionBar :total="total" :parts="parts" />
     </div>

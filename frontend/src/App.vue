@@ -15,6 +15,7 @@ import {
   WifiOff,
 } from 'lucide-vue-next'
 import { useProjectStore } from './stores/project.ts'
+import { formatCount, formatDateTime } from './formatters/metrics.ts'
 import { useScaleScreen } from './composables/useScaleScreen.ts'
 
 const route = useRoute()
@@ -28,22 +29,7 @@ const { scale, viewportRef, baseWidth, baseHeight } = useScaleScreen({
   baseHeight: 980,
 })
 
-const formattedClock = computed(() => {
-  const formatter = new Intl.DateTimeFormat('zh-CN', {
-    timeZone: store.snapshot.meta.displayTimezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  })
-  const parts = formatter.formatToParts(now.value)
-  const map: Record<string, string> = {}
-  parts.forEach((p) => { map[p.type] = p.value })
-  return `${map.year}-${map.month}-${map.day} ${map.hour}:${map.minute}:${map.second}`
-})
+const formattedClock = computed(() => formatDateTime(now.value, { seconds: true, timeZone: store.snapshot.meta.displayTimezone }))
 
 const isFullscreen = ref(false)
 
@@ -138,7 +124,7 @@ onBeforeUnmount(() => {
             <i
               v-if="item.path === '/f' && store.snapshot.overview.highRisk"
               class="risk-badge"
-              :title="`待处置高风险事项：${store.snapshot.overview.highRisk} 项（未解决总量 ${(store.snapshot.overview.unresolvedIssues || 0).toLocaleString()} 项）`"
+              :title="`待处置高风险事项：${store.snapshot.overview.highRisk} 项（未解决总量 ${formatCount(store.snapshot.overview.unresolvedIssues || 0)} 项）`"
             >
               {{ store.snapshot.overview.highRisk }}
             </i>

@@ -1,3 +1,4 @@
+import { formatCount } from '../formatters/metrics'
 import {
   calmAnimation,
   categoryAxis,
@@ -70,7 +71,7 @@ export function createOverviewCompositionOption(parts: CompositionPart[], total:
       formatter: (params: any) => {
         const part = parts[params?.seriesIndex]
         if (!part) return ''
-        return `${part.label}<br/><b>${part.value.toLocaleString()}</b> · ${part.percentage}%`
+        return `${part.label}<br/><b>${formatCount(part.value)}</b> · ${part.percentage}%`
       },
     },
     grid: { left: 0, right: 0, top: 0, bottom: 0 },
@@ -135,7 +136,7 @@ export function createCoverageOption(coverage: CoverageSeriesItem | null) {
       ...chartTooltip,
       formatter: (params: any) => {
         if (!coverage) return '暂无数据'
-        const val = params.value != null ? Number(params.value).toLocaleString() : ''
+        const val = params.value != null ? formatCount(params.value) : ''
         return `单位覆盖率 <b>${coverage.rate}%</b><br/>${params.name}: <b>${val}</b> (${params.percent}%)`
       },
     },
@@ -303,7 +304,7 @@ export function createOperationalGuardOption(list: OperationalGuardItem[]) {
       axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => {
         const item = reversed[params?.[0]?.dataIndex]
-        return item ? `${item.name}<br/><b>${item.value == null ? '—' : item.value.toLocaleString()}</b> 项` : ''
+        return item ? `${item.name}<br/><b>${formatCount(item.value)}</b> 项` : ''
       },
       ...chartTooltip,
     },
@@ -326,7 +327,7 @@ export function createOperationalGuardOption(list: OperationalGuardItem[]) {
         fontFamily: 'monospace', fontSize: 9,
         formatter: (params: any) => {
           const item = reversed[params?.dataIndex]
-          return item?.value == null ? '—' : item.value.toLocaleString()
+          return formatCount(item?.value)
         },
       },
     }],
