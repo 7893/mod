@@ -55,14 +55,40 @@ class ConstructionPropeller:
         result = PropellerCycleResult(0, 0, 0, 0)
 
         with self.conn.cursor() as cur:
+            # 0. Count open issues to dynamically tune equilibrium (corridor: 30 ~ 45)
+            cur.execute("""
+                SELECT COUNT(*) FROM governance_issue
+                WHERE status IN ('DISCOVERED', 'ASSIGNED', 'IN_PROGRESS', 'VERIFYING')
+            """)
+            row = cur.fetchone()
+            open_count = 40
+            if row and len(row) > 0 and isinstance(row[0], (int, float)):
+                open_count = int(row[0])
+
+            if open_count < 35:
+                # Understocked: accelerate friction generation & throttle resolution rate
+                issues_advance_limit = 2
+                friction_chance = 0.50
+                friction_min, friction_max = 78.0, 92.0
+            elif open_count > 45:
+                # Overstocked: accelerate resolution & throttle friction generation
+                issues_advance_limit = 8
+                friction_chance = 0.05
+                friction_min, friction_max = 84.0, 89.0
+            else:
+                # Balanced corridor (35 ~ 45)
+                issues_advance_limit = 4
+                friction_chance = 0.25
+                friction_min, friction_max = 82.0, 90.0
+
             # 1. Advance existing open issues (The Shield)
             cur.execute("""
                 SELECT id, unit_id, unit_name, issue_type, status, rework_count
                 FROM governance_issue
                 WHERE status IN ('DISCOVERED', 'ASSIGNED', 'IN_PROGRESS', 'VERIFYING')
                 ORDER BY created_at ASC
-                LIMIT 5
-            """)
+                LIMIT %s
+            """, (issues_advance_limit,))
             open_issues = cur.fetchall()
 
             for iss in open_issues:
@@ -108,13 +134,13 @@ class ConstructionPropeller:
             """)
             locked_unit_ids = {r[0] for r in cur.fetchall()}
 
-            # Pick 3 eligible batch 6 or 7 units that have lag
+            # Pick eligible batch 6, 7, 8 units that have lag
             cur.execute("""
                 SELECT o.id, o.name, o.region, o.batch_id, o.status,
                        COALESCE(AVG(t.progress), 0) AS avg_prog
                 FROM org_unit o
                 LEFT JOIN construction_task t ON t.org_id = o.id
-                WHERE o.batch_id IN (6, 7)
+                WHERE o.batch_id IN (6, 7, 8)
                 GROUP BY o.id, o.name, o.region, o.batch_id, o.status
                 HAVING avg_prog < 95.0
                 ORDER BY RAND()
@@ -127,8 +153,8 @@ class ConstructionPropeller:
                 if u_id in locked_unit_ids:
                     continue  # Frozen by open issue
 
-                # Check if this unit encounters a friction trap (85%-90%)
-                if 82.0 <= avg_prog <= 90.0 and self.rng.random() < 0.20:
+                # Check if this unit encounters a friction trap
+                if friction_min <= avg_prog <= friction_max and self.rng.random() < friction_chance:
                     # Spawn friction blocker issue
                     iss_created = self._spawn_friction_issue(cur, u_id, u_name, u_region, b_id, avg_prog, now)
                     if iss_created:
@@ -158,25 +184,28 @@ class ConstructionPropeller:
         return result
 
     def _boost_healed_unit(self, cur: pymysql.cursors.Cursor, unit_id: int, now: datetime) -> None:
-        """Boost unit completion after issue is resolved so it exits risk lists."""
-        # Elevate tasks to >= 95%
+        """Boost unit completion after issue is resolved so it exits risk lists (Cross-Screen Ripple)."""
+        # Elevate tasks to 100% and mark '已完成'
         cur.execute("""
             UPDATE construction_task
-            SET progress = GREATEST(progress, 95), update_time = %s
+            SET progress = 100, status = '已完成', update_time = %s
             WHERE org_id = %s
         """, (now.date(), unit_id))
 
-        # Elevate opening_rate to >= 96%
+        # Elevate opening_rate to 100.0% and mark '校验通过'
         cur.execute("""
             UPDATE data_readiness
-            SET opening_rate = '96.5%%', overall_status = '校验通过'
+            SET opening_rate = '100.0%%', overall_status = '校验通过'
             WHERE org_id = %s
         """, (unit_id,))
 
-        # If it was in 准备中 and qualified, let it become 双轨运行中
+        # Elevate org_unit from '准备中' or '已具备双轨条件' to '双轨运行中'
         cur.execute("""
             UPDATE org_unit
-            SET status = CASE WHEN status = '准备中' THEN '已具备双轨条件' ELSE status END
+            SET status = CASE
+                WHEN status IN ('准备中', '已具备双轨条件') THEN '双轨运行中'
+                ELSE status
+            END
             WHERE id = %s
         """, (unit_id,))
 

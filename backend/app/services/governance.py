@@ -228,3 +228,19 @@ def enrich_governance_issue(conn: Connection, issue_id: str) -> Optional[Dict[st
 
     return get_governance_issue(conn, issue_id)
 
+
+def get_recent_governance_activities(conn: Connection, limit: int = 10) -> List[Dict[str, Any]]:
+    """Retrieve recent issue timeline activities across all issues for live broadcast ticker."""
+    sql = """
+        SELECT t.id, t.issue_id AS issueId, t.action, t.actor, t.detail,
+               DATE_FORMAT(t.occurred_at, '%H:%i:%s') AS timeStr,
+               DATE_FORMAT(t.occurred_at, '%Y-%m-%d %H:%i:%s') AS occurredAt,
+               i.unit_name AS unitName, i.province, i.issue_type AS issueType, i.status
+        FROM issue_timeline t
+        JOIN governance_issue i ON t.issue_id = i.id
+        ORDER BY t.occurred_at DESC, t.id DESC
+        LIMIT :limit
+    """
+    return [dict(r) for r in conn.execute(text(sql), {"limit": limit}).mappings()]
+
+

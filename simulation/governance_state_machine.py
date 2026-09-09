@@ -14,7 +14,7 @@ Features:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import random
 from typing import Any, Dict, List, Optional, Tuple
@@ -145,6 +145,45 @@ class ExpertPool:
         return len(self.available)
 
 
+def compute_rhythm_factor(now: Optional[datetime] = None) -> float:
+    """Calculate chronobiological factor k_rhythm based on HKT (UTC+8) time & calendar day.
+
+    Rhythm profile:
+    - Morning golden work hours (08:30-11:30): k = 1.8 (Peak activity)
+    - Lunch break (12:00-13:30): k = 0.5 (Gentle advance)
+    - Afternoon golden work hours (14:00-17:30): k = 1.8 (Peak activity)
+    - Overtime evening (17:30-21:30): k = 1.0 (Standard maintenance)
+    - Deep night (22:00-07:00): k = 0.0 (Strictly frozen, zero fake resolutions at 3 AM)
+    - Other daytime hours: k = 1.0
+    - Month-End sprint (day >= 25): 1.5x multiplier on active periods.
+    """
+    if now is None:
+        now = datetime.now(timezone.utc)
+
+    if now.tzinfo is None:
+        hour, minute, day = now.hour, now.minute, now.day
+    else:
+        hkt = now.astimezone(timezone(timedelta(hours=8)))
+        hour, minute, day = hkt.hour, hkt.minute, hkt.day
+
+    t = hour + minute / 60.0
+    if (8.5 <= t <= 11.5) or (14.0 <= t <= 17.5):
+        base_k = 1.8
+    elif 12.0 <= t <= 13.5:
+        base_k = 0.5
+    elif 17.5 < t <= 21.5:
+        base_k = 1.0
+    elif 22.0 <= t or t < 7.0:
+        base_k = 0.0
+    else:
+        base_k = 1.0
+
+    if day >= 25 and base_k > 0.0:
+        base_k = min(3.0, round(base_k * 1.5, 2))
+
+    return base_k
+
+
 class GovernanceStateMachine:
     """State machine driver for governance issues."""
 
@@ -160,6 +199,7 @@ class GovernanceStateMachine:
         unit_name: str,
         now: datetime,
         force_boost: bool = False,
+        apply_rhythm: bool = True,
     ) -> Tuple[str, Optional[Tuple[str, str, str]]]:
         """Advance an issue state.
 
@@ -168,6 +208,16 @@ class GovernanceStateMachine:
         """
         template = LocalNarrativeLibrary.get_template(issue_type)
         status_enum = GovernanceStatus(current_status)
+
+        # Chronobiological rhythm check
+        if not force_boost and apply_rhythm:
+            k = compute_rhythm_factor(now)
+            if k <= 0.0:
+                # Night freeze: no state advancement during sleep hours
+                return current_status, None
+            if k < 1.0 and self.rng.random() > k:
+                # Throttled during low-activity windows (e.g. lunch)
+                return current_status, None
 
         if status_enum == GovernanceStatus.DISCOVERED:
             specialist = self.pool.acquire(issue_id)
@@ -194,8 +244,10 @@ class GovernanceStateMachine:
             return GovernanceStatus.VERIFYING.value, (action, actor, detail)
 
         elif status_enum == GovernanceStatus.VERIFYING:
-            if not force_boost and self.rng.random() < 0.15:
-                # 15% rework loop
+            # Rework loop adapts: lower rework chance during month-end sprint or high peak
+            rework_threshold = 0.08 if (not force_boost and apply_rhythm and compute_rhythm_factor(now) >= 1.5) else 0.15
+            if not force_boost and self.rng.random() < rework_threshold:
+                # Rework loop
                 action = "二次核验"
                 actor = "质量评审专家委员会"
                 detail = template["rework_note"]

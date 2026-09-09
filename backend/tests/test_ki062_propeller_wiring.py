@@ -47,6 +47,8 @@ def _mock_construction_baseline() -> ConstructionBaseline:
         orgs_by_status={"双轨运行中": [1]},
         org_users={1: [{"name": "李四", "role": "项目经理"}]},
         next_ids={
+            "org_unit": 1000,
+            "sys_user": 1000,
             "construction_task": 100,
             "training_record": 200,
             "dual_run_result": 300,
