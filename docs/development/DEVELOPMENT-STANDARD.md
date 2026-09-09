@@ -25,7 +25,7 @@
 - 页面放在 `frontend/src/views/`，可复用组件放在 `frontend/src/components/`，复用状态逻辑放在
   `frontend/src/composables/`，共享状态放在 `frontend/src/stores/`。
 - TypeScript 类型应表达接口契约；避免新增无边界的 `any`，接口字段变化必须同步后端和测试。
-- 全局 CSS 入口只组织导入；基础、组件、页面和响应式规则分别放在 `frontend/src/styles/`。
+- 全局 CSS 入口 `frontend/src/styles.css` 只组织导入；`frontend/src/styles/` 固定为四层：`theme.css`（Token）、`base.css`（重置）、`shell.css`（外壳与顶栏，唯一允许媒体查询处）、`blocks.css`（积木原型）。组件私有样式写在其 SFC 的 `<style>` 内，不得新增全局样式文件。
 - 不直接修改 Element Plus、ECharts、依赖包或生成产物；通过源码导入和构建配置优化。
 
 ## 配置与依赖

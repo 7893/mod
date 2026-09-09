@@ -21,7 +21,7 @@
 ## 前端边界
 
 - 页面组件放在 `frontend/src/views/`，可复用组件放在 `frontend/src/components/`。
-- 全局样式入口仅负责按顺序导入；样式分别放入 `frontend/src/styles/` 的基础、组件、页面和响应式文件。
+- 全局样式入口 `frontend/src/styles.css` 仅负责按顺序导入；`frontend/src/styles/` 固定为 `theme.css`、`base.css`、`shell.css`、`blocks.css` 四个文件，组件私有样式内聚在各自 SFC 中。
 - 不手工拆改 Element Plus、ECharts 或其他第三方产物；优化通过源码导入与构建配置完成。
 
 ## 大文件规则

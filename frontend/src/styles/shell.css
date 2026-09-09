@@ -1,0 +1,344 @@
+/* 中控外壳：顶部导航、主内容区与 1920×980 缩放画布。
+   外壳位于缩放画布之外，是全站唯一允许按真实视口写媒体查询的地方；
+   画布内一律保持设计基准尺寸，由 useScaleScreen 等比缩放。 */
+
+/* 外壳锁定为一屏高。此前用 min-height 意味着高度没有上界，
+   驾驶舱页里 .dashboard-cockpit 的 flex: 1 就失去了约束对象，
+   区块会一路撑出视口底部。改为确定高度后由 .command-main 分配剩余空间。 */
+.command-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  /* 全屏模式下 dvh 在部分浏览器延迟更新，min-height: 100vh 保底撑满 */
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--c-bg-base) 0%, var(--c-bg-primary) 100%);
+}
+
+/* 顶部导航栏 */
+.command-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: clamp(8px, 1vw, 20px);
+  height: 56px;
+  padding: 0 clamp(12px, 1.25vw, 24px);
+  background: rgba(7, 10, 15, 0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 100;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* 左侧导航区 */
+.header-left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+/* 中央主标题区 */
+.header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 clamp(12px, 1.2vw, 28px);
+  position: relative;
+  user-select: none;
+}
+
+.header-main-title {
+  margin: 0;
+  font-size: clamp(18px, 1.35vw, 23px);
+  font-weight: 700;
+  letter-spacing: clamp(1.5px, 0.25vw, 3px);
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 45%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 16px rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+
+.header-title-decor {
+  width: 100%;
+  height: 1.5px;
+  margin-top: 4px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 20%, rgba(56, 189, 248, 0.5) 50%, rgba(255, 255, 255, 0.1) 80%, transparent 100%);
+  border-radius: 1px;
+}
+
+/* 右侧导航与状态区 */
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(6px, 0.8vw, 14px);
+  min-width: 0;
+}
+
+/* 导航选项 */
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(2px, 0.25vw, 6px);
+  min-width: 0;
+}
+
+.nav-tab {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 0.4vw, 6px);
+  padding: 6px clamp(8px, 0.7vw, 14px);
+  font-size: clamp(12px, 0.75vw, 13.5px);
+  font-weight: 500;
+  color: var(--c-text-muted);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+  position: relative;
+  white-space: nowrap;
+}
+
+.nav-tab:hover {
+  color: var(--c-text-secondary);
+  background: color-mix(in srgb, var(--c-accent) 8%, transparent);
+}
+
+.nav-tab.active {
+  color: var(--c-text-primary);
+  background: color-mix(in srgb, var(--c-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--c-accent) 38%, transparent);
+}
+
+.nav-tab svg {
+  opacity: 0.7;
+}
+
+.nav-tab.active svg {
+  opacity: 1;
+  color: var(--c-accent);
+}
+
+.risk-badge {
+  font-style: normal;
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  padding: 1px 5px;
+  background: var(--c-danger);
+  color: #fff;
+  border-radius: 10px;
+  margin-left: 2px;
+}
+
+/* 右侧状态区 */
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 0.6vw, 12px);
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.clock-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.5px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--c-text-muted);
+}
+
+.status-item b {
+  font-family: var(--font-mono);
+  color: var(--c-text-secondary);
+}
+
+.status-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--c-border-subtle);
+  margin-left: auto;
+}
+
+.link-state {
+  padding: var(--space-1) var(--space-3);
+  background: rgba(45, 212, 160, 0.1);
+  border-radius: var(--radius-sm);
+  color: var(--c-success);
+}
+
+.link-state.error {
+  background: rgba(239, 80, 80, 0.1);
+  color: var(--c-danger);
+}
+
+.link-state.sync {
+  background: rgba(224, 160, 32, 0.1);
+  color: var(--c-warning);
+}
+
+.link-dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.sync-time svg {
+  opacity: 0.6;
+}
+
+.sync-time.spin svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.header-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--c-text-muted);
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast);
+}
+
+.header-btn:hover {
+  color: var(--c-text-primary);
+  border-color: var(--c-border);
+  background: var(--c-bg-hover);
+}
+
+.header-btn.spin svg {
+  animation: spin 1s linear infinite;
+}
+
+/* 连接警告 */
+.connection-alert {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(224, 160, 32, 0.1);
+  border-bottom: 1px solid rgba(224, 160, 32, 0.2);
+  font-size: var(--text-sm);
+  color: var(--c-warning);
+}
+
+.connection-alert button {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  background: rgba(224, 160, 32, 0.15);
+  border: 1px solid var(--c-warning);
+  color: #fff;
+  border-radius: var(--radius-sm);
+}
+
+/* 主内容区 */
+/* 主内容区撑满外壳剩余高度，并向下传递确定高度：
+   驾驶舱页据此铺满一屏，不再依赖 calc(100dvh - 129px) 这类魔法数字
+   （该数字在增删顶栏/底栏时必然失准）。 */
+/* 主内容区吃掉外壳剩余高度并向下传递：驾驶舱页据此铺满一屏，
+   内容更长的子页（台账、研判等）则在此处纵向滚动。 */
+.command-main {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 统一缩放画布：固定 1920×980，水平居中、顶部锚定后等比缩放。
+   宽高比不一致时把不可避免的余量留在底部，避免标题栏下出现大块空白。 */
+.screen-scale-box {
+  flex-shrink: 0;
+  transform-origin: top center;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.screen-scale-box > * {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+/* 顶栏按真实视口收缩 */
+@media (max-width: 1600px) {
+  .sync-time,
+  .status-divider {
+    display: none;
+  }
+
+  .command-header {
+    gap: 8px;
+  }
+
+  .header-center {
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 1400px) {
+  .header-main-title {
+    font-size: 18px;
+  }
+
+  .nav-tab {
+    padding: 5px 6px;
+    font-size: 12px;
+  }
+
+  .link-state span:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .command-header {
+    height: auto;
+    padding-block: 8px;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .header-left,
+  .header-center,
+  .header-right {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .header-status {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 960px) {
+  .nav-tab span,
+  .status-divider,
+  .link-state span:last-child { display: none; }
+  .nav-tab { justify-content: center; min-width: 38px; }
+}
