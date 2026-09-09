@@ -1,6 +1,6 @@
 # MOD 文档索引
 
-更新日期：2026-09-08
+更新日期：2026-09-09
 状态：现行索引
 适用范围：当前规范、项目资料、历史基线、运维记录与证据入口
 
@@ -42,6 +42,7 @@
 - [development/GOVERNANCE-AND-COLLABORATION.md](development/GOVERNANCE-AND-COLLABORATION.md)：协作机制与文档治理架构阐释。
 - [development/CLOUDFLARE-BROWSER-RENDERING.md](development/CLOUDFLARE-BROWSER-RENDERING.md)：Cloudflare Browser Rendering 测试与使用边界。
 - [development/DUAL-RUN-DEFINITION.md](development/DUAL-RUN-DEFINITION.md)：双轨运行的业务定义、进入与退出条件。
+- [development/GOVERNANCE-SIMULATION-SYNTHESIS.md](development/GOVERNANCE-SIMULATION-SYNTHESIS.md)：合规治理因果模拟与动态自愈生态系统架构演进总纲。
 
 ## 需求与设计
 
