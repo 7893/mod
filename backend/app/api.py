@@ -1,3 +1,4 @@
+from contextlib import suppress
 import logging
 import threading
 from datetime import datetime
@@ -202,10 +203,8 @@ def _background_refresh_snapshot() -> None:
         )
     finally:
         if conn is not None:
-            try:
+            with suppress(Exception):
                 conn.close()
-            except Exception:
-                pass
         with _snapshot_lock:
             _snapshot_refreshing = False
 

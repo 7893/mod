@@ -31,6 +31,10 @@ dev = [
 line-length = 110
 target-version = "py312"
 
+[tool.ruff.lint]
+# S110/SIM105：禁止静默吞异常；清理型忽略须显式用 contextlib.suppress 表达意图。
+extend-select = ["S110", "SIM105"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["..", "."]

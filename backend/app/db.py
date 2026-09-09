@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import suppress
+
 from functools import lru_cache
 from typing import Iterator
 
@@ -37,18 +39,14 @@ def connection() -> Iterator[Connection | None]:
     except Exception:
 
         if conn is not None:
-            try:
+            with suppress(Exception):
                 conn.close()
-            except Exception:
-                pass
         yield None
         return
 
     try:
         yield conn
     finally:
-        try:
+        with suppress(Exception):
             conn.close()
-        except Exception:
-            pass
 

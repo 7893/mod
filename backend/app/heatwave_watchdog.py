@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import suppress
+
 import logging
 from typing import Any, Sequence
 from sqlalchemy import text
@@ -43,10 +45,8 @@ def get_heatwave_status(conn: Connection) -> dict[str, Any]:
             elif isinstance(row, dict):
                 loaded.add(str(row.get("TABLE_NAME", "")))
             else:
-                try:
+                with suppress(IndexError, TypeError, KeyError):
                     loaded.add(str(row[0]))
-                except Exception:
-                    pass
 
         missing = [t for t in TARGET_MOD_TABLES if t not in loaded]
         is_healthy = len(missing) == 0
@@ -86,10 +86,9 @@ def heal_heatwave_tables(conn: Connection, missing_tables: Sequence[str]) -> dic
         logger.info("HeatWave 看门狗触发自愈，开始重载表: mod.%s", table)
         try:
             # 1. 确保 SECONDARY_ENGINE = RAPID
-            try:
+            # 表已是 RAPID 时 ALTER 会报错，属预期；真正的失败由下一步 SECONDARY_LOAD 暴露。
+            with suppress(Exception):
                 conn.execute(text(f"ALTER TABLE `mod`.`{table}` SECONDARY_ENGINE = RAPID"))
-            except Exception:
-                pass
             # 2. 执行 SECONDARY_LOAD
             conn.execute(text(f"ALTER TABLE `mod`.`{table}` SECONDARY_LOAD"))
             healed.append(table)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 import json
 import os
 from datetime import UTC, datetime
@@ -87,10 +88,8 @@ class LiveProjectionBroker:
         if self._task is None:
             return
         self._task.cancel()
-        try:
+        with suppress(asyncio.CancelledError):
             await self._task
-        except asyncio.CancelledError:
-            pass
         self._task = None
 
     def subscribe(self) -> asyncio.Queue[ProjectionEvent]:
