@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ConstructionLedger from '../ConstructionLedger.vue'
 import { useProjectStore } from '../../stores/project'
-import snapshotData from '../../data/v2-sim-snapshot.json'
+import snapshotData from '../../data/fallback-snapshot.json'
 
 describe('ConstructionLedger', () => {
   let store: ReturnType<typeof useProjectStore>

@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import RolloutLedgerTable from '../RolloutLedgerTable.vue'
 import { useProjectStore } from '../../stores/project'
-import snapshotData from '../../data/v2-sim-snapshot.json'
+import snapshotData from '../../data/fallback-snapshot.json'
 
 describe('RolloutLedgerTable', () => {
   let store: ReturnType<typeof useProjectStore>

@@ -11,6 +11,8 @@ export interface HeatWaveModelStatus {
 
 /** `/api/insights/status` 的响应：快照 insights 叠加 HeatWave 与 Cloudflare 子系统状态。 */
 export interface InsightsStatus extends InsightsData {
+  /** 后端按真实模型质量判定：READY / VALIDATION_FAILED / NOT_EVALUATED。 */
+  automlStatus?: string
   hw_ml?: {
     status: string
     verified?: boolean
