@@ -12,9 +12,9 @@ from .auth import get_current_action_token, verify_internal_auth
 from .db import connection, get_engine
 from .heatwave_watchdog import get_heatwave_status
 from .ml_adapter import HeatWaveMLAdapter, CloudflareAIAdapter
-from .schemas import PageV2
+from .schemas import Page
 from .services.dashboard import (
-    build_dashboard_snapshot_v2,
+    build_dashboard_snapshot,
     load_fallback_snapshot as load_fallback_snapshot,
     normalize_operations_dict,
     normalize_region,
@@ -164,7 +164,7 @@ def _background_refresh_snapshot() -> None:
         conn = _get_dedicated_connection()
         if conn is None:
             raise RuntimeError("Unable to acquire dedicated DB connection")
-        snap = build_dashboard_snapshot_v2(conn)
+        snap = build_dashboard_snapshot(conn)
         duration_ms = round((monotonic() - t0) * 1000, 2)
         with _snapshot_lock:
             _snapshot_cache = snap
@@ -263,7 +263,7 @@ def dashboard_snapshot(conn: Connection | None = Depends(connection)) -> dict:
     with _snapshot_lock:
         if _snapshot_cache is not None:
             return _snapshot_cache
-        snap = build_dashboard_snapshot_v2(conn)
+        snap = build_dashboard_snapshot(conn)
         _snapshot_cache = snap
         _snapshot_cached_at = monotonic()
         _snapshot_source = "live" if conn is not None else "fallback"
@@ -297,7 +297,7 @@ def regions(conn: Connection | None = Depends(connection)) -> list[dict]:
     return snap.get("provinces", [])
 
 
-@router.get("/organizations", response_model=PageV2)
+@router.get("/organizations", response_model=Page)
 def organizations(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
@@ -305,7 +305,7 @@ def organizations(
     status: str | None = None,
     keyword: str | None = None,
     conn: Connection | None = Depends(connection),
-) -> PageV2:
+) -> Page:
     snap = dashboard_snapshot(conn)
     entities = snap.get("entities", [])
 
@@ -325,7 +325,7 @@ def organizations(
     total = len(filtered)
     start = (page - 1) * page_size
     items = filtered[start:start + page_size]
-    return PageV2(items=items, total=total, page=page, page_size=page_size)
+    return Page(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.get("/issues/summary")

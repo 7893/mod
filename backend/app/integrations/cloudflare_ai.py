@@ -248,7 +248,7 @@ class CloudflareAIAdapter:
             if _cf_cached_result is None:
                 return {
                     "status": "no_cache",
-                    "message": "尚无缓存，请先调用 POST /api/v2/insights/generate",
+                    "message": "尚无缓存，请先调用 POST /api/insights/generate",
                 }
             return dict(_cf_cached_result)
 
@@ -270,7 +270,7 @@ class CloudflareAIAdapter:
         Parameters
         ----------
         summary_data : dict
-            来自 /api/v2/dashboard/overview 的聚合字典；
+            来自 /api/dashboard/overview 的聚合字典；
             本方法只取白名单字段，其余自动过滤。
 
         Returns

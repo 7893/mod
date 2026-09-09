@@ -263,7 +263,7 @@ class HeatWaveMLAdapter:
 
     def get_status(self) -> dict:
         """
-        返回两个模型的汇总状态，供 /api/insights/status 与 /api/v2/insights/status 使用。
+        返回两个模型的汇总状态，供 /api/insights/status 使用。
         此方法为只读，始终安全。
         """
         reg_status = self.get_model_status(MODEL_REGRESSION)
