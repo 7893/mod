@@ -29,7 +29,7 @@ import AtRiskUnitTable, { type AtRiskUnit } from '../components/AtRiskUnitTable.
 import AiQuotaCapsule from '../components/AiQuotaCapsule.vue'
 import { isRegressionEffective, isClassifierEffective, isAutomlReady } from '../utils/modelEvaluation.ts'
 import { useProjectStore } from '../stores/project.ts'
-import { useAiInsights } from '../composables/useAiInsights.ts'
+import { useInsightsStatus } from '../composables/useInsightsStatus.ts'
 import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
 import {
   chartPalette,
@@ -48,7 +48,7 @@ use([CanvasRenderer, BarChart, PieChart, GridComponent, TitleComponent, TooltipC
 const router = useRouter()
 const store = useProjectStore()
 
-const { aiStatus } = useAiInsights()
+const { status: insightsStatus } = useInsightsStatus()
 
 // F5 每日决策简报（后台自动生成，只读展示，零交互）
 const { briefing, loading: briefingLoading } = useDailyBriefing()
@@ -57,9 +57,7 @@ const briefingSections = computed(() => parseBriefingSections(briefing.value?.co
   .slice(0, 3)
   .map((section, index) => ({ ...section, tone: BRIEFING_TONES[index] ?? 'accent' })))
 
-const predictionsMap = computed(() => indexPredictions(
-  (aiStatus.value as any)?.predictions || (store.snapshot.insights as any)?.predictions,
-))
+const predictionsMap = computed(() => indexPredictions(insightsStatus.value?.predictions))
 
 // 风险主场核心：与 E 屏合规监督、生命周期推进器共用 utils/riskRules 同一判定标准
 const atRiskUnits = computed<AtRiskUnit[]>(() =>
@@ -173,17 +171,13 @@ const riskDistChartOption = computed(() => {
  * 回归 R² <= 0、分类准确率退化（1.0）显式标记为"已训练，验证未达标"，不把不可信指标当预测能力展示。
  */
 const insights = computed(() => {
-  const data: any = aiStatus.value || store.snapshot.insights || {}
-  const hw = data.hw_ml || {}
-  const regQuality = hw.models?.regression?.quality ?? null
-  const clsQuality = hw.models?.classifier?.quality ?? null
+  const data = insightsStatus.value ?? store.snapshot.insights
+  const hw = insightsStatus.value?.hw_ml
+  const regQuality = hw?.models?.regression?.quality ?? null
+  const clsQuality = hw?.models?.classifier?.quality ?? null
   const regEffective = isRegressionEffective(regQuality)
   const clsEffective = isClassifierEffective(clsQuality)
-  const isReady = isAutomlReady(
-    data.automlStatus || (store.snapshot.insights as any)?.automlStatus,
-    regQuality,
-    clsQuality
-  )
+  const isReady = isAutomlReady(data.automlStatus, regQuality, clsQuality)
 
   return {
     automlStatusDisplay: isReady ? '已就绪 (In-DB Ready)' : '已训练，验证未达标',
@@ -193,7 +187,7 @@ const insights = computed(() => {
         id: 'model-doc-volume-forecast',
         name: '业务单据日增量预测模型',
         type: 'REGRESSION',
-        algorithm: hw.models?.regression?.algorithm || 'HeatWave AutoML LinearRegression',
+        algorithm: hw?.models?.regression?.algorithm || 'HeatWave AutoML LinearRegression',
         target: 'daily_doc_delta (当日新增单据)',
         status: regEffective ? '已就绪' : '已训练，验证未达标',
         quality: regQuality,
@@ -206,12 +200,12 @@ const insights = computed(() => {
         id: 'model-rollout-duration-forecast',
         name: '批次延期风险智能分类模型',
         type: 'CLASSIFICATION',
-        algorithm: hw.models?.classifier?.algorithm || 'HeatWave AutoML LogisticRegression',
+        algorithm: hw?.models?.classifier?.algorithm || 'HeatWave AutoML LogisticRegression',
         target: 'risk_flag (0:正常 / 1:高危延期)',
         status: clsEffective ? '已就绪' : '已训练，验证未达标',
         quality: clsQuality,
         features: ['建设推进斜率', '工期停滞天数', '未解决问题数', '培训报错剪刀差', '经办人集中度'],
-        description: clsEffective
+        description: clsEffective && clsQuality != null
           ? `基于按单位独立分层测试集评估，泛化准确率 = ${(clsQuality * 100).toFixed(1)}%，消除退化，库内推理与 SHAP 归因已就绪。`
           : '基于真实测试集评估，分类标签过度可分（退化为 1.0），按 KI-028 规范如实标为验证未达标。',
       },

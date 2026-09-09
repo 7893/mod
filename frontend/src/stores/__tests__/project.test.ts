@@ -64,6 +64,20 @@ describe('stores/project', () => {
     expect(store.snapshot.overview.docsTotal).toBe(222)
   })
 
+  it('reports fallback data source when backend marks the snapshot as fallback', async () => {
+    store = useProjectStore()
+    await flushPromises()
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...snapshotData, meta: { ...snapshotData.meta, source: 'fallback' } }),
+    })
+
+    await store.refresh()
+
+    expect(store.dataSource).toBe('fallback')
+    expect(store.connectionError).toBe('')
+  })
+
   it('accepts an authoritative empty live entity list instead of retaining fallback rows', async () => {
     store = useProjectStore()
     await flushPromises()

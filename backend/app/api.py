@@ -229,10 +229,19 @@ def prewarm_snapshot(sync: bool = False) -> None:
 
 
 @router.get("/dashboard/snapshot")
-def dashboard_snapshot(conn: Connection | None = Depends(connection)) -> dict:
+def dashboard_snapshot_endpoint(conn: Connection | None = Depends(connection)) -> dict:
     """
-    获取数据大屏全景快照数据 (SWR Stale-While-Revalidate 保障全场景 < 1.0s SLA)
+    获取数据大屏全景快照数据 (SWR Stale-While-Revalidate 保障全场景 < 1.0s SLA)。
+
+    `meta.source` 如实标注本次返回的是真库快照（live）还是内置兜底（fallback），
+    前端据此决定数据源徽标，而不是把任何 200 响应都当作真库数据。
     """
+    snap = dashboard_snapshot(conn)
+    return {**snap, "meta": {**snap.get("meta", {}), "source": _snapshot_source}}
+
+
+def dashboard_snapshot(conn: Connection | None) -> dict:
+    """SWR 缓存的快照读取：热缓存直接返回，过期则后台刷新，冷启动同步构建。"""
     global _snapshot_cache, _snapshot_cached_at, _snapshot_refreshing, _snapshot_refresh_started_at
     global _snapshot_source
     now = monotonic()

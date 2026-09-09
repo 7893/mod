@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { formatCount } from '../formatters/metrics.ts'
 import VChart from 'vue-echarts'
@@ -54,8 +54,12 @@ const briefingSummary = computed(() => {
 // 首屏动效只播放一次：进入页面后关闭数字/进度条的强动效时长，
 // 避免省份切换、数据轮询刷新时反复"跳数字+飞入"造成视觉噪音。
 const isFirstLoad = ref(true)
+let firstLoadTimer: number | null = null
 onMounted(() => {
-  window.setTimeout(() => { isFirstLoad.value = false }, 1200)
+  firstLoadTimer = window.setTimeout(() => { isFirstLoad.value = false }, 1200)
+})
+onUnmounted(() => {
+  if (firstLoadTimer !== null) window.clearTimeout(firstLoadTimer)
 })
 const numDuration = (ms: number) => (isFirstLoad.value ? ms : 0)
 

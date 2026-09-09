@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -104,6 +104,10 @@ watch(() => props.liveEvent, (ev) => {
     liveBanner.value = null
   }, 4500)
 }, { immediate: true })
+
+onUnmounted(() => {
+  if (bannerTimer !== null) window.clearTimeout(bannerTimer)
+})
 
 /** 散点跳动光圈数据 */
 const liveScatterData = computed(() => {
