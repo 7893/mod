@@ -123,6 +123,7 @@
   HTTP 响应头 `X-Robots-Tag` 同值；并在 Nginx 层按 `User-Agent` **硬拦截** AI/检索爬虫直接返回 403（不返回任何内容），
   正常访客不受影响。robots/meta 为君子协定，Nginx UA 拦截为强制层。
 - V2 六屏驾驶舱、只读 `/api/v2`、34 省地图和无刷新轮询已经实现。
+- 大屏中央主标题与浏览器 `<title>` 统一为「业务系统建设推广大屏演示」（`App.vue` 顶栏 `header-main-title` 与 `frontend/index.html`）。
 - 前端路由采用 hash 模式（`createWebHashHistory`），URL 形如 `https://<域名>/#/a`；刷新任意屏不依赖
   服务器 fallback、永不 404。菜单从左到右严格 A→B→C→D→E→F（/d=业务运营 OperationsView、/f=风险预警 InsightsView），
   路由/组件/zone/标签/跳转全对齐。
