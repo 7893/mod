@@ -14,6 +14,14 @@
 6. [KNOWN-ISSUES.md](KNOWN-ISSUES.md)：已知问题看板（已发现问题的看板列表，各 issue 详情见 [issues/](issues/)；新需求/任务用 GitHub Issues 登记）。
 7. [CHANGELOG.md](../CHANGELOG.md)：从公开就绪基线开始、由锁定版本 git-cliff 生成的发布变更快照。
 
+### 当前活跃重大缺陷
+
+- [KI-070 驾驶舱跨屏业务口径与交互状态不一致](issues/KI-070-驾驶舱跨屏业务口径与交互状态不一致.md)
+- [KI-071 F 屏模型就绪与 SHAP 归因来源失真](issues/KI-071-F屏模型就绪与SHAP归因来源失真.md)
+- [KI-072 常驻模拟器生命周期编排、事务与安全状态未闭环](issues/KI-072-常驻模拟器生命周期编排事务与安全状态未闭环.md)
+- [KI-073 实时投影与持久化模拟器双轨事件链事实分裂](issues/KI-073-实时投影与持久化模拟器双轨事件链事实分裂.md)
+- [KI-074 历史文档未版本化保全与语义治理闸门缺失](issues/KI-074-历史文档未版本化保全与语义治理闸门缺失.md)
+
 ## 现行维护规范
 
 - [development/README.md](development/README.md)：现行开发规范导航。
