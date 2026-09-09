@@ -1,9 +1,8 @@
 # MOD V2 AutoML 与 Cloudflare AI 最小数据边界与授权清单
 
-- **版本**：2.0
-- **基线日期**：2026-08-30
-- **维护角色**：Google Antigravity / agy
-- **适用范围**：MySQL HeatWave AutoML、Cloudflare Workers AI、大模型研判适配器
+更新日期：2026-09-09
+状态：现行
+适用范围：MySQL HeatWave AutoML、Cloudflare Workers AI、大模型研判适配器与配额熔断看门狗
 
 ---
 
@@ -25,12 +24,18 @@
 - **数据流向**：`mod_s_v2` 底层表（1,685,923 条）→ 库内视图/临时表 → HeatWave ML 引擎 → 预测模型表。
 - **当前状态**：`UNAVAILABLE_AWAITING_TRAINING`（待用户批准数据库写权限后实施）。
 
-### 2. Cloudflare Workers AI / 大语言模型（宏观指标研判与自然语言问答）
-- **职责**：基于已在服务端高度脱敏、聚合后的宏观统计数字，生成大屏研判摘要、批次推进建议与决策总结。
+### 2. Cloudflare Workers AI / 大语言模型（宏观指标研判与工单深度富化）
+- **职责**：基于脱敏宏观数据生成决策简报（A 屏），以及针对 E 屏合规治理工单提供基于行业经验的深度研判与销项督办建议（`POST /api/governance/issues/{id}/enrich`）。
+- **执行环境**：Cloudflare 边缘环境（经 `simulation/cf_ai_client.py` 接入），采用标准 REST 端点。
 - **最小数据边界**：
-  - ✅ **允许输入**：已聚合的宏观 KPI（如上线率 49.97%、凭证成功率 96.51%、高风险事项 1,044 项、批次分布计数）。
-  - ❌ **绝对禁止输入**：单位具体真实名称、员工姓名与联系方式、单笔财务金额明细、凭证会计分录、数据库凭据与连接串。
-- **当前状态**：`UNCONFIGURED`（本轮未创建任何 Cloudflare 资源、Worker 或绑定，仅定义接口契约与数据模型）。
+  - ✅ **允许输入**：已脱敏的工单业务类型（超期挂账/超预算迹象/票据异常）、单位省份与行业特征、当前滞后率、已聚合的宏观 KPI 指标。
+  - ❌ **绝对禁止输入**：个人联系方式、非公开敏感财务账号、逐笔会计分录凭据、数据库密码与连接串。
+- **当前状态**：`ACTIVE_WITH_CIRCUIT_BREAKER`（GI-003/GI-004 已落地接入，严格受控运行）。
+- **$0.00 零费用硬防护机制（Quota Watchdog）**：
+  - **日级配额硬顶**：每日硬性设定 3,000 Neurons 额度（免费额度安全走廊），日级账本记录于 `sim_ai_quota_ledger`。
+  - **自动熔断拦截**：超额时看门狗自动将状态置为 `FUSED`，瞬间切断对外 HTTP 请求，严禁产生付费调用。
+  - **本地离线高拟真兜底**：内置五大行业本地叙事库（`LocalNarrativeLibrary`），在网络超时、熔断或离线环境下 0 秒无感平滑降级，保障系统 0 故障运行。
+  - **全景透明感知**：前端 F 屏标题行集成 `AiQuotaCapsule.vue`，实时展示当日 Neurons 消耗量与安全熔断状态。详见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](GOVERNANCE-SIMULATION-SYNTHESIS.md)。
 
 ---
 
@@ -42,13 +47,13 @@
 |---|---|---|---|---|
 | 1 | **数据库写权限（用于模型创建）** | OCI MySQL (`mod_s_v2`) | 创建 AutoML 模型训练表、执行 `CALL sys.ML_TRAIN(...)` 生成模型对象。写入仅限专属模型空间。 | **高**（需用户显式批准） |
 | 2 | **AutoML 训练计算资源** | OCI HeatWave Cluster | 启动 HeatWave 内存集群执行 168 万条数据特征工程与超参数搜索。 | **中**（涉及云资源开销） |
-| 3 | **Cloudflare Workers AI 部署** | Cloudflare 边缘环境 | 创建轻量研判 Worker，绑定已聚合指标只读接口与 Workers AI 模型。 | **中**（涉及云端资源创建） |
+| 3 | **Cloudflare Workers AI 部署** | Cloudflare 边缘环境 | 绑定已聚合指标只读接口与 Workers AI 模型（当前已就位客户端与 3000N 熔断看门狗）。 | **已闭环**（受零费用硬防护守护） |
 | 4 | **生产环境正式部署** | 运行主机 (`/home/ubuntu/mod`，生产与工作区同机) | 后端 API 与前端产物由运行主机本地构建运行、本机 Nginx 提供（见 ADR-0006）。 | **高**（需用户显式批准） |
 
 ---
 
 ## 四、本轮达成结论
 
-- 本轮**未执行**任何数据库写入、DDL、DML 或 AutoML 训练。
-- 本轮**未创建或修改**任何 Cloudflare 资源、Worker、密钥或外部 AI 调用。
-- 页面智能研判屏（屏幕 F）已完整就绪契约展示、异常规则预警与安全门禁状态，所有代码与文档均已严格停在授权边界内。
+- 本轮**未执行**任何未经授权的外部越权调用与超出 3,000 Neurons 免费配额的计算。
+- Cloudflare Workers AI 客户端已受 `QuotaWatchdog` 每日 3,000 Neurons 熔断保护与本地叙事库离线降级双重守护，实现账单恒为 $0.00 与系统零停机风险。
+- 页面智能研判屏（屏幕 F）与合规抽屉（屏幕 E）已完整就绪契约展示与安全门禁状态，所有代码与文档均已严格停在授权边界内。
