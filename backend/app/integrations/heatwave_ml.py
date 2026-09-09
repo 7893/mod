@@ -605,6 +605,7 @@ class HeatWaveMLAdapter:
             return {
                 "orgId": org_id,
                 "status": "unavailable",
+                "explanationSource": "UNAVAILABLE",
                 "topAttributions": [],
             }
 
@@ -639,6 +640,7 @@ class HeatWaveMLAdapter:
             return {
                 "orgId": org_id,
                 "status": "not_found",
+                "explanationSource": "UNAVAILABLE",
                 "message": f"未在特征表中找到单位 #{org_id} 的特征数据",
                 "topAttributions": [],
             }
@@ -658,6 +660,7 @@ class HeatWaveMLAdapter:
         }
 
         attributions: dict[str, float] = {}
+        explanation_source = "UNAVAILABLE"
 
         # 2. 尝试调用 HeatWave sys.ML_EXPLAIN_ROW
         try:
@@ -692,6 +695,8 @@ class HeatWaveMLAdapter:
                     col = k.replace("_attribution", "")
                     if col in factor_defs and v is not None:
                         attributions[col] = float(v)
+                if attributions:
+                    explanation_source = "HEATWAVE_SHAP"
         except Exception:
             pass
 
@@ -716,6 +721,7 @@ class HeatWaveMLAdapter:
                 "construction_pct": max(0.0, (90.0 - const_pct) * 0.01),
                 "integration_success_pct": max(0.0, (98.0 - integ_pct) * 0.02),
             }
+            explanation_source = "RULE_BASED"
 
         # 4. 提取对风险正向贡献最大的 Top 3 因子并归一化为百分比
         sorted_factors = sorted(attributions.items(), key=lambda x: x[1], reverse=True)
@@ -744,6 +750,7 @@ class HeatWaveMLAdapter:
 
         return {
             "status": "ok",
+            "explanationSource": explanation_source,
             "orgId": org_id,
             "orgName": row.get("org_name") or f"单位 #{org_id}",
             "riskFlag": int(row.get("risk_flag") or 0),
