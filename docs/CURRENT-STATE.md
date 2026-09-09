@@ -241,17 +241,18 @@
   - 金标稽核诚实性重构（KI-066）：`backend/app/services/dashboard.py` 将未执行全量离线扫表的借贷平衡、时序逻辑与孤儿链路 3 项异常数由硬编码 `0` 改为如实上报 `None`，恪守 KI-023 诚实性纪律，前端优雅降级展示为 unknown 灰色状态与 `—`；保留第四项经真库日结核验的组织状态演进追踪（`org_total`）。
   - E 屏与 A1 语义分工澄清（KI-066）：E 屏 E5 面板副标题明确“单位指标态现场判定（阈值派生）与治理工单处置流转”分工；A1 顶部总览将演示投影会话计数澄清为「实时集成脉搏」，并采用 sky-400 色调与真库今日增量（emerald-400）进行视觉区隔。
   - B2 雷达图 Tooltip 补齐百分号（KI-067）：`frontend/src/charts/constructionOptions.ts::createTaskStageRadarOption` 增加自定义 formatter，各阶段完成率读数规范补齐 `%` 后缀，语义严谨。
-  - D7 数据质量金标准面板重构与副标题自洽（KI-067 / KI-068）：`frontend/src/views/OperationsView.vue` 将四项规则小卡改为左侧 5 列纵向排布、右侧 7 列承载核验覆盖规模条形图，副标题同步调整为「核心业务约束与金标准稽核规则 · 未离线稽核项如实标注，不虚报 0 异常」，彻底消除旧文案与未核验未知态矛盾，版面呼吸感显著提升。
+  - D7 数据质量金标准面板界面重构：`frontend/src/views/OperationsView.vue` 将四项金标准规则重构为左侧 7 列 2x2 科技感指标矩阵排布（含借贷平衡、时序逻辑、孤儿链路、状态演进），强化数字字号、合规率微型进度条与状态色标；右侧 5 列对齐承载实际核验覆盖规模条形图，不更改任何指标读数与展示内容，全面提升大屏视觉美感与信息层级。
+  - E 屏布局流向优化：`frontend/src/views/IssuesView.vue` 将治理自愈动态广播流（`LiveActivityTicker`）从屏顶移至 E1「合规监督指挥盘」下方，首屏顶部优先展现全网合规大盘与 TOP3 风险维度，紧随其后呈现动态自愈事件流。
 - 双轨运行真实性演进落地与对账维度穿透（KI-053，DONE P3）：
   - 真实财务差异语料化（`simulation/construction_models.py`）：建立三大对账类别 15 组高保真专业语料库（`DUAL_RUN_DIFFERENCE_REASONS`，涵盖总账汇率截断时差、跨期预付账款挂账重分类、资产折旧尾差等真实事由），底表模型扩展 `difference_reason` 字段并落实勾稽校验；
   - 财务周期强节律机制（`simulation/construction_playbooks.py`）：引入月末结账期（自然月 26~31 日及月初 1~2 日）差异与核对量自然脉冲逻辑，动态匹配《差异专项排查与单边冲销》或《月末试算平衡核验》建设任务；
   - 驾驶舱 D6 细分对账穿透（`backend/app/services/dashboard.py`，`OperationsView.vue`）：后端扩展 `dualRunBreakdown` 细分维度统计，前端 D6 面板在一致率仪表下直观呈现月末科目余额（92.5%）、凭证借贷汇总（93.2%）与单据金额（92.7%）三大核心财务对账通过率；
   - 测试套件全量覆盖：231 项 pytest 与 112 项 Vitest 自动化测试 100% 通过。
-- 矛与盾攻防博弈与合规治理引擎（GI-003/GI-004 阶段一至阶段五 & KI-062/KI-063 治理闭环）：
+- 矛与盾攻防博弈与合规治理引擎（GI-004 & KI-062/KI-063 治理闭环）：
   - 昼夜作息与月末生物钟（GI-004，`simulation/governance_state_machine.py`）：引入 $k_{\text{rhythm}}$ 节律因子，工作日早晚黄金工段 1.8x 加速、午间 0.5x 放缓、夜间 22:00-07:00 彻底冻结（杜绝半夜出具验收通报虚假繁荣）、月末 25 日起叠加 1.5x 冲刺乘数，二次核验返工率动态适配。
   - 30~45 单动态平衡走廊（GI-004，`simulation/construction_propeller.py`）：实时感知未结案库存；低于 35 单时提升阻力暗礁触发率至 50% 并放缓消缺，高于 45 单时降低阻力触发率至 5% 并加速消缺，确保大盘恒定平稳呼吸，告别全绿死水与人工干预。
   - 跨屏因果涟漪网络（GI-004，E $\to$ B $\to$ C/D）：工单闭环销项后彻底解除阻力，建设任务进度直冲 100% 并标记「已完成」，期初数据率直达 100.0%，单位状态自动跃迁为「双轨运行中」，驱动下游凭证流水有机放量。
-  - 治理实时广播与展厅智能巡航（GI-004，`LiveActivityTicker.vue`, `KioskSpotlightTour.vue`）：E 屏顶部暗黑科技风走字流动态轮播专班一线处置流水；空闲 45 秒无感激活展厅聚光灯巡航 HUD 浮窗，任意交互瞬时淡出。
+  - 治理实时广播与展厅智能巡航（GI-004，`LiveActivityTicker.vue`, `KioskSpotlightTour.vue`）：E1 下方暗黑科技风走字流动态轮播专班一线处置流水；空闲 45 秒无感激活展厅聚光灯巡航 HUD 浮窗，任意交互瞬时淡出。
   - 实时治理动态接口（GI-004，`GET /api/governance/recent-activities`）：以毫秒级 SLA 供给最新工单事件流。
   - 测试套件离线自洽与凭据脱敏（KI-063）：移除了测试与代码中硬编码的内网 IP 与账号默认值，构建内存 `MockLedgerConnection` 与隔离 Mock 消除测试对真实生产库的直连与写库操作，完全符合 ENFORCEMENT 闸门 A/B 要求。
   - 模拟主循环接线闭环（KI-062，`simulation/runtime_service.py`）：将治理推进器（`ConstructionPropeller`）与涓流回填（`TrickleBackfiller`）正式挂接到慢电影建设周期主循环，由 `MOD_SIMULATION_ENGINE_ENABLED` 失败关闭门禁控制，彻底闭合「有引擎无接线」的技术债缺口。

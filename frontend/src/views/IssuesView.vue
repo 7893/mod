@@ -182,9 +182,6 @@ const paginatedTableUnits = computed(() => {
 
 <template>
   <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="E">
-    <!-- GI #4 治理自愈动态广播流 -->
-    <LiveActivityTicker class="flex-shrink-0" />
-
     <!-- E1: 合规仪表、风险分层与主要风险维度 -->
     <CockpitPanel
       title="合规监督指挥盘"
@@ -208,6 +205,9 @@ const paginatedTableUnits = computed(() => {
         </section>
       </div>
     </CockpitPanel>
+
+    <!-- GI #4 治理自愈动态广播流 -->
+    <LiveActivityTicker class="flex-shrink-0" />
 
     <!-- 中部：E2 风险维度分布 + E3 水位构成 (弹性优先，Guardrail 扩大为 min-h-[200px] max-h-[300px]，E-2) -->
     <div class="grid grid-cols-issues-top gap-2.5 min-h-[200px] max-h-[300px] flex-1">
