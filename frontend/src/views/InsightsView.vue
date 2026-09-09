@@ -71,16 +71,17 @@ const predictionsMap = computed(() => {
  */
 const atRiskUnits = computed<AtRiskUnit[]>(() => {
   const list: AtRiskUnit[] = []
+  const rules = store.snapshot.businessRules
   store.entities.forEach((row) => {
-    const isDualDiff = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < 95)
-    const isConstructionLag = row.construction < 88 && (row.status === '建设中' || row.status === '双轨运行')
-    const isPrepStuck = row.status === '准备中' && (row.batchId != null && row.batchId <= 7)
+    const isDualDiff = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < rules.lifecycle.dualRunConsistencyRateMin)
+    const isConstructionLag = row.construction < rules.risk.constructionLagRate && (row.status === '建设中' || row.status === '双轨运行')
+    const isPrepStuck = row.status === '准备中' && (row.batchId != null && row.batchId <= rules.risk.lastActiveBatchId)
 
     const pred = predictionsMap.value.get(row.id)
-    const stagnantDays = pred?.stagnantDays ?? (row.status === '准备中' ? 14 : row.status === '建设中' ? 8 : 2)
-    const progressSlope14d = pred?.progressSlope14d ?? (row.construction > 90 ? 1.2 : 0.4)
-    const trainingErrorScissors = pred?.trainingErrorScissors ?? (row.voucherRate ? Math.max(0, 100 - Math.round(row.voucherRate)) : 15)
-    const handlerConcentration = pred?.handlerConcentration ?? 0.65
+    const stagnantDays = pred?.stagnantDays
+    const progressSlope14d = pred?.progressSlope14d
+    const trainingErrorScissors = pred?.trainingErrorScissors
+    const handlerConcentration = pred?.handlerConcentration
 
     if (isDualDiff) {
       list.push({
@@ -95,7 +96,7 @@ const atRiskUnits = computed<AtRiskUnit[]>(() => {
         voucherRate: row.voucherRate,
         riskType: '双轨核对差异',
         riskLevel: '高危',
-        reason: `双轨入账凭证率仅 ${formatPercent(row.voucherRate)}，未达 95% 门禁，存在借贷试算不平风险`,
+        reason: `双轨入账凭证率仅 ${formatPercent(row.voucherRate)}，未达 ${rules.lifecycle.dualRunConsistencyRateMin}% 门禁，存在借贷试算不平风险`,
         stagnantDays,
         progressSlope14d,
         trainingErrorScissors,
@@ -313,12 +314,13 @@ const riskOverviewOption = computed(() => createRiskOverviewOption([
 const riskUnitTotal = computed(() => dualDiffCount.value + constLagCount.value + prepStuckCount.value)
 
 const modelQualityRows = computed(() => insights.value.targetModels.map((model) => {
-  const quality = model.quality == null ? null : Math.max(0, Math.min(1, model.quality))
+  const quality = model.quality == null ? null : model.quality
+  const progressQuality = quality == null ? 0 : Math.max(0, Math.min(1, quality))
   const regression = model.type === 'REGRESSION'
   return {
     label: regression ? '单据增量回归' : '延期风险分类',
     value: quality == null ? '—' : (regression ? `R² ${quality.toFixed(4)}` : `Acc ${(quality * 100).toFixed(1)}%`),
-    progress: quality == null ? 0 : quality * 100,
+    progress: progressQuality * 100,
   }
 }))
 
@@ -391,7 +393,7 @@ const readyModelCount = computed(() => insights.value.targetModels.filter((model
             class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-cockpit-xs flex-shrink-0"
           >
             <Sparkles :size="13" class="flex-shrink-0 text-emerald-400" />
-            <span>独立测试集达标 · 2/2 模型可用 · 库内推理与 SHAP 归因就绪</span>
+            <span>独立测试集达标 · {{ readyModelCount }}/{{ insights.targetModels.length }} 模型可用 · 仅对已验证模型提供推理</span>
           </div>
 
           <div class="grid grid-rows-2 gap-2 flex-1 min-h-0">

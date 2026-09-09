@@ -41,5 +41,6 @@ export default createRouter({
       component: InsightsView,
       meta: { title: '风险预警', screen: 'F' },
     },
+    { path: '/:pathMatch(.*)*', redirect: '/a' },
   ],
 })

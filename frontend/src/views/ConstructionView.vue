@@ -54,7 +54,8 @@ const router = useRouter()
 const store = useProjectStore()
 
 const activeTab = ref<'overview' | 'ledger'>(route.query.tab === 'ledger' ? 'ledger' : 'overview')
-const ledgerFilter = ref('全部')
+const ledgerStatusFilter = ref('全部')
+const ledgerReadinessFilter = ref('全部')
 
 watch(() => route.query.tab, (val) => {
   if (val === 'ledger') activeTab.value = 'ledger'
@@ -67,18 +68,16 @@ function switchTab(tab: 'overview' | 'ledger') {
 }
 
 function openLedgerWithFilter(statusFilter = '全部') {
-  ledgerFilter.value = statusFilter
+  ledgerStatusFilter.value = statusFilter
+  ledgerReadinessFilter.value = '全部'
   switchTab('ledger')
 }
 
 function handleReadinessClick(params: { name?: string }) {
-  const filters: Record<string, string> = {
-    已导入: '已上线',
-    已校验: '已上线',
-    收集中: '准备中',
-    未收集: '未启动',
-  }
-  if (params.name && filters[params.name]) openLedgerWithFilter(filters[params.name])
+  if (!params.name || !['已导入', '已校验', '收集中', '未收集'].includes(params.name)) return
+  ledgerStatusFilter.value = '全部'
+  ledgerReadinessFilter.value = params.name
+  switchTab('ledger')
 }
 
 const format = (value: number | undefined) => (
@@ -277,14 +276,18 @@ const readinessPieOption = computed(() => ({
         </template>
         <div class="flex h-full min-h-0 flex-col gap-2">
           <VChart class="min-h-0 flex-1 cursor-pointer" :option="readinessPieOption" autoresize @click="handleReadinessClick" />
-          <p class="text-center text-cockpit-xs text-slate-500 flex-shrink-0">点击扇区，按状态进入单位台账</p>
+          <p class="text-center text-cockpit-xs text-slate-500 flex-shrink-0">点击扇区，按数据准备状态进入单位台账</p>
         </div>
       </CockpitPanel>
     </main>
 
     <!-- 并入的数据准备台账下钻主区 -->
     <main v-else class="flex-1 min-h-0 flex flex-col">
-      <ConstructionLedger :initial-filter="ledgerFilter" @back="switchTab('overview')" />
+      <ConstructionLedger
+        :initial-filter="ledgerStatusFilter"
+        :initial-readiness-filter="ledgerReadinessFilter"
+        @back="switchTab('overview')"
+      />
     </main>
   </div>
 </template>

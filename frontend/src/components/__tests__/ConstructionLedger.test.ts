@@ -32,12 +32,13 @@ describe('ConstructionLedger', () => {
     expect(wrapper.find('[data-zone="B7"]').exists()).toBe(true)
     expect(wrapper.find('[data-zone="B8"]').exists()).toBe(true)
 
-    // Select options with counts: batch (0), province (1), status (2)
+    // Select options with counts: batch (0), province (1), lifecycle (2), readiness (3)
     const selects = wrapper.findAll('select')
     expect(selects[0].text()).toContain('全部批次')
     expect(selects[1].text()).toContain('全部省份')
     expect(selects[2].text()).toContain('全部状态')
     expect(selects[2].text()).toContain('准备中')
+    expect(selects[3].text()).toContain('全部准备度')
 
     // Page 2
     const nextBtn = wrapper.findAll('button').find((b) => b.text().includes('下一页'))
@@ -53,6 +54,22 @@ describe('ConstructionLedger', () => {
     // Resets to page 1
     expect(wrapper.text()).toContain('第 1 /')
     expect(wrapper.findAll('tbody tr').length).toBeGreaterThan(0)
+  })
+
+  it('keeps data-readiness filtering independent from lifecycle status', async () => {
+    store.entities = [
+      { ...store.entities[0], id: 1, name: '已校验单位', status: '建设中', readinessStatus: '已校验' },
+      { ...store.entities[1], id: 2, name: '收集中单位', status: '建设中', readinessStatus: '收集中' },
+    ]
+    const wrapper = mount(ConstructionLedger, {
+      props: { initialReadinessFilter: '已校验' },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('已校验单位')
+    expect(wrapper.text()).not.toContain('收集中单位')
+    expect(wrapper.findAll('select')[2].element.value).toBe('全部')
+    expect(wrapper.findAll('select')[3].element.value).toBe('已校验')
   })
 
   it('supports filter reset via toolbar reset button', async () => {
@@ -94,4 +111,3 @@ describe('ConstructionLedger', () => {
     expect(searchRows.length).toBeGreaterThan(0)
   })
 })
-

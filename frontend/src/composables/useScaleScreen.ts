@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 export interface ScaleScreenOptions {
   baseWidth?: number
   baseHeight?: number
-  /** 缩放下限：低于此值不再缩小，避免常规分辨率以下文字糊成一团。 */
+  /** 缩放下限：默认允许完整画布继续缩小；调用方仅在明确接受裁切时覆盖。 */
   minScale?: number
   /** 缩放上限：高于此值不再放大，避免超大屏元素过疏、线条发虚。 */
   maxScale?: number
@@ -19,7 +19,7 @@ export interface ScaleScreenOptions {
  * fullscreenchange 只负责在浏览器完成布局切换后重新测量。
  */
 export function useScaleScreen(options: ScaleScreenOptions = {}) {
-  const { baseWidth = 1920, baseHeight = 980, minScale = 0.55, maxScale = 1.35 } = options
+  const { baseWidth = 1920, baseHeight = 980, minScale = 0.1, maxScale = 1.35 } = options
   const scale = ref(1)
   const viewportRef = ref<HTMLElement | null>(null)
 

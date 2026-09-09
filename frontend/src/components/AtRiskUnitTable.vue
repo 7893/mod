@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Search, X } from 'lucide-vue-next'
 import { formatPercent } from '../formatters/metrics.ts'
 
@@ -9,6 +9,16 @@ export interface RiskAttribution {
   weightPct: number
   attribution: number
   description: string
+}
+
+interface RiskExplanation {
+  status: string
+  explanationSource: 'HEATWAVE_SHAP' | 'RULE_BASED' | 'UNAVAILABLE'
+  topAttributions: RiskAttribution[]
+  stagnantDays?: number | null
+  progressSlope14d?: number | null
+  trainingErrorScissors?: number | null
+  handlerConcentration?: number | null
 }
 
 export interface AtRiskUnit {
@@ -42,94 +52,59 @@ const pageSize = ref(6)
 
 const selectedUnit = ref<AtRiskUnit | null>(null)
 const loadingExplanation = ref(false)
-const unitAttributions = ref<Record<number, RiskAttribution[]>>({})
+const unitExplanations = ref<Record<number, RiskExplanation>>({})
+let explanationSequence = 0
+let explanationController: AbortController | null = null
 
 async function openDrawer(u: AtRiskUnit) {
   selectedUnit.value = u
-  if (unitAttributions.value[u.id]) {
+  if (unitExplanations.value[u.id]) {
     return
   }
+  const sequence = ++explanationSequence
+  explanationController?.abort()
+  const controller = new AbortController()
+  explanationController = controller
   loadingExplanation.value = true
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/insights/risk-explanation/${u.id}`)
-    if (res.ok) {
-      const data = await res.json()
-      if (data.topAttributions && data.topAttributions.length) {
-        unitAttributions.value[u.id] = data.topAttributions
-      }
+    const res = await fetch(`${import.meta.env.BASE_URL}api/insights/risk-explanation/${u.id}`, {
+      signal: controller.signal,
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json() as Partial<RiskExplanation>
+    if (sequence !== explanationSequence || selectedUnit.value?.id !== u.id) return
+    unitExplanations.value[u.id] = {
+      status: data.status || 'unavailable',
+      explanationSource: data.explanationSource || 'UNAVAILABLE',
+      topAttributions: Array.isArray(data.topAttributions) ? data.topAttributions : [],
+      stagnantDays: data.stagnantDays,
+      progressSlope14d: data.progressSlope14d,
+      trainingErrorScissors: data.trainingErrorScissors,
+      handlerConcentration: data.handlerConcentration,
     }
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return
+    if (sequence === explanationSequence) {
+      unitExplanations.value[u.id] = {
+        status: 'unavailable',
+        explanationSource: 'UNAVAILABLE',
+        topAttributions: [],
+      }
+    }
     console.warn('Failed to fetch risk explanation:', err)
   } finally {
-    loadingExplanation.value = false
+    if (sequence === explanationSequence) loadingExplanation.value = false
   }
 }
 
-const currentAttributions = computed<RiskAttribution[]>(() => {
-  if (!selectedUnit.value) return []
-  if (unitAttributions.value[selectedUnit.value.id]) {
-    return unitAttributions.value[selectedUnit.value.id]
-  }
-  if (selectedUnit.value.topAttributions && selectedUnit.value.topAttributions.length) {
-    return selectedUnit.value.topAttributions
-  }
-  // 智能默认降级归因（基于单位实际客观指标偏离）
-  const u = selectedUnit.value
-  const list: RiskAttribution[] = []
-  if ((u.stagnantDays ?? 0) > 10) {
-    list.push({
-      factor: 'stagnant_days',
-      factorName: '工期停滞过久',
-      weightPct: 48,
-      attribution: 0.48,
-      description: '近期缺乏持续施工推进记录，任务长时间未更新',
-    })
-  }
-  if ((u.voucherRate ?? 100) < 95) {
-    list.push({
-      factor: 'integration_success_pct',
-      factorName: '凭证入账集成受阻',
-      weightPct: 32,
-      attribution: 0.32,
-      description: '双轨财务凭证自动集成率偏离 95% 达标线',
-    })
-  }
-  if ((u.construction ?? 100) < 85) {
-    list.push({
-      factor: 'construction_pct',
-      factorName: '建设任务完成度偏低',
-      weightPct: 20,
-      attribution: 0.20,
-      description: '基础环境与主数据任务完成进度滞后全网均值',
-    })
-  }
-  if (!list.length) {
-    list.push(
-      {
-        factor: 'unresolved_issues',
-        factorName: '未解决问题积压',
-        weightPct: 52,
-        attribution: 0.52,
-        description: '当前存在未闭环业务与数据问题工单',
-      },
-      {
-        factor: 'high_risk_issues',
-        factorName: '高危风险阻断',
-        weightPct: 30,
-        attribution: 0.30,
-        description: '存在阻断系统正常推进的重大缺陷事项',
-      },
-      {
-        factor: 'stagnant_days',
-        factorName: '工期停滞过久',
-        weightPct: 18,
-        attribution: 0.18,
-        description: '近期缺乏持续施工推进记录，任务长时间未更新',
-      },
-    )
-  }
-  return list
-})
+const currentExplanation = computed(() => (
+  selectedUnit.value ? unitExplanations.value[selectedUnit.value.id] : undefined
+))
+const currentAttributions = computed<RiskAttribution[]>(() => currentExplanation.value?.topAttributions || [])
+const isNativeShap = computed(() => currentExplanation.value?.explanationSource === 'HEATWAVE_SHAP')
+const explanationTitle = computed(() => (
+  isNativeShap.value ? 'HeatWave AutoML 归因分解' : '规则风险研判'
+))
 
 const filteredRiskUnits = computed(() =>
   props.units.filter((u) => {
@@ -141,8 +116,14 @@ const filteredRiskUnits = computed(() =>
 
 const totalRiskPages = computed(() => Math.ceil(filteredRiskUnits.value.length / pageSize.value) || 1)
 
+watch([query, selectedRiskType], () => { page.value = 1 })
+watch(totalRiskPages, (total) => {
+  if (page.value > total) page.value = total
+})
+
 const paginatedRiskUnits = computed(() => {
-  const start = (page.value - 1) * pageSize.value
+  const safePage = Math.min(Math.max(1, page.value), totalRiskPages.value)
+  const start = (safePage - 1) * pageSize.value
   return filteredRiskUnits.value.slice(start, start + pageSize.value)
 })
 </script>
@@ -152,7 +133,7 @@ const paginatedRiskUnits = computed(() => {
     <!-- 过滤工具栏 -->
     <div class="flex items-center justify-between gap-2 flex-shrink-0">
       <span class="text-cockpit-xs text-slate-400">
-        发现 <b class="font-mono text-rose-400">{{ filteredRiskUnits.length }}</b> 家掉队风险单位 (点击行查看 SHAP 归因)
+        发现 <b class="font-mono text-rose-400">{{ filteredRiskUnits.length }}</b> 家掉队风险单位（点击查看可用解释）
       </span>
       <div class="flex items-center gap-2">
         <label class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-300">
@@ -268,7 +249,7 @@ const paginatedRiskUnits = computed(() => {
         <header class="flex items-center justify-between border-b border-white/5 pb-3">
           <div>
             <span class="font-mono text-cockpit-xs text-sky-400 font-bold">MOD-{{ selectedUnit.id }}</span>
-            <h3 class="text-cockpit-md font-semibold text-slate-100">掉队风险 SHAP 归因研判</h3>
+            <h3 class="text-cockpit-md font-semibold text-slate-100">掉队风险解释</h3>
           </div>
           <button
             type="button"
@@ -297,13 +278,15 @@ const paginatedRiskUnits = computed(() => {
         <!-- SHAP Top 3 致险归因标签 -->
         <div class="flex flex-col gap-2">
           <div class="flex items-center justify-between">
-            <span class="text-cockpit-sm font-semibold text-slate-300">HeatWave AutoML 归因分解</span>
-            <span class="text-cockpit-xs text-sky-400 font-mono">SHAP 贡献 Top 3</span>
+            <span class="text-cockpit-sm font-semibold text-slate-300">{{ explanationTitle }}</span>
+            <span class="text-cockpit-xs font-mono" :class="isNativeShap ? 'text-sky-400' : 'text-amber-400'">
+              {{ isNativeShap ? 'SHAP 贡献 Top 3' : (currentExplanation?.explanationSource === 'RULE_BASED' ? '规则偏离度 Top 3' : '解释不可用') }}
+            </span>
           </div>
           <div v-if="loadingExplanation" class="text-cockpit-xs text-slate-500 py-3 text-center">
-            正在调用库内 ML_EXPLAIN_ROW 解析特征贡献度...
+            正在读取风险解释...
           </div>
-          <div v-else class="flex flex-col gap-2">
+          <div v-else-if="currentAttributions.length" class="flex flex-col gap-2">
             <div
               v-for="(attr, idx) in currentAttributions"
               :key="attr.factor"
@@ -327,6 +310,7 @@ const paginatedRiskUnits = computed(() => {
               <p class="text-cockpit-xs text-slate-400 leading-normal">{{ attr.description }}</p>
             </div>
           </div>
+          <div v-else class="py-4 text-center text-cockpit-xs text-slate-500">当前没有可验证的风险解释</div>
         </div>
 
         <!-- 动量特征与客观指标核验 -->
@@ -343,25 +327,25 @@ const paginatedRiskUnits = computed(() => {
             </div>
             <div class="p-2 rounded bg-surface-veil-03 border border-surface-veil-06 flex flex-col gap-0.5">
               <span class="text-slate-400">工期停滞天数</span>
-              <b class="font-mono text-amber-400">{{ selectedUnit.stagnantDays ?? 0 }} 天</b>
+              <b class="font-mono text-amber-400">{{ currentExplanation?.stagnantDays ?? selectedUnit.stagnantDays ?? '—' }}<template v-if="currentExplanation?.stagnantDays != null || selectedUnit.stagnantDays != null"> 天</template></b>
             </div>
             <div class="p-2 rounded bg-surface-veil-03 border border-surface-veil-06 flex flex-col gap-0.5">
               <span class="text-slate-400">近14天推进斜率</span>
-              <b class="font-mono text-sky-400">{{ selectedUnit.progressSlope14d ?? 0 }}%/天</b>
+              <b class="font-mono text-sky-400">{{ currentExplanation?.progressSlope14d ?? selectedUnit.progressSlope14d ?? '—' }}<template v-if="currentExplanation?.progressSlope14d != null || selectedUnit.progressSlope14d != null">%/天</template></b>
             </div>
             <div class="p-2 rounded bg-surface-veil-03 border border-surface-veil-06 flex flex-col gap-0.5">
               <span class="text-slate-400">培训报错剪刀差</span>
-              <b class="font-mono text-rose-400">{{ selectedUnit.trainingErrorScissors ?? 0 }}%</b>
+              <b class="font-mono text-rose-400">{{ currentExplanation?.trainingErrorScissors ?? selectedUnit.trainingErrorScissors ?? '—' }}<template v-if="currentExplanation?.trainingErrorScissors != null || selectedUnit.trainingErrorScissors != null">%</template></b>
             </div>
             <div class="p-2 rounded bg-surface-veil-03 border border-surface-veil-06 flex flex-col gap-0.5">
               <span class="text-slate-400">经办人集中度</span>
-              <b class="font-mono text-slate-200">{{ Math.round((selectedUnit.handlerConcentration ?? 0) * 100) }}%</b>
+              <b class="font-mono text-slate-200">{{ currentExplanation?.handlerConcentration != null ? `${Math.round(currentExplanation.handlerConcentration * 100)}%` : (selectedUnit.handlerConcentration != null ? `${Math.round(selectedUnit.handlerConcentration * 100)}%` : '—') }}</b>
             </div>
           </div>
         </div>
 
         <div class="mt-auto pt-3 border-t border-white/5 text-cockpit-xs text-slate-500 text-center">
-          MySQL HeatWave sys.ML_EXPLAIN_ROW 原生 SHAP 归因 · 数据物理不出库
+          {{ isNativeShap ? 'MySQL HeatWave ML_EXPLAIN_ROW 原生 SHAP · 数据物理不出库' : (currentExplanation?.explanationSource === 'RULE_BASED' ? '基于库内真实特征的确定性规则研判 · 非 SHAP' : '风险解释当前不可用') }}
         </div>
       </aside>
     </div>

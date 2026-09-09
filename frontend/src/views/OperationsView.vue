@@ -107,7 +107,13 @@ const dualRunOutcomeOption = computed(() => dualRunStats.value
   : null)
 
 const dualRunPass = computed(() => (
-  dualRunStats.value ? dualRunStats.value.consistencyPct >= 95 : null
+  dualRunStats.value
+    ? dualRunStats.value.consistencyPct >= store.snapshot.businessRules.lifecycle.dualRunConsistencyRateMin
+    : null
+))
+
+const dualRunConsistencyRateMin = computed(() => (
+  store.snapshot.businessRules.lifecycle.dualRunConsistencyRateMin
 ))
 
 const dualRunBreakdown = computed(() => {
@@ -229,7 +235,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
               {{ formatPercent(dualRunStats.consistencyPct) }}
             </b>
             <div class="flex items-center gap-2 mt-1.5 text-cockpit-xs">
-              <span class="text-slate-500">门禁 ≥ 95%</span>
+              <span class="text-slate-500">门禁 ≥ {{ dualRunConsistencyRateMin }}%</span>
               <span class="font-medium" :class="dualRunPass ? 'text-emerald-400' : 'text-amber-400'">{{ dualRunPass ? '已达标' : '待提升' }}</span>
             </div>
             <!-- 三大对账维度穿透 (KI-053) -->

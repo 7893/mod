@@ -242,6 +242,7 @@ def build_entities(conn: Connection, updated_at: str, anchor_date: str | None = 
                COALESCE(ow.name, '未配置') AS owner, o.status AS rawStatus,
                COALESCE(t.construction, 0) AS construction,
                CAST(REPLACE(COALESCE(d.opening_rate, '0'), '%', '') AS DECIMAL(5,1)) AS openingData,
+               d.overall_status AS readinessStatus,
                dr.dual_rate AS voucherRate
         FROM org_unit o
         JOIN batch_mapped bm ON bm.id = o.id
@@ -262,6 +263,8 @@ def build_entities(conn: Connection, updated_at: str, anchor_date: str | None = 
         row["province"] = _normalize_region(row.pop("region"))
         raw_status = row.pop("rawStatus")
         vr = row.get("voucherRate")
+        if row.get("readinessStatus") == "校验通过":
+            row["readinessStatus"] = "已校验"
         if row["batchId"] == 8:
             row["status"] = "未启动"
             row["construction"] = 0.0

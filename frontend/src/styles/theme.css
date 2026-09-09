@@ -31,7 +31,7 @@
 
   /* 大屏固定设计基准（配合整体缩放适配，不用逐屏断点补丁） */
   --spacing-canvas-w: 1920px;
-  --spacing-canvas-h: 1080px;
+  --spacing-canvas-h: 980px;
 
   /* 表面色（obsidian slate 基调，中性灰阶承载） */
   --color-surface-base: #070a0f;          /* 大屏最底色 */

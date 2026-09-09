@@ -106,4 +106,42 @@ describe('ComplianceInspectDrawer', () => {
     await closeBtn.trigger('click')
     expect(wrapper.emitted('close')).toBeTruthy()
   })
+
+  it('treats CLOSED as an archived terminal state with no write actions', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(url.includes('/timeline') ? mockTimeline : {
+        total: 1,
+        items: [{ ...mockIssue, status: 'CLOSED' }],
+      }),
+    })))
+    const wrapper = mount(ComplianceInspectDrawer, { props: { unit: mockUnit } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('已闭环归档')
+    expect(wrapper.text()).not.toContain('一键督办（指挥部令）')
+    expect(wrapper.text()).not.toContain('AI深度研判')
+  })
+
+  it('does not let a slower old unit request overwrite the current unit', async () => {
+    let resolveOld!: (value: unknown) => void
+    const oldResponse = new Promise((resolve) => { resolveOld = resolve })
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url.includes('unit_id=872')) return oldResponse
+      if (url.includes('unit_id=873')) return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ total: 1, items: [{ ...mockIssue, id: 'ISS-NEW', unitId: 873, unitName: '新单位' }] }),
+      })
+      if (url.includes('/timeline')) return Promise.resolve({ ok: true, json: () => Promise.resolve([]) })
+      return Promise.resolve({ ok: false })
+    }))
+    const wrapper = mount(ComplianceInspectDrawer, { props: { unit: mockUnit } })
+    await wrapper.setProps({ unit: { ...mockUnit, id: 873, name: '新单位' } })
+    await flushPromises()
+    resolveOld({ ok: true, json: () => Promise.resolve({ total: 1, items: [mockIssue] }) })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('ISS-NEW')
+    expect(wrapper.text()).not.toContain('ISS-20260908-0872')
+  })
 })

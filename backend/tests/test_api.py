@@ -251,7 +251,7 @@ def test_v2_api_routes():
     res = client.get("/api/live-projection/status")
     assert res.status_code == 200
     projection = res.json()
-    assert projection["mode"] == "display_projection"
+    assert projection["mode"] == "committed_simulation"
     assert set(projection["cumulative"]) == {"documents", "vouchers", "integrations"}
     assert all(value >= 0 for value in projection["cumulative"].values())
     assert res.headers["x-robots-tag"] == "noindex, nofollow, noarchive, nosnippet, noimageindex"
@@ -555,6 +555,9 @@ def test_ki061_fallback_snapshot_contracts():
     """KI-061: 验证 fallback 快照包含全部必需字段，杜绝 C3/D3/D6 空白面板。"""
     from app.services.dashboard import load_fallback_snapshot
     snap = load_fallback_snapshot()
+    assert snap["businessRules"]["lifecycle"]["dualRunConsistencyRateMin"] == 98
+    assert snap["businessRules"]["risk"]["constructionLagRate"] == 88
+    assert snap["businessRules"]["risk"]["openingDataLagRate"] == 88
 
     # C3: rolloutTrend
     assert "rolloutTrend" in snap, "fallback 快照必须包含 rolloutTrend，防止 C3 暂无批次历史快照空态"
@@ -726,7 +729,3 @@ def test_ki061_swr_timeout_and_error_recovery(monkeypatch):
     api_mod._snapshot_refreshing = False
     api_mod._snapshot_consecutive_failures = 0
     api_mod._snapshot_last_error = None
-
-
-
-
