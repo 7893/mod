@@ -219,7 +219,11 @@
 - 本地前端全局样式已收敛为 `styles/theme.css`、`base.css`、`shell.css`、`blocks.css` 四层：
   `foundation.css`、`components.css`、`utilities.css`、`page-hierarchy.css`、`dashboard-topbar.css`、
   `responsive-breakpoints.css` 及其中约 120 条无引用规则已删除，地图与投影指示器样式内聚到各自组件。
-  待发布。
+  Token 单一来源收敛为 `theme.css` 的 `@theme`：`:root` 下的 `--c-*`/`--text-*`/`--space-*`/`--radius-*`
+  旧变量体系已全部删除，文字与信号色改用 Tailwind 内置 slate/sky/emerald/amber/rose，字号只保留
+  `cockpit-*` 固定阶梯；图表色统一取自 `charts/theme.ts`（新增 `mapRamp`、`chartInk.textDim/onAccent`），
+  地图实时光圈与浮条由调色板外的荧光青改为 sky-400。未被引用的 `AnimatedProgress.vue`、`MarkdownLite.vue`
+  已删除。待发布并需人工视觉验收。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态

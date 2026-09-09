@@ -242,7 +242,7 @@ const riskDistChartOption = computed(() => {
         },
         showBackground: true,
         backgroundStyle: {
-          color: 'rgba(255, 255, 255, 0.03)',
+          color: chartInk.borderSoft,
           borderRadius: [0, 4, 4, 0],
         },
       },

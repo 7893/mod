@@ -7,7 +7,7 @@ import { MapChart, ScatterChart, EffectScatterChart } from 'echarts/charts'
 import { TooltipComponent, GeoComponent } from 'echarts/components'
 import * as echarts from 'echarts/core'
 import chinaGeoJson from 'china-geojson/src/geojson/china.json'
-import { chartPalette } from '../charts/theme'
+import { chartInk, chartPalette, mapRamp } from '../charts/theme'
 import type { LiveProjectionEvent } from '../composables/useLiveProjection'
 
 use([CanvasRenderer, MapChart, ScatterChart, EffectScatterChart, TooltipComponent, GeoComponent])
@@ -131,8 +131,8 @@ const liveScatterData = computed(() => {
 /**
  * 建设完成度色带：从深邃碳素冷灰蓝渐变到沉稳星际群青 (低 → 高)
  */
-const RAMP = ['#121b2a', '#18273d', '#203657', '#2a4975', '#355c94'] as const
-const NO_DATA_COLOR = '#090e17'
+const RAMP = mapRamp.steps
+const NO_DATA_COLOR = mapRamp.noData
 
 const scale = computed(() => {
   const values = props.data.map((item) => Number(item.value)).filter(Number.isFinite)
@@ -176,7 +176,7 @@ const option = computed(() => ({
         const d = p.data
         return `<div class="map-tip">
           <b>${d.unitName}</b>
-          <span style="color:#00f2fe">${d.actionText}</span>
+          <span style="color:${chartPalette.accent}">${d.actionText}</span>
           <i>所属省份：${d.province}</i>
         </div>`
       }
@@ -203,21 +203,21 @@ const option = computed(() => ({
       return {
         name: item.name,
         itemStyle: {
-          areaColor: isSelected ? '#0284c7' : colorFor(Number(item.value)),
-          borderColor: isSelected ? '#38bdf8' : 'rgba(255, 255, 255, 0.12)',
+          areaColor: isSelected ? chartPalette.accentDim : colorFor(Number(item.value)),
+          borderColor: isSelected ? chartPalette.accent : chartInk.border,
           borderWidth: isSelected ? 2 : 0.8,
         },
         selected: isSelected,
       }
     }),
-    itemStyle: { areaColor: NO_DATA_COLOR, borderColor: 'rgba(255, 255, 255, 0.12)', borderWidth: 0.8 },
+    itemStyle: { areaColor: NO_DATA_COLOR, borderColor: chartInk.border, borderWidth: 0.8 },
     emphasis: {
-      itemStyle: { areaColor: '#38bdf8', shadowBlur: 16, shadowColor: 'rgba(56, 189, 248, 0.35)' },
-      label: { show: true, color: '#070d18', fontWeight: 600 },
+      itemStyle: { areaColor: chartPalette.accent },
+      label: { show: true, color: chartInk.onAccent, fontWeight: 600 },
     },
     select: {
-      itemStyle: { areaColor: '#fbbf24', borderColor: '#fef08a', borderWidth: 1.5 },
-      label: { color: '#070d18' },
+      itemStyle: { areaColor: chartPalette.warning, borderColor: chartPalette.warning, borderWidth: 1.5 },
+      label: { color: chartInk.onAccent },
     },
     selectedMode: 'single' as const,
     label: { show: false },
@@ -233,28 +233,22 @@ const option = computed(() => ({
         scale: 6,
         period: 2.2,
         brushType: 'stroke',
-        color: '#00f2fe',
+        color: chartPalette.accent,
       },
-      itemStyle: {
-        color: '#00f2fe',
-        shadowBlur: 16,
-        shadowColor: '#00f2fe',
-      },
+      itemStyle: { color: chartPalette.accent },
       label: {
         show: true,
         position: 'top',
         distance: 10,
         formatter: '{b}',
-        color: '#ffffff',
-        backgroundColor: 'rgba(7, 13, 24, 0.92)',
-        borderColor: '#00f2fe',
+        color: chartInk.textPrimary,
+        backgroundColor: chartInk.bgTooltip,
+        borderColor: chartPalette.accent,
         borderWidth: 1,
         borderRadius: 4,
         padding: [4, 8],
         fontSize: 11,
         fontWeight: 'bold',
-        shadowBlur: 10,
-        shadowColor: 'rgba(0, 242, 254, 0.5)',
       },
       zlevel: 10,
     },
@@ -305,39 +299,43 @@ function handleClick(params: any) {
 </template>
 
 <style>
+@reference "../styles.css";
+
 /* ECharts tooltip 渲染在组件根之外，须为全局规则 */
 .map-tip {
-  background: rgba(12, 20, 34, 0.95);
-  border: 1px solid var(--c-border);
+  background: color-mix(in srgb, var(--color-slate-900) 95%, transparent);
+  border: 1px solid var(--color-surface-hairline);
   border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
+  padding: --spacing(3) --spacing(4);
   min-width: 180px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
 }
 
 .map-tip b {
   display: block;
-  font-size: var(--text-md);
-  color: var(--c-text-primary);
-  margin-bottom: var(--space-1);
+  font-size: var(--text-cockpit-lg);
+  color: var(--color-slate-50);
+  margin-bottom: --spacing(1);
 }
 
 .map-tip span {
   display: block;
-  font-size: var(--text-sm);
-  color: var(--c-text-secondary);
-  margin-bottom: var(--space-1);
+  font-size: var(--text-cockpit-md);
+  color: var(--color-slate-400);
+  margin-bottom: --spacing(1);
 }
 
 .map-tip i {
   display: block;
   font-style: normal;
-  font-size: var(--text-xs);
-  color: var(--c-text-muted);
+  font-size: var(--text-cockpit-sm);
+  color: var(--color-slate-500);
 }
 </style>
 
 <style scoped>
+@reference "../styles.css";
+
 .china-map-container {
   position: relative;
   width: 100%;
@@ -362,9 +360,9 @@ function handleClick(params: any) {
   gap: 8px;
   padding: 6px 16px;
   border-radius: 20px;
-  background: rgba(7, 18, 36, 0.94);
-  border: 1px solid rgba(0, 242, 254, 0.7);
-  box-shadow: 0 0 20px rgba(0, 242, 254, 0.35), 0 4px 16px rgba(0, 0, 0, 0.6);
+  background: color-mix(in srgb, var(--color-surface-base) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-sky-400) 70%, transparent);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 60%);
   backdrop-filter: blur(8px);
   cursor: pointer;
   white-space: nowrap;
@@ -372,16 +370,15 @@ function handleClick(params: any) {
 }
 
 .map-live-banner:hover {
-  border-color: #00f2fe;
-  box-shadow: 0 0 24px rgba(0, 242, 254, 0.55), 0 4px 16px rgba(0, 0, 0, 0.7);
+  border-color: var(--color-sky-400);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 70%);
 }
 
 .banner-pulse-beacon {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #00f2fe;
-  box-shadow: 0 0 10px #00f2fe;
+  background: var(--color-sky-400);
   animation: banner-beacon-ping 1.4s infinite;
   flex-shrink: 0;
 }
@@ -393,30 +390,30 @@ function handleClick(params: any) {
 }
 
 .banner-tag {
-  font-size: 10px;
+  font-size: var(--text-cockpit-xs);
   padding: 1px 6px;
   border-radius: 3px;
-  background: rgba(0, 242, 254, 0.2);
-  color: #00f2fe;
+  background: color-mix(in srgb, var(--color-sky-400) 20%, transparent);
+  color: var(--color-sky-400);
   font-weight: 700;
   letter-spacing: 0.5px;
 }
 
 .banner-prov {
-  font-size: 12px;
+  font-size: var(--text-cockpit-sm);
   font-weight: 700;
-  color: #38bdf8;
+  color: var(--color-sky-400);
 }
 
 .banner-unit {
-  font-size: 12px;
+  font-size: var(--text-cockpit-sm);
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-white);
 }
 
 .banner-desc {
-  font-size: 12px;
-  color: #34d399;
+  font-size: var(--text-cockpit-sm);
+  color: var(--color-emerald-400);
   font-weight: 600;
 }
 
@@ -438,29 +435,29 @@ function handleClick(params: any) {
 /* 自绘横向图例，停靠左下角；固定一行 flex，避免 visualMap 横向模式渲染成竖块 */
 .map-legend {
   position: absolute;
-  left: var(--space-3);
-  bottom: var(--space-2);
+  left: --spacing(3);
+  bottom: --spacing(2);
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 5px var(--space-3);
-  background: rgba(7, 13, 24, 0.72);
-  border: 1px solid var(--c-border-subtle);
+  gap: --spacing(2);
+  padding: 5px --spacing(3);
+  background: color-mix(in srgb, var(--color-surface-base) 72%, transparent);
+  border: 1px solid var(--color-surface-veil-03);
   border-radius: 999px;
   pointer-events: none;
 }
 
 .map-legend__caption {
-  font-size: var(--text-xxs);
-  color: var(--c-text-muted);
+  font-size: var(--text-cockpit-xs);
+  color: var(--color-slate-500);
   white-space: nowrap;
 }
 
 .map-legend__bound {
   font-family: var(--font-mono);
-  font-size: var(--text-xxs);
-  color: var(--c-text-dim);
+  font-size: var(--text-cockpit-xs);
+  color: var(--color-slate-600);
   white-space: nowrap;
 }
 

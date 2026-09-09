@@ -8,6 +8,8 @@ import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/compon
 import {
   calmAnimation,
   categoryAxis,
+  chartInk,
+  chartPalette,
   chartTooltip,
   valueAxis,
 } from '../charts/theme.ts'
@@ -50,15 +52,14 @@ const trendOption = computed(() => {
       ...categoryAxis,
       data: list.map((v) => v.date),
       boundaryGap: false,
-      axisLabel: { color: '#64748b', fontSize: 10, fontFamily: 'monospace' },
-      axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.08)' } },
+      axisLabel: { color: chartInk.textDim, fontSize: 10, fontFamily: 'monospace' },
     },
     yAxis: {
       ...valueAxis,
       min: 0,
       splitNumber: 3,
-      axisLabel: { color: '#64748b', fontSize: 10, fontFamily: 'monospace' },
-      splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)', type: 'dashed' } },
+      axisLabel: { color: chartInk.textDim, fontSize: 10, fontFamily: 'monospace' },
+      splitLine: { lineStyle: { color: chartInk.borderSoft, type: 'dashed' } },
     },
     series: [
       {
@@ -67,14 +68,14 @@ const trendOption = computed(() => {
         smooth: true,
         data: list.map((v) => v.launched),
         showSymbol: false,
-        lineStyle: { color: '#38bdf8', width: 2.2 },
+        lineStyle: { color: chartPalette.accent, width: 2.2 },
       },
       {
         name: '双轨核对',
         type: 'bar',
         barMaxWidth: 18,
         data: list.map((v) => v.dual ?? 0),
-        itemStyle: { color: '#fbbf24', borderRadius: [3, 3, 0, 0], opacity: 0.82 },
+        itemStyle: { color: chartPalette.warning, borderRadius: [3, 3, 0, 0], opacity: 0.82 },
       },
     ],
   }

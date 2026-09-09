@@ -33,9 +33,18 @@
   --spacing-canvas-w: 1920px;
   --spacing-canvas-h: 980px;
 
-  /* 表面色（obsidian slate 基调，中性灰阶承载） */
+  /* 排版：字体族覆盖 Tailwind 默认 */
+  --font-sans: "Inter", "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Consolas", monospace;
+
+  /* 表面色（obsidian slate 基调，中性灰阶承载）。
+     文字色与信号色不另设 Token：文字用 slate-50/400/500/600，
+     信号灯用 sky-400（强调）/ emerald-400（成功）/ amber-400（警告）/ rose-500（风险）。 */
   --color-surface-base: #070a0f;          /* 大屏最底色 */
+  --color-surface-deep: #0b0f19;          /* 外壳渐变终点 */
   --color-surface-panel: rgb(15 23 42 / 0.60);   /* 面板底 slate-900/60 */
+  --color-surface-raised: rgb(30 41 59 / 0.45);  /* 面板内凸起元素 slate-800/45 */
+  --color-surface-hover: rgb(51 65 85 / 0.35);   /* 悬停 slate-700/35 */
   --color-surface-hairline: rgb(255 255 255 / 0.10); /* 描边 white/10 */
   --color-surface-veil-06: rgb(255 255 255 / 0.06);  /* 弱分隔 */
   --color-surface-veil-03: rgb(255 255 255 / 0.03);  /* 更弱底纹 */
@@ -47,84 +56,4 @@
   --text-cockpit-lg: 15px;
   --text-cockpit-metric: 18px;   /* 关键指标数字 */
   --text-cockpit-kpi: 24px;      /* 单面板唯一主 KPI */
-}
-
-/* 过渡期遗留变量：待迁入 @theme 后删除 */
-:root {
-  /* 现代黑曜石碳素色彩系统 (Modern Obsidian Slate) */
-  --c-bg-base: #070a0f;
-  --c-bg-primary: #0b0f19;
-  --c-bg-secondary: rgba(15, 23, 42, 0.65);
-  --c-bg-elevated: rgba(30, 41, 59, 0.45);
-  --c-bg-hover: rgba(51, 65, 85, 0.35);
-  
-  /* 微米级极细钛金发丝线 (Hairline Metallic Seams) */
-  --c-border: rgba(255, 255, 255, 0.08);
-  --c-border-subtle: rgba(255, 255, 255, 0.04);
-  --c-border-accent: rgba(255, 255, 255, 0.14);
-  
-  /* 高纯度黑白灰排版 */
-  --c-text-primary: #f8fafc;
-  --c-text-secondary: #94a3b8;
-  --c-text-muted: #64748b;
-  --c-text-dim: #475569;
-  
-  /* 功能色 - 现代克制科技风 */
-  --c-accent: #38bdf8;
-  --c-accent-dim: #0284c7;
-  --c-accent-glow: rgba(56, 189, 248, 0.12);
-  --c-success: #34d399;
-  --c-success-dim: #059669;
-  --c-warning: #fbbf24;
-  --c-warning-dim: #d97706;
-  --c-danger: #f43f5e;
-  --c-danger-dim: #e11d48;
-  --c-gold: #fbbf24;
-  --c-gold-dim: #d97706;
-
-  /* 风险强调（仅用于风险预警/告警场景，不与常规状态色混用） */
-  --c-risk-glow: rgba(244, 63, 94, 0.25);
-  --c-risk-glow-soft: rgba(244, 63, 94, 0.08);
-
-  /* 排版 */
-  --font-sans: "Inter", "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SF Mono", "Consolas", monospace;
-  
-  /* 核心数字字号：与布局的 clamp/vw 使用同一套缩放逻辑，
-     避免 1920 调好的比例在 2560/4K 拼接屏上显得过小、在 1366 上溢出。 */
-  --text-hero: clamp(38px, 2.9vw, 60px);
-  --text-kpi: clamp(26px, 1.95vw, 40px);
-  --text-stat: clamp(20px, 1.45vw, 29px);
-  --text-metric: clamp(19px, 1.25vw, 26px);
-  --text-lg: clamp(16px, 0.95vw, 19px);
-  --text-md: clamp(14px, 0.8vw, 16px);
-  --text-base: clamp(13px, 0.72vw, 15px);
-  --text-sm: clamp(12px, 0.68vw, 14px);
-  --text-xs: clamp(11px, 0.62vw, 13px);
-  --text-xxs: clamp(10px, 0.56vw, 12px);
-  --leading-relaxed: 1.7;
-  
-  /* 间距 */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-
-  /* 面板统一节奏：卡片内边距与栅格间距集中控制，避免各页面各写一套 clamp。 */
-  --panel-pad: clamp(12px, 0.95vw, 20px);
-  --grid-gap: clamp(10px, 0.85vw, 16px);
-  
-  /* 圆角 */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  
-  /* 动效 */
-  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  --duration-fast: 150ms;
-  --duration-normal: 200ms;
 }

@@ -26,29 +26,31 @@ const pulseText = computed(() => {
 </template>
 
 <style scoped>
+@reference "../styles.css";
+
 .projection-indicator {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  color: var(--c-text-muted);
-  font-size: var(--text-xxs);
+  gap: --spacing(1);
+  color: var(--color-slate-500);
+  font-size: var(--text-cockpit-xs);
 }
 
 .projection-indicator__dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--c-text-dim);
+  background: var(--color-slate-600);
 }
 
 .projection-indicator--connected .projection-indicator__dot {
-  background: var(--c-success);
-  box-shadow: 0 0 8px rgb(45 212 160 / 65%);
+  background: var(--color-emerald-400);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-emerald-400) 65%, transparent);
 }
 
 .projection-indicator b {
-  margin-left: var(--space-2);
-  color: var(--c-success);
+  margin-left: --spacing(2);
+  color: var(--color-emerald-400);
   font-family: var(--font-mono);
   font-weight: 600;
 }
