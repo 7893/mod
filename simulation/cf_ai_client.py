@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "@cf/meta/llama-3.1-8b-instruct"
 DEFAULT_TIMEOUT_SECONDS = 8.0
+DEFAULT_MAX_NEURONS_PER_CALL = 300.0
 
 
 @dataclass
@@ -53,6 +54,9 @@ class CloudflareAIClient:
         self.model = os.getenv("MOD_CF_AI_MODEL", DEFAULT_MODEL).strip()
         self.gateway = os.getenv("MOD_CF_AI_GATEWAY", "").strip()
         self.timeout = timeout
+        self.max_neurons_per_call = float(
+            os.getenv("MOD_CF_AI_MAX_NEURONS_PER_CALL", str(DEFAULT_MAX_NEURONS_PER_CALL))
+        )
         self.watchdog = watchdog or QuotaWatchdog()
 
     def is_configured(self) -> bool:
@@ -85,7 +89,11 @@ class CloudflareAIClient:
             return self._fallback_local(issue_type, unit_name, "UNCONFIGURED")
 
         # 2. Check QuotaWatchdog
-        can_run, reason = self.watchdog.can_consume(estimated_neurons=50.0)
+        try:
+            can_run, reason = self.watchdog.try_reserve(self.max_neurons_per_call)
+        except Exception as ex:
+            logger.error(f"[CF_AI] Quota ledger unavailable (fail-closed): {ex}")
+            return self._fallback_local(issue_type, unit_name, "QUOTA_UNAVAILABLE")
         if not can_run:
             logger.warning(f"[CF_AI] Quota Watchdog triggered: {reason}. Using local narrative.")
             return self._fallback_local(issue_type, unit_name, "QUOTA_EXHAUSTED")
@@ -101,6 +109,7 @@ class CloudflareAIClient:
             f'{{"summary": "一句话问题定性", "root_cause": "深入剖析技术/管理根因（约50-100字）", "suggested_action": "具体穿透式整改举措（约50-100字）"}}'
         )
 
+        reservation_active = True
         try:
             url = self._get_api_url()
             req_body = json.dumps(
@@ -126,16 +135,28 @@ class CloudflareAIClient:
 
             if not data.get("success", False):
                 err = data.get("errors", ["Unknown error"])[0]
+                self.watchdog.reconcile_reservation(
+                    reserved_neurons=self.max_neurons_per_call,
+                    actual_neurons=0.0,
+                    call_count=0,
+                )
+                reservation_active = False
                 logger.warning(f"[CF_AI] API returned failure: {err}. Using local fallback.")
                 return self._fallback_local(issue_type, unit_name, "API_FAILURE")
 
             result_obj = data.get("result", {})
             response_text = result_obj.get("response", "").strip()
             usage = result_obj.get("usage", {})
-            neurons = float(usage.get("neurons", 2.0))
+            # Missing provider usage is charged at the full reservation, never an
+            # optimistic invented value.
+            neurons = float(usage.get("neurons", self.max_neurons_per_call))
 
-            # Record consumption in watchdog
-            self.watchdog.record_consumption(neurons_used=neurons, call_count=1)
+            self.watchdog.reconcile_reservation(
+                reserved_neurons=self.max_neurons_per_call,
+                actual_neurons=neurons,
+                call_count=1,
+            )
+            reservation_active = False
 
             # Parse JSON from response
             parsed = self._extract_json(response_text)
@@ -160,6 +181,15 @@ class CloudflareAIClient:
             )
 
         except Exception as ex:
+            if reservation_active:
+                try:
+                    self.watchdog.reconcile_reservation(
+                        reserved_neurons=self.max_neurons_per_call,
+                        actual_neurons=0.0,
+                        call_count=0,
+                    )
+                except Exception as quota_ex:
+                    logger.error(f"[CF_AI] Failed to release quota reservation: {quota_ex}")
             logger.warning(f"[CF_AI] Request exception: {ex}. Using local fallback.")
             return self._fallback_local(issue_type, unit_name, "EXCEPTION")
 

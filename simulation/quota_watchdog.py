@@ -1,20 +1,21 @@
 """Quota Watchdog for Cloudflare Workers AI free tier governance.
 
 Key Rules:
-1. Daily neuron ceiling: 3,000 Neurons/day (out of Cloudflare's 10,000 free quota).
-2. Guarantees $0.00 bill: Never exceeds the 3,000 neuron threshold under any condition.
+1. Project-side daily neuron budget: 3,000 Neurons/day.
+2. Reserve conservatively before each external request and reconcile afterwards.
 3. Persistent audit ledger in `sim_ai_quota_ledger`.
-4. If daily limit is reached or quota check fails, trips fuse to FUSED state, forcing
+4. If the project budget is reached or quota check fails, trip the FUSED state, forcing
    graceful degradation to LocalNarrativeLibrary.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 import logging
 import os
 from typing import Optional, Tuple
+from zoneinfo import ZoneInfo
 
 import pymysql
 from dotenv import load_dotenv
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Daily ceiling for simulation governance AI calls.
 DAILY_NEURON_LIMIT: float = 3000.0
+HK_TZ = ZoneInfo("Asia/Hong_Kong")
 
 
 @dataclass
@@ -48,7 +50,7 @@ class QuotaWatchdog:
         self.daily_limit = daily_limit
 
     def _get_connection(self) -> pymysql.Connection:
-        """Returns existing connection or creates an autocommitting connection."""
+        """Return the injected connection or create a transaction-owning connection."""
         if self._conn is not None:
             return self._conn
 
@@ -70,7 +72,9 @@ class QuotaWatchdog:
             user=user,
             password=password,  # secret-scan: allow
             database=db,
-            autocommit=True,
+            # Reservation correctness depends on SELECT ... FOR UPDATE holding the
+            # row lock until the explicit commit below.
+            autocommit=False,
         )
 
     def can_consume(
@@ -79,7 +83,7 @@ class QuotaWatchdog:
         target_date: Optional[date] = None,
     ) -> Tuple[bool, str]:
         """Check if today's consumption allows consuming estimated_neurons."""
-        check_date = target_date or datetime.now(timezone.utc).date()
+        check_date = target_date or datetime.now(HK_TZ).date()
         conn = self._get_connection()
         close_needed = conn != self._conn
 
@@ -112,8 +116,8 @@ class QuotaWatchdog:
         target_date: Optional[date] = None,
     ) -> QuotaStatus:
         """Record consumption into sim_ai_quota_ledger with atomic update."""
-        check_date = target_date or datetime.now(timezone.utc).date()
-        now = datetime.now(timezone.utc)
+        check_date = target_date or datetime.now(HK_TZ).date()
+        now = datetime.now(HK_TZ)
         conn = self._get_connection()
         close_needed = conn != self._conn
 
@@ -163,9 +167,108 @@ class QuotaWatchdog:
             if close_needed:
                 conn.close()
 
+    def try_reserve(
+        self,
+        estimated_neurons: float,
+        target_date: Optional[date] = None,
+    ) -> Tuple[bool, str]:
+        """Atomically reserve a conservative per-call budget before external I/O.
+
+        The ledger row is locked until the reservation commits. A process crash leaves
+        a conservative reservation behind, which fails safe instead of overspending.
+        """
+        if estimated_neurons <= 0:
+            return False, "Estimated neurons must be positive"
+        check_date = target_date or datetime.now(HK_TZ).date()
+        now = datetime.now(HK_TZ)
+        conn = self._get_connection()
+        close_needed = conn != self._conn
+        try:
+            with conn.cursor() as cur:
+                # Materialize the daily row first. INSERT IGNORE plus the unique
+                # stat_date key closes the absent-row race between two processes.
+                cur.execute(
+                    "INSERT IGNORE INTO sim_ai_quota_ledger "
+                    "(stat_date, call_count, neurons_used, status, updated_at) "
+                    "VALUES (%s, 0, 0, 'ACTIVE', %s)",
+                    (check_date, now),
+                )
+                cur.execute(
+                    "SELECT call_count, neurons_used, status FROM sim_ai_quota_ledger "
+                    "WHERE stat_date = %s FOR UPDATE",
+                    (check_date,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    raise RuntimeError("Quota ledger row unavailable after initialization")
+                used = float(row[1])
+                status = str(row[2])
+                if status == "FUSED" or used + estimated_neurons > self.daily_limit:
+                    if not getattr(conn, "autocommit", False):
+                        conn.rollback()
+                    return False, (
+                        f"Quota exhausted: used {used:.1f}/{self.daily_limit:.1f} neurons "
+                        f"(reservation +{estimated_neurons:.1f})"
+                    )
+                cur.execute(
+                    "UPDATE sim_ai_quota_ledger SET neurons_used = %s, status = 'ACTIVE', "
+                    "updated_at = %s WHERE stat_date = %s",
+                    (used + estimated_neurons, now, check_date),
+                )
+                if not getattr(conn, "autocommit", False):
+                    conn.commit()
+            return True, f"Reserved {estimated_neurons:.1f} neurons"
+        except Exception:
+            if not getattr(conn, "autocommit", False):
+                conn.rollback()
+            raise
+        finally:
+            if close_needed:
+                conn.close()
+
+    def reconcile_reservation(
+        self,
+        reserved_neurons: float,
+        actual_neurons: float,
+        call_count: int,
+        target_date: Optional[date] = None,
+    ) -> None:
+        """Replace a reservation with actual usage, or release it after failure."""
+        check_date = target_date or datetime.now(HK_TZ).date()
+        now = datetime.now(HK_TZ)
+        conn = self._get_connection()
+        close_needed = conn != self._conn
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT call_count, neurons_used, status FROM sim_ai_quota_ledger "
+                    "WHERE stat_date = %s FOR UPDATE",
+                    (check_date,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    raise RuntimeError("Quota reservation ledger row disappeared before reconciliation")
+                calls = int(row[0]) + call_count
+                used = max(0.0, float(row[1]) - reserved_neurons + max(0.0, actual_neurons))
+                status = "FUSED" if used >= self.daily_limit else "ACTIVE"
+                cur.execute(
+                    "UPDATE sim_ai_quota_ledger SET call_count = %s, neurons_used = %s, "
+                    "status = %s, updated_at = %s WHERE stat_date = %s",
+                    (calls, used, status, now, check_date),
+                )
+                if not getattr(conn, "autocommit", False):
+                    conn.commit()
+        except Exception:
+            if not getattr(conn, "autocommit", False):
+                conn.rollback()
+            raise
+        finally:
+            if close_needed:
+                conn.close()
+
     def get_status(self, target_date: Optional[date] = None) -> QuotaStatus:
         """Retrieve current daily status."""
-        check_date = target_date or datetime.now(timezone.utc).date()
+        check_date = target_date or datetime.now(HK_TZ).date()
         conn = self._get_connection()
         close_needed = conn != self._conn
 

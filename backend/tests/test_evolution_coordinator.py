@@ -86,6 +86,25 @@ def test_normal_unit_evolves_towards_graduation(baseline: ConstructionBaseline):
     assert metrics_after >= metrics_before
 
 
+def test_newly_admitted_unit_is_registered_with_lifecycle_engine(baseline: ConstructionBaseline):
+    coordinator = EvolutionCoordinator(baseline, seed=42)
+    baseline.orgs[99] = {
+        "id": 99,
+        "name": "新增储备单位",
+        "batch_id": 1,
+        "status": "未启动",
+        "region": "华北",
+        "start_date": date(2026, 9, 5),
+        "end_date": date(2026, 12, 31),
+    }
+
+    coordinator.register_org(99)
+
+    assert coordinator.unit_metrics[99].current_status == "未启动"
+    assert coordinator.advancer.org_status[99] == "未启动"
+    assert coordinator.advancer.stage_entered_dates[99] == date(2026, 9, 5)
+
+
 def test_contradiction_meshing_perfect_alignment(baseline: ConstructionBaseline):
     """
     Core Phase D acceptance test:

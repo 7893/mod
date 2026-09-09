@@ -10,27 +10,9 @@ export const useLiveProjectionStore = defineStore('live-projection', () => {
   const sequence = ref(0)
 
   const liveOverview = computed(() => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
-    const localDateStr = `${year}-${month}-${day}`
-
-    const baseDocDate = project.snapshot.overview.docsAddedAsOfDate || localDateStr
-    const effectiveDocDate = baseDocDate > localDateStr ? baseDocDate : localDateStr
-
-    const baseVoucherDate = project.snapshot.overview.vouchersAddedAsOfDate || localDateStr
-    const effectiveVoucherDate = baseVoucherDate > localDateStr ? baseVoucherDate : localDateStr
-
-    return {
-      ...project.snapshot.overview,
-      docsTotal: project.snapshot.overview.docsTotal + cumulative.value.documents,
-      docsTodayAdded: project.snapshot.overview.docsTodayAdded + cumulative.value.documents,
-      vouchersTotal: project.snapshot.overview.vouchersTotal + cumulative.value.vouchers,
-      vouchersTodayAdded: project.snapshot.overview.vouchersTodayAdded + cumulative.value.vouchers,
-      docsAddedAsOfDate: effectiveDocDate,
-      vouchersAddedAsOfDate: effectiveVoucherDate,
-    }
+    // The snapshot already reads the same committed database facts. SSE cumulative
+    // values are a session pulse only and must never be overlaid onto authoritative totals.
+    return project.snapshot.overview
   })
 
   function apply(event: LiveProjectionEvent) {

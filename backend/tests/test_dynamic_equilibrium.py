@@ -103,7 +103,7 @@ def test_propeller_dynamic_equilibrium_corridor():
 
 
 def test_cross_screen_ripple_on_issue_resolution():
-    """Verify resolving issue updates construction_task, data_readiness, and org_unit."""
+    """Verify resolving issue heals construction_task and data_readiness without touching org_unit.status."""
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
     mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
@@ -116,7 +116,8 @@ def test_cross_screen_ripple_on_issue_resolution():
     calls = [str(call) for call in mock_cursor.execute.call_args_list]
     assert any("progress = 100, status = '已完成'" in c for c in calls)
     assert any("opening_rate = '100.0%%'" in c for c in calls)
-    assert any("双轨运行中" in c for c in calls)
+    # Lifecycle advancement belongs to lifecycle_advancer only (KI-072)
+    assert not any("org_unit" in c for c in calls)
 
 
 def test_recent_activities_api_endpoint():

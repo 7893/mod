@@ -110,7 +110,7 @@ def test_ki062_propeller_invoked_when_engine_enabled(tmp_path, monkeypatch):
 
     assert result.status == "SUCCESS"
     assert mock_propeller.step.called, "ConstructionPropeller.step() MUST be called in enabled slow-movie cycle"
-    assert mock_backfiller.run_cycle.called, "TrickleBackfiller.run_cycle() MUST be called when CF AI is enabled"
+    mock_backfiller.run_cycle.assert_called_once_with(batch_size=1, auto_commit=False)
     assert mock_conn.commit.called, "Database transaction MUST commit propeller & backfiller changes"
 
 

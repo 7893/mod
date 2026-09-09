@@ -1,7 +1,7 @@
 """Trickle Backfill Pipeline (涓流回填体系).
 
-Safely backfills historical and newly created governance issues using free-tier
-Cloudflare Workers AI quota (hard-capped at 3,000 neurons/day, $0.00 bill).
+Safely backfills historical and newly created governance issues using a conservative
+project-side Cloudflare Workers AI budget of 3,000 neurons/day.
 """
 
 from __future__ import annotations
@@ -39,7 +39,9 @@ class TrickleBackfiller:
         watchdog: Optional[QuotaWatchdog] = None,
     ):
         self._conn = conn
-        self.watchdog = watchdog or QuotaWatchdog(conn=conn)
+        # Quota reservations own an independent connection; they must never commit
+        # the caller's business transaction as a side effect.
+        self.watchdog = watchdog or QuotaWatchdog()
         self.client = client or CloudflareAIClient(watchdog=self.watchdog)
 
     def _get_connection(self) -> pymysql.Connection:
@@ -67,7 +69,7 @@ class TrickleBackfiller:
             autocommit=True,
         )
 
-    def run_cycle(self, batch_size: int = 3) -> BackfillReport:
+    def run_cycle(self, batch_size: int = 3, auto_commit: bool = True) -> BackfillReport:
         """Run one backfill batch (typically 2-3 issues to conserve neurons)."""
         # 1. Pre-flight quota check
         can_run, reason = self.watchdog.can_consume(estimated_neurons=50.0)
@@ -158,7 +160,7 @@ class TrickleBackfiller:
                         logger.warning("[BACKFILL] Quota reached mid-batch. Halting current cycle.")
                         break
 
-            if not getattr(conn, "autocommit", False):
+            if auto_commit and not getattr(conn, "autocommit", False):
                 conn.commit()
 
             return BackfillReport(

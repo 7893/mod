@@ -100,6 +100,10 @@ def test_rule2_sustained_qualification_days(baseline: ConstructionBaseline):
     assert advancer.consecutive_qualified_days[10] == 1
     assert advancer.org_status[10] == "准备中"
 
+    # Multiple resident ticks on the same calendar date are not multiple days.
+    assert advancer.advance_unit_if_eligible(metrics, cur_date) is None
+    assert advancer.consecutive_qualified_days[10] == 1
+
     # Day 2: Metric dips (e.g. dynamic sync rate dropped below 90%) -> Reset!
     metrics.dynamic_rate = 85.0
     cur_date += timedelta(days=1)

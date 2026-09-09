@@ -80,10 +80,18 @@ class EvolutionCoordinator:
 
     def _init_unit_metrics(self) -> None:
         """Initialize metric snapshot for all baseline orgs."""
-        for oid, info in self.baseline.orgs.items():
-            st = info["status"]
-            s_date = info["start_date"]
-            self.unit_metrics[oid] = OrgMetricsSnapshot(
+        for oid in self.baseline.orgs:
+            self.register_org(oid)
+
+    def register_org(self, oid: int) -> None:
+        """Attach a newly admitted baseline unit to the formal lifecycle engine."""
+        if oid in self.unit_metrics:
+            return
+        info = self.baseline.orgs[oid]
+        st = info["status"]
+        batch = self.baseline.batches.get(info["batch_id"], {})
+        s_date = info.get("start_date") or batch.get("start_date") or date.today()
+        self.unit_metrics[oid] = OrgMetricsSnapshot(
                 org_id=oid,
                 current_status=st,
                 batch_id=info["batch_id"],
@@ -106,6 +114,8 @@ class EvolutionCoordinator:
                 dual_run_recent_matches=5 if st in ("已上线", "稳定运行") else 0,
                 has_blocking_risk=False,
             )
+        self.advancer.org_status[oid] = st
+        self.advancer.stage_entered_dates[oid] = s_date
 
     def is_difficult_unit(self, org_id: int) -> Tuple[bool, Optional[str]]:
         """

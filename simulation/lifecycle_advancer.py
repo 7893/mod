@@ -12,7 +12,7 @@ Enforces the Three Iron Rules:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 import random
 from typing import Dict, List, Optional, Tuple
@@ -25,6 +25,7 @@ from .construction_models import (
 )
 from .construction_playbooks import TransitionReviewPlaybook
 from .engine_context import ConstructionBaseline
+from app.business_rules import DUAL_RUN_CONSISTENCY_RATE_MIN
 
 
 @dataclass
@@ -44,7 +45,7 @@ class LifecycleThresholds:
 
     # 双轨运行中 -> 已上线
     dual_run_days_min: int = 14
-    dual_run_consistency_rate_min: float = 98.0
+    dual_run_consistency_rate_min: float = DUAL_RUN_CONSISTENCY_RATE_MIN
     dual_run_min_checks: int = 5
     dual_run_consecutive_matches_min: int = 3
     dual_run_consecutive_days_min: int = 7
@@ -92,11 +93,17 @@ class LifecycleAdvancer:
 
         # State tracking: org_id -> consecutive days qualified
         self.consecutive_qualified_days: Dict[int, int] = {}
+        self.last_qualification_dates: Dict[int, date] = {}
         # Track current status of all units
         self.org_status: Dict[int, str] = {oid: info["status"] for oid, info in baseline.orgs.items()}
         # Track when unit entered current stage
         self.stage_entered_dates: Dict[int, date] = {
-            oid: info["start_date"] for oid, info in baseline.orgs.items()
+            oid: (
+                info.get("start_date")
+                or baseline.batches.get(info["batch_id"], {}).get("start_date")
+                or date.today()
+            )
+            for oid, info in baseline.orgs.items()
         }
         self.transition_log: List[TransitionReviewEventFootprint] = []
 
@@ -259,11 +266,19 @@ class LifecycleAdvancer:
         required_days = self.get_required_consecutive_days(next_stage)
 
         if is_qualified:
-            current_consecutive = self.consecutive_qualified_days.get(org_id, 0) + 1
+            last_date = self.last_qualification_dates.get(org_id)
+            if last_date == current_date:
+                current_consecutive = self.consecutive_qualified_days.get(org_id, 0)
+            elif last_date == current_date - timedelta(days=1):
+                current_consecutive = self.consecutive_qualified_days.get(org_id, 0) + 1
+            else:
+                current_consecutive = 1
             self.consecutive_qualified_days[org_id] = current_consecutive
+            self.last_qualification_dates[org_id] = current_date
         else:
             # Rule 2: Any metric drop immediately resets consecutive days (prevents fluttering)
             self.consecutive_qualified_days[org_id] = 0
+            self.last_qualification_dates[org_id] = current_date
             return None
 
         # Check if sustained criteria met

@@ -89,28 +89,9 @@ watch(() => props.liveEvent, (ev) => {
     return
   }
   const prov = cleanProvinceName(ev.province)
-  const anyEv = ev as any
-  let deltaDesc = ''
-  if (anyEv.story_desc) {
-    deltaDesc = anyEv.story_desc + (anyEv.amount ? ` (${anyEv.amount})` : '')
-  } else {
-    const bType = anyEv.business_type
-    if (bType === 'org_pooled') {
-      deltaDesc = '新设单位已登记入库，纳入第八批储备池'
-    } else if (bType === 'training_certified') {
-      deltaDesc = '关键用户通过机房实操上岗认证考试'
-    } else if (bType === 'dual_run_verified') {
-      deltaDesc = '完成 1 笔新老系统凭证借贷比对（一致）'
-    } else if (ev.increments.vouchers > 0) {
-      deltaDesc = `刚刚生成了 ${ev.increments.vouchers} 张会计凭证`
-    } else if (ev.increments.documents > 0) {
-      deltaDesc = `刚刚入库了 ${ev.increments.documents} 笔业务单据`
-    } else if (ev.increments.integrations > 0) {
-      deltaDesc = `刚刚完成了 ${ev.increments.integrations} 笔接口集成`
-    } else {
-      deltaDesc = '实时业务动态发生'
-    }
-  }
+  const deltaDesc = ev.storyDesc
+    ? ev.storyDesc + (ev.amount ? ` (${ev.amount})` : '')
+    : '实时业务动态发生'
 
   liveBanner.value = {
     province: prov,
@@ -132,28 +113,7 @@ const liveScatterData = computed(() => {
   const coords = PROVINCE_CENTERS[norm]
   if (!coords) return []
 
-  const anyEv = ev as any
-  let actionText = ''
-  if (anyEv.story_title) {
-    actionText = anyEv.story_title
-  } else {
-    const bType = anyEv.business_type
-    if (bType === 'org_pooled') {
-      actionText = '新单位入池'
-    } else if (bType === 'training_certified') {
-      actionText = '培训认证通过'
-    } else if (bType === 'dual_run_verified') {
-      actionText = '双轨比对一致'
-    } else if (ev.increments.vouchers > 0) {
-      actionText = `+${ev.increments.vouchers} 凭证`
-    } else if (ev.increments.documents > 0) {
-      actionText = `+${ev.increments.documents} 单据`
-    } else if (ev.increments.integrations > 0) {
-      actionText = `+${ev.increments.integrations} 集成`
-    } else {
-      actionText = '实时动态'
-    }
-  }
+  const actionText = ev.storyTitle || '实时动态'
 
   const labelText = `${ev.unitName || norm} · ${actionText}`
 

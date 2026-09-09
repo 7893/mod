@@ -13,9 +13,7 @@ from __future__ import annotations
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-from starlette.testclient import TestClient
 
-from app.main import app
 from simulation.cf_ai_client import CloudflareAIClient
 from simulation.quota_watchdog import QuotaWatchdog
 from simulation.trickle_backfill import TrickleBackfiller
@@ -45,8 +43,24 @@ class MockLedgerCursor:
             else:
                 # SELECT neurons_used, status
                 self._last_row = (entry["neurons_used"], entry["status"])
-        elif "INSERT INTO SIM_AI_QUOTA_LEDGER" in sql_upper:
+        elif "INSERT" in sql_upper and "SIM_AI_QUOTA_LEDGER" in sql_upper:
             check_date = params[0]
+            if "INSERT IGNORE" in sql_upper:
+                self.ledger.setdefault(check_date, {
+                    "call_count": 0,
+                    "neurons_used": 0.0,
+                    "status": "ACTIVE",
+                    "updated_at": params[1],
+                })
+                return
+            if len(params) == 3:
+                self.ledger[check_date] = {
+                    "call_count": 0,
+                    "neurons_used": params[1],
+                    "status": "ACTIVE",
+                    "updated_at": params[2],
+                }
+                return
             calls = params[1]
             neurons = params[2]
             limit = params[4]
@@ -57,6 +71,13 @@ class MockLedgerCursor:
             entry["status"] = "FUSED" if entry["neurons_used"] >= limit else "ACTIVE"
             entry["updated_at"] = now
             self.ledger[check_date] = entry
+        elif "UPDATE SIM_AI_QUOTA_LEDGER" in sql_upper:
+            check_date = params[-1]
+            entry = self.ledger[check_date]
+            if "CALL_COUNT" in sql_upper:
+                entry.update(call_count=params[0], neurons_used=params[1], status=params[2], updated_at=params[3])
+            else:
+                entry.update(neurons_used=params[0], status="ACTIVE", updated_at=params[1])
 
     def fetchone(self):
         return self._last_row
@@ -77,6 +98,9 @@ class MockLedgerConnection:
         pass
 
     def commit(self):
+        pass
+
+    def rollback(self):
         pass
 
 
@@ -119,10 +143,25 @@ def test_quota_watchdog_atomic_ledger_and_hard_fuse():
     assert can_run_after is False
 
 
+def test_quota_watchdog_reserves_before_call_and_reconciles_actual_usage():
+    conn = MockLedgerConnection()
+    test_date = date(2099, 12, 31)
+    watchdog = QuotaWatchdog(conn=conn, daily_limit=3000.0)
+
+    reserved, _ = watchdog.try_reserve(300.0, target_date=test_date)
+    assert reserved is True
+    assert watchdog.get_status(test_date).neurons_used == 300.0
+
+    watchdog.reconcile_reservation(300.0, 42.0, 1, target_date=test_date)
+    status = watchdog.get_status(test_date)
+    assert status.neurons_used == 42.0
+    assert status.call_count == 1
+
+
 def test_cf_ai_client_quota_fuse_fallback():
     """Verify CloudflareAIClient immediately falls back to LocalNarrativeLibrary when quota is full."""
     mock_watchdog = MagicMock(spec=QuotaWatchdog)
-    mock_watchdog.can_consume.return_value = (False, "Quota exhausted: 3000.0/3000.0")
+    mock_watchdog.try_reserve.return_value = (False, "Quota exhausted: 3000.0/3000.0")
 
     client = CloudflareAIClient(watchdog=mock_watchdog)
     res = client.enrich_issue(
@@ -141,10 +180,26 @@ def test_cf_ai_client_quota_fuse_fallback():
     assert "太原重工股份有限公司" in res.summary or "重工" in res.summary or "制造" in res.root_cause
 
 
+def test_cf_ai_client_quota_ledger_error_fails_closed_to_local():
+    mock_watchdog = MagicMock(spec=QuotaWatchdog)
+    mock_watchdog.try_reserve.side_effect = RuntimeError("ledger unavailable")
+    client = CloudflareAIClient(watchdog=mock_watchdog)
+
+    result = client.enrich_issue(
+        issue_id="ISS-TEST-QUOTA",
+        issue_type="数据校验失败",
+        unit_name="测试单位",
+        province="北京",
+    )
+
+    assert "QUOTA_UNAVAILABLE" in result.source
+    assert result.neurons_used == 0.0
+
+
 def test_cf_ai_client_network_error_resilience():
     """Verify CloudflareAIClient swallows network errors and safely falls back."""
     mock_watchdog = MagicMock(spec=QuotaWatchdog)
-    mock_watchdog.can_consume.return_value = (True, "Quota available")
+    mock_watchdog.try_reserve.return_value = (True, "Quota reserved")
 
     client = CloudflareAIClient(watchdog=mock_watchdog, timeout=0.001)
     # Point to unreachable URL to induce network timeout
@@ -194,56 +249,46 @@ def test_trickle_backfiller_execution():
     )
 
     backfiller = TrickleBackfiller(conn=mock_conn, client=mock_client, watchdog=mock_watchdog)
-    report = backfiller.run_cycle(batch_size=1)
+    report = backfiller.run_cycle(batch_size=1, auto_commit=False)
 
     assert report.status == "COMPLETED"
     assert report.issues_processed == 1
     assert "ISS-TEST-001" in report.enriched_ids
     assert mock_cur.execute.called, "Must execute SQL updates for issue and timeline"
     assert mock_watchdog.can_consume.called
+    mock_conn.commit.assert_not_called()
 
 
 def test_governance_ai_quota_and_enrich_endpoints(monkeypatch):
     """Verify /api/governance/ai-quota and /api/governance/issues/{id}/enrich API endpoints."""
-    from app.db import connection
+    from app.api import governance_ai_quota, governance_issue_enrich
     mock_conn = MagicMock()
-    app.dependency_overrides[connection] = lambda: mock_conn
-    client = TestClient(app)
 
-    try:
-        monkeypatch.setattr(
-            "app.services.governance.get_ai_quota_status",
-            lambda conn, **kwargs: {
-                "statDate": "2026-09-09",
-                "neuronsUsed": 150.0,
-                "dailyLimit": 3000.0,
-                "status": "ACTIVE",
-                "callCount": 3,
-                "remainingNeurons": 2850.0,
-            },
-        )
-        monkeypatch.setattr(
-            "app.services.governance.enrich_governance_issue",
-            lambda conn, issue_id: {
-                "id": issue_id,
-                "aiEnriched": 1,
-                "description": "【专家深度研判】整改完毕",
-            },
-        )
+    monkeypatch.setattr(
+        "app.services.governance.get_ai_quota_status",
+        lambda conn, **kwargs: {
+            "statDate": "2026-09-09",
+            "neuronsUsed": 150.0,
+            "dailyLimit": 3000.0,
+            "status": "ACTIVE",
+            "callCount": 3,
+            "remainingNeurons": 2850.0,
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.governance.enrich_governance_issue",
+        lambda conn, issue_id: {
+            "id": issue_id,
+            "aiEnriched": 1,
+            "description": "【专家深度研判】整改完毕",
+        },
+    )
 
-        # 1. GET /api/governance/ai-quota
-        res_quota = client.get("/api/governance/ai-quota")
-        assert res_quota.status_code == 200
-        quota_data = res_quota.json()
-        assert quota_data["statDate"] == "2026-09-09"
-        assert quota_data["dailyLimit"] == 3000.0
-        assert quota_data["status"] == "ACTIVE"
+    quota_data = governance_ai_quota(conn=mock_conn)
+    assert quota_data["statDate"] == "2026-09-09"
+    assert quota_data["dailyLimit"] == 3000.0
+    assert quota_data["status"] == "ACTIVE"
 
-        # 2. POST /api/governance/issues/{id}/enrich
-        res_enrich = client.post("/api/governance/issues/ISS-TEST-001/enrich")
-        assert res_enrich.status_code == 200
-        enriched_data = res_enrich.json()
-        assert enriched_data["id"] == "ISS-TEST-001"
-        assert enriched_data["aiEnriched"] == 1
-    finally:
-        app.dependency_overrides.pop(connection, None)
+    enriched_data = governance_issue_enrich("ISS-TEST-001", conn=mock_conn)
+    assert enriched_data["id"] == "ISS-TEST-001"
+    assert enriched_data["aiEnriched"] == 1

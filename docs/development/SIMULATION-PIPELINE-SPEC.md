@@ -14,7 +14,7 @@
 1. **未进场的单位严禁提前产生业务**：未启动、在建中的批次绝对不允许虚构生成业务单据与财务凭证。
 2. **全要素动态联动**：企业的数字化增长不仅是“单据”和“凭证”，而是**单位（Org）、人员（User）、双轨核对（Dual-Run）、业务单据（Document）、财务凭证（Voucher）、接口调用（Integration）**的全要素生命周期闭环。
 3. **末批次动态蓄水池机制**：最后一批（第八批）定位为**“全网未启动动态储备池”**，建设度为 0%，作为项目推进期内集团新设、新划转、新并购企业的唯一动态接纳池。
-4. **合规暗礁与自愈消缺因果链（Spear & Shield Dynamic Ripple）**：在建冲刺批次（第6/7/8批及储备池）在推进至 88% 阻力位时自然碰撞合规暗礁（生成治理工单并锁定进度），专班闭环销项后建设进度直冲 100% 并标记“已完成”，期初数据率达 100.0%，单位状态自动跃迁为“双轨运行中”并激活下游凭证流水（详见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](GOVERNANCE-SIMULATION-SYNTHESIS.md)）。
+4. **合规暗礁与自愈消缺因果链（Spear & Shield Dynamic Ripple）**：在建冲刺批次（第6/7/8批及储备池）在推进至 88% 阻力位时自然碰撞合规暗礁（生成治理工单并锁定进度）；专班销项只解除阻断并补齐建设/准备度指标，单位阶段仍必须由 `LifecycleAdvancer` 按连续达标日与正式评审逐级推进（详见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](GOVERNANCE-SIMULATION-SYNTHESIS.md)）。
 
 ---
 

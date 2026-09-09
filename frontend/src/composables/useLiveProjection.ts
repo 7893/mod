@@ -10,7 +10,12 @@ export interface LiveProjectionEvent {
   projectionId: string
   unitName?: string
   province?: string
-  mode: 'display_projection'
+  storyTitle?: string
+  storyDesc?: string
+  amount?: string
+  badgeTone?: string
+  batchName?: string
+  mode: 'committed_simulation'
 }
 
 export interface LiveProjectionCounts {
@@ -21,7 +26,7 @@ export interface LiveProjectionCounts {
 
 type ProjectionHandler = (event: LiveProjectionEvent) => void
 
-function parseEvent(raw: string): LiveProjectionEvent {
+export function parseEvent(raw: string): LiveProjectionEvent {
   const value = JSON.parse(raw) as Record<string, unknown>
   return {
     id: String(value.id),
@@ -33,6 +38,11 @@ function parseEvent(raw: string): LiveProjectionEvent {
     projectionId: String(value.projection_id),
     unitName: value.unit_name ? String(value.unit_name) : undefined,
     province: value.province ? String(value.province) : undefined,
+    storyTitle: value.story_title ? String(value.story_title) : undefined,
+    storyDesc: value.story_desc ? String(value.story_desc) : undefined,
+    amount: value.amount ? String(value.amount) : undefined,
+    badgeTone: value.badge_tone ? String(value.badge_tone) : undefined,
+    batchName: value.batch_name ? String(value.batch_name) : undefined,
     mode: value.mode as LiveProjectionEvent['mode'],
   }
 }

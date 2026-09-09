@@ -33,7 +33,7 @@ class ProjectionEvent:
     amount: str | None = None
     badge_tone: str | None = None
     batch_name: str | None = None
-    mode: str = field(default="display_projection", init=False)
+    mode: str = field(default="committed_simulation", init=False)
 
     def as_payload(self) -> dict:
         payload = asdict(self)
