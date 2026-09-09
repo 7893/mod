@@ -58,7 +58,7 @@
   background: linear-gradient(180deg, var(--color-white) 0%, var(--color-slate-100) 45%, var(--color-slate-400) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 16px rgb(255 255 255 / 12%);
+  text-shadow: 0 2px 16px color-mix(in srgb, var(--color-white) 12%, transparent);
   white-space: nowrap;
 }
 

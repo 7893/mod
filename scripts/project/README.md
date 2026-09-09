@@ -10,6 +10,7 @@
 - `scan_secrets.py`：只读扫描暂存区或指定 Git 范围的新增行，供 pre-commit 与 CI 共用。
 - `validate_commit_message.py`：校验本地 commit message 文件或 CI Git 范围中的提交主题。
 - `lint_frontend_arbitrary_values.py`：扫描 `frontend/src/**/*.vue` 中禁止的 Tailwind 任意值（字号/颜色/间距等），供 `make check` 与 CI 共用。
+- `lint_frontend_styles.py`：校验前端样式层契约——`frontend/src/styles/` 仅含 theme/base/shell/blocks 四文件、色值字面量只出现在 `theme.css` 与 `charts/theme.ts`、禁止旧变量（`--c-*`/`--space-*`/`--text-xs` 等）、媒体查询与 `clamp()` 仅限 `shell.css`、全局 CSS 选择器必须被 `.vue`/`.ts` 引用、引用 Token 的 SFC `<style>` 须以 `@reference` 开头。纳入 `make check` 与 CI。
 - `check_doc_links.py`：只读检查 Markdown 相对链接是否指向现存文件。
 - `check_document_governance.py`：只读阻断文档删除、冻结正文减损、KI 状态分裂、必需元数据缺失和现行索引漏项。
 - `check_doc_sync.py`：只读检查行为与运行事实变更是否在同一改动中同步 `docs/CURRENT-STATE.md`；未同步时阻断。

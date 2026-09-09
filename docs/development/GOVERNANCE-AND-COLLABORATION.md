@@ -27,8 +27,8 @@
   D 同机生产感知与发布授权受控委派。
 - 前端三层契约（骨架/物料 CockpitPanel/Token）；自研源码 ≤400 行；单一正统命名（无 `_v2/_v3`）。
 - 活/死文档分类（`DOCUMENTATION-LIFECYCLE.md`）：活文档单一真理强制同步，死文档（ADR/history/CHANGELOG）只增不改。
-- 按任务类型读规范的映射表（`AGENTS.md`），CI 五道闸门（scan_secrets / validate_commit_message /
-  lint_frontend_arbitrary_values / check_doc_sync / make check）。
+- 按任务类型读规范的映射表（`AGENTS.md`），CI 六道闸门（scan_secrets / validate_commit_message /
+  lint_frontend_arbitrary_values / lint_frontend_styles / check_doc_sync / make check）。
 
 ## 三、演进方向（对齐标杆，取"真高效"，不为完美而完美）
 
