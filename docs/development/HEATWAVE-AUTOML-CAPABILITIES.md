@@ -143,8 +143,8 @@ SELECT @test_score AS generalization_accuracy;
 ### 3.3 代码实现交叉引用
 - 后端安全只读适配器：[`backend/app/integrations/heatwave_ml.py`](../../backend/app/integrations/heatwave_ml.py)
 - SQL 语法与表结构定义：[`backend/app/integrations/heatwave_sql.py`](../../backend/app/integrations/heatwave_sql.py)
-- 离线训练与独立切分验证脚本：[`archive/legacy-scripts/agy/train_and_evaluate_models.py`](../../archive/legacy-scripts/agy/train_and_evaluate_models.py)
-- 只读基线核查门禁脚本：[`archive/legacy-scripts/agy/verify_ml_training_baseline.py`](../../archive/legacy-scripts/agy/verify_ml_training_baseline.py)
+- 离线训练与独立切分验证脚本：`archive/legacy-scripts/agy/train_and_evaluate_models.py`（本地归档，不纳入版本库）
+- 只读基线核查门禁脚本：`archive/legacy-scripts/agy/verify_ml_training_baseline.py`（本地归档，不纳入版本库）
 
 ---
 
@@ -225,7 +225,7 @@ SELECT @test_score AS generalization_accuracy;
 
 1. **“自评分 100%”的虚假繁荣（KI-015）**：
    - *现象*：最初执行 `sys.ML_TRAIN` 后直接查询训练集自评分，显示分类准确率达到了完美的 1.0（100%）。
-   - *教训*：训练集自评分存在严重的自拟合假象。在通过 [`archive/legacy-scripts/agy/train_and_evaluate_models.py`](../../archive/legacy-scripts/agy/train_and_evaluate_models.py) 建立 80%/20% 严谨的独立 Train/Test Split 评估机制后，才真正暴露出模型的泛化问题。**永远不能拿训练集自评分当模型指标对外汇报**。
+   - *教训*：训练集自评分存在严重的自拟合假象。在通过 `archive/legacy-scripts/agy/train_and_evaluate_models.py`（本地归档，不纳入版本库） 建立 80%/20% 严谨的独立 Train/Test Split 评估机制后，才真正暴露出模型的泛化问题。**永远不能拿训练集自评分当模型指标对外汇报**。
 
 2. **模拟数据“过度可分”导致模型退化（KI-028）**：
    - *现象*：即便切分了 400 行全新的独立测试集，风险分类模型的准确率仍死死钉在 1.0（100%）。
@@ -277,7 +277,7 @@ SELECT @test_score AS generalization_accuracy;
 任何试图对 HeatWave 执行 DDL、特征表重建或 `ML_TRAIN` 的操作，必须同时穿透双重安全门禁：
 1. **环境变量开关**：运行时环境变量 `MOD_HW_ML_ENABLED=true`（默认始终为 `false`）；
 2. **代码传参显式确认**：调用适配器方法时必须显式传递 `execute=True`（默认始终为 `False` 的 plan 试跑模式）；
-3. **只读核查在先**：每次训练前后必须通过只读脚本 [`archive/legacy-scripts/agy/verify_ml_training_baseline.py`](../../archive/legacy-scripts/agy/verify_ml_training_baseline.py) 核验数据集无时序泄露与分布异常。
+3. **只读核查在先**：每次训练前后必须通过只读脚本 `archive/legacy-scripts/agy/verify_ml_training_baseline.py`（本地归档，不纳入版本库） 核验数据集无时序泄露与分布异常。
 
 ---
 
@@ -287,8 +287,8 @@ SELECT @test_score AS generalization_accuracy;
 - [`backend/app/integrations/heatwave_ml.py`](../../backend/app/integrations/heatwave_ml.py)：HeatWave AutoML 核心适配器（封装连接池、安全降级、状态探测与 plan/execute 模式）。
 - [`backend/app/integrations/heatwave_sql.py`](../../backend/app/integrations/heatwave_sql.py)：所有特征表 DDL、插入 DML、`ML_TRAIN` 与批量评分存储过程定义。
 - [`backend/app/ml_adapter.py`](../../backend/app/ml_adapter.py)：大屏上层调用的统一 ML 门面，含有效性阈值拦截。
-- [`archive/legacy-scripts/agy/train_and_evaluate_models.py`](../../archive/legacy-scripts/agy/train_and_evaluate_models.py)：独立 Train/Test 切分训练与评估全流程工具。
-- [`archive/legacy-scripts/agy/verify_ml_training_baseline.py`](../../archive/legacy-scripts/agy/verify_ml_training_baseline.py)：纯只读模型基线核查与防泄露验证工具。
+- `archive/legacy-scripts/agy/train_and_evaluate_models.py`（本地归档，不纳入版本库）：独立 Train/Test 切分训练与评估全流程工具。
+- `archive/legacy-scripts/agy/verify_ml_training_baseline.py`（本地归档，不纳入版本库）：纯只读模型基线核查与防泄露验证工具。
 - [`scripts/agy/run_ml_retrain.py`](../../scripts/agy/run_ml_retrain.py)：重训执行封装脚本。
 
 ### 7.2 架构与规范文档
