@@ -11,10 +11,10 @@ html, body, #app {
 
 body {
   font-family: var(--font-sans);
-  font-size: var(--text-base);
+  font-size: var(--text-cockpit-md);
   line-height: 1.5;
-  color: var(--c-text-primary);
-  background: var(--c-bg-base);
+  color: var(--color-slate-50);
+  background: var(--color-surface-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

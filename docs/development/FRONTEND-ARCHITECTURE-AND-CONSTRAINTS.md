@@ -93,7 +93,15 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 ## 契约三 · Token 契约（Style）
 
 - 颜色、间距、字号、圆角、阴影必须来自集中定义的 Token（`frontend/src/styles/theme.css` 的
-  Tailwind 4 `@theme` 块），不得在模板中散写任意值。
+  Tailwind 4 `@theme` 块，这是**唯一** Token 来源，不再有 `:root` 变量层），不得在模板中散写任意值。
+- 语义色不另造名字：文字用 `slate-50/400/500/600`（主/次/弱/暗），信号灯用 `sky-400`（强调）、
+  `emerald-400`（成功）、`amber-400`（警告）、`rose-500`（风险）；表面色用 `surface-*` Token。
+  手写 CSS 中引用形式为 `var(--color-sky-400)`，透明度用 `color-mix(in srgb, var(--color-…) N%, transparent)`。
+- 间距用 Tailwind 刻度（模板 `gap-3`，手写 CSS `--spacing(3)`），圆角用 `var(--radius-sm|md|lg)`，
+  动效用 `var(--ease-out)` 与 `var(--default-transition-duration)`；不得再定义 `--space-*`、`--radius-*`、`--duration-*`。
+- 图表（ECharts option）内的颜色只能取自 `charts/theme.ts` 的 `chartPalette`/`chartInk`/`mapRamp`，
+  不得在组件内写色值字面量。
+- SFC 内如需手写引用 Token 的 `<style>`，块首必须 `@reference "../styles.css";`。
 - 已定义的 Token（模板直接引用其工具类，禁止再写等价任意值）：
   - 骨架：`grid-cols-cockpit`（三栏 390px/1fr/370px）、`grid-rows-cockpit-side`（1.15fr/1fr）、
     `grid-cols-construction`（B 屏 12 列）与 `grid-rows-construction`（上下 0.95fr/1.05fr）。
@@ -119,12 +127,25 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 - 需要突破契约（新分区、新物料形态、新 Token）时，先提出并获确认，再落地为契约的一部分，
   不得先斩后奏地在局部实现。
 
+## 全局样式文件契约
+
+`frontend/src/styles.css` 只做导入；`frontend/src/styles/` 固定四层，不得新增文件：
+
+| 文件 | 职责 | 允许内容 |
+|---|---|---|
+| `theme.css` | Token 唯一来源 | 仅 `@theme` 块 |
+| `base.css` | 文档重置 | 元素选择器级全局规则 |
+| `shell.css` | 外壳与顶栏（缩放画布之外） | `.command-*`/`.header-*`/`.nav-*` 等外壳类；**全站唯一允许媒体查询与 `clamp()` 的地方** |
+| `blocks.css` | 积木原型 | `MetricGrid`/`StatList`/`ChartBlock`/`StatusList` 的 BEM 规则 |
+
+组件私有样式写在其 SFC `<style>` 内（ECharts tooltip 这类渲染在组件根之外的 HTML 用非 scoped 块）。
+任何全局 CSS 类若在 `.vue`/`.ts` 中无引用即为死代码，必须删除。
+
 ## 迁移现状与推进
 
-- Token 基座（`frontend/src/styles/theme.css`）已建立，`DashboardView`（A 屏）作为范式标杆；
-  `ConstructionView`（B 屏）、`RolloutView`（C 屏）、`OperationsView`（D 屏）、`IssuesView`（E 屏）与 `InsightsView`（F 屏）已按同一契约全量迁移到 `CockpitPanel`、具名 Grid 与集中 Token。
-- 全站存量专属旧 CSS（`rollout.css`、`operations.css`、`issues.css`、`insights.css`）已全部物理清零，旧物料 `components/Panel.vue` 已彻底物理删除；`DataView`（数据台账页）已统一为 `CockpitPanel` + Tailwind 范式，`styles.css` 仅保留基座与通用物料层。
-- 全站各视图整体骨架、物料与 Token 三层契约已全面闭环生效。
+- 六屏均已使用 `CockpitPanel` 外壳与具名 Grid Token；A/B 屏为积木化范式标杆，C/D/E/F 屏仍有手写网格与统计结构，待收敛到 `components/blocks/`。
+- 2026-09-09 完成全局样式收口：删除 `foundation/components/utilities/page-hierarchy/dashboard-topbar/responsive-breakpoints` 六个文件及约 120 条无引用规则，全局 CSS 由 1897 行降至约 880 行；删除 `:root` 旧变量层，Token 唯一来源为 `theme.css`。
+- 待办：三个台账表格（`ConstructionLedger`/`RolloutLedgerTable`/`AtRiskUnitTable`）的筛选、分页、计数逻辑重复，需抽取通用表格物料与分页 composable；`stores/project.ts` 中的展示格式化需移出。
 - A1、B1、C1、D1、E1、F1、A2、A3、B2、B4、B5、C2、C5、D4、D6、D7、E4、F3、F4、F5 已完成面板密度图表化：拥挤的横排卡收敛为比较图，空旷数字面板补充构成、进度或质量图，长篇简报转为分组摘要卡，重复信息由图表交互或悬停提示承载。
 - 六屏主面板采用统一的“领域主图 + 少量精确事实”语言，但不强制同构：A1 为双进度环、运营规模谱和风险闭环，B2 为阶段状态矩阵与八轴轮廓，C1 为上线仪表与推进漏斗，D1 为业务规模谱与结构效率，E1 为合规仪表与监督梯队，F1 为风险比较条与模型质量门禁。面板区号、标题和小说明保持单行；主面板内容以分隔线组织，不再套同级边框框体。图表派生数据集中在 `charts/`，视觉统一复用 `charts/theme.ts`。
 - 同屏去重契约已扩展到 A8/B4/C3/D3/D7：A8 只做聚合运营异常、联系人只留 C5；B4 只做上线门禁与培训转化；C3 只做批次历史爬坡、C2 只做当前构成；D3 只做日吞吐趋势、D1/D2 分别保留累计规模与链路阶段；D7 在全量合规时比较真实核验覆盖规模，不再用四根相同 100% 柱填充空间。时间序列或异常字段缺失时必须显示明确空态。

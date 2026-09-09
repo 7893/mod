@@ -21,6 +21,14 @@ export const chartInk = {
   borderSoft: 'rgba(255, 255, 255, 0.05)',
   textPrimary: '#f8fafc',
   textMuted: '#94a3b8',
+  textDim: '#64748b',
+  onAccent: '#070d18',
+} as const
+
+/** 地图建设完成度色带：碳素冷灰蓝 → 星际群青（低 → 高），首项为无数据色。 */
+export const mapRamp = {
+  noData: '#090e17',
+  steps: ['#121b2a', '#18273d', '#203657', '#2a4975', '#355c94'],
 } as const
 
 /** 分类型数据的固定取色顺序，保证同一语义在各页面颜色一致。 */
