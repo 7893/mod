@@ -261,12 +261,12 @@ export interface ProjectSnapshot {
     dualRunConsistencyPct?: number
   }
   operationsTrend?: OperationsTrendItem[]
-  quality: {
-    voucherBalanceErrors: number
-    timeOrderErrors: number
-    orphanLinkErrors: number
-    organizationsWithStatusProgression: number
-  }
+  quality?: {
+    voucherBalanceErrors?: number | null
+    timeOrderErrors?: number | null
+    orphanLinkErrors?: number | null
+    organizationsWithStatusProgression?: number | null
+  } | null
   construction: ConstructionData
   insights: InsightsData
 }

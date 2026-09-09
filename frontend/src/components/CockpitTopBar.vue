@@ -143,7 +143,7 @@ const riskClosureOption = computed(() => ({
         <div class="grid grid-cols-3 gap-2 flex-shrink-0">
           <div><span class="block text-cockpit-xs text-slate-500">今日单据</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.docsTodayAdded || 0" :duration="500" /></b></div>
           <div><span class="block text-cockpit-xs text-slate-500">今日凭证</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.vouchersTodayAdded || 0" :duration="500" /></b></div>
-          <div><span class="block text-cockpit-xs text-slate-500">本次集成</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="cumulative.integrations || 0" :duration="500" /></b></div>
+          <div><span class="block text-cockpit-xs text-slate-500" title="演示投影会话累计实时集成推送数">实时集成脉搏</span><b class="font-mono text-cockpit-md text-sky-400">+<AnimatedNumber :value="cumulative.integrations || 0" :duration="500" /></b></div>
         </div>
         <VChart class="w-full flex-1 min-h-0" :option="operationsVolumeOption" autoresize />
       </section>

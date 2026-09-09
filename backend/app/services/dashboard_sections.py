@@ -231,17 +231,25 @@ def build_entities(conn: Connection, updated_at: str, anchor_date: str | None = 
                    ROW_NUMBER() OVER (PARTITION BY org_id ORDER BY
                        CASE WHEN job = '财务总监' THEN 1 WHEN role = '项目经理' THEN 2 ELSE 3 END, id) AS rn
             FROM sys_user
+        ),
+        dual_agg AS (
+            SELECT org_id,
+                   ROUND(100.0 * SUM(CASE WHEN result = '一致' THEN 1 ELSE 0 END) / COUNT(*), 1) AS dual_rate
+            FROM dual_run_result
+            GROUP BY org_id
         )
         SELECT o.id, o.name, o.region, bm.batchId, bn.name AS batch,
                COALESCE(ow.name, '未配置') AS owner, o.status AS rawStatus,
                COALESCE(t.construction, 0) AS construction,
-               CAST(REPLACE(COALESCE(d.opening_rate, '0'), '%', '') AS DECIMAL(5,1)) AS openingData
+               CAST(REPLACE(COALESCE(d.opening_rate, '0'), '%', '') AS DECIMAL(5,1)) AS openingData,
+               dr.dual_rate AS voucherRate
         FROM org_unit o
         JOIN batch_mapped bm ON bm.id = o.id
         JOIN batch_names bn ON bn.id = bm.batchId
         LEFT JOIN task_agg t ON t.org_id = o.id
         LEFT JOIN data_readiness d ON d.org_id = o.id
         LEFT JOIN owners ow ON ow.org_id = o.id AND ow.rn = 1
+        LEFT JOIN dual_agg dr ON dr.org_id = o.id
         ORDER BY o.id
     """)
     status_mapping = {
@@ -253,13 +261,15 @@ def build_entities(conn: Connection, updated_at: str, anchor_date: str | None = 
     for row in rows:
         row["province"] = _normalize_region(row.pop("region"))
         raw_status = row.pop("rawStatus")
+        vr = row.get("voucherRate")
         if row["batchId"] == 8:
             row["status"] = "未启动"
             row["construction"] = 0.0
             row["openingData"] = 0.0
+            row["voucherRate"] = None
         else:
             row["status"] = status_mapping.get(raw_status, raw_status)
-        row["voucherRate"] = None
+            row["voucherRate"] = float(vr) if vr is not None else None
         row["updatedAt"] = updated_at
     return rows
 

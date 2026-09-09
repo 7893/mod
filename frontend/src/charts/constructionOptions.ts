@@ -146,7 +146,19 @@ export function createTaskStageMatrixOption(list: StageSeriesItem[]) {
 export function createTaskStageRadarOption(list: StageSeriesItem[]) {
   return {
     ...calmAnimation,
-    tooltip: { trigger: 'item', ...chartTooltip },
+    tooltip: {
+      trigger: 'item',
+      ...chartTooltip,
+      formatter: (params: any) => {
+        const values = Array.isArray(params?.value) ? params.value : []
+        const lines = list.map((stage, idx) => {
+          const val = values[idx] ?? stage.progress
+          return `${stage.name} 完成率 <b>${val}%</b>`
+        })
+        const title = params?.seriesName || params?.name || '阶段完成率'
+        return `<b>${title}</b><br/>${lines.join('<br/>')}`
+      },
+    },
     radar: {
       center: ['50%', '53%'], radius: '65%', splitNumber: 3,
       indicator: list.map((stage) => ({ name: stage.name, max: 100 })),
