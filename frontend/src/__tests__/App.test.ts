@@ -63,7 +63,7 @@ describe('App fullscreen navigation', () => {
   })
 
   it('top-anchors the scaled canvas so extra height stays below the page', () => {
-    const css = readFileSync(resolve(process.cwd(), 'src/styles/foundation.css'), 'utf8')
+    const css = readFileSync(resolve(process.cwd(), 'src/styles/shell.css'), 'utf8')
     const commandMainRule = css.match(/\.command-main\s*\{[^}]+\}/)?.[0]
     const scaleBoxRule = css.match(/\.screen-scale-box\s*\{[^}]+\}/)?.[0]
 

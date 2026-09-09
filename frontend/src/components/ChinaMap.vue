@@ -304,11 +304,45 @@ function handleClick(params: any) {
   </div>
 </template>
 
+<style>
+/* ECharts tooltip 渲染在组件根之外，须为全局规则 */
+.map-tip {
+  background: rgba(12, 20, 34, 0.95);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.map-tip b {
+  display: block;
+  font-size: var(--text-md);
+  color: var(--c-text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.map-tip span {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--c-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.map-tip i {
+  display: block;
+  font-style: normal;
+  font-size: var(--text-xs);
+  color: var(--c-text-muted);
+}
+</style>
+
 <style scoped>
 .china-map-container {
   position: relative;
   width: 100%;
   height: 100%;
+  min-height: 0;
 }
 
 .china-map {
@@ -399,5 +433,47 @@ function handleClick(params: any) {
 .map-banner-pop-leave-to {
   opacity: 0;
   transform: translate(-50%, -12px) scale(0.96);
+}
+
+/* 自绘横向图例，停靠左下角；固定一行 flex，避免 visualMap 横向模式渲染成竖块 */
+.map-legend {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-2);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3);
+  background: rgba(7, 13, 24, 0.72);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.map-legend__caption {
+  font-size: var(--text-xxs);
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+.map-legend__bound {
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--c-text-dim);
+  white-space: nowrap;
+}
+
+.map-legend__stops {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.map-legend__stops i {
+  display: block;
+  width: 20px;
+  height: 6px;
+  border-radius: 1px;
 }
 </style>

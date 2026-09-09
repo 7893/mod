@@ -93,7 +93,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 ## 契约三 · Token 契约（Style）
 
 - 颜色、间距、字号、圆角、阴影必须来自集中定义的 Token（`frontend/src/styles/theme.css` 的
-  Tailwind 4 `@theme` 块，与 `foundation.css` 的变量层），不得在模板中散写任意值。
+  Tailwind 4 `@theme` 块），不得在模板中散写任意值。
 - 已定义的 Token（模板直接引用其工具类，禁止再写等价任意值）：
   - 骨架：`grid-cols-cockpit`（三栏 390px/1fr/370px）、`grid-rows-cockpit-side`（1.15fr/1fr）、
     `grid-cols-construction`（B 屏 12 列）与 `grid-rows-construction`（上下 0.95fr/1.05fr）。

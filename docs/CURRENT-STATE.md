@@ -216,6 +216,10 @@
   缩放；智能研判关闭态不再暗示存在现行 Cloudflare Worker。已随运行主机生产构建生效。
 - 本地 B 屏建设进度已迁移到 `CockpitPanel`、具名 Grid 与统一 Token，旧 `construction.css`
   及关联遗留规则已删除，缺失建设数据不再使用硬编码数值回填。已随运行主机生产构建生效。
+- 本地前端全局样式已收敛为 `styles/theme.css`、`base.css`、`shell.css`、`blocks.css` 四层：
+  `foundation.css`、`components.css`、`utilities.css`、`page-hierarchy.css`、`dashboard-topbar.css`、
+  `responsive-breakpoints.css` 及其中约 120 条无引用规则已删除，地图与投影指示器样式内聚到各自组件。
+  待发布。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态
