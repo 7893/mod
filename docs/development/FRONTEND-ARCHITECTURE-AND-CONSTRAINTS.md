@@ -1,6 +1,6 @@
 # 前端整体规划与约束规范
 
-更新日期：2026-09-08
+更新日期：2026-09-09
 状态：现行
 适用范围：`frontend/` 下所有页面、组件、样式与状态；约束人类与 AI 的前端改动
 
@@ -38,8 +38,8 @@
 | B | `/construction` | 建设进度 | 建设完成度与阶段任务 |
 | C | `/rollout` | 推广上线 | 批次推进、省域上线、单位台账 |
 | D | `/operations` | 业务与凭证运营 | 单据凭证全链路与质量 |
-| E | `/issues` | 问题与风险 | 未解决事项、风险分级 |
-| F | `/insights` | 智能研判与预测 | AutoML/AI 状态与预测契约 |
+| E | `/issues` | 问题与风险 | 未解决事项、风险分级、实时广播走字流（`LiveActivityTicker`）、整改抽屉（`ComplianceInspectDrawer`）与展厅巡航（`KioskSpotlightTour`） |
+| F | `/insights` | 智能研判与预测 | AutoML/AI 状态、决策简报、Cloudflare AI 每日安全额度胶囊（`AiQuotaCapsule`，$0.00 零费用硬防护） |
 
 Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得替代业务标题；
 编号本身不绑定任何一套具体 CSS 实现。
@@ -130,6 +130,8 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 - 同屏去重契约已扩展到 A8/B4/C3/D3/D7：A8 只做聚合运营异常、联系人只留 C5；B4 只做上线门禁与培训转化；C3 只做批次历史爬坡、C2 只做当前构成；D3 只做日吞吐趋势、D1/D2 分别保留累计规模与链路阶段；D7 在全量合规时比较真实核验覆盖规模，不再用四根相同 100% 柱填充空间。时间序列或异常字段缺失时必须显示明确空态。
 - 信息密度必须驱动具名骨架比例：A 屏左栏由 `dashboard-left` / `dashboard-stack` 固定 A2、A3、A4 的面积分工，B 屏上排 B2/B3 大于下排 B4/B5；C3 作为主分析画布占左侧 8 列并跨两行，C4/C5 作为辅助区在右侧 4 列上下叠放。比例只允许在 `theme.css` 的具名 Token 中维护。异步简报等首屏内容必须预留稳定槽位，数据到达不得推动主体布局；单行简报内容整体居中。
 - 笛卡尔图表的分类图例统一放入 `CockpitPanel` 标题行的 `actions` 插槽，不得侵占绘图区顶部或从右侧切割坐标系；窄面板使用 `PanelLegend compact` 只显示颜色块，原生悬停提示与无障碍文本提供完整含义。只有 B5 等环图适合保持“图形在左、图例或精确读数在右”的横向组织。
+- E/F 屏合规治理与 AI 算力护栏闭环（GI-003/GI-004）：E 屏顶端集成 `LiveActivityTicker.vue`，毫秒级轮播专班一线处置流水，赋予大屏环境生命体征；E 屏台账支持下钻唤起 `ComplianceInspectDrawer.vue`（六态 Stepper、专班责任人、一键督办上帝之手与 AI 深度研判）；空闲 45 秒由 `KioskSpotlightTour.vue` 自动唤醒展厅聚光灯巡航 HUD 浮窗，交互瞬时淡出；F 屏操作区嵌入 `AiQuotaCapsule.vue`，透视 Cloudflare AI 每日 3,000 Neurons 安全额度与熔断状态，坚守 $0.00 零费用硬防护。详见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](GOVERNANCE-SIMULATION-SYNTHESIS.md)。
+
 
 ## 重构执行顺序（后续 AI 必须按此顺序，不得跳步）
 
