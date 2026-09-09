@@ -237,7 +237,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       </CockpitPanel>
 
       <!-- D7: 数据质量金标准核验 -->
-      <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="核心业务约束与金标准稽核规则 (真实核验 0 异常如实展示)" class="col-span-2">
+      <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="核心业务约束与金标准稽核规则 · 未离线稽核项如实标注，不虚报 0 异常" class="col-span-2">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
           <!-- 四项规则左置纵向排布，缩短主图横条宽度，提升版面呼吸感 (KI-067) -->
           <div class="col-span-5 flex flex-col justify-between gap-1.5 min-w-0 pr-2 border-r border-surface-veil-06">
