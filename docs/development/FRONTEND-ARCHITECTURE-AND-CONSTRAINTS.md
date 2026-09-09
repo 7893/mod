@@ -141,6 +141,10 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 组件私有样式写在其 SFC `<style>` 内（ECharts tooltip 这类渲染在组件根之外的 HTML 用非 scoped 块）。
 任何全局 CSS 类若在 `.vue`/`.ts` 中无引用即为死代码，必须删除。
 
+以上文件集、色值字面量位置、旧变量、媒体查询位置、选择器引用与 `@reference` 要求由
+`scripts/project/lint_frontend_styles.py` 在 `make check` 与 CI 中机器校验；模板任意值由
+`lint_frontend_arbitrary_values.py` 校验。两者失败均阻断提交。
+
 ## 迁移现状与推进
 
 - 六屏均已使用 `CockpitPanel` 外壳与具名 Grid Token；A/B 屏为积木化范式标杆，C/D/E/F 屏仍有手写网格与统计结构，待收敛到 `components/blocks/`。

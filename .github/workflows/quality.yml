@@ -75,6 +75,9 @@ jobs:
       - name: Lint frontend arbitrary values
         run: python3 scripts/project/lint_frontend_arbitrary_values.py
 
+      - name: Lint frontend style contracts
+        run: python3 scripts/project/lint_frontend_styles.py
+
       - name: Check documentation links
         run: python3 scripts/project/check_doc_links.py
 

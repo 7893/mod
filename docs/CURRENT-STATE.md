@@ -223,7 +223,8 @@
   旧变量体系已全部删除，文字与信号色改用 Tailwind 内置 slate/sky/emerald/amber/rose，字号只保留
   `cockpit-*` 固定阶梯；图表色统一取自 `charts/theme.ts`（新增 `mapRamp`、`chartInk.textDim/onAccent`），
   地图实时光圈与浮条由调色板外的荧光青改为 sky-400。未被引用的 `AnimatedProgress.vue`、`MarkdownLite.vue`
-  已删除。待发布并需人工视觉验收。
+  已删除。新增 `scripts/project/lint_frontend_styles.py` 闸门（样式文件集、色值位置、旧变量、媒体查询位置、
+  死选择器、`@reference`）纳入 `make check` 与 CI。待发布并需人工视觉验收。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态
