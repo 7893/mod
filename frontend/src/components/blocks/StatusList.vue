@@ -9,15 +9,17 @@ withDefaults(
     chevron?: boolean
     /** 超出高度时滚动，否则各行等分压缩。 */
     scroll?: boolean
+    /** 说明文字允许换行（默认单行省略）。用于告警详情等长句。 */
+    wrap?: boolean
   }>(),
-  { chevron: false, scroll: false },
+  { chevron: false, scroll: false, wrap: false },
 )
 
 const emit = defineEmits<{ (e: 'select', row: StatusRow): void }>()
 </script>
 
 <template>
-  <div class="status-list" :class="{ 'status-list--scroll': scroll }">
+  <div class="status-list" :class="{ 'status-list--scroll': scroll, 'status-list--wrap': wrap }">
     <component
       :is="row.href ? 'a' : 'div'"
       v-for="(row, idx) in rows"

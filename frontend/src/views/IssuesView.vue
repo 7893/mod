@@ -5,10 +5,16 @@ import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, GaugeChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
-import { Search } from 'lucide-vue-next'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
 import ChartBlock from '../components/blocks/ChartBlock.vue'
+import CommandBand from '../components/blocks/CommandBand.vue'
+import StatList from '../components/blocks/StatList.vue'
+import type { StatRow } from '../components/blocks/types.ts'
+import FilterSelect from '../components/ledger/FilterSelect.vue'
+import LedgerPager from '../components/ledger/LedgerPager.vue'
+import SearchInput from '../components/ledger/SearchInput.vue'
+import { usePagedList } from '../composables/usePagedList.ts'
 import ComplianceInspectDrawer, { type ComplianceIssueUnit } from '../components/ComplianceInspectDrawer.vue'
 import LiveActivityTicker from '../components/LiveActivityTicker.vue'
 import KioskSpotlightTour from '../components/KioskSpotlightTour.vue'
@@ -22,77 +28,27 @@ import {
   compactGrid,
   valueAxis,
 } from '../charts/theme.ts'
-import { formatPercent } from '../formatters/metrics.ts'
+import { formatCount as format } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import { createBatchComplianceOption } from '../charts/panelOptions.ts'
 import { createComplianceOverviewOption } from '../charts/complianceOptions.ts'
+import { BATCH_ORDER } from '../utils/entityOptions.ts'
+import { COMPLIANCE_TAGS, deriveComplianceUnits } from '../utils/riskRules.ts'
+
+const TAG_FILTER_OPTIONS = ['全部标签', ...COMPLIANCE_TAGS] as const
 
 use([CanvasRenderer, BarChart, GaugeChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
 
 const store = useProjectStore()
 
 const searchQuery = ref('')
-const selectedTag = ref('全部标签')
+const selectedTag = ref<string>(TAG_FILTER_OPTIONS[0])
 const inspectingUnit = ref<ComplianceIssueUnit | null>(null)
-const page = ref(1)
-const pageSize = ref(8)
 
-const format = (value: number | undefined) => (
-  value === undefined ? '—' : new Intl.NumberFormat('zh-CN').format(value)
+// 矛与盾咬合：与 F 屏困难户共用 utils/riskRules 判定，仅依据真实运行指标派生标签
+const complianceUnits = computed<ComplianceIssueUnit[]>(() =>
+  deriveComplianceUnits(store.entities, store.snapshot.businessRules),
 )
-
-/**
- * 矛与盾咬合：从全量实体中识别困难户，派生单位级合规监督标签。
- * 仅依据真实运行指标（凭证率、建设进度、期初数据、状态、批次）判定，不使用 id 机械规则造标签。
- */
-const complianceUnits = computed<ComplianceIssueUnit[]>(() => {
-  const result: ComplianceIssueUnit[] = []
-  const rules = store.snapshot.businessRules
-  store.entities.forEach((row) => {
-    const isDualInconsistent = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < rules.lifecycle.dualRunConsistencyRateMin)
-    const isConstructionLag = row.construction < rules.risk.constructionLagRate && (row.status === '建设中' || row.status === '双轨运行')
-    const isOpeningDataLag = row.openingData < rules.risk.openingDataLagRate && (row.status === '建设中' || row.status === '双轨运行')
-    const isStuckPrep = row.status === '准备中' && (row.batchId != null && row.batchId <= rules.risk.lastActiveBatchId)
-
-    if (isDualInconsistent || isConstructionLag || isOpeningDataLag || isStuckPrep) {
-      const tags: string[] = []
-      let detailNote = ''
-
-      if (isOpeningDataLag) {
-        tags.push('超期挂账')
-        detailNote = `期初数据完成率仅 ${row.openingData}%，存在历史往来账目跨期未结清隐患。`
-      }
-      if (isConstructionLag) {
-        tags.push('超预算迹象')
-        detailNote += `建设任务推进迟滞（${row.construction}%），多阶段工序返工引发预算预警。`
-      }
-      if (isDualInconsistent) {
-        tags.push('票据异常')
-        detailNote += `双轨比对入账凭证率仅 ${formatPercent(row.voucherRate)}，存在借贷试算不平迹象。`
-      }
-
-      if (!tags.length) tags.push('建设进度滞后')
-
-      const isHigh = isDualInconsistent || tags.length >= 3 || tags.includes('超期挂账')
-      result.push({
-        id: row.id,
-        name: row.name,
-        province: row.province,
-        batch: row.batch,
-        owner: row.owner,
-        status: row.status,
-        construction: row.construction,
-        openingData: row.openingData,
-        voucherRate: row.voucherRate,
-        level: isHigh ? '高' : '中',
-        tags,
-        primaryIssue: tags[0] || '合规审查',
-        detailNote,
-      })
-    }
-  })
-  return result
-})
 
 const totalUnits = computed(() => store.snapshot.overview.orgTotal ?? store.entities.length)
 const compliantCount = computed(() => Math.max(0, totalUnits.value - complianceUnits.value.length))
@@ -120,9 +76,10 @@ const complianceOverviewOption = computed(() => createComplianceOverviewOption({
   medium: mediumRiskCount.value,
 }))
 
-const dominantComplianceTags = computed(() => [...tagDimensionCounts.value]
+const dominantComplianceTags = computed<StatRow[]>(() => [...tagDimensionCounts.value]
   .sort((a, b) => b.count - a.count)
-  .slice(0, 3))
+  .slice(0, 3)
+  .map((item) => ({ id: item.label, label: item.label, value: item.count })))
 
 const tagBarOption = computed(() => ({
   ...calmAnimation,
@@ -148,8 +105,6 @@ const riskPieOption = computed(() => ({
   }],
 }))
 
-const BATCH_ORDER = ['第一批', '第二批', '第三批', '第四批', '第五批', '第六批', '第七批', '第八批']
-
 const batchComplianceStats = computed(() =>
   BATCH_ORDER.map((name, idx) => {
     const batchUnits = store.entities.filter((e) => e.batch === name)
@@ -165,19 +120,17 @@ const batchComplianceStats = computed(() =>
 
 const batchComplianceOption = computed(() => createBatchComplianceOption(batchComplianceStats.value))
 
-const filteredTableUnits = computed(() => {
-  return complianceUnits.value.filter((u) => {
-    const matchTag = selectedTag.value === '全部标签' || u.tags.includes(selectedTag.value)
-    const matchQuery = !searchQuery.value || `${u.name}${u.province}${u.batch}${u.owner}`.includes(searchQuery.value)
-    return matchTag && matchQuery
-  })
-})
+const filteredTableUnits = computed(() =>
+  complianceUnits.value.filter(
+    (u) =>
+      (selectedTag.value === TAG_FILTER_OPTIONS[0] || u.tags.includes(selectedTag.value)) &&
+      (!searchQuery.value || `${u.name}${u.province}${u.batch}${u.owner}`.includes(searchQuery.value)),
+  ),
+)
 
-const totalTablePages = computed(() => Math.ceil(filteredTableUnits.value.length / pageSize.value) || 1)
-
-const paginatedTableUnits = computed(() => {
-  const start = (page.value - 1) * pageSize.value
-  return filteredTableUnits.value.slice(start, start + pageSize.value)
+const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePagedList(() => filteredTableUnits.value, {
+  pageSize: 8,
+  resetOn: [searchQuery, selectedTag],
 })
 </script>
 
@@ -190,21 +143,15 @@ const paginatedTableUnits = computed(() => {
       :subtitle="`全网 ${format(totalUnits)} 家单位 · 合规水位、监督梯队与主要风险同屏`"
       class="flex-shrink-0"
     >
-      <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
-        <section class="col-span-9 pr-3 border-r border-surface-veil-06 min-h-0">
+      <CommandBand>
+        <template #chart>
           <VChart class="w-full h-full min-h-0" :option="complianceOverviewOption" autoresize />
-        </section>
-        <section class="col-span-3 flex flex-col min-h-0">
+        </template>
+        <template #aside>
           <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs"><span class="font-medium text-slate-300">主要风险维度</span><span class="text-slate-500">TOP 3</span></div>
-          <div class="grid grid-rows-3 flex-1 min-h-0">
-            <div v-for="item in dominantComplianceTags" :key="item.label" class="flex items-center gap-2 min-w-0 text-cockpit-xs">
-              <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :style="{ backgroundColor: item.color }" />
-              <span class="text-slate-400 truncate">{{ item.label }}</span>
-              <b class="font-mono text-slate-100 ml-auto">{{ item.count }}</b>
-            </div>
-          </div>
-        </section>
-      </div>
+          <StatList :rows="dominantComplianceTags" flat density="dense" />
+        </template>
+      </CommandBand>
     </CockpitPanel>
 
     <!-- GI #4 治理自愈动态广播流 -->
@@ -243,23 +190,8 @@ const paginatedTableUnits = computed(() => {
     >
       <template #actions>
         <div class="flex items-center gap-2 flex-wrap">
-          <label class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-300">
-            <Search :size="13" class="text-slate-400" />
-            <input
-              v-model="searchQuery"
-              placeholder="搜索单位/区域/联系人"
-              class="bg-transparent border-none outline-none text-slate-200 placeholder-slate-500 w-36 text-cockpit-xs"
-            />
-          </label>
-          <select
-            v-model="selectedTag"
-            class="px-2.5 py-1 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-200 focus:outline-none focus:border-sky-500/40"
-          >
-            <option>全部标签</option>
-            <option>超期挂账</option>
-            <option>超预算迹象</option>
-            <option>票据异常</option>
-          </select>
+          <SearchInput v-model="searchQuery" placeholder="搜索单位/区域/联系人" />
+          <FilterSelect v-model="selectedTag" :options="TAG_FILTER_OPTIONS" />
         </div>
       </template>
 
@@ -335,27 +267,7 @@ const paginatedTableUnits = computed(() => {
           </table>
         </div>
 
-        <div class="flex items-center justify-between px-1 pt-0.5 text-cockpit-sm text-slate-400">
-          <span>重点监督共 {{ filteredTableUnits.length }} 家 · 第 {{ page }} / {{ totalTablePages }} 页</span>
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              :disabled="page <= 1"
-              class="px-2.5 py-1 rounded bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-cockpit-xs cursor-pointer"
-              @click="page--"
-            >
-              上一页
-            </button>
-            <button
-              type="button"
-              :disabled="page >= totalTablePages"
-              class="px-2.5 py-1 rounded bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-cockpit-xs cursor-pointer"
-              @click="page++"
-            >
-              下一页
-            </button>
-          </div>
-        </div>
+        <LedgerPager v-model="page" :total-pages="totalTablePages" :summary="`重点监督共 ${filteredTableUnits.length} 家`" />
       </div>
     </CockpitPanel>
 

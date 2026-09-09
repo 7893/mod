@@ -7,20 +7,21 @@ import { BarChart, GaugeChart, HeatmapChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, VisualMapComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
+import CommandBand from '../components/blocks/CommandBand.vue'
+import EmptyNote from '../components/blocks/EmptyNote.vue'
+import StatList from '../components/blocks/StatList.vue'
+import type { MetricItem, StatRow } from '../components/blocks/types.ts'
 import RolloutLedgerTable from '../components/RolloutLedgerTable.vue'
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from '../charts/theme.ts'
 import { buildCoverageComposition, buildRolloutComposition } from '../charts/panelData.ts'
 import { createCoverageOption, createRolloutCompositionOption } from '../charts/panelOptions.ts'
 import { createRolloutCommandOption, createRolloutTrendMatrixOption } from '../charts/rolloutOptions.ts'
+import { formatCount as format } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 
 use([CanvasRenderer, BarChart, GaugeChart, HeatmapChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, VisualMapComponent])
 
 const store = useProjectStore()
-
-const format = (value: number | undefined) => (
-  value === undefined ? '—' : new Intl.NumberFormat('zh-CN').format(value)
-)
 
 const batches = computed(() => store.snapshot.rollout || [])
 
@@ -68,6 +69,19 @@ const provinceRolloutRanking = computed(() => {
 const topProvinces = computed(() => provinceRolloutRanking.value.slice(0, 6))
 
 const coveredProvinceCount = computed(() => new Set(store.provinceSummary.map((p) => p.name)).size)
+
+const commandFacts = computed<MetricItem[]>(() => [
+  { label: '纳管单位', value: format(store.snapshot.overview.orgTotal) },
+  { label: '推广批次', value: batches.value.length, unit: '批', tone: 'accent' },
+  { label: '覆盖省份', value: coveredProvinceCount.value, unit: '省' },
+  { label: '联系人', value: format(store.snapshot.overview.contactsTotal), tone: 'success' },
+])
+
+const contactFacts = computed<StatRow[]>(() => [
+  { label: '联系人总数', value: format(store.snapshot.overview.contactsTotal), tone: 'accent' },
+  { label: '已覆盖单位', value: format(contactCoverage.value?.covered), tone: 'success' },
+  { label: '待补齐缺口', value: format(contactCoverage.value?.gap), tone: 'warning' },
+])
 
 const provinceRolloutOption = computed(() => ({
   ...calmAnimation,
@@ -126,17 +140,11 @@ const provinceRolloutOption = computed(() => ({
       subtitle="总体上线水位、在途单位结构与推广覆盖上下文"
       class="flex-shrink-0"
     >
-      <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
-        <section class="col-span-9 pr-3 border-r border-surface-veil-06 min-h-0">
+      <CommandBand :facts="commandFacts" :fact-columns="2">
+        <template #chart>
           <VChart class="w-full h-full min-h-0" :option="rolloutCommandOption" autoresize />
-        </section>
-        <section class="col-span-3 grid grid-cols-2 grid-rows-2 min-h-0">
-          <div class="pr-2 pb-1 border-r border-b border-surface-veil-06 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">纳管单位</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">{{ format(store.snapshot.overview.orgTotal) }}</b></div>
-          <div class="pl-2 pb-1 border-b border-surface-veil-06 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">推广批次</span><b class="font-mono text-cockpit-md text-sky-400 mt-0.5">{{ batches.length }} 批</b></div>
-          <div class="pr-2 pt-1 border-r border-surface-veil-06 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">覆盖省份</span><b class="font-mono text-cockpit-md text-slate-100 mt-0.5">{{ coveredProvinceCount }} 省</b></div>
-          <div class="pl-2 pt-1 flex flex-col justify-center min-h-0"><span class="text-cockpit-xs text-slate-500">联系人</span><b class="font-mono text-cockpit-md text-emerald-400 mt-0.5">{{ format(store.snapshot.overview.contactsTotal) }}</b></div>
-        </section>
-      </div>
+        </template>
+      </CommandBand>
     </CockpitPanel>
 
     <!-- C2: 横向比较各批次单位当前所处推广状态 -->
@@ -161,7 +169,7 @@ const provinceRolloutOption = computed(() => ({
       <div class="grid grid-cols-rollout-analysis grid-rows-rollout-analysis gap-2.5 min-h-0">
         <CockpitPanel title="批次上线爬坡矩阵" zone="C3" subtitle="历史快照中的批次上线率与双轨率" class="col-span-8 row-span-2">
           <VChart v-if="rolloutTrend.length" class="w-full h-full min-h-0" :option="rolloutTrendOption" autoresize />
-          <div v-else class="flex h-full items-center justify-center text-cockpit-xs text-slate-500">暂无批次历史快照</div>
+          <EmptyNote v-else>暂无批次历史快照</EmptyNote>
         </CockpitPanel>
 
         <CockpitPanel title="省域上线分布" zone="C4" subtitle="上线率前六" class="col-span-4 min-h-0">
@@ -178,26 +186,13 @@ const provinceRolloutOption = computed(() => ({
         <CockpitPanel title="项目联系人" zone="C5" subtitle="组织覆盖与专员" class="col-span-4 min-h-0">
           <div class="grid grid-cols-5 h-full min-h-0 gap-2 items-center">
             <VChart class="col-span-2 w-full h-full min-h-0" :option="contactCoverageOption" autoresize />
-            <div class="col-span-3 grid grid-rows-3 h-full text-cockpit-xs min-h-0">
-              <div class="flex items-center justify-between border-b border-surface-veil-06 gap-2 min-w-0">
-                <span class="text-slate-400 truncate">联系人总数</span>
-                <b class="font-mono text-cockpit-sm text-sky-400 flex-shrink-0">{{ format(store.snapshot.overview.contactsTotal) }}</b>
-              </div>
-              <div class="flex items-center justify-between border-b border-surface-veil-06 gap-2 min-w-0">
-                <span class="text-slate-400 truncate">已覆盖单位</span>
-                <b class="font-mono text-cockpit-sm text-emerald-400 flex-shrink-0">{{ format(contactCoverage?.covered) }}</b>
-              </div>
-              <div class="flex items-center justify-between gap-2 min-w-0">
-                <span class="text-slate-400 truncate">待补齐缺口</span>
-                <b class="font-mono text-cockpit-sm text-amber-400 flex-shrink-0">{{ format(contactCoverage?.gap) }}</b>
-              </div>
-            </div>
+            <StatList class="col-span-3 self-stretch" :rows="contactFacts" flat density="dense" />
           </div>
         </CockpitPanel>
       </div>
 
       <!-- C6: 单位台账表格与分页组件 -->
-      <RolloutLedgerTable class="min-h-0" />
+      <RolloutLedgerTable />
     </div>
   </div>
 </template>

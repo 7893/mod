@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import {
-  ArrowRight,
-  Check,
-  FileCheck2,
-  Scale,
-  ServerCog,
-  ShieldCheck,
-  Workflow,
-} from 'lucide-vue-next'
+import { ArrowRight, Check, FileCheck2, Scale, ServerCog, Workflow } from 'lucide-vue-next'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -16,11 +8,17 @@ import { BarChart, GaugeChart, LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
+import CommandBand from '../components/blocks/CommandBand.vue'
+import EmptyNote from '../components/blocks/EmptyNote.vue'
+import MetricGrid from '../components/blocks/MetricGrid.vue'
+import StatList from '../components/blocks/StatList.vue'
+import type { BlockTone, MetricItem, StatRow } from '../components/blocks/types.ts'
 import { formatCount, formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import {
   calcDualRunConsistency,
   buildQualityAuditList,
+  type QualityAuditItem,
 } from '../utils/qualityMetrics.ts'
 import {
   createDualRunOutcomeOption,
@@ -35,11 +33,6 @@ use([CanvasRenderer, BarChart, GaugeChart, LineChart, GridComponent, TooltipComp
 
 const store = useProjectStore()
 const format = formatCount
-
-const formatWithUnit = (value: number | null | undefined, unit: string) => {
-  const s = format(value)
-  return s === '—' ? '—' : `${s} ${unit}`
-}
 
 const ops = computed(() => store.snapshot.operations)
 
@@ -128,6 +121,68 @@ const qualityAuditList = computed(() => {
   )
 })
 
+const scaleFacts = computed<MetricItem[]>(() => {
+  const fullRows = format(store.snapshot.meta?.fullRows)
+  return [
+    { label: '数据总规模', value: fullRows, unit: fullRows === '—' ? undefined : '行', tone: 'warning' },
+    { label: '单据平均明细', value: documentLineRatio.value, hint: '行 / 单据', tone: 'accent' },
+    { label: '凭证平均分录', value: averageVoucherLines.value, hint: '行 / 凭证', tone: 'success' },
+  ]
+})
+
+const voucherFacts = computed<MetricItem[]>(() => [
+  {
+    label: '平均每张凭证',
+    value: averageVoucherLines.value,
+    unit: '行分录',
+    tone: 'accent',
+    hint: '借贷平衡规则已启用 · 异常笔数：接口未提供',
+  },
+])
+
+const integrationHeadline = computed<MetricItem[]>(() => [
+  { label: '集成成功率', value: formatPercent(integrationRate.value), tone: 'accent' },
+])
+const integrationFacts = computed<MetricItem[]>(() => [
+  { label: '总调用', value: format(integrationTotal.value) },
+  { label: '异常待核', value: format(integrationFailedCount.value), tone: 'danger' },
+])
+
+const dualRunHeadline = computed<MetricItem[]>(() => {
+  const stats = dualRunStats.value
+  if (!stats) return []
+  return [
+    {
+      label: '核对一致率',
+      value: formatPercent(stats.consistencyPct),
+      tone: dualRunPass.value ? 'success' : 'warning',
+      hint: `门禁 ≥ ${dualRunConsistencyRateMin.value}% · ${dualRunPass.value ? '已达标' : '待提升'}`,
+    },
+  ]
+})
+const dualRunBreakdownRows = computed<StatRow[]>(() => dualRunBreakdown.value.map((item) => ({
+  id: item.type,
+  label: item.type.replace('核对', '').replace('比对', ''),
+  value: formatPercent(item.rate),
+})))
+
+function auditTone(status: QualityAuditItem['status']): BlockTone {
+  if (status === 'pass') return 'success'
+  if (status === 'unknown') return 'default'
+  return 'warning'
+}
+const qualityAuditItems = computed<MetricItem[]>(() => qualityAuditList.value.map((item) => ({
+  label: item.rule,
+  value: format(item.total),
+  unit: item.unit,
+  tone: auditTone(item.status),
+  progress: item.rate ?? 0,
+  meta: [
+    { label: '合规率', value: item.rate != null ? `${item.rate}%` : '—' },
+    { label: '异常', value: item.errors != null ? item.errors : '—' },
+  ],
+})))
+
 const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualityAuditList.value))
 </script>
 
@@ -140,20 +195,15 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       :subtitle="`主链路规模与数据结构效率 · 截至 ${store.snapshot.overview.docsAddedAsOfDate || store.snapshot.meta.asOfDate}`"
       class="flex-shrink-0"
     >
-      <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
-        <section class="col-span-8 flex flex-col min-h-0 pr-3 border-r border-surface-veil-06">
+      <CommandBand :chart-span="8" :facts="scaleFacts">
+        <template #chart>
           <div class="flex items-center justify-between text-cockpit-xs flex-shrink-0 px-1">
             <span class="font-medium text-slate-300">主链路累计规模谱</span>
             <span class="text-slate-500">单据 / 凭证 / 集成</span>
           </div>
           <VChart class="w-full flex-1 min-h-0" :option="operationsOverviewOption" autoresize />
-        </section>
-        <section class="col-span-4 grid grid-cols-3 gap-2 min-h-0">
-          <div class="flex flex-col justify-center border-r border-surface-veil-06 pr-2 min-w-0"><span class="text-cockpit-xs text-slate-500">数据总规模</span><b class="font-mono text-cockpit-md text-amber-400 mt-1 truncate">{{ formatWithUnit(store.snapshot.meta?.fullRows, '行') }}</b></div>
-          <div class="flex flex-col justify-center border-r border-surface-veil-06 pr-2 min-w-0"><span class="text-cockpit-xs text-slate-500">单据平均明细</span><b class="font-mono text-cockpit-metric text-sky-400 mt-1">{{ documentLineRatio }}</b><span class="text-cockpit-xs text-slate-500">行 / 单据</span></div>
-          <div class="flex flex-col justify-center min-w-0"><span class="text-cockpit-xs text-slate-500">凭证平均分录</span><b class="font-mono text-cockpit-metric text-emerald-400 mt-1">{{ averageVoucherLines }}</b><span class="text-cockpit-xs text-slate-500">行 / 凭证</span></div>
-        </section>
-      </div>
+        </template>
+      </CommandBand>
     </CockpitPanel>
 
     <!-- D2: 全链路流程条 -->
@@ -189,38 +239,23 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
           ]" />
         </template>
         <VChart v-if="operationsTrend.length" class="w-full h-full min-h-0" :option="operationsTrendOption" autoresize />
-        <div v-else class="flex h-full items-center justify-center text-cockpit-xs text-slate-500">暂无连续日吞吐数据</div>
+        <EmptyNote v-else>暂无连续日吞吐数据</EmptyNote>
       </CockpitPanel>
 
       <!-- D4: 凭证生成质效 -->
       <CockpitPanel title="凭证生成质效" zone="D4" subtitle="成功率、生成规模与凭证结构">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
           <VChart class="col-span-9 w-full h-full min-h-0" :option="voucherQualityOption" autoresize />
-          <div class="col-span-3 flex flex-col justify-center border-l border-surface-veil-06 pl-3 min-w-0">
-            <span class="text-cockpit-xs text-slate-500">平均每张凭证</span>
-            <div class="flex items-baseline gap-1 mt-1">
-              <b class="font-mono text-cockpit-metric text-sky-400">{{ averageVoucherLines }}</b>
-              <small class="text-cockpit-xs text-slate-500">行分录</small>
-            </div>
-            <div class="flex items-center gap-1.5 mt-2 text-cockpit-xs text-emerald-400">
-              <ShieldCheck :size="13" class="flex-shrink-0" />
-              <span class="truncate">借贷平衡规则已启用</span>
-            </div>
-            <span class="text-cockpit-xs text-slate-500 mt-1 truncate">异常笔数：接口未提供</span>
-          </div>
+          <MetricGrid class="col-span-3 border-l border-surface-veil-06 pl-3" :items="voucherFacts" flat fill />
         </div>
       </CockpitPanel>
 
       <!-- D5: 接口集成入账 (阶梯条充实内容，消除空旷感，D-2) -->
       <CockpitPanel title="接口集成入账" zone="D5" subtitle="实时与批量接口调用结果">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <div class="col-span-4 flex flex-col justify-center pr-3 border-r border-surface-veil-06 min-w-0">
-            <span class="text-cockpit-xs text-slate-500">集成成功率</span>
-            <b class="font-mono text-cockpit-kpi font-bold text-sky-400 mt-1">{{ formatPercent(integrationRate) }}</b>
-            <div class="grid grid-cols-2 gap-2 mt-3 text-cockpit-xs">
-              <div><span class="block text-slate-500">总调用</span><b class="font-mono text-slate-200">{{ format(integrationTotal) }}</b></div>
-              <div><span class="block text-slate-500">异常待核</span><b class="font-mono text-rose-400">{{ format(integrationFailedCount) }}</b></div>
-            </div>
+          <div class="col-span-4 flex flex-col justify-center gap-2 pr-3 border-r border-surface-veil-06 min-w-0">
+            <MetricGrid :items="integrationHeadline" flat size="lg" />
+            <MetricGrid :items="integrationFacts" flat size="xs" :columns="2" />
           </div>
           <VChart class="col-span-8 w-full h-full min-h-0" :option="integrationOutcomeOption" autoresize />
         </div>
@@ -229,95 +264,20 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       <!-- D6: 双轨运行核对 -->
       <CockpitPanel title="双轨运行核对" zone="D6" subtitle="新老系统一致性对账">
         <div v-if="dualRunStats && dualRunOutcomeOption" class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <div class="col-span-4 flex flex-col justify-center pr-3 border-r border-surface-veil-06 min-w-0">
-            <span class="text-cockpit-xs text-slate-500">核对一致率</span>
-            <b class="font-mono text-cockpit-kpi font-bold mt-1" :class="dualRunPass ? 'text-emerald-400' : 'text-amber-400'">
-              {{ formatPercent(dualRunStats.consistencyPct) }}
-            </b>
-            <div class="flex items-center gap-2 mt-1.5 text-cockpit-xs">
-              <span class="text-slate-500">门禁 ≥ {{ dualRunConsistencyRateMin }}%</span>
-              <span class="font-medium" :class="dualRunPass ? 'text-emerald-400' : 'text-amber-400'">{{ dualRunPass ? '已达标' : '待提升' }}</span>
-            </div>
+          <div class="col-span-4 flex flex-col justify-center gap-2 pr-3 border-r border-surface-veil-06 min-w-0">
+            <MetricGrid :items="dualRunHeadline" flat size="lg" />
             <!-- 三大对账维度穿透 (KI-053) -->
-            <div v-if="dualRunBreakdown.length" class="flex flex-col gap-1 mt-2 pt-2 border-t border-surface-veil-06">
-              <div v-for="item in dualRunBreakdown" :key="item.type" class="flex items-center justify-between text-cockpit-xs text-slate-400">
-                <span class="truncate max-w-20" :title="item.type">{{ item.type.replace('核对', '').replace('比对', '') }}</span>
-                <span class="font-mono font-medium text-slate-200">{{ formatPercent(item.rate) }}</span>
-              </div>
-            </div>
+            <StatList v-if="dualRunBreakdownRows.length" :rows="dualRunBreakdownRows" flat density="dense" class="pt-2 border-t border-surface-veil-06" />
           </div>
           <VChart class="col-span-8 w-full h-full min-h-0" :option="dualRunOutcomeOption" autoresize />
         </div>
-        <div v-else class="flex items-center justify-center h-full text-slate-500 text-cockpit-xs">
-          当前快照未提供双轨明细
-        </div>
+        <EmptyNote v-else>当前快照未提供双轨明细</EmptyNote>
       </CockpitPanel>
 
       <!-- D7: 数据质量金标准核验 -->
       <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="核心业务约束与金标准稽核规则 · 未离线稽核项如实标注，不虚报 0 异常" class="col-span-2">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <!-- 4 项规则 2x2 规整矩阵，科技感指标卡排布 -->
-          <div class="col-span-7 grid grid-cols-2 gap-2.5 min-w-0 pr-3 border-r border-surface-veil-06">
-            <div
-              v-for="item in qualityAuditList"
-              :key="item.id"
-              class="px-3 py-2 rounded-lg bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between min-w-0 transition-colors hover:border-surface-hairline"
-              :class="item.status === 'pass'
-                ? 'border-l-2 border-l-emerald-500'
-                : (item.status === 'unknown'
-                  ? 'border-l-2 border-l-slate-600'
-                  : 'border-l-2 border-l-amber-500')"
-            >
-              <!-- 顶部：规则名称与状态胶囊 -->
-              <div class="flex items-center justify-between gap-2 min-w-0">
-                <div class="flex items-center gap-1.5 min-w-0">
-                  <span
-                    class="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    :class="item.status === 'pass'
-                      ? 'bg-emerald-400'
-                      : (item.status === 'unknown' ? 'bg-slate-500' : 'bg-amber-400')"
-                  />
-                  <span class="text-cockpit-xs text-slate-200 font-medium truncate">{{ item.rule }}</span>
-                </div>
-                <span
-                  class="font-mono text-cockpit-xs px-1.5 py-0.5 rounded border flex-shrink-0"
-                  :class="item.status === 'pass'
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                    : (item.status === 'unknown'
-                      ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
-                      : 'bg-amber-500/10 text-amber-400 border-amber-500/20')"
-                >
-                  {{ item.errors === 0 ? '0 异常' : (item.errors != null ? `${item.errors} 异常` : '—') }}
-                </span>
-              </div>
-
-              <!-- 中部：核验总规模大字 -->
-              <div class="flex items-baseline gap-1 my-0.5 min-w-0">
-                <b class="font-mono text-cockpit-metric font-semibold text-slate-100 truncate">{{ format(item.total) }}</b>
-                <span class="text-cockpit-xs text-slate-400 flex-shrink-0">{{ item.unit }}</span>
-              </div>
-
-              <!-- 底部：合规率及微型进度条 -->
-              <div class="flex items-center justify-between gap-2 text-cockpit-xs min-w-0">
-                <div class="flex items-center gap-1.5 min-w-0">
-                  <span class="text-slate-500 flex-shrink-0">合规率</span>
-                  <div class="w-14 h-1 rounded-full bg-surface-veil-06 overflow-hidden flex-shrink-0">
-                    <div
-                      class="h-full rounded-full transition-all"
-                      :class="item.rate != null ? 'bg-emerald-400' : 'bg-slate-600'"
-                      :style="{ width: item.rate != null ? `${item.rate}%` : '0%' }"
-                    />
-                  </div>
-                </div>
-                <b
-                  class="font-mono font-semibold flex-shrink-0"
-                  :class="item.rate != null ? 'text-emerald-400' : 'text-slate-500'"
-                >
-                  {{ item.rate != null ? `${item.rate}%` : '—' }}
-                </b>
-              </div>
-            </div>
-          </div>
+          <MetricGrid class="col-span-7 pr-3 border-r border-surface-veil-06" :items="qualityAuditItems" :columns="2" fill size="sm" />
 
           <!-- 右侧：覆盖规模图表 -->
           <div class="col-span-5 flex flex-1 min-h-0 flex-col pl-1">

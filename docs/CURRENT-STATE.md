@@ -229,6 +229,12 @@
   `components/ledger/` 四个物料，分页状态机、抽屉编辑、省份/批次/状态顺序表与带计数选项构造分别
   收敛为 `usePagedList`、`useEntityEditor`、`utils/entityOptions.ts`（均配套单测），三组件由 1234 行降至
   约 790 行；`AtRiskUnitTable` 补齐总页数收缩到 0 时的最小页钳位。待发布。
+- 本地 C/D/E/F 屏已收敛到积木库：新增 `blocks/CommandBand`、`NoteBanner`、`EmptyNote`，`MetricGrid`/`StatList`
+  增加 `flat` 平铺形态，`StatusList` 增加 `wrap`；四屏手写的指挥带栅格、事实栏、D7 核验四卡、F3 告警卡、
+  F4/F5 提示条与六处空态全部改为积木 + 数据映射，四视图由 1462 行降至约 1220 行。E 屏合规监督与
+  F 屏困难户的风险判定收敛为 `utils/riskRules.ts` 单一来源（配套单测），E5 清单改用台账物料并补齐
+  筛选变动回第 1 页；F3 页脚门禁文案改为读取 `businessRules`（此前硬编码 95% 与实际 98% 门禁不一致）。
+  已用无头 Chromium 在 1920×1080 下对 C/D/E/F 四屏做渲染冒烟，无控制台错误。待发布并需人工视觉验收。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态
