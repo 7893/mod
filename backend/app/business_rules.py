@@ -34,8 +34,6 @@ BATCH_LIFECYCLE_STAGES: tuple[str, ...] = (
 
 # 「已上线」口径：正式上线与稳定运行都算上线。
 LAUNCHED_STATUSES: tuple[str, ...] = (ORG_STATUS_LAUNCHED, ORG_STATUS_STABLE)
-# 有真实业务流水的单位口径（业务拟真只对这些单位落单据）。
-ACTIVE_BUSINESS_STATUSES: tuple[str, ...] = (ORG_STATUS_STABLE, ORG_STATUS_DUAL_RUNNING, ORG_STATUS_LAUNCHED)
 
 # 六态数据库状态 → 前端五态展示（frontend RolloutStatus）。
 DISPLAY_STATUS_MAPPING: dict[str, str] = {
@@ -52,7 +50,6 @@ def sql_status_list(statuses: Iterable[str]) -> str:
 
 
 SQL_LAUNCHED_STATUSES = sql_status_list(LAUNCHED_STATUSES)
-SQL_ACTIVE_BUSINESS_STATUSES = sql_status_list(ACTIVE_BUSINESS_STATUSES)
 
 # 演示口径的「推断批次」：历史存量单位（id<=2005）按状态与 id 区间归入 1-7 批，
 # 蓄水池（batch_id=8）与在库批次原样保留。所有大屏批次统计共用此表达式（表别名固定为 o）。
