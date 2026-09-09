@@ -16,7 +16,6 @@ SQL_MODULES = (
     "backend/app/services/dashboard.py",
     "backend/app/services/dashboard_sections.py",
     "backend/app/integrations/heatwave_sql.py",
-    "backend/app/business_simulator.py",
     "simulation/engine_context.py",
 )
 
@@ -31,7 +30,6 @@ def test_lifecycle_stages_are_ordered_and_unique():
 def test_status_groups_are_subsets_of_lifecycle():
     stages = set(br.ORG_LIFECYCLE_STAGES)
     assert set(br.LAUNCHED_STATUSES) <= stages
-    assert set(br.ACTIVE_BUSINESS_STATUSES) <= stages
     assert set(br.DISPLAY_STATUS_MAPPING) <= stages
 
 

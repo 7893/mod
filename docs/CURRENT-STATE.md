@@ -242,7 +242,7 @@
   `BATCH_LIFECYCLE_STAGES`（原 `simulation/construction_models.py` 定义处改为转引）、`LAUNCHED_STATUSES`
   「已上线族」、`ACTIVE_BUSINESS_STATUSES`、数据库六态→前端五态的 `DISPLAY_STATUS_MAPPING`（原散在
   `dashboard_sections.py`）、SQL 片段 `SQL_LAUNCHED_STATUSES` 与三处重复的推断批次 `SQL_INFERRED_BATCH_ID`；
-  `dashboard.py`/`dashboard_sections.py`/`heatwave_sql.py`/`business_simulator.py`/`simulation/engine_context.py`
+  `dashboard.py`/`dashboard_sections.py`/`heatwave_sql.py`/`simulation/engine_context.py`
   中 40 余处状态字面量改为引用常量，`public_business_rules()` 新增只读 `orgStages`/`launchedStatuses`。
   新增 `tests/test_business_rules.py` 契约测试（词表有序唯一、映射覆盖全部状态、SQL 模块禁止散写状态
   字面量）。未改变任何 SQL 语义。待发布。
@@ -252,6 +252,13 @@
 - 本地后端 KI-027 补遗：`PageV2→Page`、`build_dashboard_snapshot_v2→build_dashboard_snapshot`，docstring/错误消息中
   残留的 `/api/v2/`、`V2`、`USA` 字样清除，删除无引用死 schema `RefreshMeta`/`Overview`；因 `scripts/kiro/run_daily_briefing.py`
   （生产简报定时任务）仍按旧名导入且目录归 Kiro，`dashboard.py` 暂留一行兼容别名，待 Kiro 迁移后删除。待发布。
+- 本地删除旧「五层模型」模拟器死代码：`backend/app/business_simulator.py`、`backend/app/simulator_config.py`、
+  `simulation/models.py` 及其专属测试 `test_business_simulator.py`（约 1,400 行）。三者未被 `main.py`、任何 systemd
+  服务或 `simulation/runtime_service.py` 引用，仅被自身测试引用；环境变量 `MOD_SIMULATOR_ENABLED`/`MOD_DB_WRITE_URL`
+  随之从 `.env.example` 移除（生产 `.env.systemd` 中的同名行已无读取方，可在下次运维时清理）。现行拟真引擎
+  唯一入口为 `scripts/agy/run_simulator_service.py` → `simulation/runtime_service.py`，门禁 `MOD_SIMULATION_ENGINE_ENABLED`。
+  注：`scripts/kiro/ki051_stage2_parallel.py`（KI-051 已完成的一次性脚本，Kiro 目录）曾导入 `simulation.models.TimePatternSystem`，
+  若需重跑须由 Kiro 自行调整。pytest 249→230。待发布。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态

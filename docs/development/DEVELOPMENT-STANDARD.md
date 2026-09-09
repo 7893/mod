@@ -17,7 +17,8 @@
 - Python 目标版本和依赖以 `backend/pyproject.toml` 为准，格式和静态检查以 Ruff 配置为准。
 - 路由层只负责参数、依赖注入、状态码和响应编排；SQL 聚合与业务规则进入服务层。
 - 外部平台访问进入 `backend/app/integrations/`，必须有超时、失败降级、数据边界和凭据隔离。
-- 模拟器代码保留在 `backend/app/simulation/`，默认停用；不得绕过 `simulator_config.py` 的门禁。
+- 拟真引擎是顶层独立包 `simulation/`（ADR-0009），由 `mod-simulator.service` 独立运行，API 进程不得导入它；写库门禁
+  `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭，不得绕过。旧「五层模型」`business_simulator.py`/`simulator_config.py` 已删除。
 - 捕获异常时保留可诊断信息，但不得把密码、Token、连接串、个人信息或原始业务明细写入日志。
 
 ## 前端

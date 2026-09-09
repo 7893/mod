@@ -67,17 +67,6 @@ from .footprint_models import (
     VoucherLineFootprint,
     validate_footprint,
 )
-from .models import (
-    ActiveScenario,
-    BusinessEvent,
-    BusinessEventChain,
-    EventStatus,
-    GrowthTarget,
-    ProbabilityDistributions,
-    ScenarioSystem,
-    ScenarioType,
-    TimePatternSystem,
-)
 from .construction_writer import (
     ConstructionWriteResult,
     ConstructionWriter,
