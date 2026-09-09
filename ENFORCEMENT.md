@@ -92,6 +92,8 @@
 - KI 看板与详情状态必须一致，统一使用 `DRAFT`、`OPEN`、`IN-PROGRESS`、`DONE`。
 - 新增或修改的活文档必须有标题、更新日期、状态和适用范围；现行规范、运维文档、Runbook 与证据入口必须以 Markdown 链接纳入 `docs/INDEX.md`。
 - `scripts/project/check_document_governance.py` 在 `make check` 和 CI 中执行上述校验；
+  `scripts/project/check_history_integrity.py` 验证本机受限历史与仓库历史的 SHA-256 清单；
+  `scripts/project/check_semantic_contracts.py` 阻断已登记的高风险跨层事实漂移；
   `scripts/project/check_doc_sync.py` 对事实变更未同步 `CURRENT-STATE.md` 的情况直接返回失败。
 
 ## 每次任务的强制流程
