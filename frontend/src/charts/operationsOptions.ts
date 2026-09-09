@@ -129,7 +129,7 @@ export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
         return `${item.rule}<br/>核验规模 <b>${item.total == null ? '—' : item.total.toLocaleString()} ${item.unit}</b><br/>检出异常 <b>${item.errors == null ? '—' : item.errors.toLocaleString()}</b> · 合规率 ${item.rate == null ? '—' : `${item.rate}%`}<br/><span style="color:${chartInk.textMuted}">柱长为对数尺度，仅比较数量级</span>`
       },
     },
-    grid: { left: 82, right: 92, top: 8, bottom: 8 },
+    grid: { left: 78, right: 84, top: 8, bottom: 8 },
     xAxis: { type: 'value', show: false, max: Math.max(1, ...plotted) },
     yAxis: {
       type: 'category', data: reversed.map((item) => item.rule),
@@ -137,12 +137,18 @@ export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
       axisLabel: { color: chartInk.textMuted, fontSize: 10 },
     },
     series: [{
-      type: 'bar', barWidth: 12, showBackground: true,
+      type: 'bar', barWidth: 14, showBackground: true,
       backgroundStyle: { color: chartInk.borderSoft, borderRadius: 4 },
-      data: plotted.map((value, index) => ({
-        value,
-        itemStyle: { color: (reversed[index]?.errors ?? 0) > 0 ? chartPalette.warning : chartPalette.success, borderRadius: 4 },
-      })),
+      data: plotted.map((value, index) => {
+        const item = reversed[index]
+        const color = (item?.errors ?? 0) > 0
+          ? chartPalette.warning
+          : (item?.errors === 0 ? chartPalette.success : chartPalette.neutral)
+        return {
+          value,
+          itemStyle: { color, borderRadius: 4 },
+        }
+      }),
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
         fontFamily: 'monospace', fontSize: 10,

@@ -250,17 +250,31 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       <!-- D7: 数据质量金标准核验 -->
       <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="核心业务约束与金标准稽核规则 · 未离线稽核项如实标注，不虚报 0 异常" class="col-span-2">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <!-- 四项规则左置纵向排布，缩短主图横条宽度，提升版面呼吸感 (KI-067) -->
-          <div class="col-span-5 flex flex-col justify-between gap-1.5 min-w-0 pr-2 border-r border-surface-veil-06">
+          <!-- 4 项规则 2x2 规整矩阵，科技感指标卡排布 -->
+          <div class="col-span-7 grid grid-cols-2 gap-2.5 min-w-0 pr-3 border-r border-surface-veil-06">
             <div
               v-for="item in qualityAuditList"
               :key="item.id"
-              class="px-2.5 py-1.5 rounded-lg bg-surface-veil-03 border border-surface-veil-06 min-w-0"
+              class="px-3 py-2 rounded-lg bg-surface-veil-03 border border-surface-veil-06 flex flex-col justify-between min-w-0 transition-colors hover:border-surface-hairline"
+              :class="item.status === 'pass'
+                ? 'border-l-2 border-l-emerald-500'
+                : (item.status === 'unknown'
+                  ? 'border-l-2 border-l-slate-600'
+                  : 'border-l-2 border-l-amber-500')"
             >
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-cockpit-xs text-slate-300 font-medium truncate">{{ item.rule }}</span>
+              <!-- 顶部：规则名称与状态胶囊 -->
+              <div class="flex items-center justify-between gap-2 min-w-0">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    :class="item.status === 'pass'
+                      ? 'bg-emerald-400'
+                      : (item.status === 'unknown' ? 'bg-slate-500' : 'bg-amber-400')"
+                  />
+                  <span class="text-cockpit-xs text-slate-200 font-medium truncate">{{ item.rule }}</span>
+                </div>
                 <span
-                  class="font-mono text-cockpit-xs px-1.5 py-0.5 rounded border"
+                  class="font-mono text-cockpit-xs px-1.5 py-0.5 rounded border flex-shrink-0"
                   :class="item.status === 'pass'
                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                     : (item.status === 'unknown'
@@ -270,17 +284,43 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
                   {{ item.errors === 0 ? '0 异常' : (item.errors != null ? `${item.errors} 异常` : '—') }}
                 </span>
               </div>
-              <div class="flex items-center justify-between mt-1 text-cockpit-xs">
-                <span class="font-mono text-slate-500">{{ format(item.total) }} {{ item.unit }}</span>
-                <b class="font-mono text-emerald-400">{{ item.rate != null ? `${item.rate}%` : '—' }}</b>
+
+              <!-- 中部：核验总规模大字 -->
+              <div class="flex items-baseline gap-1 my-0.5 min-w-0">
+                <b class="font-mono text-cockpit-metric font-semibold text-slate-100 truncate">{{ format(item.total) }}</b>
+                <span class="text-cockpit-xs text-slate-400 flex-shrink-0">{{ item.unit }}</span>
+              </div>
+
+              <!-- 底部：合规率及微型进度条 -->
+              <div class="flex items-center justify-between gap-2 text-cockpit-xs min-w-0">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="text-slate-500 flex-shrink-0">合规率</span>
+                  <div class="w-14 h-1 rounded-full bg-surface-veil-06 overflow-hidden flex-shrink-0">
+                    <div
+                      class="h-full rounded-full transition-all"
+                      :class="item.rate != null ? 'bg-emerald-400' : 'bg-slate-600'"
+                      :style="{ width: item.rate != null ? `${item.rate}%` : '0%' }"
+                    />
+                  </div>
+                </div>
+                <b
+                  class="font-mono font-semibold flex-shrink-0"
+                  :class="item.rate != null ? 'text-emerald-400' : 'text-slate-500'"
+                >
+                  {{ item.rate != null ? `${item.rate}%` : '—' }}
+                </b>
               </div>
             </div>
           </div>
 
-          <div class="col-span-7 flex flex-1 min-h-0 flex-col">
+          <!-- 右侧：覆盖规模图表 -->
+          <div class="col-span-5 flex flex-1 min-h-0 flex-col pl-1">
             <div class="flex items-center justify-between px-1 text-cockpit-xs flex-shrink-0">
-              <span class="font-medium text-slate-300">实际核验覆盖规模</span>
-              <span class="font-mono text-slate-500">对数尺度 · 标签为真实数量</span>
+              <div class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                <span class="font-medium text-slate-300">实际核验覆盖规模</span>
+              </div>
+              <span class="font-mono text-slate-400 bg-surface-veil-03 px-1.5 py-0.5 rounded border border-surface-veil-06">对数尺度 · 标签为真实数量</span>
             </div>
             <VChart class="w-full flex-1 min-h-0" :option="qualityVolumeOption" autoresize />
           </div>
