@@ -5,7 +5,8 @@ Responsibilities:
 2. Applies the 88% friction trap: units reaching 85%-90% risk encountering blockers.
 3. Locks progress when an open governance issue exists for that unit.
 4. Advances governance issues via GovernanceStateMachine.
-5. On issue RESOLVED: unfreezes unit progress, bumps metrics to 95%+, clearing E/F screen risks.
+5. On issue RESOLVED: unfreezes unit metrics; lifecycle changes remain exclusively owned by
+   LifecycleAdvancer so remediation cannot skip a formal stage review.
 """
 
 from __future__ import annotations
@@ -199,15 +200,8 @@ class ConstructionPropeller:
             WHERE org_id = %s
         """, (unit_id,))
 
-        # Elevate org_unit from '准备中' or '已具备双轨条件' to '双轨运行中'
-        cur.execute("""
-            UPDATE org_unit
-            SET status = CASE
-                WHEN status IN ('准备中', '已具备双轨条件') THEN '双轨运行中'
-                ELSE status
-            END
-            WHERE id = %s
-        """, (unit_id,))
+        # Deliberately do not update org_unit.status here. The formal lifecycle
+        # advancer evaluates these healed metrics and emits the next-stage review.
 
     def _spawn_friction_issue(
         self,

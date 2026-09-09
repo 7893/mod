@@ -100,7 +100,7 @@ def read_simulator_status(
     Returns a fixed dictionary contract:
     {
         "service": str,
-        "status": str ("RUNNING", "DEGRADED", "HALTED", "STALE", "UNAVAILABLE"),
+        "status": str ("RUNNING", "DEGRADED", "DISABLED", "HALTED", "STALE", "UNAVAILABLE"),
         "last_cycle_status": Optional[str],
         "timestamp": Optional[str],
         "fresh": bool,
@@ -202,7 +202,7 @@ def read_simulator_status(
         else:
             fresh = True
             # Status from file if valid enum, else fallback to RUNNING
-            if status not in ("RUNNING", "DEGRADED", "HALTED"):
+            if status not in ("RUNNING", "DEGRADED", "DISABLED", "HALTED"):
                 status = "RUNNING"
 
     # Whitelist fields mapping
@@ -233,5 +233,7 @@ def read_simulator_status(
         "uptime_seconds": uptime,
         "consecutive_failures": consecutive_failures,
         "notice": notice,
-        "enabled": fresh and (status in ("RUNNING", "DEGRADED")),
+        # enabled means a fresh heartbeat whose last cycle actually committed writes;
+        # process liveness alone is represented by fresh/status.
+        "enabled": fresh and status == "RUNNING" and last_cycle_status == "SUCCESS",
     }

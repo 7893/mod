@@ -15,7 +15,7 @@ function makeEvent(patch: Partial<LiveProjectionEvent>): LiveProjectionEvent {
     increments: { documents: 1, vouchers: 1, integrations: 0 },
     cumulative: { documents: 1, vouchers: 1, integrations: 0 },
     projectionId: 'proj-001',
-    mode: 'display_projection',
+    mode: 'committed_simulation',
     ...patch,
   }
 }
@@ -121,7 +121,7 @@ describe('stores/liveProjection', () => {
     expect(store.cumulative).toEqual({ documents: 2, vouchers: 1, integrations: 0 })
   })
 
-  it('correctly calculates liveOverview by adding cumulative values onto project overview', async () => {
+  it('never double-counts the committed SSE pulse on top of the database snapshot', async () => {
     projectStore = useProjectStore()
     const liveStore = useLiveProjectionStore()
     await flushPromises()
@@ -140,9 +140,9 @@ describe('stores/liveProjection', () => {
     )
 
     const overview = liveStore.liveOverview
-    expect(overview.docsTotal).toBe(initialDocsTotal + 25)
-    expect(overview.docsTodayAdded).toBe(initialDocsToday + 25)
-    expect(overview.vouchersTotal).toBe(initialVouchersTotal + 14)
-    expect(overview.vouchersTodayAdded).toBe(initialVouchersToday + 14)
+    expect(overview.docsTotal).toBe(initialDocsTotal)
+    expect(overview.docsTodayAdded).toBe(initialDocsToday)
+    expect(overview.vouchersTotal).toBe(initialVouchersTotal)
+    expect(overview.vouchersTodayAdded).toBe(initialVouchersToday)
   })
 })

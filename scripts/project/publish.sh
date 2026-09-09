@@ -134,7 +134,7 @@ STATUS_BODY=$(curl -s "$SIMULATOR_STATUS_URL")
 if ! echo "$STATUS_BODY" | python3 -c '
 import sys, json
 data = json.load(sys.stdin)
-required = ["service", "status", "fresh"]
+required = ["service", "status", "fresh", "enabled", "last_cycle_status", "fail_closed_tripped"]
 if not all(k in data for k in required):
     sys.exit(1)
 if "Internal Server Error" in json.dumps(data):
@@ -143,8 +143,17 @@ svc = data.get("service")
 st = data.get("status")
 fr = data.get("fresh")
 print(f"  Simulator probe OK: service={svc} status={st} fresh={fr}")
+if not (
+    svc == "mod-simulator"
+    and st == "RUNNING"
+    and fr is True
+    and data.get("enabled") is True
+    and data.get("last_cycle_status") == "SUCCESS"
+    and data.get("fail_closed_tripped") is False
+):
+    sys.exit(1)
 '; then
-    echo "ERROR: /api/simulator/status 响应契约异常，自动回滚..."
+    echo "ERROR: 模拟器非新鲜可写 SUCCESS 状态（含 dry-run/限流/熔断），自动回滚..."
     [ -n "$PREV_FE" ] && ln -sfn "$PREV_FE" "$FE_CURRENT"
     [ -n "$PREV_BE" ] && ln -sfn "$PREV_BE" "$BE_CURRENT"
     sudo systemctl reload nginx

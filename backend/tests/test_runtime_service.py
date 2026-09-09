@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+import json
 from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
 
@@ -367,7 +368,8 @@ def test_runtime_service_consecutive_failure_trips_flag(tmp_path, monkeypatch):
     assert r4.status == "FAIL_CLOSED"
 
 
-def test_runtime_service_rate_limit_cycle(tmp_path):
+def test_runtime_service_rate_limit_cycle(tmp_path, monkeypatch):
+    monkeypatch.setenv("MOD_SIMULATION_ENGINE_ENABLED", "true")
     config = SimulatorRuntimeConfig(
         max_events_per_minute=0,  # Force immediate rate limit
         fail_closed_flag_path=tmp_path / "flag.flag",
@@ -439,6 +441,7 @@ def test_runtime_service_successful_writes(tmp_path, monkeypatch):
 def test_runtime_service_rate_limit_throttle(tmp_path, monkeypatch, caplog):
     """KI-038: 熔断告警限制频率，相同原因 300s 内只打一条 warning 日志，防止日志刷爆磁盘。"""
     import logging
+    monkeypatch.setenv("MOD_SIMULATION_ENGINE_ENABLED", "true")
 
     config = SimulatorRuntimeConfig(
         status_file_path=tmp_path / "status.json",
@@ -447,8 +450,8 @@ def test_runtime_service_rate_limit_throttle(tmp_path, monkeypatch, caplog):
     )
     service = SimulatorRuntimeService(config=config)
 
-    # Mock fuse.can_produce to return False
-    monkeypatch.setattr(service.fuse, "can_produce", lambda now, count: (False, "Daily limit reached: 5000/5000"))
+    # Mock atomic reservation to return False
+    monkeypatch.setattr(service.fuse, "reserve", lambda now, count, persist=True: (False, "Daily limit reached: 5000/5000"))
 
     now_hkt = datetime(2026, 9, 7, 10, 0, 0, tzinfo=HK_TZ)
 
@@ -466,7 +469,7 @@ def test_runtime_service_rate_limit_throttle(tmp_path, monkeypatch, caplog):
         assert len(fuse_logs) == 1
 
         # Step 3: Change limit reason -> new warning logged
-        monkeypatch.setattr(service.fuse, "can_produce", lambda now, count: (False, "Burst limit reached: 10/10"))
+        monkeypatch.setattr(service.fuse, "reserve", lambda now, count, persist=True: (False, "Burst limit reached: 10/10"))
         r3 = service.step_cycle(now=now_hkt)
         assert r3.status == "RATE_LIMITED"
         fuse_logs = [rec for rec in caplog.records if "[RATE_LIMIT_FUSE]" in rec.message]
@@ -550,6 +553,45 @@ def test_runtime_service_single_transaction_rollback_on_self_check_failure(tmp_p
     assert metrics["day_count"] == 0
 
 
+def test_slow_movie_substep_failure_rolls_back_without_success_audit(tmp_path, monkeypatch):
+    """A propeller/backfill failure cannot leave a pre-commit success audit behind."""
+    monkeypatch.setenv("MOD_SIMULATION_ENGINE_ENABLED", "true")
+    monkeypatch.setenv("MOD_CF_AI_ENABLED", "false")
+    config = SimulatorRuntimeConfig(
+        slow_movie_interval_cycles=1,
+        fail_closed_flag_path=tmp_path / "flag.flag",
+        status_file_path=tmp_path / "status.json",
+        audit_log_path=tmp_path / "audit.log",
+        fuse_state_path=tmp_path / "fuse.json",
+        dry_run=False,
+    )
+    mock_conn = MagicMock()
+    propeller = MagicMock()
+    propeller.step.side_effect = RuntimeError("propeller failed")
+    service = SimulatorRuntimeService(config=config, conn=mock_conn, propeller=propeller, seed=42)
+    service._fast_baseline = _mock_fast_baseline()
+    service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
+    service._construction_baseline = _mock_construction_baseline()
+    service._construction_allocator = IdAllocator(service._construction_baseline.next_ids)
+    monkeypatch.setattr(service, "_generate_slow_movie_events", lambda _date: [MagicMock()])
+
+    staged = MagicMock(success=True)
+    write = MagicMock(return_value=staged)
+    audit = MagicMock()
+    monkeypatch.setattr("simulation.runtime_service.ConstructionWriter.write_construction_events", write)
+    monkeypatch.setattr("simulation.runtime_service.ConstructionWriter.record_success_audit", audit)
+    monkeypatch.setattr(PostCycleSelfChecker, "check_construction_events", lambda conn, events: (True, ""))
+
+    result = service.step_cycle(datetime(2026, 9, 7, 10, 0, tzinfo=HK_TZ))
+
+    assert result.status == "ERROR"
+    mock_conn.commit.assert_not_called()
+    mock_conn.rollback.assert_called_once()
+    audit.assert_not_called()
+    assert service._evolution_coordinator is None
+    assert service._construction_baseline is None
+
+
 def test_rate_limit_fuse_cross_process_persistence_and_restart(tmp_path):
     """KI-040: 每日熔断跨进程/跨重启持久化，达到硬上限后同日重启仍保持熔断，跨日自动恢复。"""
     from datetime import timedelta
@@ -595,4 +637,26 @@ def test_rate_limit_fuse_corrupted_state_fails_closed(tmp_path):
     assert "fail-closed" in msg
 
 
+def test_rate_limit_fuse_future_business_date_fails_closed(tmp_path):
+    fuse_state = tmp_path / "future_fuse.json"
+    fuse_state.write_text(json.dumps({
+        "business_date": "2099-01-01",
+        "day_count": 1,
+        "timezone": "Asia/Hong_Kong",
+    }), encoding="utf-8")
+    fuse = RateLimitFuse(max_per_minute=20, max_per_day=5000, state_file_path=fuse_state)
+    ok, msg = fuse.reserve(datetime(2026, 9, 7, 14, 0, tzinfo=HK_TZ), count=1)
+    assert ok is False
+    assert "fail-closed" in msg
 
+
+def test_rate_limit_fuse_atomic_reservation_visible_across_instances(tmp_path):
+    fuse_state = tmp_path / "shared_fuse.json"
+    now_hkt = datetime(2026, 9, 7, 14, 0, tzinfo=HK_TZ)
+    first = RateLimitFuse(max_per_minute=5, max_per_day=5, state_file_path=fuse_state)
+    second = RateLimitFuse(max_per_minute=5, max_per_day=5, state_file_path=fuse_state)
+
+    assert first.reserve(now_hkt, count=4) == (True, "")
+    ok, msg = second.reserve(now_hkt, count=2)
+    assert ok is False
+    assert "hard cap" in msg

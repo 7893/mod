@@ -59,7 +59,7 @@
   - **前端台账交互闭环与筛选器治理**：
     - C6（`RolloutLedgerTable.vue`）和 B7（`ConstructionLedger.vue`）台账组件建立了筛选条件响应式重置闭环。切换批次、省份、状态或搜索关键字时，强制重置 `page.value = 1`；同时对 `totalPages` 设置安全边界钳位保护（`safePage`），彻底根除翻至高页码后切换筛选导致切片越界展示假性空白的交互缺陷。
     - 工具栏重构：B7 工具栏按标准层级调整为 `[搜索框 (支持单位名/联系人/省份/批次/编码/MOD-ID 及大小写宽容匹配)] -> [批次下拉] -> [省份下拉] -> [状态下拉] -> [重置按钮]`，移除 `flex-wrap` 消除折行被面板头部遮挡导致无法点击的选择器点击穿透缺陷。
-    - 状态筛选动态计数与全生命周期补齐：状态下拉框重构为从 `store.entities` 动态派生带真实实体计数的选项列表（包含 `全部状态`、`未启动`、`准备中`、`建设中`、`双轨运行`、`已上线`），补齐类型系统与抽屉对 `未启动` 的支持；修复 B5 饼图“收集中”与“未收集”扇区下钻至 B7 的状态映射（“收集中”映射至 `准备中`，“未收集”映射至 `未启动`），根除进入台账后因状态 0 匹配受困的交互死锁。
+    - 状态筛选动态计数与全生命周期补齐：状态下拉框重构为从 `store.entities` 动态派生带真实实体计数的选项列表（包含 `全部状态`、`未启动`、`准备中`、`建设中`、`双轨运行`、`已上线`），补齐类型系统与抽屉对 `未启动` 的支持；B5 饼图下钻使用独立的 `readinessStatus` 筛选，不再把数据准备状态错误映射成单位生命周期状态。
   - **大盘快照异步双缓冲与预热（SWR）**：改造快照缓存机制为 Stale-While-Revalidate（SWR）模式，消除 60s TTL 到期时同步穿透全库重新计算造成的 1.12s 阻塞；服务启动（lifespan）通过 `prewarm_snapshot()` 触发异步快照装载，前台 API 响应恒定控制在毫秒级（< 100ms），严格保障全场景 < 1.0s 的 SLA 红线。
   - **快照预热慢查询卡死与过期 fallback 修复（KI-061，DONE）**：
     - **日期锚点索引优化**：将 `LATEST_COMPLETED_DOCUMENT_DATE_SQL` 从全表扫描的 `MAX(DATE(submit_time))` 优化为索引友好的 `DATE(MAX(submit_time))`，借助 `idx_doc_submit_time` 消除 RAPID 587 万行全表聚合扫描，查询耗时由 >60 分钟降至 <1ms（实测 0.75ms）。
@@ -130,8 +130,9 @@
 - 浏览器全屏模式保留顶部六屏导航、在线状态、时钟、刷新与退出全屏控制；内容画布继续按导航下方
   `command-main` 的真实尺寸等比缩放，并采用水平居中、顶部锚定；宽高比不一致产生的余量留在底部，
   不再隐藏菜单、按整块物理屏幕高度覆盖导航空间或在标题栏下留出大块空白。
-- 驾驶舱包含默认启用的进程内只读实时投影，通过 SSE 展示受约束的单据、凭证和集成增量；该投影明确
-  标记为演示动态，不写数据库，也不启用业务模拟器。
+- 驾驶舱实时投影只尾随常驻模拟器事务提交后追加的本机持久日志，通过 SSE 播报单据、凭证和集成事件；
+  数据库快照仍是累计数字唯一事实源，前端会话脉搏不再与快照相加。当前只支持同机单 API 进程，尚无共享
+  outbox、跨实例消费者位点或完整重连续播保证，具体边界见 `development/LIVE-PROJECTION.md`。
 - 拟真引擎第一步（技术验证载体）已落地（`backend/app/simulation/`）：实现费用报销剧本（`ExpensePlaybook`）多表完整足迹生成与安全写库器（`SimulationWriter`），单事务原子落库 6 张表（`business_document`、`business_document_line`、`accounting_voucher`、`accounting_voucher_line`、`document_voucher_link`、`integration_result`）并级联同步 `daily_stats`；以存量治理成果为硬约束（时间线接续存量最新日期只向前生长、经办人 100% 命中本单位名录、仅限已上线单位门禁、只增不删、零 schema 变更、运行审计留痕）；开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭（`false`）；已通过 100 笔小试落库实测，KI-017 零回归。
 - 拟真引擎第二步（建设管控主线 + B模式生命周期推进器）已落地并已实测写库（`backend/app/simulation/` 与 `scripts/agy/run_step2_batch_write.py`）：
   - 核心模块：实现 7 类建设管控剧本生成器（入池、数据准备、培训认证、接口联调、双轨核对、跃迁评审、批次推进，`construction_playbooks.py`）、6 阶段生命周期状态机推进器（`lifecycle_advancer.py`，严格执行“只进不退、持续达标 N 天才跃迁、跃迁评审留痕快照”三条铁律）、快慢电影演进协调器与矛盾咬合机制（`evolution_coordinator.py`，~4% 自然涌现困难户与决策支撑风险视角 100% 咬合自洽）、建设安全事务写库器（`construction_writer.py`）；
@@ -149,9 +150,9 @@
   - 模拟器因果数据层改造：注入体量加权、经办人单点集中度瓶颈（75%）、错误率因果与期初数据差异双轨考核惩罚（+7天），从根因上彻底消除标签过度可分与周期节律缺失；
   - 特征表扩充动量特征：`mod.ml_feat_risk_train` 与 `mod.ml_feat_doc_delta_train` 扩充近 14 天推进斜率、任务停滞天数、经办人集中度、培训-报错剪刀差等核心字段；
   - 库内重训与独立测试集验证达标：风险分类模型 `MOD_RISK_CLASSIFIER` 独立测试集准确率达 89.50%（Precision 90.61%, Recall 86.77%, F1 88.65%，消除 1.0 退化）；单据量回归模型 `MOD_REGRESSION_MODEL` 独立测试集 R² 达 0.4488（MAE 0.7237，彻底消除负 R²）；
-  - SHAP 库内原生可解释性调通：接入 `sys.ML_EXPLAIN_ROW(..., JSON_OBJECT('prediction_explainer', 'shap'))` 与确定性偏离兜底，提供 GET `/api/insights/risk-explanation/{org_id}` API 输出 Top 3 致险因子及百分比权重；
+  - 模型解释来源显式化：接口使用 `explanationSource` 区分真实 `HEATWAVE_SHAP`、后端可追溯规则 `RULE_BASED` 和 `UNAVAILABLE`；只有第一类可标示 SHAP，前端不再伪造权重或现场指标；
   - 库内批量预测评分完成（各 2,000 行），元数据全量落库 `ml_model_metadata` / `ml_training_log`，`/api/insights/status` 状态晋升为 `READY`；
-  - 前端归因透出联动：`AtRiskUnitTable.vue` 增加 SHAP 归因与客观动量指标核验下钻抽屉，`ModelContractCard.vue` 与 `InsightsView.vue` 达标激活展示真实指标；自动化回归测试 122 项全绿。HeatWave AutoML 的能力清单与边界见 [HeatWave AutoML 能力与边界手册](development/HEATWAVE-AUTOML-CAPABILITIES.md)。
+  - 前端归因透出联动：`AtRiskUnitTable.vue` 按来源展示模型解释、规则研判或不可用空态，切换单位采用缓存与 latest-wins；`InsightsView.vue` 分别展示真实可用模型数量并如实保留负 R²。HeatWave AutoML 的能力清单与边界见 [HeatWave AutoML 能力与边界手册](development/HEATWAVE-AUTOML-CAPABILITIES.md)。
 - HeatWave 内存加速看门狗与自愈落地（KI-049 / KI-050）：应用内置轻量看门狗模块（`app/heatwave_watchdog.py`）提供 ~1ms 级状态探测；为 API 生产只读账号 `mod_readonly` 补齐 `performance_schema.rpd_tables` 与 `rpd_table_id` 的最小 `SELECT` 权限（KI-050 闭环），消除只读观测盲区，`/api/health` 探针真实透出 `heatwave: {status, loaded_count, total_target, loaded_tables, missing_tables}`；API 进程严守 KI-041 物理只读边界只做状态观测，自愈动作解耦交由具备运维凭据的系统定时器（`deploy/mod-heatwave-watchdog.timer` 与 `service`，开机及每 5 分钟巡检）；CLI 运维工具扩展 `watchdog` 指令支持周期巡检；自动化回归测试 7 项全过（`test_heatwave_watchdog.py`，全量 195 项后端单测全绿）。
 - 拟真业务语料生态落地（KI-034 第三期，遵循 ADR-0010 与零运行时成本原则）：
   - 离线预生成静态语料资产（`simulation/assets/business_corpus.json`，688 条）：含 363 条符合真实国资政企财务质感的卡点事由（覆盖历史数据清洗、银企直联/税企接口、双轨平账尾差、交叉权签矩阵、流程合规等 5 大维度）与 325 条阶段跃迁《专家组上线评审决议书》专业措辞，去除虚构姓名与占位符；
@@ -163,7 +164,7 @@
   - 严守第八批零业务数据铁律：严格禁止对未启动的第八批单位生成任何单据、凭证、接口集成或双轨记录，确保数据金标准 0 缺陷；
   - 批次映射 SQL 逻辑加固：修复 `dashboard.py`、`dashboard_sections.py` 与 `broker.py` 中 `batch_mapped` 判定（由 `id > 1600` 加固为 `batch_id = 8` 及 `id > 1600 AND id <= 2000` 映射至第七批），杜绝新插入单位（id > 2000）被错误归入在推批次，确保批次 1~6（1002 家）、批次 7（400 家）与批次 8（647+ 家动态增长）全网勾稽一致；
   - 常驻模拟服务低频节律触发（`simulation/runtime_service.py`）：按周新增 1~3 家滚动预算受控偶发入池，保持平缓自然增长；全量回归测试套件 `test_org_onboarding.py` 通过，`make check` 138 项后端与 67 项前端测试全绿。
-- 前端自动化测试体系基于 Vitest 5 + @vue/test-utils 2 + happy-dom，当前包含 15 个测试文件、84 项单测，实现秒级执行与 100% 离线 Mock，覆盖：
+- 前端自动化测试体系基于 Vitest 5 + @vue/test-utils 2 + happy-dom，当前包含 25 个测试文件、122 项单测，实现秒级执行与 100% 离线 Mock，覆盖：
   - `useScaleScreen.ts`：普通/全屏模式视口等比计算、clamp 范围约束、零尺寸防御与生命周期事件解绑；
   - `useAiInsights.ts` 与 `useDailyBriefing.ts`：完整状态机流转、并发节流、429 限流捕获与网络异常优雅降级；
   - `formatters/metrics.ts`：千分位与百分比格式化及各类边界数值（null/undefined/NaN/0/负数）安全保护；
@@ -184,7 +185,7 @@
   - **D4 凭证质量**：原三张同权数字卡与说明横幅重构为成功率环形仪表、凭证/分录规模对比条和平均分录数结构事实，缺失异常数继续明确显示接口未提供；
   - **D1/E1/F1 领域指挥盘**：D1 用业务单据、会计凭证与接口集成规模谱配合平均明细/分录效率；E1 用真实派生合规率仪表、监督分层条和主要风险 TOP 3，缺失合规率显示 `—`；F1 移除小环中心叠字，改为独立风险总数、三类风险比较条和两项真实 AutoML 独立测试质量门禁；三块主面板均取消同级内嵌框；
   - **E4 批次合规监督**：原 8 张横排卡改为合规率折线与高风险单位柱图，扩大图表画布并减少重复序列，突出批次间差异；
-  - **D3/D5/D6 运营密度**：D3 将重复标签与手绘进度条合并为四阶段横向规模图；D5 将成功率、总调用与异常数集中在左侧，右侧以成功/异常结果图比较；D6 移除易叠字的小环，改为面板唯一一致率 KPI、95% 门禁状态和一致/差异两行结果图；缺失明细继续显示明确空态；
+  - **D3/D5/D6 运营密度**：D3 将重复标签与手绘进度条合并为四阶段横向规模图；D5 将成功率、总调用与异常数集中在左侧，右侧以成功/异常结果图比较；D6 移除易叠字的小环，改为面板唯一一致率 KPI、与生命周期同源的 98% 门禁状态和一致/差异两行结果图；缺失明细继续显示明确空态；
   - **D7 数据质量金标准**：4 项规则压缩为单行状态带，主画布用于横向通过率柱状比较；真实接入快照 `quality`（`voucherBalanceErrors`、`timeOrderErrors`、`orphanLinkErrors`、`organizationsWithStatusProgression`），0 异常如实展示；
   - **F3 综合态势预警**：在确定性规则研判卡左侧新增困难户风险维度分布柱状图，直观展现准备期卡顿、双轨核对差异与建设严重滞后各维度预警单位数及集中批次，撑起版面空间；
   - **F4/F5 智能研判**：F4 两个模型改为上下质量仪表卡，正文说明下沉到悬停提示，首屏只保留真实质量、算法、目标、验证状态与两项特征；F5 将 Markdown 文字墙解析为“成效/瓶颈/行动”三列简报卡，每类首屏显示前三条且卡片悬停保留完整内容；
@@ -256,19 +257,19 @@
 - 矛与盾攻防博弈与合规治理引擎（GI-004 & KI-062/KI-063 治理闭环）：
   - 昼夜作息与月末生物钟（GI-004，`simulation/governance_state_machine.py`）：引入 $k_{\text{rhythm}}$ 节律因子，工作日早晚黄金工段 1.8x 加速、午间 0.5x 放缓、夜间 22:00-07:00 彻底冻结（杜绝半夜出具验收通报虚假繁荣）、月末 25 日起叠加 1.5x 冲刺乘数，二次核验返工率动态适配。
   - 30~45 单动态平衡走廊（GI-004，`simulation/construction_propeller.py`）：实时感知未结案库存；低于 35 单时提升阻力暗礁触发率至 50% 并放缓消缺，高于 45 单时降低阻力触发率至 5% 并加速消缺，确保大盘恒定平稳呼吸，告别全绿死水与人工干预。
-  - 跨屏因果涟漪网络（GI-004，E $\to$ B $\to$ C/D）：工单闭环销项后彻底解除阻力，建设任务进度直冲 100% 并标记「已完成」，期初数据率直达 100.0%，单位状态自动跃迁为「双轨运行中」，驱动下游凭证流水有机放量。
+  - 跨屏因果涟漪网络（GI-004，E $\to$ B $\to$ C/D）：工单闭环后治理推进器只修复建设指标和阻力；单位状态必须继续由唯一 `EvolutionCoordinator/LifecycleAdvancer` 按正式门槛评审跃迁，不再由推进器直接跳到双轨运行。
   - 治理实时广播与展厅智能巡航（GI-004，`LiveActivityTicker.vue`, `KioskSpotlightTour.vue`）：E1 下方暗黑科技风走字流动态轮播专班一线处置流水；空闲 45 秒无感激活展厅聚光灯巡航 HUD 浮窗，任意交互瞬时淡出。
   - 实时治理动态接口（GI-004，`GET /api/governance/recent-activities`）：以毫秒级 SLA 供给最新工单事件流。
   - 测试套件离线自洽与凭据脱敏（KI-063）：移除了测试与代码中硬编码的内网 IP 与账号默认值，构建内存 `MockLedgerConnection` 与隔离 Mock 消除测试对真实生产库的直连与写库操作，完全符合 ENFORCEMENT 闸门 A/B 要求。
-  - 模拟主循环接线闭环（KI-062，`simulation/runtime_service.py`）：将治理推进器（`ConstructionPropeller`）与涓流回填（`TrickleBackfiller`）正式挂接到慢电影建设周期主循环，由 `MOD_SIMULATION_ENGINE_ENABLED` 失败关闭门禁控制，彻底闭合「有引擎无接线」的技术债缺口。
+  - 模拟主循环编排收敛（KI-062/KI-072，`simulation/runtime_service.py`）：治理推进器、涓流回填和正式六阶段 `EvolutionCoordinator` 共用慢周期，由运行时独占业务事务提交权；建设成功审计在提交后记录，生命周期长期状态另行原子持久化，恢复失败进入 fail-closed。
   - 数据库就绪三张治理与配额审计表：`governance_issue`（存量 45 单）、`issue_timeline`（存量 139 条流水）、`sim_ai_quota_ledger`（日级看门狗流水账）。
   - 盾（`simulation/governance_state_machine.py`）：六态治理有限状态机、容量为 8 的专家专班调度池、15% 严苛二次返工回路、五大行业高拟真离线叙事库。
   - 矛（`simulation/construction_propeller.py`）：批次推进与阻力陷阱动力学，结合消缺解冻与推进器协同。
-  - 配额看门狗（`simulation/quota_watchdog.py`）：每日硬限制 3,000 Neurons，超额自动触发 FUSED 熔断阻断外网请求，确保账单恒为 $0.00。
+  - 配额看门狗（`simulation/quota_watchdog.py`）：按 HKT 业务日使用数据库行锁在外部调用前预留、调用后结算，项目侧预算为每日 3,000 Neurons；该预算闸门不等同于云厂商计费上限，也不承诺账单恒为零。
   - AI 算力挂接与零故障降级（`simulation/cf_ai_client.py`）：接入 Cloudflare Workers AI，异常或断网时平滑降级至本地离线叙事库。
   - 涓流回填流水线（`simulation/trickle_backfill.py`）：受控微批量（≤3 单）异步富化存量工单与时间线，实现历史数据真实有机充填。
   - 治理与配额端点（`backend/app/api.py`, `backend/app/services/governance.py`）：提供工单分页查询、详情透视、全景时间线、一键督办（`POST /api/governance/issues/{id}/dispatch`）、配额透视（`GET /api/governance/ai-quota`）以及单工单 AI 富化（`POST /api/governance/issues/{id}/enrich`）。
-  - 前端 E/F 屏双向交互抽屉（`ComplianceInspectDrawer.vue`, `AiQuotaCapsule.vue`）：E 屏提供六态流转 Stepper、专班展示、多节点流水展示、一键督办上帝之手与 AI 深度研判；F 屏挂载 Cloudflare AI 每日安全算力额度监控胶囊（$0.00 零费用硬防护）。
+  - 前端 E/F 屏双向交互抽屉（`ComplianceInspectDrawer.vue`, `AiQuotaCapsule.vue`）：E 屏提供六态流转 Stepper、专班展示、多节点流水展示、一键督办与 AI 深度研判；终态禁止继续写操作且请求按最新目标隔离。F 屏胶囊展示项目侧每日预算状态，不把它描述为云账单保证。
   - 编号口径与线上追踪（KI-064）：治理仿真的 "GI-001~GI-004" 是文档「演进代际」叙事编号，与 GitHub Issue 真实编号 `#1~#4` 不逐一对应，权威映射见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](development/GOVERNANCE-SIMULATION-SYNTHESIS.md) 第一章。承载上述能力的 GitHub Issue `#1`/`#2`/`#3`/`#4` 均已随生产发布 `20260909-095536` 上线并以 `completed` 回写关闭，当前线上无 open issue；KI（本地缺陷看板）与 GI（GitHub 新功能）分轨管理沿用 AGENTS.md 四铁律。
 - Ruff 检查已清零并纳入 `make check`。
 - 文档治理闸门已纳入 `make check` 与 CI：阻断已跟踪文档删除、冻结正文减损、KI 状态分裂、必需元数据缺失与现行索引漏项；核心行为变更未同步本文时直接失败，不再仅输出警告。
@@ -280,20 +281,23 @@
 KI-060 更新前的本节原文完整保存在
 [2026-09-08 本地质量基线更新前快照](history/2026-09-08-本地质量基线更新前快照.md)。
 
-## 当前已登记的重大缺陷（2026-09-09 补充审计）
+## KI-070~074 本地整改状态（2026-09-09）
 
-下列内容是只读审计确认的**当前缺陷**，不是已完成能力，也不构成数据库写入、服务启停或生产发布授权：
+本轮只修改本地代码、测试、文档和发布门禁，未写生产数据库、未启停服务、未调用外部 AI、未发布：
 
-- [KI-070](issues/KI-070-驾驶舱跨屏业务口径与交互状态不一致.md)：双轨门槛、B5 下钻、C4 排行、治理抽屉、
-  并发刷新和画布缩放存在跨屏或异步状态不一致。
-- [KI-071](issues/KI-071-F屏模型就绪与SHAP归因来源失真.md)：F 屏可能把单模型就绪宣称为 2/2，钳制负 R²，
-  并把前端规则权重与默认指标标成 HeatWave SHAP/现场事实。
-- [KI-072](issues/KI-072-常驻模拟器生命周期编排事务与安全状态未闭环.md)：正式六阶段推进器未接入常驻循环，
-  子模块中途提交、长期状态只存内存、AI 配额与服务健康门禁也未形成严格闭环。
-- [KI-073](issues/KI-073-实时投影与持久化模拟器双轨事件链事实分裂.md)：SSE 投影仍是独立随机事件系统，
-  不是持久化模拟器成功提交事件的实时广播。
-- [KI-074](issues/KI-074-历史文档未版本化保全与语义治理闸门缺失.md)：本机 27 份历史资料中仅 4 份受 Git
-  跟踪，其余忽略文件缺少版本化保全；现有闸门也不能验证代码与文档的语义一致性。
+- [KI-070](issues/KI-070-驾驶舱跨屏业务口径与交互状态不一致.md)：业务门槛改由快照统一下发；B5 与 C4
+  下钻口径、治理抽屉并发/终态、快照 latest-wins、fallback 来源以及 1920×980 缩放契约已完成本地修复。
+- [KI-071](issues/KI-071-F屏模型就绪与SHAP归因来源失真.md)：模型数量、负 R²、解释来源、缺失指标和请求乱序
+  已完成本地修复；未创建、重训或调用生产 HeatWave 模型。
+- [KI-072](issues/KI-072-常驻模拟器生命周期编排事务与安全状态未闭环.md)：六阶段编排、事务所有权、重启状态、
+  原子限流、配额预留和状态/发布门禁已在本地实现；生产双实例围栏与云厂商计费边界仍待授权环境验收。
+- [KI-073](issues/KI-073-实时投影与持久化模拟器双轨事件链事实分裂.md)：独立随机投影已移除，SSE 只消费提交后
+  日志；当前仍是同机单 API 进程方案，跨实例 outbox 和完整重连续播尚未实现。
+- [KI-074](issues/KI-074-历史文档未版本化保全与语义治理闸门缺失.md)：历史完整性清单和高风险语义闸门已进入
+  `make check`；本机历史原件的异机加密备份仍待具有云资源权限的后续动作。
+- 当前受管工具沙箱内，Python 3.13.15 的异步事件循环等待线程池任务会死锁，最小 `anyio.to_thread`
+  与 Starlette/httpx2 `TestClient` 均可复现；因此本轮只完成不经过该桥接层的 198 项后端测试及完整前端、文档
+  检查，不能把全量 `make check` 标为通过。该现象未在生产进程上做任何验证，也未改生产依赖或服务。
 
 ## 操作边界
 

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal
 import json
 import logging
 import os
@@ -35,11 +36,8 @@ from zoneinfo import ZoneInfo
 import pymysql
 
 from app.live_projection.simulation_engine import HongKongDiurnalEngine
+from app.live_projection.journal import CommittedEventJournal
 from .construction_models import validate_construction_event
-from .construction_playbooks import (
-    DualRunCheckPlaybook,
-    TrainingCertificationPlaybook,
-)
 from .pool_onboarding import ReservePoolAdmissionPlaybook
 from .construction_writer import ConstructionWriter
 from .engine_context import (
@@ -48,6 +46,7 @@ from .engine_context import (
     load_simulation_baseline,
 )
 from .expense_playbook import ExpensePlaybook
+from .evolution_coordinator import EvolutionCoordinator
 from .footprint_models import EventFootprint, validate_footprint
 from .simulation_writer import SimulationWriter, is_simulation_engine_enabled
 
@@ -66,6 +65,8 @@ class SimulatorRuntimeConfig:
     fuse_state_path: Path = field(default_factory=lambda: Path("output/simulator_fuse_state.json"))
     status_file_path: Path = field(default_factory=lambda: Path("output/simulator_status.json"))
     audit_log_path: Path = field(default_factory=lambda: Path("output/simulation_audit.log"))
+    lifecycle_state_path: Optional[Path] = None
+    projection_journal_path: Optional[Path] = None
     slow_movie_interval_cycles: int = 6
     min_wait_seconds: float = 2.5
     max_wait_seconds: float = 90.0
@@ -134,7 +135,7 @@ class FailClosedManager:
 
 
 class RateLimitFuse:
-    """Sliding rate limiter with minute and daily hard caps backed by persistent state."""
+    """Minute/day hard caps with an atomic, cross-process reservation ledger."""
 
     def __init__(
         self,
@@ -150,6 +151,7 @@ class RateLimitFuse:
         self._current_day = ""
         self._day_count = 0
         self._corruption_error: Optional[str] = None
+        self._mutex = threading.Lock()
         self._lock_file_path = (
             self.state_file_path.with_suffix(".lock") if self.state_file_path else None
         )
@@ -165,6 +167,8 @@ class RateLimitFuse:
                 raise RuntimeError(f"Invalid schema in rate limit state file: {self.state_file_path}")
             self._current_day = str(data["business_date"])
             self._day_count = int(data["day_count"])
+            self._current_minute = str(data.get("minute_key", ""))
+            self._minute_count = int(data.get("minute_count", 0))
         except Exception as ex:
             logger.error(f"Failed to load rate limit state file: {ex}")
             self._corruption_error = f"Corrupted rate limit state file: {ex}"
@@ -193,9 +197,10 @@ class RateLimitFuse:
                 self._day_count = 0
             else:
                 # File date is ahead of local clock (clock skew protection)
-                self._current_day = file_date
-                self._day_count = int(data["day_count"])
-        except json.JSONDecodeError as ex:
+                raise RuntimeError(
+                    f"Rate limit business date {file_date} is ahead of local date {day_key}"
+                )
+        except (json.JSONDecodeError, RuntimeError) as ex:
             self._corruption_error = f"Corrupted rate limit state file: {self.state_file_path}: {ex}"
             raise RuntimeError(self._corruption_error) from ex
 
@@ -223,62 +228,140 @@ class RateLimitFuse:
 
         return True, ""
 
-    def record(self, now: datetime, count: int = 1, persist: bool = True) -> None:
+    def reserve(self, now: datetime, count: int = 1, persist: bool = True) -> Tuple[bool, str]:
+        """Atomically reserve capacity before writing a simulation batch."""
+        if count < 0:
+            return False, "Reservation count cannot be negative"
         now_hkt = now.astimezone(HK_TZ) if now.tzinfo else now.replace(tzinfo=HK_TZ)
         minute_key = now_hkt.strftime("%Y-%m-%d %H:%M")
         day_key = now_hkt.strftime("%Y-%m-%d")
 
-        if minute_key != self._current_minute:
-            self._current_minute = minute_key
-            self._minute_count = 0
-        self._minute_count += count
+        def reserve_locked() -> Tuple[bool, str]:
+            if self._corruption_error:
+                return False, f"Rate limit state error (fail-closed): {self._corruption_error}"
 
-        if not self.state_file_path or not persist:
-            if day_key != self._current_day:
-                self._current_day = day_key
-                self._day_count = 0
-            self._day_count += count
-            return
-
-        import fcntl
-
-        self.state_file_path.parent.mkdir(parents=True, exist_ok=True)
-        lock_file = self._lock_file_path or self.state_file_path.with_suffix(".lock")
-        with open(lock_file, "w") as lock_fd:
-            fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
-            try:
-                current_count = 0
-                if self.state_file_path.exists():
-                    try:
-                        with open(self.state_file_path, "r", encoding="utf-8") as f:
-                            data = json.load(f)
-                        if data.get("business_date") == day_key:
-                            current_count = int(data.get("day_count", 0))
-                    except json.JSONDecodeError as err:
-                        raise RuntimeError(f"Corrupted rate limit state file: {self.state_file_path}") from err
-
-                new_count = current_count + count
-                self._current_day = day_key
-                self._day_count = new_count
-
-                state_data = {
-                    "business_date": day_key,
-                    "day_count": new_count,
-                    "timezone": "Asia/Hong_Kong",
-                    "updated_at": now_hkt.isoformat(),
-                }
-                tmp_path = self.state_file_path.with_name(f".tmp_{self.state_file_path.name}")
-                with open(tmp_path, "w", encoding="utf-8") as f:
-                    json.dump(state_data, f, indent=2)
-                    f.flush()
-                    os.fsync(f.fileno())
-                tmp_path.replace(self.state_file_path)
+            day_count = self._day_count if self._current_day == day_key else 0
+            minute_count = self._minute_count if self._current_minute == minute_key else 0
+            if self.state_file_path and persist and self.state_file_path.exists():
                 try:
-                    self.state_file_path.chmod(0o644)
-                except Exception:
-                    pass
-            finally:
-                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+                    with open(self.state_file_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    if not isinstance(data, dict):
+                        raise RuntimeError("state is not a JSON object")
+                    file_date = str(data.get("business_date", ""))
+                    if file_date > day_key:
+                        raise RuntimeError(
+                            f"business date {file_date} is ahead of local date {day_key}"
+                        )
+                    if file_date == day_key:
+                        day_count = int(data.get("day_count", 0))
+                        minute_count = (
+                            int(data.get("minute_count", 0))
+                            if str(data.get("minute_key", "")) == minute_key
+                            else 0
+                        )
+                    else:
+                        day_count = 0
+                        minute_count = 0
+                except Exception as ex:
+                    self._corruption_error = f"Corrupted rate limit state file: {ex}"
+                    return False, f"Rate limit state error (fail-closed): {ex}"
+
+            if minute_count + count > self.max_per_minute:
+                return False, f"Minute hard cap reached ({minute_count}/{self.max_per_minute})"
+            if day_count + count > self.max_per_day:
+                return False, f"Daily hard cap reached ({day_count}/{self.max_per_day})"
+
+            self._current_minute = minute_key
+            self._minute_count = minute_count + count
+            self._current_day = day_key
+            self._day_count = day_count + count
+            if self.state_file_path and persist:
+                self._write_state(now_hkt)
+            return True, ""
+
+        with self._mutex:
+            if not self.state_file_path or not persist:
+                return reserve_locked()
+            import fcntl
+            self.state_file_path.parent.mkdir(parents=True, exist_ok=True)
+            lock_file = self._lock_file_path or self.state_file_path.with_suffix(".lock")
+            with open(lock_file, "w") as lock_fd:
+                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+                try:
+                    return reserve_locked()
+                finally:
+                    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+
+    def _write_state(self, now_hkt: datetime) -> None:
+        if not self.state_file_path:
+            return
+        state_data = {
+            "business_date": self._current_day,
+            "day_count": self._day_count,
+            "minute_key": self._current_minute,
+            "minute_count": self._minute_count,
+            "timezone": "Asia/Hong_Kong",
+            "updated_at": now_hkt.isoformat(),
+        }
+        tmp_path = self.state_file_path.with_name(f".tmp_{self.state_file_path.name}")
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(state_data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        tmp_path.replace(self.state_file_path)
+        try:
+            self.state_file_path.chmod(0o644)
+        except Exception:
+            pass
+
+    def release(self, now: datetime, count: int, persist: bool = True) -> None:
+        """Release a reservation after rollback or when the committed batch was smaller."""
+        if count <= 0:
+            return
+        now_hkt = now.astimezone(HK_TZ) if now.tzinfo else now.replace(tzinfo=HK_TZ)
+        minute_key = now_hkt.strftime("%Y-%m-%d %H:%M")
+        day_key = now_hkt.strftime("%Y-%m-%d")
+
+        def release_locked() -> None:
+            if self.state_file_path and persist and self.state_file_path.exists():
+                with open(self.state_file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if str(data.get("business_date", "")) != day_key:
+                    return
+                self._current_day = day_key
+                self._day_count = max(0, int(data.get("day_count", 0)) - count)
+                self._current_minute = str(data.get("minute_key", ""))
+                current_minute_count = int(data.get("minute_count", 0))
+                self._minute_count = (
+                    max(0, current_minute_count - count)
+                    if self._current_minute == minute_key
+                    else current_minute_count
+                )
+                self._write_state(now_hkt)
+                return
+            if self._current_day == day_key:
+                self._day_count = max(0, self._day_count - count)
+            if self._current_minute == minute_key:
+                self._minute_count = max(0, self._minute_count - count)
+
+        with self._mutex:
+            if not self.state_file_path or not persist:
+                release_locked()
+                return
+            import fcntl
+            lock_file = self._lock_file_path or self.state_file_path.with_suffix(".lock")
+            with open(lock_file, "w") as lock_fd:
+                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+                try:
+                    release_locked()
+                finally:
+                    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+
+    def record(self, now: datetime, count: int = 1, persist: bool = True) -> None:
+        ok, reason = self.reserve(now, count=count, persist=persist)
+        if not ok:
+            raise RuntimeError(reason)
 
     def get_metrics(self) -> Dict[str, Any]:
         return {
@@ -356,6 +439,7 @@ class SimulatorRuntimeService:
         seed: Optional[int] = None,
         propeller: Optional[Any] = None,
         backfiller: Optional[Any] = None,
+        projection_journal: Optional[CommittedEventJournal] = None,
     ):
         self.config = config or SimulatorRuntimeConfig()
         self._external_conn = conn
@@ -374,12 +458,17 @@ class SimulatorRuntimeService:
         self._last_rate_limit_warn_time: float = 0.0
         self.propeller = propeller
         self.backfiller = backfiller
+        journal_path = self.config.projection_journal_path or self.config.status_file_path.with_name(
+            "committed_projection_events.jsonl"
+        )
+        self.projection_journal = projection_journal or CommittedEventJournal(journal_path)
 
         # Cache baselines
         self._fast_baseline: Optional[Any] = None
         self._fast_allocator: Optional[IdAllocator] = None
         self._construction_baseline: Optional[Any] = None
         self._construction_allocator: Optional[IdAllocator] = None
+        self._evolution_coordinator: Optional[EvolutionCoordinator] = None
 
     def _get_connection(self) -> Any:
         if self._external_conn:
@@ -409,9 +498,19 @@ class SimulatorRuntimeService:
             self._fast_baseline = load_simulation_baseline(conn)
             self._fast_allocator = IdAllocator(self._fast_baseline.next_ids)
 
-        if self._construction_baseline is None or (self.cycle_count > 0 and self.cycle_count % 100 == 0):
+        # The coordinator owns construction lifecycle state after initialization.
+        # Replacing its baseline every 100 cycles would split runtime state between
+        # the coordinator and a newly loaded object.
+        if self._construction_baseline is None:
             self._construction_baseline = load_construction_baseline(conn)
             self._construction_allocator = IdAllocator(self._construction_baseline.next_ids)
+        if self._evolution_coordinator is None and self._construction_baseline is not None:
+            self._evolution_coordinator = EvolutionCoordinator(
+                self._construction_baseline,
+                seed=self.rng.randint(1, 1000000),
+            )
+            self._construction_allocator = self._evolution_coordinator.allocator
+            self._restore_evolution_state()
 
     def step_cycle(self, now: Optional[datetime] = None) -> CycleResult:
         """Execute one complete diurnal simulation tick cycle."""
@@ -436,9 +535,29 @@ class SimulatorRuntimeService:
         wait_seconds, burst_count = HongKongDiurnalEngine.next_burst_interval(now_hkt, self.rng)
         wait_seconds = max(self.config.min_wait_seconds, min(self.config.max_wait_seconds, wait_seconds))
 
-        # 3. Check Fuse Rate Limits
-        can_produce, limit_reason = self.fuse.can_produce(now_hkt, burst_count)
-        if not can_produce:
+        # 3. The disabled/dry-run path is strictly observational and must not consume
+        #    rate-limit capacity or touch any persistence.
+        engine_enabled = is_simulation_engine_enabled() and not self.config.dry_run
+        if not engine_enabled:
+            logger.info(
+                f"[DRY-RUN TICK] {now_hkt.strftime('%Y-%m-%d %H:%M:%S')} HKT | "
+                f"Intensity: {intensity:.3f} | Planned burst: {burst_count} events | DB Write: DISABLED"
+            )
+            self._save_status("DRY_RUN", intensity, now_hkt, None)
+            return CycleResult(
+                status="DRY_RUN",
+                events_written=0,
+                wait_seconds=wait_seconds,
+                intensity=intensity,
+                cycle_duration_ms=(time.perf_counter() - t0) * 1000,
+            )
+
+        # 4. Atomically reserve the planned burst before acquiring a DB connection.
+        #    A failed transaction releases the reservation; a smaller slow-movie batch
+        #    releases the unused tail after commit.
+        reservation_count = burst_count
+        reserved, limit_reason = self.fuse.reserve(now_hkt, reservation_count, persist=True)
+        if not reserved:
             now_mono = time.monotonic()
             if limit_reason != self._last_rate_limit_reason or (now_mono - self._last_rate_limit_warn_time) >= 300.0:
                 logger.warning(f"[RATE_LIMIT_FUSE] {limit_reason}. Pausing cycle.")
@@ -456,32 +575,11 @@ class SimulatorRuntimeService:
             )
         self._last_rate_limit_reason = None
 
-        # 4. Check whether database writes are enabled.
-        #    KI-062 fail-closed: when the engine is disabled we short-circuit BEFORE acquiring a
-        #    connection, loading baselines, generating events, allocating IDs, or touching the
-        #    propeller/backfiller. This keeps the disabled path strictly side-effect free and
-        #    independent of baseline completeness (the previous ordering generated events first
-        #    and could raise during ID allocation instead of returning DRY_RUN).
-        engine_enabled = is_simulation_engine_enabled() and not self.config.dry_run
-
-        if not engine_enabled:
-            # Dry-run / Idle mode: zero database access, zero modifications.
-            logger.info(
-                f"[DRY-RUN TICK] {now_hkt.strftime('%Y-%m-%d %H:%M:%S')} HKT | "
-                f"Intensity: {intensity:.3f} | Planned burst: {burst_count} events | DB Write: DISABLED"
-            )
-            self.fuse.record(now_hkt, burst_count, persist=False)
-            self._save_status("DRY_RUN", intensity, now_hkt, None)
-            return CycleResult(
-                status="DRY_RUN",
-                events_written=0,
-                wait_seconds=wait_seconds,
-                intensity=intensity,
-                cycle_duration_ms=(time.perf_counter() - t0) * 1000,
-            )
-
-        conn = self._get_connection()
+        conn = None
+        lifecycle_state_saved = True
+        projection_journal_saved = True
         try:
+            conn = self._get_connection()
             self._ensure_baselines(conn)
             self.cycle_count += 1
 
@@ -490,8 +588,7 @@ class SimulatorRuntimeService:
 
             if is_slow_movie:
                 # Generate slow-movie construction event
-                c_event = self._generate_slow_movie_event(now_hkt.date())
-                all_events: List[object] = [c_event] if c_event else []
+                all_events = self._generate_slow_movie_events(now_hkt.date())
                 is_construction = True
             else:
                 # Generate fast-movie expense events
@@ -507,6 +604,7 @@ class SimulatorRuntimeService:
             # 5. Real Atomic Write Execution (Single-Transaction Ownership)
             c_writer: Optional[ConstructionWriter] = None
             s_writer: Optional[SimulationWriter] = None
+            construction_audit: Optional[Any] = None
 
             if is_construction:
                 if not all_events:
@@ -523,39 +621,38 @@ class SimulatorRuntimeService:
                     if not ok:
                         raise RuntimeError(f"Post-cycle construction self-check failed: {chk_err}")
 
-                    c_writer.record_success_audit(c_res)
+                    construction_audit = c_res
                     events_written = len(all_events)
 
                 # KI-062: Hook ConstructionPropeller (The Spear & Shield)
                 if self.propeller is not None:
                     self.propeller.step(now=now_hkt, auto_commit=False)
                 elif not (type(conn).__name__ == "MagicMock" or type(conn).__name__ == "Mock"):
-                    try:
-                        from .construction_propeller import ConstructionPropeller
-                        propeller = ConstructionPropeller(conn=conn)
-                        prop_res = propeller.step(now=now_hkt, auto_commit=False)
-                        logger.info(
-                            f"[PROPELLER] Units advanced: {prop_res.units_advanced} | "
-                            f"Issues advanced: {prop_res.issues_advanced} | "
-                            f"Issues resolved: {prop_res.issues_resolved} | "
-                            f"Issues created: {prop_res.issues_created}"
-                        )
-                    except Exception as prop_err:
-                        logger.warning(f"[PROPELLER WARNING] {prop_err}")
+                    from .construction_propeller import ConstructionPropeller
+
+                    propeller = ConstructionPropeller(conn=conn)
+                    prop_res = propeller.step(now=now_hkt, auto_commit=False)
+                    logger.info(
+                        f"[PROPELLER] Units advanced: {prop_res.units_advanced} | "
+                        f"Issues advanced: {prop_res.issues_advanced} | "
+                        f"Issues resolved: {prop_res.issues_resolved} | "
+                        f"Issues created: {prop_res.issues_created}"
+                    )
 
                 # KI-062: Trickle backfill AI narrative (guarded by 3,000 neurons/day QuotaWatchdog)
                 if os.getenv("MOD_CF_AI_ENABLED", "true").lower() == "true":
                     if self.backfiller is not None:
-                        self.backfiller.run_cycle(batch_size=1)
+                        self.backfiller.run_cycle(batch_size=1, auto_commit=False)
                     elif not (type(conn).__name__ == "MagicMock" or type(conn).__name__ == "Mock"):
-                        try:
-                            from .trickle_backfill import TrickleBackfiller
-                            backfiller = TrickleBackfiller(conn=conn)
-                            backfiller.run_cycle(batch_size=1)
-                        except Exception as bf_err:
-                            logger.warning(f"[TRICKLE_BACKFILL WARNING] {bf_err}")
+                        from .trickle_backfill import TrickleBackfiller
+
+                        backfiller = TrickleBackfiller(conn=conn)
+                        backfiller.run_cycle(batch_size=1, auto_commit=False)
 
                 conn.commit()
+                if c_writer is not None and construction_audit is not None:
+                    c_writer.record_success_audit(construction_audit)
+                lifecycle_state_saved = self._save_evolution_state()
             else:
                 s_writer = SimulationWriter(conn=conn, audit_log_path=str(self.config.audit_log_path))
                 s_res = s_writer.write_events(all_events, auto_commit=False)  # type: ignore
@@ -569,10 +666,43 @@ class SimulatorRuntimeService:
                 conn.commit()
                 s_writer.record_success_audit(s_res)
                 events_written = len(all_events)
+                try:
+                    self.projection_journal.append([
+                        self._projection_record(event, now_hkt) for event in all_events
+                    ])
+                except Exception as journal_error:
+                    projection_journal_saved = False
+                    self.fail_closed_mgr.trip(
+                        "Committed events could not be handed to live projection",
+                        {"error": str(journal_error), "event_count": events_written},
+                    )
 
-            # Success: reset consecutive failures & record fuse
+            # Success: reservation already counted. Slow-movie cycles usually commit fewer
+            # events than the planned burst, so release only the unused capacity.
             self.consecutive_failures = 0
-            self.fuse.record(now_hkt, events_written, persist=True)
+            self.fuse.release(now_hkt, max(0, reservation_count - events_written), persist=True)
+            if not lifecycle_state_saved:
+                err_msg = "Committed lifecycle events but failed to persist restart state; service halted"
+                self._save_status("ERROR", intensity, now_hkt, err_msg)
+                return CycleResult(
+                    status="ERROR",
+                    events_written=events_written,
+                    wait_seconds=wait_seconds,
+                    intensity=intensity,
+                    error=err_msg,
+                    cycle_duration_ms=(time.perf_counter() - t0) * 1000,
+                )
+            if not projection_journal_saved:
+                err_msg = "Events committed but projection hand-off failed; service halted"
+                self._save_status("ERROR", intensity, now_hkt, err_msg)
+                return CycleResult(
+                    status="ERROR",
+                    events_written=events_written,
+                    wait_seconds=wait_seconds,
+                    intensity=intensity,
+                    error=err_msg,
+                    cycle_duration_ms=(time.perf_counter() - t0) * 1000,
+                )
             self._save_status("SUCCESS", intensity, now_hkt, None)
 
             return CycleResult(
@@ -584,11 +714,21 @@ class SimulatorRuntimeService:
             )
 
         except Exception as ex:
+            self.fuse.release(now_hkt, reservation_count, persist=True)
             if conn:
                 try:
                     conn.rollback()
                 except Exception:
                     pass
+
+            if "is_construction" in locals() and is_construction:
+                # Lifecycle generation mutates in-memory evidence before staging its
+                # matching rows. Discard it after rollback; the next cycle reloads DB
+                # truth plus the last committed restart-state file.
+                self._construction_baseline = None
+                self._construction_allocator = None
+                self._evolution_coordinator = None
+                self.onboarding_dates = []
 
             self.consecutive_failures += 1
             err_msg = str(ex)
@@ -626,10 +766,10 @@ class SimulatorRuntimeService:
             if not self._external_conn and conn:
                 conn.close()
 
-    def _generate_slow_movie_event(self, event_date: Any) -> Optional[object]:
-        """Generate an eligible slow-movie construction event based on current baseline."""
+    def _generate_slow_movie_events(self, event_date: Any) -> List[object]:
+        """Generate metric evidence and any formal lifecycle review for one unit."""
         if not self._construction_baseline:
-            return None
+            return []
 
         # KI-035: Low-frequency Batch 8 dynamic reserve pool admission (1~3 per week)
         admissions_in_week = sum(
@@ -663,23 +803,160 @@ class SimulatorRuntimeService:
             self._construction_baseline.org_users[ev.org_id] = [
                 {"name": u.name, "role": u.role} for u in ev.users
             ]
-            return ev
+            if self._evolution_coordinator is not None:
+                self._evolution_coordinator.register_org(ev.org_id)
+            return [ev]
 
-        # Try DualRunCheck for active dual-run org
-        dual_orgs = self._construction_baseline.orgs_by_status.get("双轨运行中", [])
-        if dual_orgs:
-            oid = self.rng.choice(dual_orgs)
-            pb = DualRunCheckPlaybook(self._construction_baseline, seed=self.rng.randint(1, 100000))
-            return pb.generate(org_id=oid, event_date=event_date, id_allocator=self._construction_allocator)
+        coordinator = self._evolution_coordinator
+        if coordinator is None:
+            return []
+        candidates = [
+            oid for oid, metrics in coordinator.unit_metrics.items()
+            if coordinator.advancer.org_status.get(oid, metrics.current_status) != "稳定运行"
+        ]
+        if not candidates:
+            return []
+        oid = self.rng.choice(candidates)
+        events = coordinator.evolve_unit_step(oid, event_date)
+        metrics = coordinator.unit_metrics[oid]
+        transition = coordinator.advancer.advance_unit_if_eligible(metrics, event_date)
+        if transition is not None:
+            metrics.current_status = transition.status_update.to_status
+            metrics.stage_entered_date = event_date
+            events.append(transition)
+        return events
 
-        # Fallback to Training
-        prep_orgs = self._construction_baseline.orgs_by_status.get("准备中", [])
-        if prep_orgs:
-            oid = self.rng.choice(prep_orgs)
-            pb_train = TrainingCertificationPlaybook(self._construction_baseline, seed=self.rng.randint(1, 100000))
-            return pb_train.generate(org_id=oid, event_date=event_date, id_allocator=self._construction_allocator)
+    def _projection_record(self, event: EventFootprint, committed_at: datetime) -> Dict[str, Any]:
+        """Map one successfully committed footprint to the factual SSE contract."""
+        org = (
+            self._construction_baseline.orgs.get(event.document.org_id, {})
+            if self._construction_baseline is not None
+            else {}
+        )
+        integration_ok = event.integration.status == "SUCCESS"
+        return {
+            "event_id": f"document-{event.document.id}",
+            "committed_at": committed_at.isoformat(),
+            "business_type": "integration_completed",
+            "increments": {
+                "documents": 1,
+                "vouchers": 1,
+                "integrations": 1,
+            },
+            "unit_id": event.document.org_id,
+            "unit_name": org.get("name"),
+            "province": org.get("region"),
+            "batch_name": f"第{org.get('batch_id')}批" if org.get("batch_id") else None,
+            "story_title": f"{event.document.type}完成业务入账",
+            "story_desc": (
+                f"{event.document.doc_no} → {event.voucher.voucher_no} · "
+                f"集成{'成功' if integration_ok else '失败'}"
+            ),
+            "amount": str(event.document.amount),
+            "badge_tone": "success" if integration_ok else "danger",
+        }
 
-        return None
+    def _restore_evolution_state(self) -> None:
+        """Restore lifecycle evidence counters after a daemon restart (fail closed on corruption)."""
+        path = self.config.lifecycle_state_path or self.config.status_file_path.with_name(
+            "simulator_lifecycle_state.json"
+        )
+        if not path.exists() or self._evolution_coordinator is None:
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if data.get("version") != 1:
+                raise RuntimeError("unsupported lifecycle state version")
+            coordinator = self._evolution_coordinator
+            advancer = coordinator.advancer
+            self.onboarding_dates = [datetime.fromisoformat(v).date() for v in data.get("onboarding_dates", [])]
+            advancer.org_status.update({int(k): str(v) for k, v in data.get("org_status", {}).items()})
+            advancer.consecutive_qualified_days.update({
+                int(k): int(v) for k, v in data.get("consecutive_qualified_days", {}).items()
+            })
+            advancer.stage_entered_dates.update({
+                int(k): datetime.fromisoformat(v).date() for k, v in data.get("stage_entered_dates", {}).items()
+            })
+            advancer.last_qualification_dates.update({
+                int(k): datetime.fromisoformat(v).date() for k, v in data.get("last_qualification_dates", {}).items()
+            })
+            for key, raw in data.get("unit_metrics", {}).items():
+                oid = int(key)
+                metrics = coordinator.unit_metrics.get(oid)
+                if metrics is None:
+                    continue
+                for field_name in (
+                    "current_status", "static_rate", "opening_rate", "dynamic_rate",
+                    "training_completed", "training_pass_rate", "interfaces_completed",
+                    "dual_run_checks_total", "dual_run_consistency_rate",
+                    "dual_run_recent_matches", "has_blocking_risk",
+                ):
+                    if field_name in raw:
+                        setattr(metrics, field_name, raw[field_name])
+                metrics.opening_diff_amount = Decimal(str(raw.get("opening_diff_amount", "0")))
+                metrics.tasks_completed = dict(raw.get("tasks_completed", metrics.tasks_completed))
+                if raw.get("stage_entered_date"):
+                    metrics.stage_entered_date = datetime.fromisoformat(raw["stage_entered_date"]).date()
+        except Exception as ex:
+            self.fail_closed_mgr.trip("Lifecycle state is unreadable", {"error": str(ex)})
+            raise
+
+    def _save_evolution_state(self) -> bool:
+        """Atomically persist lifecycle evidence only after the database commit succeeds."""
+        if self._evolution_coordinator is None:
+            return True
+        coordinator = self._evolution_coordinator
+        advancer = coordinator.advancer
+        data = {
+            "version": 1,
+            "updated_at": datetime.now(HK_TZ).isoformat(),
+            "onboarding_dates": [d.isoformat() for d in self.onboarding_dates],
+            "org_status": {str(k): v for k, v in advancer.org_status.items()},
+            "consecutive_qualified_days": {str(k): v for k, v in advancer.consecutive_qualified_days.items()},
+            "stage_entered_dates": {str(k): v.isoformat() for k, v in advancer.stage_entered_dates.items()},
+            "last_qualification_dates": {str(k): v.isoformat() for k, v in advancer.last_qualification_dates.items()},
+            "unit_metrics": {
+                str(oid): {
+                    "current_status": metrics.current_status,
+                    "stage_entered_date": metrics.stage_entered_date.isoformat(),
+                    "static_rate": metrics.static_rate,
+                    "opening_rate": metrics.opening_rate,
+                    "opening_diff_amount": str(metrics.opening_diff_amount),
+                    "dynamic_rate": metrics.dynamic_rate,
+                    "tasks_completed": metrics.tasks_completed,
+                    "training_completed": metrics.training_completed,
+                    "training_pass_rate": metrics.training_pass_rate,
+                    "interfaces_completed": metrics.interfaces_completed,
+                    "dual_run_checks_total": metrics.dual_run_checks_total,
+                    "dual_run_consistency_rate": metrics.dual_run_consistency_rate,
+                    "dual_run_recent_matches": metrics.dual_run_recent_matches,
+                    "has_blocking_risk": metrics.has_blocking_risk,
+                }
+                for oid, metrics in coordinator.unit_metrics.items()
+            },
+        }
+        path = self.config.lifecycle_state_path or self.config.status_file_path.with_name(
+            "simulator_lifecycle_state.json"
+        )
+        tmp_path = path.with_name(f".tmp_{path.name}")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            tmp_path.replace(path)
+            return True
+        except Exception as ex:
+            self.fail_closed_mgr.trip("Lifecycle restart state could not be persisted", {"error": str(ex)})
+            return False
+        finally:
+            if tmp_path.exists():
+                try:
+                    tmp_path.unlink()
+                except Exception:
+                    pass
 
     def _save_status(self, last_status: str, intensity: float, now: datetime, last_error: Optional[str]) -> None:
         """Persist structured service heartbeat status to JSON file using atomic tempfile swap."""
@@ -687,9 +964,17 @@ class SimulatorRuntimeService:
         try:
             target_path = self.config.status_file_path
             target_path.parent.mkdir(parents=True, exist_ok=True)
+            if self.fail_closed_mgr.is_tripped():
+                service_status = "HALTED"
+            elif last_status == "SUCCESS":
+                service_status = "RUNNING"
+            elif last_status == "DRY_RUN":
+                service_status = "DISABLED"
+            else:
+                service_status = "DEGRADED"
             status_data = {
                 "service": "mod-simulator",
-                "status": "HALTED" if self.fail_closed_mgr.is_tripped() else ("RUNNING" if last_status != "ERROR" else "DEGRADED"),
+                "status": service_status,
                 "last_cycle_status": last_status,
                 "timestamp": now.isoformat(),
                 "intensity": round(intensity, 4),

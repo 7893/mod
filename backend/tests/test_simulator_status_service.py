@@ -137,6 +137,21 @@ def test_status_stale_heartbeat(tmp_path, api_client):
         assert "expired" in (data["notice"] or "")
 
 
+def test_status_dry_run_is_fresh_but_not_write_enabled(tmp_path, api_client):
+    status_file = tmp_path / "simulator_status.json"
+    status_file.write_text(json.dumps({
+        "service": "mod-simulator",
+        "status": "DISABLED",
+        "last_cycle_status": "DRY_RUN",
+        "timestamp": datetime.now(HK_TZ).isoformat(),
+    }), encoding="utf-8")
+    with patch.dict(os.environ, {"MOD_SIMULATOR_STATUS_PATH": str(status_file)}):
+        data = api_client.get("/api/simulator/status").json()
+    assert data["fresh"] is True
+    assert data["status"] == "DISABLED"
+    assert data["enabled"] is False
+
+
 def test_status_file_missing(tmp_path, api_client):
     """KI-039: 心跳文件不存在时返回 200, status=UNAVAILABLE, fresh=False, enabled=False."""
     missing_file = tmp_path / "does_not_exist.json"
@@ -360,4 +375,3 @@ sys.exit(0)
     error_payload = json.dumps({"service": "mod-simulator", "status": "Internal Server Error", "fresh": False})
     r3 = subprocess.run([sys.executable, "-c", probe_script, error_payload])
     assert r3.returncode == 1
-
