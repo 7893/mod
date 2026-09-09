@@ -9,6 +9,7 @@ from sqlalchemy.engine import Connection
 
 from ..business_rules import (
     DISPLAY_STATUS_MAPPING,
+    LAST_ACTIVE_BATCH_ID,
     ORG_STATUS_NOT_STARTED,
     SQL_INFERRED_BATCH_ID,
 )
@@ -271,3 +272,65 @@ def _normalize_region(value: str) -> str:
         if value.endswith(suffix):
             return value[:-len(suffix)]
     return value
+
+
+def compose_rule_based_alerts(rollout_rows: list[dict], voucher_success_pct: float | None) -> list[dict]:
+    """由批次推进事实派生 A 屏规则告警，所有数字都来自 rollout_rows，不写死。
+
+    - 双轨批次：dual > 0 且 launched == 0 的批次；
+    - 已推进批次：batchId <= LAST_ACTIVE_BATCH_ID 且 launched > 0；
+    - 在建批次：batchId <= LAST_ACTIVE_BATCH_ID 且 launched == 0 且 dual == 0；
+    - 储备批次：batchId > LAST_ACTIVE_BATCH_ID。
+    """
+    def _n(row: dict, key: str) -> float:
+        value = row.get(key)
+        return float(value) if isinstance(value, (int, float, Decimal)) else 0.0
+
+    def _names(rows: list[dict]) -> str:
+        return "、".join(str(r.get("name") or f"第{r.get('batchId')}批") for r in rows)
+
+    rows = sorted((r for r in rollout_rows if r.get("batchId") is not None), key=lambda r: int(r["batchId"]))
+    dual_rows = [r for r in rows if _n(r, "dual") > 0 and _n(r, "launched") == 0]
+    launched_rows = [r for r in rows if int(r["batchId"]) <= LAST_ACTIVE_BATCH_ID and _n(r, "launched") > 0]
+    building_rows = [
+        r for r in rows
+        if int(r["batchId"]) <= LAST_ACTIVE_BATCH_ID and _n(r, "launched") == 0 and _n(r, "dual") == 0
+    ]
+    reserve_rows = [r for r in rows if int(r["batchId"]) > LAST_ACTIVE_BATCH_ID]
+
+    alerts: list[dict] = []
+    if dual_rows:
+        dual_total = int(sum(_n(r, "dual") for r in dual_rows))
+        dual_pct = round(
+            sum(_n(r, "constructionPct") * _n(r, "total") for r in dual_rows)
+            / max(sum(_n(r, "total") for r in dual_rows), 1.0),
+            1,
+        )
+        alerts.append({
+            "level": "INFO",
+            "title": f"{_names(dual_rows)} {dual_total} 家单位处于双轨运行期",
+            "detail": f"{_names(dual_rows)}共 {dual_total} 家单位并行双轨核对，建设完成度 {dual_pct}%，达标后转入正式上线。",
+        })
+    if launched_rows:
+        total = int(sum(_n(r, "total") for r in launched_rows))
+        launched = int(sum(_n(r, "launched") for r in launched_rows))
+        pct = round(launched * 100.0 / total, 1) if total else 0.0
+        voucher_text = f"，财务凭证入账率 {voucher_success_pct}%" if voucher_success_pct is not None else ""
+        alerts.append({
+            "level": "SUCCESS" if pct >= 50 else "WARNING",
+            "title": f"{_names(launched_rows[:1])}至{_names(launched_rows[-1:])} {launched} 家单位已上线",
+            "detail": f"已推进批次共 {total} 家单位，其中 {launched} 家已上线（{pct}%）{voucher_text}。",
+        })
+    if building_rows or reserve_rows:
+        parts = []
+        for r in building_rows:
+            parts.append(f"{r.get('name')} {int(_n(r, 'total'))} 家在建单位平均进度 {_n(r, 'constructionPct'):.1f}%")
+        for r in reserve_rows:
+            parts.append(f"{r.get('name')} {int(_n(r, 'total'))} 家储备单位处于期初数据准备期")
+        alerts.append({
+            "level": "WARNING",
+            "title": "在建与储备批次接口联调与数据准备督导",
+            "detail": "，".join(parts) + "，需重点防范接口联调堵点。",
+        })
+    return alerts
+

@@ -11,7 +11,12 @@ from sqlalchemy.engine import Connection
 
 from ..business_rules import ORG_STATUS_DUAL_RUNNING, SQL_INFERRED_BATCH_ID, SQL_LAUNCHED_STATUSES, public_business_rules
 from ..config import get_display_timezone, get_settings
-from .dashboard_sections import build_construction_summary, build_entities, build_issue_sections
+from .dashboard_sections import (
+    build_construction_summary,
+    build_entities,
+    build_issue_sections,
+    compose_rule_based_alerts,
+)
 
 
 FALLBACK_SNAPSHOT_PATHS = [
@@ -568,24 +573,7 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         integration_success_pct = numeric(ov_row["integration_success_pct"])
 
         insights_data = dict(fallback.get("insights", {}))
-        batch_8_count = next((b["total"] for b in rollout_rows if b["batchId"] == 8), 647)
-        insights_data["ruleBasedAlerts"] = [
-            {
-                "level": "INFO",
-                "title": f"第六批 {ov_row['dual_run']} 家单位进入双轨攻坚冲刺期",
-                "detail": f"第六批共 {ov_row['dual_run']} 家单位全网并网双轨核对，建设完成度已达 91.9%，预计下阶段平稳收敛正式上线。",
-            },
-            {
-                "level": "SUCCESS",
-                "title": f"前五批 {launched} 家单位全网达成稳定运行",
-                "detail": f"第一至第五批共 {launched} 家推广单位已全量投产，财务凭证入账率稳定在 {voucher_success_pct}%。",
-            },
-            {
-                "level": "WARNING",
-                "title": "重点在建批次接口联调与数据准备督导",
-                "detail": f"第七批 400 家在建单位平均进度 62.7%，第八批 {batch_8_count} 家储备单位进入期初数据准备期，需重点防范接口联调堵点。",
-            },
-        ]
+        insights_data["ruleBasedAlerts"] = compose_rule_based_alerts(rollout_rows, voucher_success_pct)
 
         org_today_added = int(ov_row.get("org_today_added") or 0)
         org_added_note = (
