@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   AlertCircle,
-  AlertTriangle,
   ArrowRight,
   CheckCircle2,
   Info,
@@ -18,6 +17,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
+import BriefingList from '../components/blocks/BriefingList.vue'
 import CommandBand from '../components/blocks/CommandBand.vue'
 import EmptyNote from '../components/blocks/EmptyNote.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
@@ -52,7 +52,10 @@ const { aiStatus } = useAiInsights()
 
 // F5 每日决策简报（后台自动生成，只读展示，零交互）
 const { briefing, loading: briefingLoading } = useDailyBriefing()
-const briefingSections = computed(() => parseBriefingSections(briefing.value?.content).slice(0, 3))
+const BRIEFING_TONES: BlockTone[] = ['success', 'warning', 'accent']
+const briefingSections = computed(() => parseBriefingSections(briefing.value?.content)
+  .slice(0, 3)
+  .map((section, index) => ({ ...section, tone: BRIEFING_TONES[index] ?? 'accent' })))
 
 const predictionsMap = computed(() => indexPredictions(
   (aiStatus.value as any)?.predictions || (store.snapshot.insights as any)?.predictions,
@@ -103,7 +106,7 @@ const riskDistChartOption = computed(() => {
     },
     grid: {
       top: 10,
-      bottom: 20,
+      bottom: 4,
       left: 80,
       right: 60,
       containLabel: true,
@@ -111,11 +114,8 @@ const riskDistChartOption = computed(() => {
     xAxis: {
       ...valueAxis,
       minInterval: 1,
-      axisLabel: {
-        color: chartInk.textMuted,
-        fontSize: 10,
-        fontFamily: 'monospace',
-      },
+      // 数值已标注在柱右侧，坐标轴刻度只会在窄宽度下互相重叠。
+      axisLabel: { show: false },
       splitLine: {
         lineStyle: {
           color: chartInk.borderSoft,
@@ -333,7 +333,7 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
       >
         <div class="grid grid-cols-12 gap-3 h-full min-h-0 items-stretch">
           <!-- 左侧：风险维度分布小图 (撑起空间，消除空旷感) -->
-          <div class="col-span-5 flex flex-col h-full min-h-0 p-2 rounded-xl bg-surface-veil-03 border border-surface-veil-06">
+          <div class="col-span-5 flex flex-col h-full min-h-0 pr-3 border-r border-surface-veil-06">
             <div class="flex items-center justify-between pb-1.5 border-b border-surface-veil-06">
               <span class="text-cockpit-xs font-medium text-slate-300">困难户风险维度分布</span>
               <span class="font-mono text-cockpit-xs text-slate-400">共 {{ atRiskUnits.length }} 家预警</span>
@@ -377,46 +377,8 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
               <span class="text-cockpit-xs">正在读取每日简报…</span>
             </div>
 
-            <!-- 已有简报 -->
-            <div v-else-if="briefing?.status === 'ok'" class="grid grid-cols-3 gap-2 h-full min-h-0">
-              <section
-                v-for="(section, sectionIndex) in briefingSections"
-                :key="section.title"
-                class="flex flex-col min-h-0 rounded-xl border p-2.5"
-                :title="section.items.join('\n')"
-                :class="sectionIndex === 0
-                  ? 'bg-emerald-950/15 border-emerald-500/20'
-                  : (sectionIndex === 1
-                    ? 'bg-amber-950/15 border-amber-500/20'
-                    : 'bg-sky-950/15 border-sky-500/20')"
-              >
-                <div class="flex items-center justify-between gap-1.5 pb-2 border-b border-surface-veil-06">
-                  <div class="flex items-center gap-1.5 min-w-0">
-                    <CheckCircle2 v-if="sectionIndex === 0" :size="13" class="text-emerald-400 flex-shrink-0" />
-                    <AlertTriangle v-else-if="sectionIndex === 1" :size="13" class="text-amber-400 flex-shrink-0" />
-                    <Sparkles v-else :size="13" class="text-sky-400 flex-shrink-0" />
-                    <b class="text-cockpit-sm font-semibold text-slate-200 truncate">{{ section.title }}</b>
-                  </div>
-                  <span class="font-mono text-cockpit-xs text-slate-500 flex-shrink-0">{{ section.items.length }}</span>
-                </div>
-                <div class="flex flex-col justify-around gap-1.5 flex-1 min-h-0 pt-2">
-                  <div
-                    v-for="(item, itemIndex) in section.items.slice(0, 3)"
-                    :key="item"
-                    class="flex items-center gap-1.5 min-w-0"
-                    :title="item"
-                  >
-                    <span class="w-4 h-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-mono text-cockpit-xs text-slate-500 flex-shrink-0">
-                      {{ itemIndex + 1 }}
-                    </span>
-                    <span class="text-cockpit-xs text-slate-300 truncate">{{ item }}</span>
-                  </div>
-                  <span v-if="section.items.length > 3" class="text-cockpit-xs text-slate-500 pl-5">
-                    另有 {{ section.items.length - 3 }} 条建议
-                  </span>
-                </div>
-              </section>
-            </div>
+            <!-- 已有简报：纵向分节、全文展示，不截断 -->
+            <BriefingList v-else-if="briefing?.status === 'ok'" class="h-full min-h-0 overflow-y-auto" :sections="briefingSections" />
 
             <!-- 尚无简报（定时任务未生成） -->
             <div v-else class="flex flex-col items-center justify-center h-full rounded-xl bg-surface-veil-03 border border-surface-veil-06 text-center gap-1.5 py-4 text-slate-400">

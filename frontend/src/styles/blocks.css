@@ -420,3 +420,67 @@
 .status-row.is-success .status-row__dot { background: var(--color-emerald-400); }
 .status-row.is-warning .status-row__dot { background: var(--color-amber-400); }
 .status-row.is-danger  .status-row__dot { background: var(--color-rose-500); }
+
+/* 分节要点列表：纵向分节 + 细分隔线，正文全文换行，不做彩色卡片与截断。 */
+.briefing {
+  display: flex;
+  flex-direction: column;
+  gap: --spacing(2);
+  min-height: 0;
+}
+
+.briefing__section {
+  display: flex;
+  flex-direction: column;
+  gap: --spacing(1);
+  padding-bottom: --spacing(2);
+  border-bottom: 1px solid var(--color-surface-veil-06);
+}
+.briefing__section:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.briefing__head {
+  display: flex;
+  align-items: center;
+  gap: --spacing(1.5);
+  min-width: 0;
+}
+.briefing__icon { flex-shrink: 0; color: var(--color-sky-400); }
+.briefing__head.is-success .briefing__icon { color: var(--color-emerald-400); }
+.briefing__head.is-warning .briefing__icon { color: var(--color-amber-400); }
+.briefing__head.is-danger  .briefing__icon { color: var(--color-rose-500); }
+
+.briefing__title {
+  color: var(--color-slate-200);
+  font-size: var(--text-cockpit-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.briefing__count {
+  margin-left: auto;
+  color: var(--color-slate-500);
+  font-family: var(--font-mono);
+  font-size: var(--text-cockpit-xs);
+}
+
+.briefing__items {
+  display: flex;
+  flex-direction: column;
+  gap: --spacing(0.5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.briefing__item {
+  display: flex;
+  gap: --spacing(1.5);
+  color: var(--color-slate-300);
+  font-size: var(--text-cockpit-xs);
+  line-height: 1.5;
+}
+.briefing__index {
+  flex-shrink: 0;
+  color: var(--color-slate-500);
+  font-family: var(--font-mono);
+}

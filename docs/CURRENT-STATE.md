@@ -246,6 +246,9 @@
   中 40 余处状态字面量改为引用常量，`public_business_rules()` 新增只读 `orgStages`/`launchedStatuses`。
   新增 `tests/test_business_rules.py` 契约测试（词表有序唯一、映射覆盖全部状态、SQL 模块禁止散写状态
   字面量）。未改变任何 SQL 语义。待发布。
+- 本地 D7/F3/F5 去模板化：新增积木 `blocks/BriefingList`，F5 每日简报由三列彩色底卡+截断改为纵向分节全文
+  展示；D7 核验卡去掉无语义的进度轨与胶囊标签；F3 分布图去掉面板内底卡并隐藏与柱标重叠的坐标刻度。
+  已在 1920×1080 无头渲染核对，无控制台错误。待发布并需人工视觉验收。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态
