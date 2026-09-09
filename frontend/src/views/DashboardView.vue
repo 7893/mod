@@ -230,9 +230,8 @@ const chooseProvince = (name: string) => {
           >
             <template #actions>
               <PanelLegend compact :items="[
-                { label: '已上线', tone: 'success' },
-                { label: '已建设待上线', tone: 'accent' },
-                { label: '待完成', tone: 'neutral' },
+                { label: '建设完成度', tone: 'accent' },
+                { label: '上线率', tone: 'success' },
               ]" />
             </template>
             <VChart :option="batchProgressOption" autoresize class="w-full h-full min-h-0" />

@@ -112,11 +112,11 @@ const riskPieOption = computed(() => ({
 const batchComplianceStats = computed(() =>
   BATCH_ORDER.map((name, idx) => {
     const batchUnits = store.entities.filter((e) => e.batch === name)
-    const total = batchUnits.length || 1
+    const total = batchUnits.length
     const problemUnits = complianceUnits.value.filter((u) => u.batch === name)
     return {
       batchId: idx + 1, name, total, problemCount: problemUnits.length,
-      complianceRate: (((total - problemUnits.length) / total) * 100).toFixed(1),
+      complianceRate: total ? Number((((total - problemUnits.length) / total) * 100).toFixed(1)) : null,
       highCount: problemUnits.filter((u) => u.level === '高').length,
     }
   }),

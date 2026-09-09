@@ -21,50 +21,7 @@ const currentIndex = ref(0)
 const isPaused = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 
-const fallbackActivities: GovernanceActivity[] = [
-  {
-    id: 991,
-    issueId: 'ISS-LIVE-001',
-    action: '现场排查',
-    actor: '财务双轨总账平账专家组',
-    detail: '正深入各三级单位核查往来资产借贷明细，加速阻力消缺。',
-    timeStr: '10:24:18',
-    occurredAt: '2026-09-08 10:24:18',
-    unitName: '北方特种装备工业集团',
-    province: '辽宁',
-    issueType: '超期挂账',
-    status: 'IN_PROGRESS',
-  },
-  {
-    id: 992,
-    issueId: 'ISS-LIVE-002',
-    action: '发布补丁',
-    actor: '核心ERP接口联调支持团队',
-    detail: '发布跨系统字符转码与报文过滤插件，保障建设工序顺畅跃迁。',
-    timeStr: '10:15:30',
-    occurredAt: '2026-09-08 10:15:30',
-    unitName: '华东现代能源开发公司',
-    province: '江苏',
-    issueType: '超预算迹象',
-    status: 'VERIFYING',
-  },
-  {
-    id: 993,
-    issueId: 'ISS-LIVE-003',
-    action: '闭环销项',
-    actor: '数字化转型总指挥部',
-    detail: '双轨借贷试算已达 100% 平账，正式消除合规阻力并转入双轨试运行。',
-    timeStr: '09:48:02',
-    occurredAt: '2026-09-08 09:48:02',
-    unitName: '西南清洁能源投资集团',
-    province: '四川',
-    issueType: '票据异常',
-    status: 'RESOLVED',
-  },
-]
-
-const displayList = computed(() => (activities.value.length ? activities.value : fallbackActivities))
-const currentActivity = computed(() => displayList.value[currentIndex.value % displayList.value.length])
+const currentActivity = computed(() => activities.value[currentIndex.value % activities.value.length] ?? null)
 
 async function fetchActivities() {
   try {
@@ -81,14 +38,14 @@ async function fetchActivities() {
 }
 
 function next() {
-  if (displayList.value.length > 0) {
-    currentIndex.value = (currentIndex.value + 1) % displayList.value.length
+  if (activities.value.length > 0) {
+    currentIndex.value = (currentIndex.value + 1) % activities.value.length
   }
 }
 
 function prev() {
-  if (displayList.value.length > 0) {
-    currentIndex.value = (currentIndex.value - 1 + displayList.value.length) % displayList.value.length
+  if (activities.value.length > 0) {
+    currentIndex.value = (currentIndex.value - 1 + activities.value.length) % activities.value.length
   }
 }
 
@@ -126,7 +83,10 @@ onUnmounted(() => {
     </div>
 
     <!-- Middle activity stream content with transition -->
-    <div class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+    <div v-if="!currentActivity" class="flex-1 min-w-0 truncate text-slate-500">
+      暂无治理活动记录
+    </div>
+    <div v-else class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
       <span class="font-mono text-slate-400 text-cockpit-xs">[{{ currentActivity.timeStr }}]</span>
       <span class="px-1.5 py-0.5 rounded bg-sky-950/60 border border-sky-500/20 text-sky-300 font-medium">
         {{ currentActivity.unitName }}
@@ -149,9 +109,9 @@ onUnmounted(() => {
     </div>
 
     <!-- Right controls -->
-    <div class="flex items-center gap-1.5 flex-shrink-0">
+    <div v-if="activities.length" class="flex items-center gap-1.5 flex-shrink-0">
       <span class="text-slate-500 font-mono text-cockpit-xs">
-        {{ (currentIndex % displayList.length) + 1 }}/{{ displayList.length }}
+        {{ (currentIndex % activities.length) + 1 }}/{{ activities.length }}
       </span>
       <button
         type="button"

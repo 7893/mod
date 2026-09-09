@@ -269,6 +269,7 @@
   提取收窄为 `JSONDecodeError`、临时文件 unlink/chmod 收窄为 `OSError`、错误路径 rollback 用 `suppress(Exception)`。待发布。
 - 前端状态词表已与后端四态对齐：`RolloutStatus` 去掉幻影「建设中」，`EntityRow.rawStatus` 与 `api.py` 的 `rawStatus` 过滤死分支一并删除；后端新增 `CONSTRUCTION_CRITICAL_RATE`/`DISPLAY_STATUSES` 并通过 `businessRules.risk.constructionCriticalRate`/`lifecycle.displayStatuses` 下发。建设滞后只评估「双轨运行」，准备中走「准备期卡顿」，合规标签枚举加入「准备期卡顿」；F3 风险维度门禁文案与高危数由规则和单位级判定派生；「正式上线」口径统一为「已上线」。
 - A 屏规则告警（`insights.ruleBasedAlerts`）由 `dashboard_sections.compose_rule_based_alerts(rollout_rows, voucher_success_pct)` 从批次推进事实派生：双轨批次家数与加权建设度、已推进批次上线家数与占比、在建/储备批次进度均取自 `rollout_rows`，不再写死「91.9%」「400 家 62.7%」「全量投产」等与真数据矛盾的字面量。前端 `overview` 类型去掉后端不返回的 `leadershipAttention`，补 `issuesSummaryText`/`batches`；删除无引用的 `frontend/src/data/sim-snapshot.json`。
+- A3 批次推进阶梯改为「建设完成度」「上线率」两条并列条形，不再把分母不同的两项指标堆叠在同一根条里；E 屏批次合规率在批次无单位时返回 `null`（图上留空），不再用 `|| 1` 兜底成 100%；`LiveActivityTicker` 删除三条虚构 fallback 活动，接口为空时显示「暂无治理活动记录」并隐藏翻页控件；F 屏高危单位数按单位级 `riskLevel` 统计。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态
