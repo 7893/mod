@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 import json
 import logging
 import os
@@ -350,10 +351,8 @@ class SimulationWriter:
             )
 
         except Exception as ex:
-            try:
+            with suppress(Exception):
                 conn.rollback()
-            except Exception:
-                pass
             duration_ms = (time.perf_counter() - start_time) * 1000.0
             audit = SimulationAuditRecord(
                 run_id=run_id,

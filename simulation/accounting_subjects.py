@@ -66,7 +66,8 @@ def _split_amount(total: Decimal, n: int, rng) -> List[Decimal]:
     parts, acc = [], Decimal("0.00")
     for i in range(n - 1):
         p = _q(total * Decimal(str(ws[i] / s)))
-        parts.append(p); acc += p
+        parts.append(p)
+        acc += p
     parts.append(total - acc)
     return parts
 
@@ -101,14 +102,16 @@ def _expense(total: Decimal, item_names: List[str], rng) -> List[Line]:
 
 def _purchase(total: Decimal, items, rng) -> List[Line]:
     # 借 库存商品 + 进项税(13%), 贷 应付账款
-    net = _q(total / Decimal("1.13")); tax = _q(total - net)
+    net = _q(total / Decimal("1.13"))
+    tax = _q(total - net)
     return [("140501", "库存商品", net, Decimal("0.00")),
             (TAX_INPUT[0], TAX_INPUT[1], tax, Decimal("0.00")),
             ("220201", "应付账款", Decimal("0.00"), total)]
 
 
 def _project(total: Decimal, items, rng) -> List[Line]:
-    net = _q(total / Decimal("1.09")); tax = _q(total - net)
+    net = _q(total / Decimal("1.09"))
+    tax = _q(total - net)
     cr = BANK if rng.random() < 0.7 else ("220201", "应付账款")
     return [("160401", "在建工程", net, Decimal("0.00")),
             (TAX_INPUT[0], TAX_INPUT[1], tax, Decimal("0.00")),
@@ -125,7 +128,8 @@ def _fund(total: Decimal, items, rng) -> List[Line]:
 
 def _income(total: Decimal, items, rng) -> List[Line]:
     # 借 银行存款/应收账款, 贷 主营业务收入 + 销项税(6%)
-    net = _q(total / Decimal("1.06")); tax = _q(total - net)
+    net = _q(total / Decimal("1.06"))
+    tax = _q(total - net)
     dr = BANK if rng.random() < 0.6 else ("112201", "应收账款")
     return [(dr[0], dr[1], total, Decimal("0.00")),
             ("600101", "主营业务收入", Decimal("0.00"), net),
@@ -134,7 +138,8 @@ def _income(total: Decimal, items, rng) -> List[Line]:
 
 def _asset(total: Decimal, items, rng) -> List[Line]:
     # 资产处置：借 银行存款, 贷 固定资产清理 + 销项税(13%)
-    net = _q(total / Decimal("1.13")); tax = _q(total - net)
+    net = _q(total / Decimal("1.13"))
+    tax = _q(total - net)
     return [(BANK[0], BANK[1], total, Decimal("0.00")),
             ("160105", "固定资产清理", Decimal("0.00"), net),
             (TAX_OUTPUT[0], TAX_OUTPUT[1], Decimal("0.00"), tax)]
@@ -153,8 +158,8 @@ _DISPATCH = {
 
 def _balance_fix(lines: List[Line], total: Decimal) -> List[Line]:
     """确保借贷平衡：因舍入产生的分差补到最后一条借方费用行。"""
-    dsum = sum(l[2] for l in lines)
-    csum = sum(l[3] for l in lines)
+    dsum = sum(line[2] for line in lines)
+    csum = sum(line[3] for line in lines)
     diff = _q(csum - dsum)  # 借方应补 diff
     if diff != 0:
         for i in range(len(lines)):

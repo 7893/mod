@@ -14,7 +14,8 @@
 
 ## 后端
 
-- Python 目标版本和依赖以 `backend/pyproject.toml` 为准，格式和静态检查以 Ruff 配置为准。
+- Python 目标版本和依赖以 `backend/pyproject.toml` 为准，格式和静态检查以 Ruff 配置为准；`make check` 的 Ruff 范围
+  覆盖 `backend/app`、`backend/tests` 与顶层 `simulation/`。
 - 路由层只负责参数、依赖注入、状态码和响应编排；SQL 聚合与业务规则进入服务层。
 - 外部平台访问进入 `backend/app/integrations/`，必须有超时、失败降级、数据边界和凭据隔离。
 - 拟真引擎是顶层独立包 `simulation/`（ADR-0009），由 `mod-simulator.service` 独立运行，API 进程不得导入它；写库门禁

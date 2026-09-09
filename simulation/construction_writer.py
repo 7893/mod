@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import gzip
+from contextlib import suppress
 import json
 import logging
 import os
@@ -77,15 +78,14 @@ class ConstructionWriter:
             return self._external_conn
 
         if not os.environ.get("MOD_DB_HOST"):
-            try:
+            # 本地开发可选加载 .env；缺少 python-dotenv 或文件不可读都不应阻断。
+            with suppress(Exception):
                 from dotenv import load_dotenv
 
                 for env_file in [".env.systemd", ".env.local", ".env"]:
                     if os.path.exists(env_file):
                         load_dotenv(env_file)
                         break
-            except Exception:
-                pass
 
         host = os.environ.get("MOD_DB_HOST", "127.0.0.1")
         port = int(os.environ.get("MOD_DB_PORT", "3306"))
@@ -197,19 +197,15 @@ class ConstructionWriter:
                 )
             except Exception as rot_ex:
                 if backup_path.exists():
-                    try:
+                    with suppress(OSError):
                         backup_path.unlink()
-                    except Exception:
-                        pass
                 raise RuntimeError(f"Backup rotation enforcement failed (fail-closed): {rot_ex}") from rot_ex
 
             return str(backup_path)
         finally:
             if temp_path.exists():
-                try:
+                with suppress(OSError):
                     temp_path.unlink()
-                except Exception:
-                    pass
             if not self._external_conn:
                 conn.close()
 
@@ -465,10 +461,8 @@ class ConstructionWriter:
             )
 
         except Exception as ex:
-            try:
+            with suppress(Exception):
                 conn.rollback()
-            except Exception:
-                pass
             duration = (time.perf_counter() - t0) * 1000
             err_msg = f"Rolled back batch: {ex}"
             logger.error(f"[{run_id}] Write failed: {err_msg}")

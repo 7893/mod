@@ -3,7 +3,7 @@
 check: backend-check frontend-check doc-check
 
 backend-check:
-	cd backend && .venv/bin/ruff check app tests
+	cd backend && .venv/bin/ruff check app tests ../simulation
 	cd backend && .venv/bin/python -m pytest -p no:cacheprovider -q
 
 frontend-check:

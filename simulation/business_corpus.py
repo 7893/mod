@@ -11,9 +11,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from pathlib import Path
 from threading import Lock
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 ASSET_PATH = Path(__file__).resolve().parent / "assets" / "business_corpus.json"
 
@@ -53,8 +56,8 @@ def load_corpus() -> dict:
                 with open(ASSET_PATH, "r", encoding="utf-8") as f:
                     _corpus_data = json.load(f)
                     return _corpus_data
-            except Exception:
-                pass
+            except (OSError, ValueError) as ex:
+                logger.warning("业务语料资产加载失败，回退内置最小词典: %s", type(ex).__name__)
 
         # Fallback minimal dictionary
         _corpus_data = {

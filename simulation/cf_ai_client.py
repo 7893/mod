@@ -10,6 +10,7 @@ Design Principles:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import suppress
 import json
 import logging
 import os
@@ -199,10 +200,8 @@ class CloudflareAIClient:
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end != -1 and end > start:
-            try:
+            with suppress(json.JSONDecodeError):
                 return json.loads(text[start : end + 1])
-            except Exception:
-                pass
         return None
 
     def _fallback_local(
