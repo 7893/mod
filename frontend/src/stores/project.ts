@@ -256,7 +256,8 @@ export interface ProjectSnapshot {
     integrationSuccessPct: number
     unresolvedIssues: number
     highRisk: number
-    leadershipAttention: string
+    issuesSummaryText?: string
+    batches?: number
     regions: number
   }
   rollout: RolloutBatchItem[]
