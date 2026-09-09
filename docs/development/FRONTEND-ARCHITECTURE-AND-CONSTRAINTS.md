@@ -89,7 +89,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 - 物料的可选形态由其 props 有限枚举承载（如 `tone` 仅 `default`/`risk`），不得在外部叠加样式覆盖。
 - 复用组件放 `components/`，页面放 `views/`，复用逻辑放 `composables/`，共享状态放 `stores/`，
   无副作用的纯函数放 `utils/`（必须配套单测）；不新建 `misc` 型散装模块。
-- 积木库 `components/blocks/` 现有：`MetricGrid`（`flat`/`fill`/`size xs–lg`）、`StatList`（`flat`/`dense`/`ranked`）、`StatusList`（`wrap`/`scroll`/`chevron`）、`ChartBlock`、`CommandBand`、`OverviewBand`、`CompositionBar`、`NoteBanner`、`EmptyNote`。新增展示结构前先检查能否由现有积木 + 数据映射表达；新增积木需同时补 `blocks.css` 原型与本表。
+- 积木库 `components/blocks/` 现有：`MetricGrid`（`flat`/`fill`/`size xs–lg`）、`StatList`（`flat`/`dense`/`ranked`）、`StatusList`（`wrap`/`scroll`/`chevron`）、`ChartBlock`、`CommandBand`、`OverviewBand`、`CompositionBar`、`NoteBanner`、`EmptyNote`、`BriefingList`（分节要点全文列表，不截断）。新增展示结构前先检查能否由现有积木 + 数据映射表达；新增积木需同时补 `blocks.css` 原型与本表。
 - 台账/清单类面板必须复用 `components/ledger/` 物料（`SearchInput`、`FilterSelect`、`LedgerPager`、
   `EntityEditDrawer`）与 `composables/usePagedList.ts`（分页状态机）、`composables/useEntityEditor.ts`
   （调态抽屉）、`utils/entityOptions.ts`（省份/批次/状态顺序表、带计数选项、关键字匹配），
@@ -153,6 +153,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 ## 迁移现状与推进
 
 - 六屏均已使用 `CockpitPanel` 外壳与具名 Grid Token。2026-09-09 完成 C/D/E/F 屏积木化：首行指挥带统一为 `blocks/CommandBand`（左主图 + 右事实栏），面板内事实栏/对账明细/TOP 列表统一为 `MetricGrid`/`StatList` 的 `flat` 平铺形态，规则告警统一为 `StatusList`，提示条统一为 `NoteBanner`，空态统一为 `EmptyNote`；D7 金标准核验四卡收敛为 `MetricGrid` 数据映射。
+- 去「模板感」原则：面板内不再叠彩色底卡（card-in-panel），分区只用 hairline 分隔；没有语义的装饰线（如未稽核项的空进度轨）、胶囊标签一律不画；文本内容宁可滚动也不得截断成「另有 N 条」。2026-09-09 据此改写 F5 简报（`BriefingList` 纵向全文）、D7 核验卡（去进度轨）、F3 分布图（去底卡、隐藏与柱标重叠的坐标刻度）。
 - 风险判定单一来源：E 屏合规监督与 F 屏困难户共用 `utils/riskRules.ts`（`evaluateRiskFlags`/`deriveComplianceUnits`/`deriveAtRiskUnits`），阈值只读 `businessRules`，视图与模板中不得再出现门禁数字字面量。
 - 2026-09-09 完成全局样式收口：删除 `foundation/components/utilities/page-hierarchy/dashboard-topbar/responsive-breakpoints` 六个文件及约 120 条无引用规则，全局 CSS 由 1897 行降至约 880 行；删除 `:root` 旧变量层，Token 唯一来源为 `theme.css`。
 - 2026-09-09 完成台账层去重：`ConstructionLedger`/`RolloutLedgerTable`/`AtRiskUnitTable` 的筛选、分页、计数、调态抽屉收敛到 `components/ledger/` 与 `usePagedList`/`useEntityEditor`/`entityOptions`，三组件合计由 1234 行降至约 790 行；`AtRiskUnitTable` 顺带补齐总页数收缩时的最小页钳位。

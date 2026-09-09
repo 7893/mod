@@ -176,7 +176,6 @@ const qualityAuditItems = computed<MetricItem[]>(() => qualityAuditList.value.ma
   value: format(item.total),
   unit: item.unit,
   tone: auditTone(item.status),
-  progress: item.rate ?? 0,
   meta: [
     { label: '合规率', value: item.rate != null ? `${item.rate}%` : '—' },
     { label: '异常', value: item.errors != null ? item.errors : '—' },
@@ -286,7 +285,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
                 <span class="w-1.5 h-1.5 rounded-full bg-sky-400" />
                 <span class="font-medium text-slate-300">实际核验覆盖规模</span>
               </div>
-              <span class="font-mono text-slate-400 bg-surface-veil-03 px-1.5 py-0.5 rounded border border-surface-veil-06">对数尺度 · 标签为真实数量</span>
+              <span class="font-mono text-slate-500">对数尺度 · 标签为真实数量</span>
             </div>
             <VChart class="w-full flex-1 min-h-0" :option="qualityVolumeOption" autoresize />
           </div>
