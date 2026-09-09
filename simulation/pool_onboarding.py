@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from datetime import date
 import logging
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, List, Optional, Set, Tuple
 
 from .construction_models import (
     ConstructionTaskFootprint,

@@ -263,6 +263,10 @@
   `try/except: pass` 全部处理——连接关闭/任务取消等清理型改为 `contextlib.suppress`（看门狗行解析收窄为
   `IndexError/TypeError/KeyError`），`heatwave_ml.py` 中评分表读取失败、SHAP 归因失败由静默变为 `warning` 日志
   （只记异常类名），`prediction_json` 解析收窄为 `ValueError/TypeError/AttributeError`。行为不变，可观测性提升。待发布。
+- 本地拟真引擎 `simulation/` 首次纳入 Ruff 闸门（`make check`），清零 34 项：修复 `pool_onboarding.py` 未导入 `Tuple`
+  的真实 `NameError` 隐患（类型注解在运行期求值路径）、5 处分号多语句、4 处 `l` 歧义变量名、1 处未用变量；13 处
+  `try/except: pass` 按同一原则处理——语料资产加载失败改为 `warning`、失败审计自身失败改为 `warning`、AI 响应 JSON
+  提取收窄为 `JSONDecodeError`、临时文件 unlink/chmod 收窄为 `OSError`、错误路径 rollback 用 `suppress(Exception)`。待发布。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态

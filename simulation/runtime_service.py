@@ -23,6 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
+from contextlib import suppress
 import json
 import logging
 import os
@@ -310,10 +311,8 @@ class RateLimitFuse:
             f.flush()
             os.fsync(f.fileno())
         tmp_path.replace(self.state_file_path)
-        try:
+        with suppress(OSError):
             self.state_file_path.chmod(0o644)
-        except Exception:
-            pass
 
     def release(self, now: datetime, count: int, persist: bool = True) -> None:
         """Release a reservation after rollback or when the committed batch was smaller."""
@@ -716,10 +715,8 @@ class SimulatorRuntimeService:
         except Exception as ex:
             self.fuse.release(now_hkt, reservation_count, persist=True)
             if conn:
-                try:
+                with suppress(Exception):
                     conn.rollback()
-                except Exception:
-                    pass
 
             if "is_construction" in locals() and is_construction:
                 # Lifecycle generation mutates in-memory evidence before staging its
@@ -743,8 +740,8 @@ class SimulatorRuntimeService:
                     c_writer.record_failure_audit(err_msg, event_count=len(all_events) if 'all_events' in locals() else 0)
                 elif s_writer:
                     s_writer.record_failure_audit(err_msg, event_count=len(all_events) if 'all_events' in locals() else 0)
-            except Exception:
-                pass
+            except Exception as audit_ex:
+                logger.warning("失败审计落库自身失败，本周期失败仅存日志: %s", type(audit_ex).__name__)
 
             # Check if threshold reached for fail-closed trip
             if self.consecutive_failures >= self.config.consecutive_failure_threshold:
@@ -953,10 +950,8 @@ class SimulatorRuntimeService:
             return False
         finally:
             if tmp_path.exists():
-                try:
+                with suppress(OSError):
                     tmp_path.unlink()
-                except Exception:
-                    pass
 
     def _save_status(self, last_status: str, intensity: float, now: datetime, last_error: Optional[str]) -> None:
         """Persist structured service heartbeat status to JSON file using atomic tempfile swap."""
@@ -991,18 +986,14 @@ class SimulatorRuntimeService:
                 os.fsync(f.fileno())
 
             tmp_path.replace(target_path)
-            try:
+            with suppress(OSError):
                 target_path.chmod(0o644)
-            except Exception:
-                pass
         except Exception as ex:
             logger.warning(f"Could not persist runtime status: {ex}")
         finally:
             if tmp_path and tmp_path.exists():
-                try:
+                with suppress(OSError):
                     tmp_path.unlink()
-                except Exception:
-                    pass
 
     def run_once(self, now: Optional[datetime] = None) -> CycleResult:
         """Execute a single cycle and return outcome."""

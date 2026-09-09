@@ -63,7 +63,6 @@ class ExpensePlaybook:
         财务周期性：月末结账、季度末、报税期（每月上旬）等高强度时段，加班概率升高。
         """
         y, mo, d = target_date.year, target_date.month, target_date.day
-        wd = target_date.weekday()  # 0=周一 6=周日
 
         # 财务高强度诱因：月末(26-31)、季度末月(3/6/9/12)的月末、报税期(每月1-15)
         is_month_end = d >= 26
@@ -270,8 +269,8 @@ class ExpensePlaybook:
                     credit=cr,
                 )
             )
-        vch_debit = sum(l.debit for l in voucher_lines)
-        vch_credit = sum(l.credit for l in voucher_lines)
+        vch_debit = sum(line.debit for line in voucher_lines)
+        vch_credit = sum(line.credit for line in voucher_lines)
 
         voucher = VoucherFootprint(
             id=vch_id,
