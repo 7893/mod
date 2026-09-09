@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatCount, formatPercent } from '../metrics'
+import { formatCount, formatDateTime, formatPercent } from '../metrics'
 
 describe('formatters/metrics', () => {
   describe('formatCount', () => {
@@ -59,5 +59,21 @@ describe('formatters/metrics', () => {
       expect(formatPercent(-4.5)).toBe('-4.5%')
       expect(formatPercent(-10.0)).toBe('-10%')
     })
+  })
+})
+
+describe('formatDateTime', () => {
+  const instant = new Date('2026-09-09T14:05:09Z')
+
+  it('renders 24h date-time in the given timezone, optionally with seconds', () => {
+    expect(formatDateTime(instant, { timeZone: 'Asia/Shanghai' })).toBe('2026-09-09 22:05')
+    expect(formatDateTime(instant, { timeZone: 'Asia/Shanghai', seconds: true })).toBe('2026-09-09 22:05:09')
+    expect(formatDateTime(instant.toISOString(), { timeZone: 'UTC' })).toBe('2026-09-09 14:05')
+  })
+
+  it('degrades gracefully on empty or unparsable input', () => {
+    expect(formatDateTime(null)).toBe('—')
+    expect(formatDateTime('')).toBe('—')
+    expect(formatDateTime('not-a-date')).toBe('not-a-date')
   })
 })

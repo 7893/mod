@@ -10,6 +10,7 @@ import AnimatedNumber from './AnimatedNumber.vue'
 import CockpitPanel from './CockpitPanel.vue'
 import LiveProjectionIndicator from './LiveProjectionIndicator.vue'
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from '../charts/theme.ts'
+import { formatCount } from '../formatters/metrics.ts'
 import type { LiveProjectionCounts, LiveProjectionEvent } from '../composables/useLiveProjection.ts'
 import type { ProjectSnapshot } from '../stores/project.ts'
 
@@ -91,7 +92,7 @@ const operationsVolumeOption = computed(() => {
       data: items.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
       label: {
         show: true, position: 'right', color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 9,
-        formatter: (params: any) => Number(params.value).toLocaleString(),
+        formatter: (params: any) => formatCount(params.value),
       },
     }],
   }
@@ -135,7 +136,7 @@ const riskClosureOption = computed(() => ({
         <div class="col-span-3 grid grid-rows-3 divide-y divide-surface-veil-06 min-w-0">
           <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设完成率</span><b class="font-mono text-sky-400"><AnimatedNumber :value="constructionProgress" :decimals="1" :duration="numDuration(800)" />%</b></div>
           <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">正式上线率</span><b class="font-mono text-emerald-400">{{ rolloutRate }}%</b></div>
-          <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设任务</span><b class="font-mono text-slate-200">{{ (construction?.totalTasks || 0).toLocaleString() }}</b></div>
+          <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设任务</span><b class="font-mono text-slate-200">{{ formatCount(construction?.totalTasks || 0) }}</b></div>
         </div>
       </section>
 
@@ -160,7 +161,7 @@ const riskClosureOption = computed(() => ({
         <div class="flex-1 min-w-0 grid grid-cols-3 gap-2">
           <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500 truncate">闭环率</span><b class="font-mono text-cockpit-lg text-emerald-400">{{ closeRate }}%</b></div>
           <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500 truncate">高风险</span><b class="font-mono text-cockpit-lg text-rose-400"><AnimatedNumber :value="overview.highRisk || 0" :duration="numDuration(600)" /></b></div>
-          <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500 truncate">未解决</span><b class="font-mono text-cockpit-lg text-amber-400">{{ (overview.unresolvedIssues || 0).toLocaleString() }}</b></div>
+          <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500 truncate">未解决</span><b class="font-mono text-cockpit-lg text-amber-400">{{ formatCount(overview.unresolvedIssues || 0) }}</b></div>
         </div>
         <ChevronRight :size="14" class="text-slate-500 mr-2 flex-shrink-0" />
       </button>

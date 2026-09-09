@@ -1,3 +1,4 @@
+import { formatCount } from '../formatters/metrics'
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from './theme'
 
 export interface RolloutCommandSummary {
@@ -33,7 +34,7 @@ export function createRolloutTrendMatrixOption(points: RolloutTrendPoint[]) {
       formatter: (params: any) => {
         const point = params.data?.point as RolloutTrendPoint | undefined
         return point
-          ? `${point.date} · ${point.name}<br/>上线率 <b>${point.launchedPct}%</b><br/>双轨率 <b>${point.dualPct}%</b> · ${point.total.toLocaleString()} 家`
+          ? `${point.date} · ${point.name}<br/>上线率 <b>${point.launchedPct}%</b><br/>双轨率 <b>${point.dualPct}%</b> · ${formatCount(point.total)} 家`
           : ''
       },
     },
@@ -104,7 +105,7 @@ export function createRolloutCommandOption(summary: RolloutCommandSummary) {
         label: {
           show: true, position: 'right', color: chartInk.textPrimary,
           fontFamily: 'monospace', fontSize: 9,
-          formatter: (params: any) => Number(params.value).toLocaleString(),
+          formatter: (params: any) => formatCount(params.value),
         },
       },
     ],

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatCount } from '../../formatters/metrics.ts'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -38,7 +39,7 @@ const dotClasses: Record<CompositionTone, string> = {
       <div v-for="part in parts" :key="part.label" class="flex items-center gap-1 min-w-0">
         <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="dotClasses[part.tone]" />
         <span class="text-slate-400 truncate">{{ part.label }}</span>
-        <b class="font-mono text-slate-200 flex-shrink-0">{{ part.value.toLocaleString() }}</b>
+        <b class="font-mono text-slate-200 flex-shrink-0">{{ formatCount(part.value) }}</b>
       </div>
     </div>
   </div>

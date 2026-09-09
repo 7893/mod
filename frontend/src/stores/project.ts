@@ -1,3 +1,4 @@
+import { formatDateTime } from '../formatters/metrics.ts'
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import snapshotData from '../data/v2-sim-snapshot.json'
@@ -380,7 +381,7 @@ export const useProjectStore = defineStore('project', () => {
       if (before === String(after)) return
       audits.value.unshift({
         id: Date.now() + audits.value.length,
-        time: new Date().toLocaleString('zh-CN', { hour12: false }),
+        time: formatDateTime(new Date(), { seconds: true }),
         operator: '项目管理员',
         entity: row.name,
         field: labels[field] ?? field,

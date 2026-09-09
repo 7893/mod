@@ -235,6 +235,9 @@
   F 屏困难户的风险判定收敛为 `utils/riskRules.ts` 单一来源（配套单测），E5 清单改用台账物料并补齐
   筛选变动回第 1 页；F3 页脚门禁文案改为读取 `businessRules`（此前硬编码 95% 与实际 98% 门禁不一致）。
   已用无头 Chromium 在 1920×1080 下对 C/D/E/F 四屏做渲染冒烟，无控制台错误。待发布并需人工视觉验收。
+- 本地前端展示格式化已收口到 `formatters/metrics.ts`：新增 `formatDateTime`（顶栏时钟、AI 生成时间、
+  台账审计时间共用），视图/组件/图表 tooltip/store 中 30 余处 `toLocaleString`/`Intl.*` 全部改为
+  `formatCount`/`formatDateTime`，数字展示统一 zh-CN 千分位、空值统一 `—`。待发布。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态

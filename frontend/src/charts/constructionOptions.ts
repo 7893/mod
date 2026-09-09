@@ -1,3 +1,4 @@
+import { formatCount } from '../formatters/metrics'
 import {
   calmAnimation,
   chartInk,
@@ -41,7 +42,7 @@ export function createLaunchGateOption(items: GateStageItem[]) {
       formatter: (params: any[]) => {
         const item = reversed[params?.[0]?.dataIndex]
         return item
-          ? `${item.name}<br/>完成 <b>${item.completed.toLocaleString()}</b> · 进行中 ${item.inProgress.toLocaleString()} · 待启动 ${item.notStarted.toLocaleString()}<br/>总体完成率 <b>${item.progress}%</b>`
+          ? `${item.name}<br/>完成 <b>${formatCount(item.completed)}</b> · 进行中 ${formatCount(item.inProgress)} · 待启动 ${formatCount(item.notStarted)}<br/>总体完成率 <b>${item.progress}%</b>`
           : ''
       },
     },
@@ -108,7 +109,7 @@ export function createTaskStageMatrixOption(list: StageSeriesItem[]) {
         const stage = list[columnIndex]
         const status = statuses[rowIndex]
         return stage && status
-          ? `${stage.name} · ${status.name}<br/><b>${Number(count).toLocaleString()}</b> 项 · ${params.data.percentage}%`
+          ? `${stage.name} · ${status.name}<br/><b>${formatCount(count)}</b> 项 · ${params.data.percentage}%`
           : ''
       },
     },
@@ -135,7 +136,7 @@ export function createTaskStageMatrixOption(list: StageSeriesItem[]) {
       type: 'heatmap', data: matrix,
       label: {
         show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 9,
-        formatter: (params: any) => `${params.data.percentage}%\n${Number(params.value?.[2] ?? 0).toLocaleString()}`,
+        formatter: (params: any) => `${params.data.percentage}%\n${formatCount(params.value?.[2] ?? 0)}`,
       },
       itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 3, borderRadius: 4 },
       emphasis: { itemStyle: { borderColor: chartInk.textPrimary, borderWidth: 1 } },
@@ -194,7 +195,7 @@ export function createTrainingConversionOption(items: TrainingTypeItem[]) {
         const item = items[params?.[0]?.dataIndex]
         if (!item) return ''
         const rate = item.actual > 0 ? percent(item.passed, item.actual) : 0
-        return `${item.type}<br/>培训场次 <b>${item.count.toLocaleString()}</b><br/>实到 / 应到 <b>${item.actual.toLocaleString()} / ${item.expected.toLocaleString()}</b><br/>考核通过 <b>${item.passed.toLocaleString()}</b> · ${rate}%`
+        return `${item.type}<br/>培训场次 <b>${formatCount(item.count)}</b><br/>实到 / 应到 <b>${formatCount(item.actual)} / ${formatCount(item.expected)}</b><br/>考核通过 <b>${formatCount(item.passed)}</b> · ${rate}%`
       },
     },
     grid: { left: 42, right: 12, top: 8, bottom: 38 },
@@ -229,7 +230,7 @@ export function createTrainingMixOption(items: TrainingTypeItem[]) {
     tooltip: {
       trigger: 'item',
       ...chartTooltip,
-      formatter: (params: any) => `${params.name}<br/>培训场次 <b>${Number(params.value).toLocaleString()}</b> · ${params.percent}%`,
+      formatter: (params: any) => `${params.name}<br/>培训场次 <b>${formatCount(params.value)}</b> · ${params.percent}%`,
     },
     series: [{
       type: 'pie',
@@ -286,7 +287,7 @@ export function createTrainingFunnelOption(summary?: TrainingSummaryItem) {
         color: chartInk.textPrimary,
         fontFamily: 'monospace',
         fontSize: 10,
-        formatter: (params: any) => Number(params.value).toLocaleString(),
+        formatter: (params: any) => formatCount(params.value),
       },
     }],
   }

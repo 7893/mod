@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { formatCount } from '../formatters/metrics.ts'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -92,13 +93,13 @@ const operationsQualityOption = computed(() => createOperationsQualityOption([
   {
     name: '凭证入账',
     value: parsePercentage(store.snapshot.overview.voucherSuccessPct),
-    detail: `${store.snapshot.overview.voucherTotal?.toLocaleString() ?? '—'} 张`,
+    detail: `${formatCount(store.snapshot.overview.voucherTotal)} 张`,
     tone: 'success',
   },
   {
     name: '接口集成',
     value: parsePercentage(store.snapshot.overview.integrationSuccessPct),
-    detail: `${store.snapshot.operations.integrationResult?.toLocaleString() ?? '—'} 笔`,
+    detail: `${formatCount(store.snapshot.operations.integrationResult)} 笔`,
     tone: 'accent',
   },
 ]))

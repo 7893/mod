@@ -10,7 +10,7 @@ import LedgerPager from './ledger/LedgerPager.vue'
 import SearchInput from './ledger/SearchInput.vue'
 import { useEntityEditor } from '../composables/useEntityEditor.ts'
 import { usePagedList } from '../composables/usePagedList.ts'
-import { formatPercent } from '../formatters/metrics.ts'
+import { formatCount, formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import {
   ALL,
@@ -103,14 +103,14 @@ function resetFilters() {
 const summaryItems = computed<MetricItem[]>(() => [
   {
     label: '纳管总单位',
-    value: store.snapshot.overview.orgTotal ? store.snapshot.overview.orgTotal.toLocaleString() : '—',
+    value: formatCount(store.snapshot.overview.orgTotal),
     unit: '家',
     icon: Building,
     hint: '全量生命周期台账',
   },
   {
     label: '当前筛选结果',
-    value: filtered.value.length.toLocaleString(),
+    value: formatCount(filtered.value.length),
     unit: '家',
     tone: 'accent',
     icon: Filter,
@@ -118,9 +118,7 @@ const summaryItems = computed<MetricItem[]>(() => [
   },
   {
     label: '期初数据完成',
-    value: store.snapshot.construction?.dataReadinessSummary?.verified
-      ? store.snapshot.construction.dataReadinessSummary.verified.toLocaleString()
-      : '—',
+    value: formatCount(store.snapshot.construction?.dataReadinessSummary?.verified),
     unit: '家',
     tone: 'success',
     icon: CheckCircle2,
@@ -144,7 +142,7 @@ const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEdit
     <CockpitPanel
       title="数据准备台账与单位状态"
       zone="B6"
-      :subtitle="`${store.entities.length.toLocaleString()} 家单位建设完成度、期初数据状态与审计留痕`"
+      :subtitle="`${formatCount(store.entities.length)} 家单位建设完成度、期初数据状态与审计留痕`"
       class="flex-shrink-0"
     >
       <template #actions>

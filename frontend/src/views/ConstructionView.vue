@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { formatCount as format } from '../formatters/metrics.ts'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -79,10 +80,6 @@ function handleReadinessClick(params: { name?: string }) {
   ledgerReadinessFilter.value = params.name
   switchTab('ledger')
 }
-
-const format = (value: number | undefined) => (
-  value === undefined ? '—' : new Intl.NumberFormat('zh-CN').format(value)
-)
 
 const taskStages = computed(() => store.snapshot.construction?.taskStages || [])
 
