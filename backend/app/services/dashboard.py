@@ -523,10 +523,15 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
                 breakdown_by_type[ct]["inconsistent"] += cnt
             breakdown_by_type[ct]["total"] += cnt
 
+        # KI-069: 分子与分母严格同源（均来自 dual_run_result 实时聚合统计），
+        # 杜绝分母使用 daily_stats 滞后快照导致的分子 > 分母从而一致率超过 100%（如 102.65%）
+        dual_total = dual_consistent + dual_inconsistent
+        if dual_total > 0:
+            operations["dualRunResult"] = dual_total
         operations["dualRunConsistent"] = dual_consistent
         operations["dualRunInconsistent"] = dual_inconsistent
         operations["dualRunConsistencyPct"] = (
-            round(dual_consistent * 100 / ops["dual_run_count"], 2) if ops["dual_run_count"] else 0
+            round(dual_consistent * 100.0 / dual_total, 2) if dual_total else 0.0
         )
         operations["dualRunBreakdown"] = [
             {
@@ -558,9 +563,9 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             ops[key]
             for key in (
                 "doc_count", "doc_line_count", "voucher_count", "voucher_line_count",
-                "link_count", "integration_count", "dual_run_count", "snapshot_count",
+                "link_count", "integration_count", "snapshot_count",
             )
-        ) + small_total
+        ) + operations["dualRunResult"] + small_total
 
         fallback = load_fallback_snapshot()
         construction = build_construction_summary(conn)

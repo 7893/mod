@@ -248,6 +248,10 @@
   - 财务周期强节律机制（`simulation/construction_playbooks.py`）：引入月末结账期（自然月 26~31 日及月初 1~2 日）差异与核对量自然脉冲逻辑，动态匹配《差异专项排查与单边冲销》或《月末试算平衡核验》建设任务；
   - 驾驶舱 D6 细分对账穿透（`backend/app/services/dashboard.py`，`OperationsView.vue`）：后端扩展 `dualRunBreakdown` 细分维度统计，前端 D6 面板在一致率仪表下直观呈现月末科目余额（92.5%）、凭证借贷汇总（93.2%）与单据金额（92.7%）三大核心财务对账通过率；
   - 测试套件全量覆盖：231 项 pytest 与 112 项 Vitest 自动化测试 100% 通过。
+- 双轨核对一致率分子分母同源闭环（KI-069，DONE P2）：
+  - 根因消除（`backend/app/services/dashboard.py`）：将 `dualRunConsistencyPct` 与 `dualRunResult` 的计算分母由 `daily_stats.dual_run_count` 滞后快照修正为 `dual_run_result` 实时聚合总数（`dual_consistent + dual_inconsistent`），分子分母严格同源，彻底杜绝线上因模拟器增长导致一致率超过 100%（如 102.65%）的穿帮缺陷；
+  - 前端防御性收敛（`frontend/src/utils/qualityMetrics.ts`）：`calcDualRunConsistency` 增加 `safeTotal = Math.max(total, c)` 防护，确保大屏仪表一致率数值恒定在 `[0, 100]` 区间，并与 D6 穿透细分口径完美对齐；
+  - 勾稽与测试：全库行数 `full_rows` 同步使用实时 `dualRunResult`，新增前后端回归测试断言，`make check` 全绿。
 - 矛与盾攻防博弈与合规治理引擎（GI-004 & KI-062/KI-063 治理闭环）：
   - 昼夜作息与月末生物钟（GI-004，`simulation/governance_state_machine.py`）：引入 $k_{\text{rhythm}}$ 节律因子，工作日早晚黄金工段 1.8x 加速、午间 0.5x 放缓、夜间 22:00-07:00 彻底冻结（杜绝半夜出具验收通报虚假繁荣）、月末 25 日起叠加 1.5x 冲刺乘数，二次核验返工率动态适配。
   - 30~45 单动态平衡走廊（GI-004，`simulation/construction_propeller.py`）：实时感知未结案库存；低于 35 单时提升阻力暗礁触发率至 50% 并放缓消缺，高于 45 单时降低阻力触发率至 5% 并加速消缺，确保大盘恒定平稳呼吸，告别全绿死水与人工干预。
