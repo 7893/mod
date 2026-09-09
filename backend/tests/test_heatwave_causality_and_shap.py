@@ -167,6 +167,7 @@ def test_heatwave_ml_shap_explain_risk_native():
 
     res = adapter.explain_risk(88)
     assert res["status"] == "ok"
+    assert res["explanationSource"] == "HEATWAVE_SHAP"
     assert res["orgId"] == 88
     assert res["orgName"] == "天府创新示范基地"
     assert len(res["topAttributions"]) == 3
@@ -211,6 +212,7 @@ def test_heatwave_ml_shap_explain_risk_fallback_on_db_error():
 
     res = adapter.explain_risk(99)
     assert res["status"] == "ok"
+    assert res["explanationSource"] == "RULE_BASED"
     assert res["orgId"] == 99
     assert len(res["topAttributions"]) == 3
     assert sum(a["weightPct"] for a in res["topAttributions"]) == 100
@@ -232,6 +234,7 @@ def test_insights_risk_explanation_api_endpoint(client):
     data = response.json()
     assert data["orgId"] == 1
     assert data["status"] in ("unavailable", "ok")
+    assert data["explanationSource"] in ("UNAVAILABLE", "RULE_BASED", "HEATWAVE_SHAP")
 
     # 2. When mock connection is injected
     mock_conn = MagicMock()
@@ -259,6 +262,7 @@ def test_insights_risk_explanation_api_endpoint(client):
         assert d["orgId"] == 1
         assert d["orgName"] == "总部机关"
         assert d["status"] == "ok"
+        assert d["explanationSource"] == "RULE_BASED"
         assert len(d["topAttributions"]) >= 1
     finally:
         app.dependency_overrides.clear()

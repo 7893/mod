@@ -442,8 +442,8 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
 @router.get("/insights/risk-explanation/{org_id}")
 def insights_risk_explanation(org_id: int, conn: Connection | None = Depends(connection)) -> dict:
     """
-    返回指定单位的 HeatWave AutoML SHAP 风险归因与贡献分解。
-    只读查询，零外部调用，物理数据不出库。
+    返回指定单位的可用风险解释，并通过 explanationSource 明确区分
+    HeatWave 原生 SHAP、真实特征规则降级或不可用；只读查询，零外部调用。
     """
     adapter = HeatWaveMLAdapter(conn)
     return adapter.explain_risk(org_id)
@@ -651,4 +651,3 @@ def governance_recent_activities(
         raise HTTPException(status_code=503, detail="Database connection unavailable")
     from .services.governance import get_recent_governance_activities
     return get_recent_governance_activities(conn, limit=min(max(1, limit), 50))
-
