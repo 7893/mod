@@ -87,8 +87,12 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 
 - 所有面板必须使用统一窗体物料 `frontend/src/components/CockpitPanel.vue` 包裹（存量旧物料 `components/Panel.vue` 已彻底废弃并物理删除，全站包括 `/data` 台账页均完全统一），不得在页面里另起一套私有面板样式。
 - 物料的可选形态由其 props 有限枚举承载（如 `tone` 仅 `default`/`risk`），不得在外部叠加样式覆盖。
-- 复用组件放 `components/`，页面放 `views/`，复用逻辑放 `composables/`，共享状态放 `stores/`；
-  不新建 `misc`、`utils` 型散装模块。
+- 复用组件放 `components/`，页面放 `views/`，复用逻辑放 `composables/`，共享状态放 `stores/`，
+  无副作用的纯函数放 `utils/`（必须配套单测）；不新建 `misc` 型散装模块。
+- 台账/清单类面板必须复用 `components/ledger/` 物料（`SearchInput`、`FilterSelect`、`LedgerPager`、
+  `EntityEditDrawer`）与 `composables/usePagedList.ts`（分页状态机）、`composables/useEntityEditor.ts`
+  （调态抽屉）、`utils/entityOptions.ts`（省份/批次/状态顺序表、带计数选项、关键字匹配），
+  不得在组件内重写筛选、分页、计数或抽屉逻辑。
 
 ## 契约三 · Token 契约（Style）
 
@@ -149,7 +153,8 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 
 - 六屏均已使用 `CockpitPanel` 外壳与具名 Grid Token；A/B 屏为积木化范式标杆，C/D/E/F 屏仍有手写网格与统计结构，待收敛到 `components/blocks/`。
 - 2026-09-09 完成全局样式收口：删除 `foundation/components/utilities/page-hierarchy/dashboard-topbar/responsive-breakpoints` 六个文件及约 120 条无引用规则，全局 CSS 由 1897 行降至约 880 行；删除 `:root` 旧变量层，Token 唯一来源为 `theme.css`。
-- 待办：三个台账表格（`ConstructionLedger`/`RolloutLedgerTable`/`AtRiskUnitTable`）的筛选、分页、计数逻辑重复，需抽取通用表格物料与分页 composable；`stores/project.ts` 中的展示格式化需移出。
+- 2026-09-09 完成台账层去重：`ConstructionLedger`/`RolloutLedgerTable`/`AtRiskUnitTable` 的筛选、分页、计数、调态抽屉收敛到 `components/ledger/` 与 `usePagedList`/`useEntityEditor`/`entityOptions`，三组件合计由 1234 行降至约 790 行；`AtRiskUnitTable` 顺带补齐总页数收缩时的最小页钳位。
+- 待办：`stores/project.ts` 中的展示格式化需移出到 `formatters/`。
 - A1、B1、C1、D1、E1、F1、A2、A3、B2、B4、B5、C2、C5、D4、D6、D7、E4、F3、F4、F5 已完成面板密度图表化：拥挤的横排卡收敛为比较图，空旷数字面板补充构成、进度或质量图，长篇简报转为分组摘要卡，重复信息由图表交互或悬停提示承载。
 - 六屏主面板采用统一的“领域主图 + 少量精确事实”语言，但不强制同构：A1 为双进度环、运营规模谱和风险闭环，B2 为阶段状态矩阵与八轴轮廓，C1 为上线仪表与推进漏斗，D1 为业务规模谱与结构效率，E1 为合规仪表与监督梯队，F1 为风险比较条与模型质量门禁。面板区号、标题和小说明保持单行；主面板内容以分隔线组织，不再套同级边框框体。图表派生数据集中在 `charts/`，视觉统一复用 `charts/theme.ts`。
 - 同屏去重契约已扩展到 A8/B4/C3/D3/D7：A8 只做聚合运营异常、联系人只留 C5；B4 只做上线门禁与培训转化；C3 只做批次历史爬坡、C2 只做当前构成；D3 只做日吞吐趋势、D1/D2 分别保留累计规模与链路阶段；D7 在全量合规时比较真实核验覆盖规模，不再用四根相同 100% 柱填充空间。时间序列或异常字段缺失时必须显示明确空态。
