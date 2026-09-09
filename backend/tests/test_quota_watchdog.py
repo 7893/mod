@@ -184,6 +184,8 @@ def test_cf_ai_client_quota_ledger_error_fails_closed_to_local():
     mock_watchdog = MagicMock(spec=QuotaWatchdog)
     mock_watchdog.try_reserve.side_effect = RuntimeError("ledger unavailable")
     client = CloudflareAIClient(watchdog=mock_watchdog)
+    # CI 环境无凭据配置；mock _credentials_configured 使测试能走到 watchdog 逻辑
+    client._credentials_configured = lambda: True
 
     result = client.enrich_issue(
         issue_id="ISS-TEST-QUOTA",
