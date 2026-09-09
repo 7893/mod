@@ -33,6 +33,7 @@ ML_PREDICT_ROW(features_json, model) — 单行预测（只读查询）
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from datetime import datetime
@@ -61,6 +62,8 @@ from .heatwave_sql import (
     _TRAIN_CLASSIFIER_SQL,
     _TRAIN_REGRESSION_SQL,
 )
+
+logger = logging.getLogger(__name__)
 
 class HeatWaveMLAdapter:
     """
@@ -525,8 +528,8 @@ class HeatWaveMLAdapter:
                             probs = pj.get("probabilities", {})
                             if "1" in probs and probs["1"] is not None:
                                 risk_score = round(float(probs["1"]), 4)
-                        except Exception:
-                            pass
+                        except (ValueError, TypeError, AttributeError):
+                            logger.debug("risk prediction_json 解析失败，回退固定分值 (org_id=%s)", r.get("org_id"))
 
                     predictions.append(
                         {
@@ -547,8 +550,8 @@ class HeatWaveMLAdapter:
                             "actualFlag": r.get("actual_flag"),
                         }
                     )
-            except Exception:
-                pass
+            except Exception as ex:
+                logger.warning("读取分类模型评分表失败，风险预测返回空: %s", type(ex).__name__)
 
         if reg_exists:
             try:
@@ -584,8 +587,8 @@ class HeatWaveMLAdapter:
                             "actualDocDelta": r.get("actual_delta"),
                         }
                     )
-            except Exception:
-                pass
+            except Exception as ex:
+                logger.warning("读取回归模型评分表失败，增量预测返回空: %s", type(ex).__name__)
 
         return predictions
 
@@ -697,8 +700,8 @@ class HeatWaveMLAdapter:
                         attributions[col] = float(v)
                 if attributions:
                     explanation_source = "HEATWAVE_SHAP"
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.warning("HeatWave SHAP 归因查询失败，降级为确定性偏离度: %s", type(ex).__name__)
 
         # 3. 若 HeatWave 原生 SHAP 未产生有效归因，执行确定性因果偏离度降级计算
         if not attributions:

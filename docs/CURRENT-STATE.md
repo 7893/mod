@@ -259,6 +259,10 @@
   唯一入口为 `scripts/agy/run_simulator_service.py` → `simulation/runtime_service.py`，门禁 `MOD_SIMULATION_ENGINE_ENABLED`。
   注：`scripts/kiro/ki051_stage2_parallel.py`（KI-051 已完成的一次性脚本，Kiro 目录）曾导入 `simulation.models.TimePatternSystem`，
   若需重跑须由 Kiro 自行调整。pytest 249→230。待发布。
+- 本地后端异常处理收口：Ruff 新增 `S110`/`SIM105` 闸门（`backend/pyproject.toml`），`backend/app` 内 15 处
+  `try/except: pass` 全部处理——连接关闭/任务取消等清理型改为 `contextlib.suppress`（看门狗行解析收窄为
+  `IndexError/TypeError/KeyError`），`heatwave_ml.py` 中评分表读取失败、SHAP 归因失败由静默变为 `warning` 日志
+  （只记异常类名），`prediction_json` 解析收窄为 `ValueError/TypeError/AttributeError`。行为不变，可观测性提升。待发布。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态
