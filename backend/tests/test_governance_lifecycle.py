@@ -205,4 +205,3 @@ def test_construction_propeller_advancement():
     assert res is not None
     assert isinstance(res.issues_advanced, int)
     assert isinstance(res.units_advanced, int)
-

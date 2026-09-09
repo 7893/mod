@@ -9,6 +9,7 @@ import { useProjectStore, type EntityRow, type RolloutStatus } from '../stores/p
 
 const props = defineProps<{
   initialFilter?: string
+  initialReadinessFilter?: string
 }>()
 
 const emit = defineEmits<{
@@ -20,6 +21,7 @@ const query = ref('')
 const province = ref('全部')
 const selectedBatch = ref('全部')
 const selectedStatus = ref(props.initialFilter || '全部')
+const selectedReadiness = ref(props.initialReadinessFilter || '全部')
 const page = ref(1)
 const pageSize = ref(25)
 const editing = ref<EntityRow | null>(null)
@@ -29,12 +31,17 @@ watch(() => props.initialFilter, (val) => {
   if (val) selectedStatus.value = val
 })
 
+watch(() => props.initialReadinessFilter, (val) => {
+  if (val) selectedReadiness.value = val
+})
+
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
   return store.entities.filter((row) => {
     const matchProvince = province.value === '全部' || row.province === province.value
     const matchBatch = selectedBatch.value === '全部' || row.batch === selectedBatch.value
     const matchStatus = selectedStatus.value === '全部' || row.status === selectedStatus.value
+    const matchReadiness = selectedReadiness.value === '全部' || row.readinessStatus === selectedReadiness.value
     const matchQuery = !q || (
       row.name.toLowerCase().includes(q) ||
       row.owner.toLowerCase().includes(q) ||
@@ -43,7 +50,7 @@ const filtered = computed(() => {
       String(row.id).includes(q) ||
       `mod-${row.id}`.includes(q)
     )
-    return matchProvince && matchBatch && matchStatus && matchQuery
+    return matchProvince && matchBatch && matchStatus && matchReadiness && matchQuery
   })
 })
 
@@ -118,10 +125,25 @@ const statusOptions = computed(() => {
   ]
 })
 
+const READINESS_ORDER = ['已导入', '已校验', '收集中', '未收集']
+const readinessOptions = computed(() => {
+  const counts = new Map<string, number>()
+  store.entities.forEach((row) => {
+    if (row.readinessStatus) counts.set(row.readinessStatus, (counts.get(row.readinessStatus) || 0) + 1)
+  })
+  return [
+    { value: '全部', label: `全部准备度 (${[...counts.values()].reduce((sum, value) => sum + value, 0)}家有数据)` },
+    ...READINESS_ORDER.map((status) => ({
+      value: status,
+      label: `${status} (${counts.get(status) || 0}家)`,
+    })),
+  ]
+})
+
 const totalPages = computed(() => Math.ceil(filtered.value.length / pageSize.value) || 1)
 
 // 关键修复：筛选条件变动时强制归位第 1 页，彻底根除“分页死锁”
-watch([province, selectedBatch, selectedStatus, query], () => {
+watch([province, selectedBatch, selectedStatus, selectedReadiness, query], () => {
   page.value = 1
 })
 
@@ -133,13 +155,14 @@ watch(totalPages, (newTotal) => {
 })
 
 const isFiltered = computed(() => (
-  province.value !== '全部' || selectedBatch.value !== '全部' || selectedStatus.value !== '全部' || !!query.value
+  province.value !== '全部' || selectedBatch.value !== '全部' || selectedStatus.value !== '全部' || selectedReadiness.value !== '全部' || !!query.value
 ))
 
 function resetFilters() {
   province.value = '全部'
   selectedBatch.value = '全部'
   selectedStatus.value = '全部'
+  selectedReadiness.value = '全部'
   query.value = ''
   page.value = 1
 }
@@ -259,6 +282,12 @@ function save() {
           >
             <option v-for="s in statusOptions" :key="s.value" :value="s.value" class="bg-slate-900 text-slate-200">{{ s.label }}</option>
           </select>
+          <select
+            v-model="selectedReadiness"
+            class="px-2.5 py-1 text-cockpit-xs rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-200 focus:outline-none focus:border-sky-500/40 transition-colors cursor-pointer"
+          >
+            <option v-for="s in readinessOptions" :key="s.value" :value="s.value" class="bg-slate-900 text-slate-200">{{ s.label }}</option>
+          </select>
           <button
             v-if="isFiltered"
             type="button"
@@ -283,7 +312,7 @@ function save() {
                 <th class="px-3 py-2">联系人</th>
                 <th class="px-3 py-2">状态</th>
                 <th class="px-3 py-2">建设进度</th>
-                <th class="px-3 py-2 text-right">期初数据</th>
+                <th class="px-3 py-2 text-right">期初数据 / 准备态</th>
                 <th class="px-3 py-2 text-right">凭证率</th>
                 <th class="px-3 py-2">更新时间</th>
                 <th class="px-3 py-2 text-center">操作</th>
@@ -327,7 +356,10 @@ function save() {
                     <span class="font-mono text-cockpit-xs text-slate-300">{{ row.construction }}%</span>
                   </div>
                 </td>
-                <td class="px-3 py-1.5 text-right font-mono text-slate-300">{{ row.openingData }}%</td>
+                <td class="px-3 py-1.5 text-right">
+                  <b class="block font-mono text-slate-300">{{ row.openingData }}%</b>
+                  <small class="text-cockpit-xs text-slate-500">{{ row.readinessStatus || '未提供' }}</small>
+                </td>
                 <td class="px-3 py-1.5 text-right font-mono text-slate-300">{{ formatPercent(row.voucherRate) }}</td>
                 <td class="px-3 py-1.5 text-slate-400 font-mono text-cockpit-xs">{{ row.updatedAt }}</td>
                 <td class="px-3 py-1.5 text-center">

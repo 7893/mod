@@ -82,6 +82,18 @@ describe('useScaleScreen', () => {
     unmount()
   })
 
+  it('keeps the whole canvas visible on a narrow viewport by default', () => {
+    const { result, unmount } = runInSetup(() => useScaleScreen())
+    const mockEl = document.createElement('div')
+    Object.defineProperty(mockEl, 'clientWidth', { value: 800, configurable: true })
+    Object.defineProperty(mockEl, 'clientHeight', { value: 980, configurable: true })
+    result.viewportRef.value = mockEl
+
+    result.updateScale()
+    expect(result.scale.value).toBeCloseTo(800 / 1920, 3)
+    unmount()
+  })
+
   it('scales proportionally based on limiting dimension (width-constrained)', () => {
     const { result, unmount } = runInSetup(() =>
       useScaleScreen({

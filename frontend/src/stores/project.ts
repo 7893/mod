@@ -17,6 +17,7 @@ export interface EntityRow {
   rawStatus?: string
   construction: number
   openingData: number
+  readinessStatus?: '已导入' | '已校验' | '收集中' | '未收集' | null
   voucherRate: number | null
   updatedAt: string
 }
@@ -197,6 +198,16 @@ export interface InsightsData {
 }
 
 export interface ProjectSnapshot {
+  businessRules: {
+    lifecycle: {
+      dualRunConsistencyRateMin: number
+    }
+    risk: {
+      constructionLagRate: number
+      openingDataLagRate: number
+      lastActiveBatchId: number
+    }
+  }
   meta: {
     mode: string
     notice: string
@@ -278,7 +289,15 @@ export interface ProjectSnapshot {
   insights: InsightsData
 }
 
-const initialSnapshot = snapshotData as unknown as ProjectSnapshot
+const FALLBACK_BUSINESS_RULES: ProjectSnapshot['businessRules'] = {
+  lifecycle: { dualRunConsistencyRateMin: 98 },
+  risk: { constructionLagRate: 88, openingDataLagRate: 88, lastActiveBatchId: 7 },
+}
+
+const initialSnapshot = {
+  ...(snapshotData as unknown as ProjectSnapshot),
+  businessRules: FALLBACK_BUSINESS_RULES,
+}
 const seeds = initialSnapshot.entities as EntityRow[]
 
 export const useProjectStore = defineStore('project', () => {
@@ -286,9 +305,11 @@ export const useProjectStore = defineStore('project', () => {
   const entities = ref<EntityRow[]>([...seeds])
   const loading = ref(false)
   const connectionError = ref('')
-  const lastLoadedAt = ref<Date | null>(new Date())
+  const lastLoadedAt = ref<Date | null>(null)
+  const dataSource = ref<'fallback' | 'live'>('fallback')
   const pollIntervalMs = ref(60000) // Default 60s
   let timerId: number | null = null
+  let refreshSequence = 0
 
   const audits = ref<AuditRow[]>([
     { id: 1, time: '2026-08-30 15:10:08', operator: '项目管理员', entity: '第一批·羊城林业研究院', field: '上线状态', before: '双轨运行', after: '已上线' },
@@ -388,6 +409,7 @@ export const useProjectStore = defineStore('project', () => {
     // 因此只在“完全没有任何可展示数据”这种极端情况下才显示 loading。
     // 由于 store 初始即用内置兜底快照预填 entities，正常运行下 loading 永不被置真，
     // 后端快照冷启动（即使 >1s）也只是静默替换数据，用户看不到转圈。
+    const requestSequence = ++refreshSequence
     const hasDisplayableData = entities.value.length > 0
     const showLoading = !silent && !hasDisplayableData
     if (showLoading) loading.value = true
@@ -398,17 +420,21 @@ export const useProjectStore = defineStore('project', () => {
       if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       const raw = await response.json()
       const live = fixKeys(raw) as ProjectSnapshot
+      if (requestSequence !== refreshSequence) return
+      live.businessRules = live.businessRules || FALLBACK_BUSINESS_RULES
       snapshot.value = live
-      if (live.entities && live.entities.length > 0) {
+      if (Array.isArray(live.entities)) {
         entities.value = live.entities
       }
       lastLoadedAt.value = new Date()
+      dataSource.value = 'live'
       connectionError.value = ''
     } catch (error) {
+      if (requestSequence !== refreshSequence) return
       const msg = error instanceof Error ? error.message : '网络连接异常'
       connectionError.value = `数据刷新受阻（${msg}），当前维持上一有效快照`
     } finally {
-      if (showLoading) loading.value = false
+      if (requestSequence === refreshSequence && showLoading) loading.value = false
     }
   }
 
@@ -430,6 +456,9 @@ export const useProjectStore = defineStore('project', () => {
   void refresh()
   startPolling()
 
+  // Vite HMR 会重新执行 store 模块；旧模块必须主动释放轮询，避免开发环境重复请求。
+  import.meta.hot?.dispose(stopPolling)
+
   return {
     snapshot,
     entities,
@@ -439,6 +468,7 @@ export const useProjectStore = defineStore('project', () => {
     loading,
     connectionError,
     lastLoadedAt,
+    dataSource,
     pollIntervalMs,
     refresh,
     updateEntity,

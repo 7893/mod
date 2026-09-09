@@ -9,6 +9,7 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from ..business_rules import public_business_rules
 from ..config import get_display_timezone, get_settings
 from .dashboard_sections import build_construction_summary, build_entities, build_issue_sections
 
@@ -141,8 +142,11 @@ def load_fallback_snapshot() -> dict:
     for path in FALLBACK_SNAPSHOT_PATHS:
         if path and os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                snapshot = json.load(f)
+                snapshot["businessRules"] = public_business_rules()
+                return snapshot
     return {
+        "businessRules": public_business_rules(),
         "meta": {"mode": "S", "notice": "全部为虚构模拟数据", "fullRows": 1685923},
         "overview": {"orgTotal": 1497, "launched": 748, "dual": 205, "voucherSuccessPct": 96.51},
         "rollout": [],
@@ -613,6 +617,7 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
         )
 
         return {
+            "businessRules": public_business_rules(),
             "meta": {
                 "mode": "S",
                 "notice": "全部为虚构模拟数据",

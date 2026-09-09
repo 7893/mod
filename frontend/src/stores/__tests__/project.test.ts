@@ -33,6 +33,49 @@ describe('stores/project', () => {
     expect(store.entities.length).toBeGreaterThan(0)
     expect(store.connectionError).toBe('')
     expect(store.loading).toBe(false)
+    expect(store.dataSource).toBe('live')
+    expect(store.lastLoadedAt).toBeInstanceOf(Date)
+    expect(store.snapshot.businessRules.lifecycle.dualRunConsistencyRateMin).toBe(98)
+  })
+
+  it('uses latest-response-wins and ignores a stale refresh response', async () => {
+    store = useProjectStore()
+    await flushPromises()
+
+    let resolveFirst!: (value: Response) => void
+    let resolveSecond!: (value: Response) => void
+    globalThis.fetch = vi.fn()
+      .mockReturnValueOnce(new Promise<Response>((resolve) => { resolveFirst = resolve }))
+      .mockReturnValueOnce(new Promise<Response>((resolve) => { resolveSecond = resolve }))
+
+    const older = store.refresh()
+    const newer = store.refresh()
+    resolveSecond({
+      ok: true,
+      json: async () => ({ ...snapshotData, overview: { ...snapshotData.overview, docsTotal: 222 } }),
+    } as Response)
+    await newer
+    resolveFirst({
+      ok: true,
+      json: async () => ({ ...snapshotData, overview: { ...snapshotData.overview, docsTotal: 111 } }),
+    } as Response)
+    await older
+
+    expect(store.snapshot.overview.docsTotal).toBe(222)
+  })
+
+  it('accepts an authoritative empty live entity list instead of retaining fallback rows', async () => {
+    store = useProjectStore()
+    await flushPromises()
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...snapshotData, entities: [] }),
+    })
+
+    await store.refresh()
+
+    expect(store.entities).toEqual([])
+    expect(store.dataSource).toBe('live')
   })
 
   it('calculates statusCount correctly based on entities', async () => {

@@ -72,6 +72,9 @@ const loading = ref(false)
 const dispatching = ref(false)
 const enriching = ref(false)
 const actionNotice = ref<string | null>(null)
+const actionError = ref(false)
+let loadSequence = 0
+let loadController: AbortController | null = null
 
 const statusSteps = [
   { key: 'DISCOVERED', label: '发现' },
@@ -79,65 +82,85 @@ const statusSteps = [
   { key: 'IN_PROGRESS', label: '攻坚' },
   { key: 'VERIFYING', label: '核验' },
   { key: 'RESOLVED', label: '销项' },
+  { key: 'CLOSED', label: '归档' },
 ]
+
+const isTerminal = computed(() => issue.value?.status === 'RESOLVED' || issue.value?.status === 'CLOSED')
 
 const currentStepIndex = computed(() => {
   if (!issue.value) return 0
   const st = issue.value.status
   const idx = statusSteps.findIndex((s) => s.key === st)
-  return idx !== -1 ? idx : (st === 'CLOSED' ? 4 : 2)
+  return idx !== -1 ? idx : 2
 })
 
 async function fetchIssueAndTimeline(unitId: number) {
+  const sequence = ++loadSequence
+  loadController?.abort()
+  const controller = new AbortController()
+  loadController = controller
   loading.value = true
+  issue.value = null
+  timeline.value = []
   actionNotice.value = null
+  actionError.value = false
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues?unit_id=${unitId}&page_size=1`)
-    if (res.ok) {
-      const data = await res.json()
-      if (data.items && data.items.length > 0) {
-        const item = data.items[0]
-        issue.value = item
-        await fetchTimeline(item.id)
-      } else {
-        issue.value = null
-        timeline.value = []
-      }
+    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues?unit_id=${unitId}&page_size=1`, {
+      signal: controller.signal,
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    if (sequence !== loadSequence || props.unit?.id !== unitId) return
+    if (data.items && data.items.length > 0) {
+      const item = data.items[0] as GovernanceIssue
+      const loadedTimeline = await fetchTimeline(item.id, controller.signal)
+      if (sequence !== loadSequence || props.unit?.id !== unitId) return
+      issue.value = item
+      timeline.value = loadedTimeline
     }
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return
+    actionError.value = true
+    actionNotice.value = '治理工单读取失败，请稍后重试。'
     console.warn('Failed to load governance issue:', err)
   } finally {
-    loading.value = false
+    if (sequence === loadSequence) loading.value = false
   }
 }
 
-async function fetchTimeline(issueId: string) {
-  try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issueId}/timeline`)
-    if (res.ok) {
-      timeline.value = await res.json()
-    }
-  } catch (err) {
-    console.warn('Failed to load timeline:', err)
-  }
+async function fetchTimeline(issueId: string, signal?: AbortSignal): Promise<TimelineEvent[]> {
+  const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issueId}/timeline`, { signal })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return await res.json() as TimelineEvent[]
 }
 
 async function handleDispatch() {
   if (!issue.value) return
   dispatching.value = true
   actionNotice.value = null
+  actionError.value = false
+  const issueId = issue.value.id
+  const unitId = props.unit?.id
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issue.value.id}/dispatch`, {
+    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issueId}/dispatch`, {
       method: 'POST',
     })
-    if (res.ok) {
-      const updated = await res.json()
-      issue.value = updated
-      await fetchTimeline(updated.id)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const updated = await res.json() as GovernanceIssue
+    if (props.unit?.id !== unitId || issue.value?.id !== issueId) return
+    issue.value = updated
+    try {
+      timeline.value = await fetchTimeline(updated.id)
       actionNotice.value = '特派军令状已下达！攻坚专班进入强力处置。'
-      emit('dispatched', updated)
+    } catch (timelineError) {
+      actionError.value = true
+      actionNotice.value = '督办已成功，但时间线刷新失败，请稍后重新打开。'
+      console.warn('Timeline refresh after dispatch failed:', timelineError)
     }
+    emit('dispatched', updated)
   } catch (err) {
+    actionError.value = true
+    actionNotice.value = '督办失败，工单未变更，请稍后重试。'
     console.warn('Dispatch failed:', err)
   } finally {
     dispatching.value = false
@@ -148,17 +171,28 @@ async function handleEnrich() {
   if (!issue.value) return
   enriching.value = true
   actionNotice.value = null
+  actionError.value = false
+  const issueId = issue.value.id
+  const unitId = props.unit?.id
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issue.value.id}/enrich`, {
+    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issueId}/enrich`, {
       method: 'POST',
     })
-    if (res.ok) {
-      const updated = await res.json()
-      issue.value = updated
-      await fetchTimeline(updated.id)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const updated = await res.json() as GovernanceIssue
+    if (props.unit?.id !== unitId || issue.value?.id !== issueId) return
+    issue.value = updated
+    try {
+      timeline.value = await fetchTimeline(updated.id)
       actionNotice.value = 'AI 专家研判完成，已回填深层根因与销项举措。'
+    } catch (timelineError) {
+      actionError.value = true
+      actionNotice.value = 'AI 研判已完成，但时间线刷新失败，请稍后重新打开。'
+      console.warn('Timeline refresh after enrichment failed:', timelineError)
     }
   } catch (err) {
+    actionError.value = true
+    actionNotice.value = 'AI 研判失败，工单未变更，请稍后重试。'
     console.warn('Enrich failed:', err)
   } finally {
     enriching.value = false
@@ -169,8 +203,10 @@ watch(
   () => props.unit,
   (newUnit) => {
     if (newUnit) {
-      fetchIssueAndTimeline(newUnit.id)
+      void fetchIssueAndTimeline(newUnit.id)
     } else {
+      loadSequence += 1
+      loadController?.abort()
       issue.value = null
       timeline.value = []
       actionNotice.value = null
@@ -208,9 +244,9 @@ watch(
           <span
             v-if="issue"
             class="px-1.5 py-0.5 rounded text-cockpit-xs font-semibold"
-            :class="issue.status === 'RESOLVED' ? 'text-emerald-400 bg-emerald-950/40' : 'text-amber-400 bg-amber-950/40'"
+            :class="isTerminal ? 'text-emerald-400 bg-emerald-950/40' : 'text-amber-400 bg-amber-950/40'"
           >
-            {{ issue.status === 'RESOLVED' ? '已闭环销项' : '攻坚治理中' }}
+            {{ isTerminal ? '已闭环归档' : '攻坚治理中' }}
           </span>
         </div>
         <span class="text-cockpit-sm text-slate-400">{{ unit.province }} · {{ unit.batch }} · 经办人：{{ unit.owner }}</span>
@@ -225,7 +261,7 @@ watch(
             二次返工 x{{ issue.reworkCount }}
           </span>
         </div>
-        <div class="grid grid-cols-5 gap-1 text-center font-mono text-cockpit-xs">
+        <div class="grid grid-cols-6 gap-1 text-center font-mono text-cockpit-xs">
           <div
             v-for="(st, idx) in statusSteps"
             :key="st.key"
@@ -244,12 +280,12 @@ watch(
             <UserCheck :size="11" class="text-sky-400" />
             专班专员：{{ issue.owner || '指挥中心调度中' }}
           </span>
-          <span class="font-mono text-slate-500">严苛返工率 15%</span>
+          <span class="font-mono text-slate-500">状态以工单流水为准</span>
         </div>
       </div>
 
       <!-- 上帝之手双向督办动作条 -->
-      <div v-if="issue && issue.status !== 'RESOLVED'" class="flex items-center gap-2">
+      <div v-if="issue && !isTerminal" class="flex items-center gap-2">
         <button
           type="button"
           :disabled="dispatching"
@@ -273,8 +309,13 @@ watch(
       </div>
 
       <!-- 操作通知反馈 -->
-      <div v-if="actionNotice" class="p-2 rounded bg-emerald-950/30 border border-emerald-500/30 text-emerald-400 text-cockpit-xs flex items-center gap-1.5">
-        <CheckCircle2 :size="13" class="flex-shrink-0" />
+      <div
+        v-if="actionNotice"
+        class="p-2 rounded text-cockpit-xs flex items-center gap-1.5"
+        :class="actionError ? 'bg-rose-950/30 border border-rose-500/30 text-rose-400' : 'bg-emerald-950/30 border border-emerald-500/30 text-emerald-400'"
+      >
+        <AlertTriangle v-if="actionError" :size="13" class="flex-shrink-0" />
+        <CheckCircle2 v-else :size="13" class="flex-shrink-0" />
         <span>{{ actionNotice }}</span>
       </div>
 

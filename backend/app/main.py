@@ -137,4 +137,3 @@ async def internal_server_error_handler(request: Request, exc: Exception) -> JSO
 @app.get("/")
 def root() -> dict[str, str]:
     return {"service": "MOD API", "status": "ok"}
-

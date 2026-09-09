@@ -47,11 +47,12 @@ const format = (value: number | undefined) => (
  */
 const complianceUnits = computed<ComplianceIssueUnit[]>(() => {
   const result: ComplianceIssueUnit[] = []
+  const rules = store.snapshot.businessRules
   store.entities.forEach((row) => {
-    const isDualInconsistent = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < 95)
-    const isConstructionLag = row.construction < 88 && (row.status === '建设中' || row.status === '双轨运行')
-    const isOpeningDataLag = row.openingData < 88 && (row.status === '建设中' || row.status === '双轨运行')
-    const isStuckPrep = row.status === '准备中' && (row.batchId != null && row.batchId <= 7)
+    const isDualInconsistent = row.status === '双轨运行' && (row.voucherRate !== null && row.voucherRate < rules.lifecycle.dualRunConsistencyRateMin)
+    const isConstructionLag = row.construction < rules.risk.constructionLagRate && (row.status === '建设中' || row.status === '双轨运行')
+    const isOpeningDataLag = row.openingData < rules.risk.openingDataLagRate && (row.status === '建设中' || row.status === '双轨运行')
+    const isStuckPrep = row.status === '准备中' && (row.batchId != null && row.batchId <= rules.risk.lastActiveBatchId)
 
     if (isDualInconsistent || isConstructionLag || isOpeningDataLag || isStuckPrep) {
       const tags: string[] = []

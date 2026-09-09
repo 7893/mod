@@ -62,7 +62,7 @@ const provinceRolloutRanking = computed(() => {
       launchedPct: p.total > 0 ? Math.round((p.launched * 100) / p.total) : 0,
       unlaunched: Math.max(0, p.total - p.launched - p.dual),
     }))
-    .sort((a, b) => b.launched - a.launched || b.total - a.total)
+    .sort((a, b) => b.launchedPct - a.launchedPct || b.launched - a.launched || a.name.localeCompare(b.name, 'zh-CN'))
 })
 
 const topProvinces = computed(() => provinceRolloutRanking.value.slice(0, 6))
