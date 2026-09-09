@@ -248,6 +248,7 @@
   - 涓流回填流水线（`simulation/trickle_backfill.py`）：受控微批量（≤3 单）异步富化存量工单与时间线，实现历史数据真实有机充填。
   - 治理与配额端点（`backend/app/api.py`, `backend/app/services/governance.py`）：提供工单分页查询、详情透视、全景时间线、一键督办（`POST /api/governance/issues/{id}/dispatch`）、配额透视（`GET /api/governance/ai-quota`）以及单工单 AI 富化（`POST /api/governance/issues/{id}/enrich`）。
   - 前端 E/F 屏双向交互抽屉（`ComplianceInspectDrawer.vue`, `AiQuotaCapsule.vue`）：E 屏提供六态流转 Stepper、专班展示、多节点流水展示、一键督办上帝之手与 AI 深度研判；F 屏挂载 Cloudflare AI 每日安全算力额度监控胶囊（$0.00 零费用硬防护）。
+  - 编号口径与线上追踪（KI-064）：治理仿真的 "GI-001~GI-004" 是文档「演进代际」叙事编号，与 GitHub Issue 真实编号 `#1~#4` 不逐一对应，权威映射见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](development/GOVERNANCE-SIMULATION-SYNTHESIS.md) 第一章。承载上述能力的 GitHub Issue `#1`/`#2`/`#3`/`#4` 均已随生产发布 `20260909-095536` 上线并以 `completed` 回写关闭，当前线上无 open issue；KI（本地缺陷看板）与 GI（GitHub 新功能）分轨管理沿用 AGENTS.md 四铁律。
 - Ruff 检查已清零并纳入 `make check`。
 - 文档治理闸门已纳入 `make check` 与 CI：阻断已跟踪文档删除、冻结正文减损、KI 状态分裂、必需元数据缺失与现行索引漏项；核心行为变更未同步本文时直接失败，不再仅输出警告。
 - CHANGELOG 从 `.git-cliff-baseline` 记录的真实公开就绪提交起计，使用锁定的 git-cliff 2.13.1 生成；质量闸门校验基线可达性、配置与生成标记，`v*` tag/人工触发工作流只上传变更日志产物，无仓库写权限。

@@ -2,7 +2,7 @@
 
 更新日期：2026-09-09
 状态：现行
-适用范围：GI-001/GI-002/GI-003/GI-004 演进链路、KI-062/KI-063 缺陷闭环、矛与盾动力学、AI配额看门狗与跨屏因果涟漪架构
+适用范围：GI-001/GI-002/GI-003/GI-004 演进链路、KI-062/KI-063 缺陷闭环、矛与盾动力学、AI配额看门狗与跨屏因果涟漪架构；含 KI/GI 编号体系与 GitHub Issue 权威映射（见第一章）
 
 ---
 
@@ -24,6 +24,48 @@ graph TD
         K63 --> G4["GI-004: 无人值守动态自愈生态<br/>30~45单平衡走廊·生物钟·跨屏涟漪·实时广播"]
     end
 ```
+
+### 编号体系与 GitHub Issue 映射（KI / GI 关系厘清）
+
+本项目对问题按性质分两条轨道管理，两者职责不混（详见 [AGENTS.md](../../AGENTS.md) 四铁律与
+[文档生命周期规范](DOCUMENTATION-LIFECYCLE.md)）：
+
+- **KI（Known Issue）· 记录在本地仓库**：已发现的缺陷、数据漂移与现有技术债。看板 `docs/KNOWN-ISSUES.md`，
+  详情 `docs/issues/KI-xxx.md`，状态 `DRAFT`/`OPEN`/`IN-PROGRESS`/`DONE`，随修复代码同一提交演进，受文档治理闸门强制。
+- **GI（GitHub Issue）· 记录在 GitHub 线上**：新功能、新能力与计划任务（enhancement），入口
+  [github.com/7893/mod/issues](https://github.com/7893/mod/issues)，模板见 `.github/ISSUE_TEMPLATE/`。
+
+**"GI-00x" 是本文对治理仿真「演进代际」的叙事编号，与 GitHub Issue 的真实编号 `#N` 不是逐一对应关系。**
+为避免混淆，下表是唯一权威映射，凡文档中出现 "GI-00x" 均以此表指代的 GitHub Issue 与实现状态为准：
+
+| 文档演进代际 | 对应 GitHub Issue | 线上状态 | 核心内容 | 落地承载 |
+|---|---|---|---|---|
+| GI-001 | 归入 [#3](https://github.com/7893/mod/issues/3)（E/F 屏盘活总 issue 的阶段一叙述） | closed（completed，已回写关闭） | 治理全生命周期六态状态机与 `governance_issue`/`issue_timeline` 底表 | `simulation/governance_state_machine.py` |
+| GI-002 | 归入 [#3](https://github.com/7893/mod/issues/3)（阶段二叙述），因果推进关联 [#2](https://github.com/7893/mod/issues/2) | closed（completed，已回写关闭） | 矛与盾博弈雏形：88% 阻力位卡点与解冻因果 | `simulation/construction_propeller.py` |
+| GI-003 | 归入 [#3](https://github.com/7893/mod/issues/3)（阶段三叙述） | closed（completed，已回写关闭） | 攻防博弈深化 + Cloudflare Workers AI 挂接、3000N 配额看门狗与 E/F 屏多维抽屉 | `simulation/quota_watchdog.py`、`simulation/cf_ai_client.py`、`ComplianceInspectDrawer.vue`、`AiQuotaCapsule.vue` |
+| GI-004 | [#4](https://github.com/7893/mod/issues/4)（编号对齐，标题含 GI-004） | **closed** | 无人值守动态自愈生态：30~45 单平衡走廊、东八区生物钟、跨屏涟漪、实时广播、展厅巡航 | `simulation/construction_propeller.py`、`governance_state_machine.py`、`LiveActivityTicker.vue`、`KioskSpotlightTour.vue` |
+
+另有两个 GitHub Issue 承载对应能力，与上表交织：
+
+| GitHub Issue | 线上状态 | 核心内容 | 关联 |
+|---|---|---|---|
+| [#1](https://github.com/7893/mod/issues/1) | closed（completed，已回写关闭） | 风险与问题生命周期闭环（分派-处置-销项时间线） | 由 GI-001 状态机与 GI-003 的 E 屏抽屉共同实现 |
+| [#2](https://github.com/7893/mod/issues/2) | closed（completed，已回写关闭） | 模拟引擎驱动单位建设推进与风险自愈动态 | 由 [KI-062](../issues/KI-062-治理自愈推进器已就位但未接入模拟主循环而静默失效.md) 接线闭环 + GI-002/GI-004 推进器实现 |
+
+> 说明：GitHub `#1`/`#2`/`#3`/`#4` 的核心能力均已随 GI-003/GI-004 与 KI-062 实现并部署（生产发布 `20260909-095536`），
+> 四个 issue 均已以 `completed` 回写关闭说明并关闭；本编号口径的长期一致性治理由 [KI-064](../issues/KI-064-GI编号口径与GitHub-Issue状态不一致.md) 跟踪。
+
+### 演进与改进过程记录（时间线）
+
+| 阶段 | 时间 | 事件 |
+|---|---|---|
+| GI-001 | — | 设计六态治理状态机与 `governance_issue`/`issue_timeline` 底表，引入容量 8 的专家专班调度池 |
+| GI-002 | — | 引入矛与盾因果博弈雏形：冲刺批次推进至 80~90% 时按概率撞上"合规暗礁"，钳位 88% 并生成待整改工单 |
+| GI-003 | — | 攻防博弈深化并挂接 Cloudflare Workers AI，落地 3000N/日配额看门狗（超额 FUSED 熔断）、离线叙事库双保险与 E/F 屏多维交互抽屉 |
+| KI-062 | 2026-09-09 | 修复"推进器已实现但未接入模拟主循环而静默失效"：在慢电影建设周期装配推进器与滴灌回填，受 `MOD_SIMULATION_ENGINE_ENABLED` 失败关闭门禁守护 |
+| KI-063 | 2026-09-09 | 除险 KI-062 回归测试的生产库直连与硬编码内网凭据，重构为纯内存 Mock、100% 离线自洽 |
+| GI-004 | 2026-09-09 | 无人值守动态自愈生态落地（GitHub #4 已 closed）：动态平衡走廊、东八区生物钟、跨屏因果涟漪、实时广播与展厅巡航 |
+| 部署 | 2026-09-09 | 上述能力随生产发布 `20260909-095536` 上线，健康探针全绿 |
 
 ---
 

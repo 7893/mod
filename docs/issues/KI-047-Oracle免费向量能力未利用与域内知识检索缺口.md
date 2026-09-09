@@ -1,8 +1,8 @@
 # KI-047 · Oracle 免费向量能力未利用与域内知识检索缺口
 
-- 状态：OPEN
+- 状态：DONE（关闭·不予实施；决策见下方进度）
 - 优先级：P3
-- 更新日期：2026-09-08
+- 更新日期：2026-09-09
 - 适用范围：OCI MySQL HeatWave Always Free、项目知识资料的域内语义检索、KI-036 问答检索底座
 - 关联：[KI-036 AI 业务数据洞察问答](KI-036-AI业务数据洞察问答.md)、[KI-045 HeatWave 内存集群未加载 MOD 表与加速失真](KI-045-HeatWave内存集群未加载MOD表与加速失真.md)、[ML/AI 数据边界](../development/ML-AI-DATA-BOUNDARY.md)、[数据与安全标准](../development/DATA-AND-SECURITY-STANDARD.md)、[HeatWave 使用与边界](../development/HEATWAVE-USAGE-AND-BOUNDARIES.md)
 
@@ -152,6 +152,15 @@ Oracle 官方同时明确：Always Free 支持部分 HeatWave GenAI 能力，但
 ## 进度
 
 - 2026-09-08：完成只读能力探测与边界确认，登记为 OPEN；尚未创建表、生成 Embedding、调用外部模型或部署功能。
+- 2026-09-09 关闭（DONE·不予实施）。决策理由：本 KI 的主要牵引用途是作为 [KI-036](KI-036-AI业务数据洞察问答.md)
+  域内问答的语义检索底座，而 KI-036 已于同日关闭·不予实施（开放式 LLM 交互不利于大屏展示体验且有风险）。
+  下游需求消失后，本 KI 仅剩"纯语义搜索 + 来源展示"这一独立价值——它面向的是维护者对项目文档的检索，
+  并不上大屏，对"面向管理决策的可视化演示大屏"这一项目定位收益很低；同时项目已有的受控 AI 能力
+  （每日决策简报、AutoML SHAP 归因、GI-003/004 治理叙事）已覆盖大屏侧的 AI 展示诉求。
+  综合收益与项目定位，不予实施。
+  说明：本次关闭不改变任何数据库现状——从未创建向量表、从未生成 Embedding；HeatWave 实例自带的向量能力
+  （`VECTOR`/`DISTANCE`/`ML_EMBED_ROW`）客观存在这一事实记录仍保留于上文，供未来追溯。
+  若未来出现明确、适配大屏且低风险的域内语义检索场景，另行以新 GitHub Issue（新功能）立项，不复用本 KI。
 
 ## 官方依据
 
