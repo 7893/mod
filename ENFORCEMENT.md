@@ -72,14 +72,17 @@
 - `.githooks/commit-msg` 与 CI 共同调用 `scripts/project/validate_commit_message.py` 校验提交主题；
   CI 同时运行 `make check`，防止本地 `--no-verify` 绕过成为最终结果。
 
-### 闸门 D · 危险操作即停
+### 闸门 D · 危险操作即停与发布授权
 
-- 遇到删除、后端/服务启停、Nginx 变更、云资源变更或 Git 发布类操作，AI 必须停止并报告，
+- 遇到删除、后端/服务启停、Nginx 变更、云资源变更或生产发布类操作，AI 必须停止并报告，
   等待针对该操作的显式授权，不得自行推断授权。
 - 生产与工作区同机：构建前端、重载服务、变更 Nginx 均直接影响生产，一律按生产变更对待，需显式授权。
-- **前端发布分离**：`pnpm build` 仅输出到 `frontend/dist/`（本地验证，不影响生产）；
-  生产由软链 `frontend/current` 提供，只有主控运行 `scripts/project/publish_frontend.sh` 后才更新。
-  AI 不得直接调用发布脚本。
+- **前后端统一发布隔离与授权机制**：`pnpm build` 仅输出到 `frontend/dist/`（本地验证，不影响生产）；
+  后端改动在工作区开发测试，不直接触碰生产环境。生产由 `frontend/current` 与 `backend/current` 软链提供，
+  通过统一发布脚本 `scripts/project/publish.sh` 执行原子切换、服务重载与健康探针。
+  - 发布部署属于生产最高级别变更，**必须由项目 Owner（用户）或主控 Agent 亲自运行，或由其明确授权其他 Agent（如执行 Agent / 子 Agent）运行**；
+  - 主控 Agent 与项目 Owner 拥有发布授权权，可将发布部署任务及对应 scope 明确授权或委托给其他 Agent 执行；
+  - 未经项目 Owner 或主控 Agent 显式授权，任何 Agent 严禁擅自直接调用发布脚本或自行推断授权。
 - 任务书、历史提示词、规范文档本身都不构成执行授权。
 
 ### 闸门 E · 文档历史保全与当前切片

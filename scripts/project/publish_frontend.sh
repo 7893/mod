@@ -13,8 +13,9 @@
 #
 # Rollback: ln -sfn /home/ubuntu/mod/frontend/releases/<prev_ts> /home/ubuntu/mod/frontend/current && sudo systemctl reload nginx
 #
-# This script must be run by the controller (主控) after explicit authorization.
-# agy and other agents must NOT call this script directly — they build to releases/ via pnpm build only.
+# This script (superseded by publish.sh) must be run by the project owner or controller agent,
+# or by an authorized agent with explicit authorization from the project owner or controller agent.
+# Unauthorized agents must NOT call this script directly.
 
 set -euo pipefail
 

@@ -265,5 +265,5 @@ KI-060 更新前的本节原文完整保存在
 - 实时投影的展示语义、事件链和多实例限制以 `development/LIVE-PROJECTION.md` 为准。
 - 不部署历史 Cloudflare Worker。
 - 不修改冻结 CSV，不重复运行历史全量导入工具。
-- 数据库写入、USA 部署、服务启停、Nginx 和云资源操作仍需明确确认。
+- 数据库写入、服务启停、Nginx 和云资源操作仍需明确确认；生产发布部署（`scripts/project/publish.sh`）必须由项目 Owner（用户）或主控 Agent 亲自运行，或由其明确授权其他 Agent（如执行 Agent / 子 Agent）后方可执行。
 - 当前默认改进范围是本地代码、测试、文档与开发工具。

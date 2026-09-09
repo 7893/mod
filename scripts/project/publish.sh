@@ -17,8 +17,8 @@
 #   后端：ln -sfn /home/ubuntu/mod/backend/releases/<prev_ts> backend/current && sudo systemctl restart mod-api
 #   前端：ln -sfn /home/ubuntu/mod/frontend/releases/<prev_ts> frontend/current && sudo systemctl reload nginx
 #
-# 本脚本必须由主控（主控 agent）在获得明确授权后运行。
-# agy 等执行 agent 不得直接调用本脚本。
+# 本脚本必须由项目 Owner（用户）或主控 Agent 运行，或在其明确授权下由被授权的 Agent（如执行 Agent）调用。
+# 未获得项目 Owner 或主控 Agent 显式授权时，任何 Agent 严禁擅自调用本脚本。
 
 set -euo pipefail
 
