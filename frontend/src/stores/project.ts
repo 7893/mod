@@ -228,6 +228,8 @@ export interface ProjectSnapshot {
     sourceTimezone: string
     displayTimezone: string
     generatedAt?: string
+    /** 后端如实标注：live 为真库快照，fallback 为内置兜底；缺省（旧版后端）按 live 处理。 */
+    source?: 'live' | 'fallback' | 'none'
   }
   overview: {
     orgTotal: number
@@ -442,7 +444,7 @@ export const useProjectStore = defineStore('project', () => {
         entities.value = live.entities
       }
       lastLoadedAt.value = new Date()
-      dataSource.value = 'live'
+      dataSource.value = live.meta?.source === 'fallback' || live.meta?.source === 'none' ? 'fallback' : 'live'
       connectionError.value = ''
     } catch (error) {
       if (requestSequence !== refreshSequence) return

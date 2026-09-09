@@ -540,6 +540,10 @@ def test_dashboard_snapshot_swr_and_prewarm(monkeypatch):
     assert duration < 0.1, f"Expected < 100ms response, took {duration:.3f}s"
     assert "overview" in snap
     assert "entities" in snap
+    assert "source" not in snap["meta"]
+    served = api_mod.dashboard_snapshot_endpoint(None)
+    assert served["meta"]["source"] == api_mod._snapshot_source
+    assert served["meta"]["source"] in {"live", "fallback"}
 
     # 3. 模拟缓存过期，验证 SWR 异步刷新且立即返回旧缓存
     api_mod._snapshot_cached_at = time.monotonic() - 1000.0  # 过期

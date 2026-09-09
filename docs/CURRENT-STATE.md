@@ -166,7 +166,7 @@
   - 常驻模拟服务低频节律触发（`simulation/runtime_service.py`）：按周新增 1~3 家滚动预算受控偶发入池，保持平缓自然增长；全量回归测试套件 `test_org_onboarding.py` 通过，`make check` 138 项后端与 67 项前端测试全绿。
 - 前端自动化测试体系基于 Vitest 5 + @vue/test-utils 2 + happy-dom，当前包含 25 个测试文件、122 项单测，实现秒级执行与 100% 离线 Mock，覆盖：
   - `useScaleScreen.ts`：普通/全屏模式视口等比计算、clamp 范围约束、零尺寸防御与生命周期事件解绑；
-  - `useAiInsights.ts` 与 `useDailyBriefing.ts`：完整状态机流转、并发节流、429 限流捕获与网络异常优雅降级；
+  - `useInsightsStatus.ts` 与 `useDailyBriefing.ts`：只读轮询、卸载停表与网络异常优雅降级；
   - `formatters/metrics.ts`：千分位与百分比格式化及各类边界数值（null/undefined/NaN/0/负数）安全保护；
   - `stores/project.ts` 与 `liveProjection.ts`：快照加载、键名递归驼峰化（fixKeys）、审计记录生成、实时投影有序应用与重置；
   - `utils/modelEvaluation.ts`：严格落实 KI-023/KI-028/ADR-0010 诚实模型判定契约（R² > 0 回归有效性、(0.5, 1.0) 分类有效性及整体 READY 判定）；
@@ -270,6 +270,7 @@
 - 前端状态词表已与后端四态对齐：`RolloutStatus` 去掉幻影「建设中」，`EntityRow.rawStatus` 与 `api.py` 的 `rawStatus` 过滤死分支一并删除；后端新增 `CONSTRUCTION_CRITICAL_RATE`/`DISPLAY_STATUSES` 并通过 `businessRules.risk.constructionCriticalRate`/`lifecycle.displayStatuses` 下发。建设滞后只评估「双轨运行」，准备中走「准备期卡顿」，合规标签枚举加入「准备期卡顿」；F3 风险维度门禁文案与高危数由规则和单位级判定派生；「正式上线」口径统一为「已上线」。
 - A 屏规则告警（`insights.ruleBasedAlerts`）由 `dashboard_sections.compose_rule_based_alerts(rollout_rows, voucher_success_pct)` 从批次推进事实派生：双轨批次家数与加权建设度、已推进批次上线家数与占比、在建/储备批次进度均取自 `rollout_rows`，不再写死「91.9%」「400 家 62.7%」「全量投产」等与真数据矛盾的字面量。前端 `overview` 类型去掉后端不返回的 `leadershipAttention`，补 `issuesSummaryText`/`batches`；删除无引用的 `frontend/src/data/sim-snapshot.json`。
 - A3 批次推进阶梯改为「建设完成度」「上线率」两条并列条形，不再把分母不同的两项指标堆叠在同一根条里；E 屏批次合规率在批次无单位时返回 `null`（图上留空），不再用 `|| 1` 兜底成 100%；`LiveActivityTicker` 删除三条虚构 fallback 活动，接口为空时显示「暂无治理活动记录」并隐藏翻页控件；F 屏高危单位数按单位级 `riskLevel` 统计。
+- 数据源徽标如实：`/api/dashboard/snapshot` 响应新增 `meta.source`（live/fallback），前端 `dataSource` 据此判定，不再把 SWR 返回的兜底缓存当作真库数据。前端删除无任何视图消费的 `useAiInsights.ts`（生成按钮状态机、action token、`/insights/latest` 拉取共 180 行）及其测试，改为 40 行类型化 `useInsightsStatus.ts` 只读轮询 `/api/insights/status`（`InsightsStatus` 类型覆盖 `hw_ml`/`predictions`/`cf_ai`，`InsightsView` 去掉全部 `as any`）；`DashboardView` 首屏动效定时器与 `ChinaMap` 横幅定时器在卸载时清理。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态
