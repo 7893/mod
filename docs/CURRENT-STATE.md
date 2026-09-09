@@ -229,15 +229,20 @@
 ## 本地质量基线
 
 - 2026-09-07 记录的旧质量基线为前端 84 项 Vitest、后端 139 项 pytest；该数字作为历史增长节点保留，不再代表当前总数。
-- 前端：Vue 3、TypeScript、Vite；当前 20 个测试文件、103 项 Vitest 单测、类型检查与生产构建通过。
-- 后端：FastAPI、SQLAlchemy；当前 224 项 pytest 测试通过（新增 GI-003 矛与盾攻防博弈与 Cloudflare AI 看门狗 10 项全生命周期测试用例全绿，以及 KI-062 推进器与滴灌回填主循环接线回归测试 2 项全绿，全量测试已完成 100% 离线自洽化改造，移除直连生产库的冗余 live 测试）；KI-060 已将 Starlette `TestClient` 的开发依赖
+- 前端：Vue 3、TypeScript、Vite；当前 22 个测试文件、108 项 Vitest 单测、类型检查与生产构建通过。
+- 后端：FastAPI、SQLAlchemy；当前 229 项 pytest 测试通过（新增 GI-004 动态自愈生态、东八区生物钟、跨屏因果涟漪与动态广播 5 项测试全绿，累计 229 项全量测试 100% 离线自洽通过）；KI-060 已将 Starlette `TestClient` 的开发依赖
   从已弃用的 `httpx` 回退路径迁移至精确锁定的 `httpx2==2.12.0`，并将对应弃用警告设为测试失败。
-- 矛与盾攻防博弈与合规治理引擎（GI-003 阶段一至阶段三 & KI-062/KI-063 治理闭环）：
+- 矛与盾攻防博弈与合规治理引擎（GI-003/GI-004 阶段一至阶段五 & KI-062/KI-063 治理闭环）：
+  - 昼夜作息与月末生物钟（GI-004，`simulation/governance_state_machine.py`）：引入 $k_{\text{rhythm}}$ 节律因子，工作日早晚黄金工段 1.8x 加速、午间 0.5x 放缓、夜间 22:00-07:00 彻底冻结（杜绝半夜出具验收通报虚假繁荣）、月末 25 日起叠加 1.5x 冲刺乘数，二次核验返工率动态适配。
+  - 30~45 单动态平衡走廊（GI-004，`simulation/construction_propeller.py`）：实时感知未结案库存；低于 35 单时提升阻力暗礁触发率至 50% 并放缓消缺，高于 45 单时降低阻力触发率至 5% 并加速消缺，确保大盘恒定平稳呼吸，告别全绿死水与人工干预。
+  - 跨屏因果涟漪网络（GI-004，E $\to$ B $\to$ C/D）：工单闭环销项后彻底解除阻力，建设任务进度直冲 100% 并标记「已完成」，期初数据率直达 100.0%，单位状态自动跃迁为「双轨运行中」，驱动下游凭证流水有机放量。
+  - 治理实时广播与展厅智能巡航（GI-004，`LiveActivityTicker.vue`, `KioskSpotlightTour.vue`）：E 屏顶部暗黑科技风走字流动态轮播专班一线处置流水；空闲 45 秒无感激活展厅聚光灯巡航 HUD 浮窗，任意交互瞬时淡出。
+  - 实时治理动态接口（GI-004，`GET /api/governance/recent-activities`）：以毫秒级 SLA 供给最新工单事件流。
   - 测试套件离线自洽与凭据脱敏（KI-063）：移除了测试与代码中硬编码的内网 IP 与账号默认值，构建内存 `MockLedgerConnection` 与隔离 Mock 消除测试对真实生产库的直连与写库操作，完全符合 ENFORCEMENT 闸门 A/B 要求。
   - 模拟主循环接线闭环（KI-062，`simulation/runtime_service.py`）：将治理推进器（`ConstructionPropeller`）与涓流回填（`TrickleBackfiller`）正式挂接到慢电影建设周期主循环，由 `MOD_SIMULATION_ENGINE_ENABLED` 失败关闭门禁控制，彻底闭合「有引擎无接线」的技术债缺口。
   - 数据库就绪三张治理与配额审计表：`governance_issue`（存量 45 单）、`issue_timeline`（存量 139 条流水）、`sim_ai_quota_ledger`（日级看门狗流水账）。
   - 盾（`simulation/governance_state_machine.py`）：六态治理有限状态机、容量为 8 的专家专班调度池、15% 严苛二次返工回路、五大行业高拟真离线叙事库。
-  - 矛（`simulation/construction_propeller.py`）：批次推进与 88% 阻力陷阱动力学，结合消缺解冻与推进器协同。
+  - 矛（`simulation/construction_propeller.py`）：批次推进与阻力陷阱动力学，结合消缺解冻与推进器协同。
   - 配额看门狗（`simulation/quota_watchdog.py`）：每日硬限制 3,000 Neurons，超额自动触发 FUSED 熔断阻断外网请求，确保账单恒为 $0.00。
   - AI 算力挂接与零故障降级（`simulation/cf_ai_client.py`）：接入 Cloudflare Workers AI，异常或断网时平滑降级至本地离线叙事库。
   - 涓流回填流水线（`simulation/trickle_backfill.py`）：受控微批量（≤3 单）异步富化存量工单与时间线，实现历史数据真实有机充填。

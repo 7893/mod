@@ -639,3 +639,16 @@ def governance_issue_enrich(
     if not updated:
         raise HTTPException(status_code=404, detail="Issue not found")
     return updated
+
+
+@router.get("/governance/recent-activities")
+def governance_recent_activities(
+    limit: int = 10,
+    conn: Connection | None = Depends(connection),
+) -> list[dict]:
+    """Retrieve recent governance timeline activities for live broadcast ticker."""
+    if conn is None:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+    from .services.governance import get_recent_governance_activities
+    return get_recent_governance_activities(conn, limit=min(max(1, limit), 50))
+

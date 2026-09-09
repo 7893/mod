@@ -10,6 +10,8 @@ import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
 import ChartBlock from '../components/blocks/ChartBlock.vue'
 import ComplianceInspectDrawer, { type ComplianceIssueUnit } from '../components/ComplianceInspectDrawer.vue'
+import LiveActivityTicker from '../components/LiveActivityTicker.vue'
+import KioskSpotlightTour from '../components/KioskSpotlightTour.vue'
 import {
   calmAnimation,
   categoryAxis,
@@ -180,6 +182,9 @@ const paginatedTableUnits = computed(() => {
 
 <template>
   <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="E">
+    <!-- GI #4 治理自愈动态广播流 -->
+    <LiveActivityTicker class="flex-shrink-0" />
+
     <!-- E1: 合规仪表、风险分层与主要风险维度 -->
     <CockpitPanel
       title="合规监督指挥盘"
@@ -355,5 +360,8 @@ const paginatedTableUnits = computed(() => {
 
     <!-- 下钻核查抽屉 -->
     <ComplianceInspectDrawer :unit="inspectingUnit" @close="inspectingUnit = null" />
+
+    <!-- 展厅无人巡航模式浮窗 -->
+    <KioskSpotlightTour />
   </div>
 </template>
