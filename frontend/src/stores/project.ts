@@ -3,7 +3,8 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import snapshotData from '../data/v2-sim-snapshot.json'
 
-export type RolloutStatus = '未启动' | '准备中' | '建设中' | '双轨运行' | '已上线'
+/** 展示四态，与后端 business_rules.DISPLAY_STATUSES 一致：DB 六态由后端折叠，「已上线」含「稳定运行」。 */
+export type RolloutStatus = '未启动' | '准备中' | '双轨运行' | '已上线'
 
 export interface EntityRow {
   id: number
@@ -15,7 +16,6 @@ export interface EntityRow {
   owner: string
   rawOwner?: string
   status: RolloutStatus
-  rawStatus?: string
   construction: number
   openingData: number
   readinessStatus?: '已导入' | '已校验' | '收集中' | '未收集' | null
@@ -202,9 +202,17 @@ export interface ProjectSnapshot {
   businessRules: {
     lifecycle: {
       dualRunConsistencyRateMin: number
+      /** DB 六态（有序）。 */
+      orgStages: string[]
+      /** 计入「已上线」口径的 DB 状态。 */
+      launchedStatuses: string[]
+      /** 前端展示四态（有序）。 */
+      displayStatuses: RolloutStatus[]
     }
     risk: {
       constructionLagRate: number
+      /** 建设滞后中再低于此线为「高危」。 */
+      constructionCriticalRate: number
       openingDataLagRate: number
       lastActiveBatchId: number
     }
@@ -291,8 +299,13 @@ export interface ProjectSnapshot {
 }
 
 const FALLBACK_BUSINESS_RULES: ProjectSnapshot['businessRules'] = {
-  lifecycle: { dualRunConsistencyRateMin: 98 },
-  risk: { constructionLagRate: 88, openingDataLagRate: 88, lastActiveBatchId: 7 },
+  lifecycle: {
+    dualRunConsistencyRateMin: 98,
+    orgStages: ['未启动', '准备中', '已具备双轨条件', '双轨运行中', '已上线', '稳定运行'],
+    launchedStatuses: ['已上线', '稳定运行'],
+    displayStatuses: ['未启动', '准备中', '双轨运行', '已上线'],
+  },
+  risk: { constructionLagRate: 88, constructionCriticalRate: 80, openingDataLagRate: 88, lastActiveBatchId: 7 },
 }
 
 const initialSnapshot = {

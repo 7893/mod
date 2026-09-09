@@ -16,10 +16,15 @@ export interface RiskFlags {
   prepStuck: boolean
 }
 
-const IN_PROGRESS_STATUSES = new Set<EntityRow['status']>(['建设中', '双轨运行'])
+/**
+ * 只有「双轨运行」单位已进入正式建设阶段，其建设/期初进度才与滞后门禁比较；
+ * 「准备中」单位的进度天然偏低，其风险由 prepStuck（已推进批次仍停留准备期）单独表达，
+ * 二者互斥、不重复计数。「已上线」单位不再评估建设进度。
+ */
+const BUILDING_STATUSES = new Set<EntityRow['status']>(['双轨运行'])
 
 export function evaluateRiskFlags(row: EntityRow, rules: BusinessRules): RiskFlags {
-  const inProgress = IN_PROGRESS_STATUSES.has(row.status)
+  const inProgress = BUILDING_STATUSES.has(row.status)
   return {
     dualInconsistent:
       row.status === '双轨运行' &&
@@ -83,14 +88,14 @@ export function deriveAtRiskUnits(
     } else if (flags.constructionLag) {
       risk = {
         riskType: '建设严重滞后',
-        riskLevel: row.construction < 80 ? '高危' : '重点关注',
-        reason: `建设完成度 (${row.construction}%) 显著落后于批次推进均值，存在阶段脱轨掉队风险`,
+        riskLevel: row.construction < rules.risk.constructionCriticalRate ? '高危' : '重点关注',
+        reason: `建设完成度 ${row.construction}% 低于 ${rules.risk.constructionLagRate}% 滞后门禁，存在阶段脱轨掉队风险`,
       }
     } else if (flags.prepStuck) {
       risk = {
         riskType: '准备期卡顿',
         riskLevel: '重点关注',
-        reason: '属于已推进批次但仍停留在准备中，期初数据收集或基础环境尚未打通',
+        reason: `属于第 ${rules.risk.lastActiveBatchId} 批及以前的已推进批次但仍停留在准备中（建设完成度 ${row.construction}%），期初数据收集或基础环境尚未打通`,
       }
     }
     if (!risk) continue
@@ -107,7 +112,7 @@ export function deriveAtRiskUnits(
   return list
 }
 
-export const COMPLIANCE_TAGS = ['超期挂账', '超预算迹象', '票据异常'] as const
+export const COMPLIANCE_TAGS = ['超期挂账', '超预算迹象', '票据异常', '准备期卡顿'] as const
 export type ComplianceTag = (typeof COMPLIANCE_TAGS)[number]
 
 /** E 屏合规监督清单：一个单位可同时带多个风险标签。 */
@@ -131,7 +136,10 @@ export function deriveComplianceUnits(rows: readonly EntityRow[], rules: Busines
       tags.push('票据异常')
       detailNote += `双轨比对入账凭证率仅 ${formatPercent(row.voucherRate)}，存在借贷试算不平迹象。`
     }
-    if (!tags.length) tags.push('建设进度滞后')
+    if (flags.prepStuck) {
+      tags.push('准备期卡顿')
+      detailNote += `已推进批次仍停留在准备中（建设完成度 ${row.construction}%），期初数据或基础环境尚未打通。`
+    }
 
     const isHigh = flags.dualInconsistent || tags.length >= 3 || tags.includes('超期挂账')
     result.push({

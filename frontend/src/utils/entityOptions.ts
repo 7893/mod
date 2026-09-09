@@ -19,7 +19,8 @@ export const NATIONAL_PROVINCE_ORDER = [
 ] as const
 
 export const BATCH_ORDER = ['第一批', '第二批', '第三批', '第四批', '第五批', '第六批', '第七批', '第八批'] as const
-export const STATUS_ORDER = ['未启动', '准备中', '建设中', '双轨运行', '已上线'] as const
+/** 与后端 DISPLAY_STATUSES 一致；后端不会产出其他状态值。 */
+export const STATUS_ORDER = ['未启动', '准备中', '双轨运行', '已上线'] as const
 export const READINESS_ORDER = ['已导入', '已校验', '收集中', '未收集'] as const
 
 interface CountedOptionsConfig {

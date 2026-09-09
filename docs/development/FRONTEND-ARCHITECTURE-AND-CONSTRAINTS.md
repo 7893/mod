@@ -155,6 +155,8 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 - 六屏均已使用 `CockpitPanel` 外壳与具名 Grid Token。2026-09-09 完成 C/D/E/F 屏积木化：首行指挥带统一为 `blocks/CommandBand`（左主图 + 右事实栏），面板内事实栏/对账明细/TOP 列表统一为 `MetricGrid`/`StatList` 的 `flat` 平铺形态，规则告警统一为 `StatusList`，提示条统一为 `NoteBanner`，空态统一为 `EmptyNote`；D7 金标准核验四卡收敛为 `MetricGrid` 数据映射。
 - 去「模板感」原则：面板内不再叠彩色底卡（card-in-panel），分区只用 hairline 分隔；没有语义的装饰线（如未稽核项的空进度轨）、胶囊标签一律不画；文本内容宁可滚动也不得截断成「另有 N 条」。2026-09-09 据此改写 F5 简报（`BriefingList` 纵向全文）、D7 核验卡（去进度轨）、F3 分布图（去底卡、隐藏与柱标重叠的坐标刻度）。
 - 风险判定单一来源：E 屏合规监督与 F 屏困难户共用 `utils/riskRules.ts`（`evaluateRiskFlags`/`deriveComplianceUnits`/`deriveAtRiskUnits`），阈值只读 `businessRules`，视图与模板中不得再出现门禁数字字面量。
+- 状态词表四态：前端 `RolloutStatus` 与后端 `DISPLAY_STATUSES`（未启动/准备中/双轨运行/已上线）一致，不允许出现后端不会返回的幻影状态（如「建设中」）。建设/期初滞后只对「双轨运行」单位评估；「准备中」单位一律走 `prepStuck`（准备期卡顿），二者互斥；「已上线」不再评估进度。高危/关注分界读 `risk.constructionCriticalRate`。
+- 风险维度汇总 `qualityMetrics.buildRiskDimensionBreakdown(units, rules)` 必须传入 `businessRules`，门禁文案由规则生成，高危数按单位级 `riskLevel` 统计，不得固定写维度等级。合规标签枚举以 `COMPLIANCE_TAGS` 为唯一来源，视图的标签筛选与计数都从它派生。
 - 2026-09-09 完成全局样式收口：删除 `foundation/components/utilities/page-hierarchy/dashboard-topbar/responsive-breakpoints` 六个文件及约 120 条无引用规则，全局 CSS 由 1897 行降至约 880 行；删除 `:root` 旧变量层，Token 唯一来源为 `theme.css`。
 - 2026-09-09 完成台账层去重：`ConstructionLedger`/`RolloutLedgerTable`/`AtRiskUnitTable` 的筛选、分页、计数、调态抽屉收敛到 `components/ledger/` 与 `usePagedList`/`useEntityEditor`/`entityOptions`，三组件合计由 1234 行降至约 790 行；`AtRiskUnitTable` 顺带补齐总页数收缩时的最小页钳位。
 - 数字与日期时间展示统一走 `formatters/metrics.ts`（`formatCount`/`formatPercent`/`formatDateTime`）：视图、组件、图表 tooltip 与 store 中不得再直接调用 `toLocaleString`/`Intl.*`，空值一律显示 `—`。

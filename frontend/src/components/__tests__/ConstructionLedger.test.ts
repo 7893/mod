@@ -58,8 +58,8 @@ describe('ConstructionLedger', () => {
 
   it('keeps data-readiness filtering independent from lifecycle status', async () => {
     store.entities = [
-      { ...store.entities[0], id: 1, name: '已校验单位', status: '建设中', readinessStatus: '已校验' },
-      { ...store.entities[1], id: 2, name: '收集中单位', status: '建设中', readinessStatus: '收集中' },
+      { ...store.entities[0], id: 1, name: '已校验单位', status: '双轨运行', readinessStatus: '已校验' },
+      { ...store.entities[1], id: 2, name: '收集中单位', status: '双轨运行', readinessStatus: '收集中' },
     ]
     const wrapper = mount(ConstructionLedger, {
       props: { initialReadinessFilter: '已校验' },

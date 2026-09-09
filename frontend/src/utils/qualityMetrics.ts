@@ -149,14 +149,46 @@ export interface RiskDimensionSummary {
   id: string
   type: string
   count: number
-  level: '高危' | '重点关注'
+  /** 该维度内的高危单位数；重点关注数 = count - highCount。 */
+  highCount: number
   batchDistribution: Record<string, number>
   gate: string
   tone: 'danger' | 'warning' | 'accent'
 }
 
+export interface RiskGateRules {
+  lifecycle: { dualRunConsistencyRateMin: number }
+  risk: { constructionLagRate: number; constructionCriticalRate: number; lastActiveBatchId: number }
+}
+
+const RISK_DIMENSIONS: ReadonlyArray<{
+  id: string
+  type: string
+  tone: RiskDimensionSummary['tone']
+  gate: (rules: RiskGateRules) => string
+}> = [
+  {
+    id: 'prep-stuck',
+    type: '准备期卡顿',
+    tone: 'warning',
+    gate: (r) => `第 ${r.risk.lastActiveBatchId} 批及以前仍停留准备中`,
+  },
+  {
+    id: 'dual-diff',
+    type: '双轨核对差异',
+    tone: 'danger',
+    gate: (r) => `双轨凭证率 < ${r.lifecycle.dualRunConsistencyRateMin}%`,
+  },
+  {
+    id: 'const-lag',
+    type: '建设严重滞后',
+    tone: 'accent',
+    gate: (r) => `建设度 < ${r.risk.constructionLagRate}%（< ${r.risk.constructionCriticalRate}% 为高危）`,
+  },
+]
+
 /**
- * 汇总 F3 风险维度分布统计
+ * 汇总 F3 风险维度分布统计。门禁文案与高危计数都来自单位级判定结果与后端 businessRules，不在此处写数字。
  */
 export function buildRiskDimensionBreakdown(
   units: Array<{
@@ -164,55 +196,24 @@ export function buildRiskDimensionBreakdown(
     riskLevel?: string
     batch?: string
   }> | null | undefined,
+  rules: RiskGateRules,
 ): RiskDimensionSummary[] {
   const safeUnits = Array.isArray(units) ? units : []
-
-  const counts: Record<string, number> = {
-    准备期卡顿: 0,
-    双轨核对差异: 0,
-    建设严重滞后: 0,
-  }
-  const batches: Record<string, Record<string, number>> = {
-    准备期卡顿: {},
-    双轨核对差异: {},
-    建设严重滞后: {},
-  }
-
-  safeUnits.forEach((u) => {
-    if (u && u.riskType && counts[u.riskType] !== undefined) {
-      counts[u.riskType] += 1
+  return RISK_DIMENSIONS.map((dim) => {
+    const matched = safeUnits.filter((u) => u?.riskType === dim.type)
+    const batchDistribution: Record<string, number> = {}
+    for (const u of matched) {
       const b = u.batch || '其他批次'
-      batches[u.riskType][b] = (batches[u.riskType][b] || 0) + 1
+      batchDistribution[b] = (batchDistribution[b] || 0) + 1
+    }
+    return {
+      id: dim.id,
+      type: dim.type,
+      count: matched.length,
+      highCount: matched.filter((u) => u.riskLevel === '高危').length,
+      batchDistribution,
+      gate: dim.gate(rules),
+      tone: dim.tone,
     }
   })
-
-  return [
-    {
-      id: 'prep-stuck',
-      type: '准备期卡顿',
-      count: counts['准备期卡顿'],
-      level: '重点关注',
-      batchDistribution: batches['准备期卡顿'],
-      gate: '准备期停留超时，期初数据收集受阻',
-      tone: 'warning',
-    },
-    {
-      id: 'dual-diff',
-      type: '双轨核对差异',
-      count: counts['双轨核对差异'],
-      level: '高危',
-      batchDistribution: batches['双轨核对差异'],
-      gate: '双轨凭证率 < 95%，借贷试算不平',
-      tone: 'danger',
-    },
-    {
-      id: 'const-lag',
-      type: '建设严重滞后',
-      count: counts['建设严重滞后'],
-      level: '高危',
-      batchDistribution: batches['建设严重滞后'],
-      gate: '建设度 < 88%，落后批次推进均值',
-      tone: 'accent',
-    },
-  ]
 }

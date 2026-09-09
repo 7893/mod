@@ -313,7 +313,7 @@ def organizations(
         norm_r = normalize_region(region)
         filtered = [e for e in filtered if e["province"] == norm_r or e["region"] == region]
     if status and status != "全部":
-        filtered = [e for e in filtered if e["status"] == status or e.get("rawStatus") == status]
+        filtered = [e for e in filtered if e["status"] == status]
     if keyword:
         kw = keyword.lower()
         filtered = [

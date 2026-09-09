@@ -63,7 +63,7 @@ const progressRingsOption = computed(() => ({
       name: '推广上线', type: 'pie', radius: ['43%', '59%'], center: ['50%', '50%'],
       silent: false, label: { show: false }, emphasis: { scale: false },
       data: [
-        { value: rolloutRate.value, name: '正式上线', itemStyle: { color: chartPalette.success } },
+        { value: rolloutRate.value, name: '已上线', itemStyle: { color: chartPalette.success } },
         { value: 100 - rolloutRate.value, name: '待上线', itemStyle: { color: chartInk.borderSoft } },
       ],
     },
@@ -135,7 +135,7 @@ const riskClosureOption = computed(() => ({
         <VChart class="col-span-2 w-full h-full min-h-0" :option="progressRingsOption" autoresize />
         <div class="col-span-3 grid grid-rows-3 divide-y divide-surface-veil-06 min-w-0">
           <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设完成率</span><b class="font-mono text-sky-400"><AnimatedNumber :value="constructionProgress" :decimals="1" :duration="numDuration(800)" />%</b></div>
-          <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">正式上线率</span><b class="font-mono text-emerald-400">{{ rolloutRate }}%</b></div>
+          <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">上线率</span><b class="font-mono text-emerald-400">{{ rolloutRate }}%</b></div>
           <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设任务</span><b class="font-mono text-slate-200">{{ formatCount(construction?.totalTasks || 0) }}</b></div>
         </div>
       </section>

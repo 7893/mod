@@ -60,13 +60,17 @@ const highRiskCount = computed(() => complianceUnits.value.filter((u) => u.level
 const mediumRiskCount = computed(() => complianceUnits.value.filter((u) => u.level === '中').length)
 
 const tagDimensionCounts = computed(() => {
-  const counts: Record<string, number> = { 超期挂账: 0, 超预算迹象: 0, 票据异常: 0 }
-  complianceUnits.value.forEach((u) => { u.tags.forEach((t) => { if (counts[t] !== undefined) counts[t]++ }) })
-  return [
-    { label: '超期挂账', count: counts['超期挂账'], color: chartSeriesColors[3] },
-    { label: '超预算迹象', count: counts['超预算迹象'], color: chartSeriesColors[4] },
-    { label: '票据异常', count: counts['票据异常'], color: chartSeriesColors[2] },
-  ]
+  const colors: Record<(typeof COMPLIANCE_TAGS)[number], string> = {
+    超期挂账: chartSeriesColors[3],
+    超预算迹象: chartSeriesColors[4],
+    票据异常: chartSeriesColors[2],
+    准备期卡顿: chartSeriesColors[1],
+  }
+  return COMPLIANCE_TAGS.map((label) => ({
+    label,
+    count: complianceUnits.value.filter((u) => u.tags.includes(label)).length,
+    color: colors[label],
+  }))
 })
 
 const complianceOverviewOption = computed(() => createComplianceOverviewOption({

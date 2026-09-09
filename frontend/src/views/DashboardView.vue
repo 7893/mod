@@ -215,7 +215,7 @@ const chooseProvince = (name: string) => {
               <div class="col-span-3 grid grid-rows-4 h-full divide-y divide-white/5 min-w-0">
                 <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">建设完成率</span><b class="font-mono text-sky-400">{{ selectedProvinceData.progress }}%</b></div>
                 <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">纳入单位</span><b class="font-mono text-slate-100">{{ selectedProvinceData.total }}</b></div>
-                <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">正式上线</span><b class="font-mono text-emerald-400">{{ selectedProvinceData.launched }}</b></div>
+                <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">已上线</span><b class="font-mono text-emerald-400">{{ selectedProvinceData.launched }}</b></div>
                 <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">双轨运行</span><b class="font-mono text-amber-400">{{ selectedProvinceData.dual }}</b></div>
               </div>
             </div>
@@ -247,7 +247,7 @@ const chooseProvince = (name: string) => {
         >
           <template #actions>
             <PanelLegend compact :items="[
-              { label: '正式上线', tone: 'accent' },
+              { label: '已上线', tone: 'accent' },
               { label: '双轨核对', tone: 'warning' },
             ]" />
           </template>

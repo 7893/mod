@@ -37,7 +37,7 @@ def test_display_mapping_covers_every_db_status_into_five_public_states():
     public = {br.DISPLAY_STATUS_MAPPING.get(s, s) for s in br.ORG_LIFECYCLE_STAGES}
     # 数据库六态折叠为前端可见三态；「未启动」仅由蓄水池(batch 8)分支直接产出。
     assert public == {"准备中", "双轨运行", "已上线"}
-    assert public <= {"未启动", "准备中", "建设中", "双轨运行", "已上线"}
+    assert public | {"未启动"} == set(br.DISPLAY_STATUSES)
 
 
 def test_sql_helpers_render_in_lists():
@@ -51,6 +51,8 @@ def test_public_business_rules_exposes_status_vocabulary():
     rules = br.public_business_rules()
     assert rules["lifecycle"]["orgStages"] == list(br.ORG_LIFECYCLE_STAGES)
     assert rules["lifecycle"]["launchedStatuses"] == list(br.LAUNCHED_STATUSES)
+    assert rules["lifecycle"]["displayStatuses"] == list(br.DISPLAY_STATUSES)
+    assert rules["risk"]["constructionCriticalRate"] < rules["risk"]["constructionLagRate"]
     assert rules["lifecycle"]["dualRunConsistencyRateMin"] == br.DUAL_RUN_CONSISTENCY_RATE_MIN
 
 

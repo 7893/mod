@@ -9,7 +9,7 @@ function row(partial: Partial<EntityRow>): EntityRow {
     province: '北京',
     batch: '第一批',
     owner: '张三',
-    status: '建设中',
+    status: '双轨运行',
     construction: 50,
     openingData: 20,
     ...partial,
@@ -17,10 +17,10 @@ function row(partial: Partial<EntityRow>): EntityRow {
 }
 
 const rows = [
-  row({ id: 1, province: '广东', batch: '第二批', status: '建设中' }),
+  row({ id: 1, province: '广东', batch: '第二批', status: '双轨运行' }),
   row({ id: 2, province: '北京', batch: '第一批', status: '已上线' }),
-  row({ id: 3, province: '广东', batch: '第二批', status: '建设中' }),
-  row({ id: 4, province: '火星', batch: '第二批', status: '建设中' }),
+  row({ id: 3, province: '广东', batch: '第二批', status: '双轨运行' }),
+  row({ id: 4, province: '火星', batch: '第二批', status: '双轨运行' }),
 ]
 
 describe('countedOptions', () => {

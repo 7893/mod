@@ -267,6 +267,7 @@
   的真实 `NameError` 隐患（类型注解在运行期求值路径）、5 处分号多语句、4 处 `l` 歧义变量名、1 处未用变量；13 处
   `try/except: pass` 按同一原则处理——语料资产加载失败改为 `warning`、失败审计自身失败改为 `warning`、AI 响应 JSON
   提取收窄为 `JSONDecodeError`、临时文件 unlink/chmod 收窄为 `OSError`、错误路径 rollback 用 `suppress(Exception)`。待发布。
+- 前端状态词表已与后端四态对齐：`RolloutStatus` 去掉幻影「建设中」，`EntityRow.rawStatus` 与 `api.py` 的 `rawStatus` 过滤死分支一并删除；后端新增 `CONSTRUCTION_CRITICAL_RATE`/`DISPLAY_STATUSES` 并通过 `businessRules.risk.constructionCriticalRate`/`lifecycle.displayStatuses` 下发。建设滞后只评估「双轨运行」，准备中走「准备期卡顿」，合规标签枚举加入「准备期卡顿」；F3 风险维度门禁文案与高危数由规则和单位级判定派生；「正式上线」口径统一为「已上线」。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态

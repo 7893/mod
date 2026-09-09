@@ -225,7 +225,6 @@ const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEdit
                     :class="{
                       'bg-emerald-950/40 text-emerald-400 border-emerald-500/30': row.status === '已上线',
                       'bg-sky-950/40 text-sky-400 border-sky-500/30': row.status === '双轨运行',
-                      'bg-amber-950/40 text-amber-400 border-amber-500/30': row.status === '建设中',
                       'bg-slate-800/60 text-slate-400 border-white/10': row.status === '准备中' || row.status === '未启动',
                     }"
                   >

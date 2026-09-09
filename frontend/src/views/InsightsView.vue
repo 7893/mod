@@ -70,9 +70,8 @@ const dualDiffCount = computed(() => atRiskUnits.value.filter((u) => u.riskType 
 const constLagCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '建设严重滞后').length)
 const prepStuckCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '准备期卡顿').length)
 
-const riskDimensions = computed(() => {
-  return buildRiskDimensionBreakdown(atRiskUnits.value)
-})
+const riskDimensions = computed(() => buildRiskDimensionBreakdown(atRiskUnits.value, store.snapshot.businessRules))
+const highRiskCount = computed(() => atRiskUnits.value.filter((u) => u.riskLevel === '高危').length)
 
 const riskDistChartOption = computed(() => {
   const list = [...riskDimensions.value].reverse()
@@ -96,7 +95,7 @@ const riskDistChartOption = computed(() => {
 
         return `
           <div style="font-size: 12px; line-height: 1.6;">
-            <div style="font-weight: 600; color: ${chartInk.textPrimary}; margin-bottom: 4px;">${raw.type} · ${raw.level}</div>
+            <div style="font-weight: 600; color: ${chartInk.textPrimary}; margin-bottom: 4px;">${raw.type} · 高危 ${raw.highCount} / 关注 ${raw.count - raw.highCount}</div>
             <div style="color: ${chartInk.textMuted};">预警规模: <b style="color: ${chartInk.textPrimary}; font-family: monospace;">${raw.count} 家</b> (${pct}%)</div>
             <div style="color: ${chartInk.textMuted};">集中批次: <span style="color: ${chartInk.textPrimary};">${batchDetails}</span></div>
             <div style="color: ${chartInk.textMuted}; margin-top: 4px; border-top: 1px dashed ${chartInk.borderSoft}; padding-top: 4px;">门禁规则: ${raw.gate}</div>
@@ -343,7 +342,7 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
             </div>
             <div class="flex items-center justify-between pt-1 border-t border-surface-veil-06 text-cockpit-xs text-slate-500">
               <span>门禁：凭证率 &lt; {{ store.snapshot.businessRules.lifecycle.dualRunConsistencyRateMin }}% / 进度 &lt; {{ store.snapshot.businessRules.risk.constructionLagRate }}%</span>
-              <span class="font-mono text-slate-400">{{ dualDiffCount + constLagCount }} 家高危</span>
+              <span class="font-mono text-slate-400">{{ highRiskCount }} 家高危</span>
             </div>
           </div>
 

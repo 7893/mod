@@ -104,6 +104,11 @@ describe('utils/qualityMetrics', () => {
     })
   })
 
+  const RULES = {
+    lifecycle: { dualRunConsistencyRateMin: 98 },
+    risk: { constructionLagRate: 88, constructionCriticalRate: 80, lastActiveBatchId: 7 },
+  }
+
   describe('buildRiskDimensionBreakdown', () => {
     it('aggregates counts and batch distributions accurately', () => {
       const mockUnits = [
@@ -113,7 +118,7 @@ describe('utils/qualityMetrics', () => {
         { riskType: '建设严重滞后', riskLevel: '高危', batch: '第五批' },
       ]
 
-      const res = buildRiskDimensionBreakdown(mockUnits)
+      const res = buildRiskDimensionBreakdown(mockUnits, RULES)
       expect(res).toHaveLength(3)
 
       const prep = res.find((r) => r.type === '准备期卡顿')
@@ -127,10 +132,22 @@ describe('utils/qualityMetrics', () => {
       const lag = res.find((r) => r.type === '建设严重滞后')
       expect(lag?.count).toBe(1)
       expect(lag?.batchDistribution).toEqual({ 第五批: 1 })
+      expect(lag?.gate).toBe('建设度 < 88%（< 80% 为高危）')
+      expect(dual?.gate).toBe('双轨凭证率 < 98%')
+    })
+
+    it('counts high-risk units per dimension from unit-level levels', () => {
+      const res = buildRiskDimensionBreakdown([
+        { riskType: '建设严重滞后', riskLevel: '高危', batch: '第六批' },
+        { riskType: '建设严重滞后', riskLevel: '重点关注', batch: '第六批' },
+      ], RULES)
+      const lag = res.find((r) => r.type === '建设严重滞后')
+      expect(lag?.count).toBe(2)
+      expect(lag?.highCount).toBe(1)
     })
 
     it('returns zero counts safely on empty or null inputs', () => {
-      const res = buildRiskDimensionBreakdown(null)
+      const res = buildRiskDimensionBreakdown(null, RULES)
       expect(res).toHaveLength(3)
       expect(res.every((r) => r.count === 0)).toBe(true)
     })
