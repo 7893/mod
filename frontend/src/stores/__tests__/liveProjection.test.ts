@@ -4,7 +4,7 @@ import { flushPromises } from '@vue/test-utils'
 import { useLiveProjectionStore } from '../liveProjection'
 import { useProjectStore } from '../project'
 import type { LiveProjectionEvent } from '../../composables/useLiveProjection'
-import snapshotData from '../../data/v2-sim-snapshot.json'
+import snapshotData from '../../data/fallback-snapshot.json'
 
 function makeEvent(patch: Partial<LiveProjectionEvent>): LiveProjectionEvent {
   return {

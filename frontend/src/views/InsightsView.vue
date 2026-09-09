@@ -171,13 +171,12 @@ const riskDistChartOption = computed(() => {
  * 回归 R² <= 0、分类准确率退化（1.0）显式标记为"已训练，验证未达标"，不把不可信指标当预测能力展示。
  */
 const insights = computed(() => {
-  const data = insightsStatus.value ?? store.snapshot.insights
   const hw = insightsStatus.value?.hw_ml
   const regQuality = hw?.models?.regression?.quality ?? null
   const clsQuality = hw?.models?.classifier?.quality ?? null
   const regEffective = isRegressionEffective(regQuality)
   const clsEffective = isClassifierEffective(clsQuality)
-  const isReady = isAutomlReady(data.automlStatus, regQuality, clsQuality)
+  const isReady = isAutomlReady(insightsStatus.value?.automlStatus, regQuality, clsQuality)
 
   return {
     automlStatusDisplay: isReady ? '已就绪 (In-DB Ready)' : '已训练，验证未达标',
@@ -210,9 +209,7 @@ const insights = computed(() => {
           : '基于真实测试集评估，分类标签过度可分（退化为 1.0），按 KI-028 规范如实标为验证未达标。',
       },
     ],
-    ruleBasedAlerts: store.snapshot.insights?.ruleBasedAlerts?.length
-      ? store.snapshot.insights.ruleBasedAlerts
-      : [],
+    ruleBasedAlerts: store.snapshot.insights?.ruleBasedAlerts ?? [],
   }
 })
 

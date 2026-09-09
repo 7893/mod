@@ -22,9 +22,9 @@ from .dashboard_sections import (
 FALLBACK_SNAPSHOT_PATHS = [
     os.getenv("MOD_FALLBACK_SNAPSHOT_PATH", ""),
     # Backend-bundled snapshot (relative to this file) — works in any environment/CI.
-    os.path.join(os.path.dirname(__file__), "..", "v2-sim-snapshot.json"),
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "src", "data", "v2-sim-snapshot.json"),
-    "v2-sim-snapshot.json",
+    # 与前端共用同一份精简兜底（scripts/project/build_fallback_snapshot.py 生成）；release 目录内为其拷贝。
+    os.path.join(os.path.dirname(__file__), "..", "fallback-snapshot.json"),
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend", "src", "data", "fallback-snapshot.json"),
 ]
 
 REGION_SUFFIX_RULES = [
@@ -150,10 +150,11 @@ def load_fallback_snapshot() -> dict:
                 snapshot = json.load(f)
                 snapshot["businessRules"] = public_business_rules()
                 return snapshot
+    # 兜底文件也缺失时只返回空结构，不编造任何数字。
     return {
         "businessRules": public_business_rules(),
-        "meta": {"mode": "S", "notice": "全部为虚构模拟数据", "fullRows": 1685923},
-        "overview": {"orgTotal": 1497, "launched": 748, "dual": 205, "voucherSuccessPct": 96.51},
+        "meta": {"mode": "S", "notice": "全部为虚构模拟数据", "fullRows": 0},
+        "overview": {},
         "rollout": [],
         "trend": [],
         "entities": [],
@@ -554,7 +555,6 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
             )
         ) + operations["dualRunResult"] + small_total
 
-        fallback = load_fallback_snapshot()
         construction = build_construction_summary(conn)
         issues_summary, issues = build_issue_sections(conn, anchor_date_str)
         entities = build_entities(conn, as_of_date, anchor_date_str)
@@ -572,8 +572,7 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         voucher_success_pct = numeric(ov_row["voucher_success_pct"])
         integration_success_pct = numeric(ov_row["integration_success_pct"])
 
-        insights_data = dict(fallback.get("insights", {}))
-        insights_data["ruleBasedAlerts"] = compose_rule_based_alerts(rollout_rows, voucher_success_pct)
+        insights_data = {"ruleBasedAlerts": compose_rule_based_alerts(rollout_rows, voucher_success_pct)}
 
         org_today_added = int(ov_row.get("org_today_added") or 0)
         org_added_note = (

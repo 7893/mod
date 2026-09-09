@@ -163,8 +163,8 @@
   - 连锁数据原子入池（`simulation/pool_onboarding.py` 与 `simulation/construction_writer.py`）：新单位以第八批、未启动、进度 0 入池，联动单事务原子生成 30 项全生命周期标准任务模板（全未开始）、全 0% 期初数据准备度、初始上线快照，并级联更新 `daily_stats.org_count` 与 `user_count`；
   - 严守第八批零业务数据铁律：严格禁止对未启动的第八批单位生成任何单据、凭证、接口集成或双轨记录，确保数据金标准 0 缺陷；
   - 批次映射 SQL 逻辑加固：修复 `dashboard.py`、`dashboard_sections.py` 与 `broker.py` 中 `batch_mapped` 判定（由 `id > 1600` 加固为 `batch_id = 8` 及 `id > 1600 AND id <= 2000` 映射至第七批），杜绝新插入单位（id > 2000）被错误归入在推批次，确保批次 1~6（1002 家）、批次 7（400 家）与批次 8（647+ 家动态增长）全网勾稽一致；
-  - 常驻模拟服务低频节律触发（`simulation/runtime_service.py`）：按周新增 1~3 家滚动预算受控偶发入池，保持平缓自然增长；全量回归测试套件 `test_org_onboarding.py` 通过，`make check` 138 项后端与 67 项前端测试全绿。
-- 前端自动化测试体系基于 Vitest 5 + @vue/test-utils 2 + happy-dom，当前包含 25 个测试文件、122 项单测，实现秒级执行与 100% 离线 Mock，覆盖：
+  - 常驻模拟服务低频节律触发（`simulation/runtime_service.py`）：按周新增 1~3 家滚动预算受控偶发入池，保持平缓自然增长；全量回归测试套件 `test_org_onboarding.py` 通过，`make check` 全绿（后端/前端测试数量以 `make check` 实时输出为准，不在文档中手写以免失真）。
+- 前端自动化测试体系基于 Vitest 5 + @vue/test-utils 2 + happy-dom（测试文件与用例数量以 `make check` 实时输出为准），实现秒级执行与 100% 离线 Mock，覆盖：
   - `useScaleScreen.ts`：普通/全屏模式视口等比计算、clamp 范围约束、零尺寸防御与生命周期事件解绑；
   - `useInsightsStatus.ts` 与 `useDailyBriefing.ts`：只读轮询、卸载停表与网络异常优雅降级；
   - `formatters/metrics.ts`：千分位与百分比格式化及各类边界数值（null/undefined/NaN/0/负数）安全保护；

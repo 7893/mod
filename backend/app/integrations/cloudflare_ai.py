@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 # 1. 默认禁用：MOD_CF_AI_ENABLED 未设置或非 "true" 时，所有方法直接返回
 #    {"status": "disabled"}，不发出任何网络请求。
 # 2. 主动触发：外部 HTTP 调用仅由 generate_insights() 发起，
-#    get_status() 和 get_latest_cached_insights() 均不触发外部请求。
+#    get_status() 不触发外部请求。
 # 3. 强缓存：相同聚合指标指纹（SHA-256 截断）且 TTL 内直接复用缓存；
 #    TTL 默认 6 小时，由 MOD_CF_AI_CACHE_TTL_SECONDS 配置。
 # 4. 每日限额：默认 20 次真实调用/UTC 日，由 MOD_CF_AI_DAILY_LIMIT 配置；
@@ -137,7 +137,6 @@ class CloudflareAIAdapter:
     Cloudflare Workers AI REST API 适配器（低频主动触发 + 强缓存）。
 
     - get_status()                 ：只报告配置与缓存状态，绝不发外部请求。
-    - get_latest_cached_insights() ：只读缓存，不发外部请求。
     - generate_insights()          ：唯一可触发外部 HTTP 请求的入口；
                                      命中缓存、限额超出或降级时均不发请求。
     """
@@ -236,24 +235,7 @@ class CloudflareAIAdapter:
         }
 
     # ------------------------------------------------------------------
-    # 公开接口 2：只读最新缓存（绝不发外部请求）
-    # ------------------------------------------------------------------
-
-    def get_latest_cached_insights(self) -> dict:
-        """
-        返回最近一次成功调用的缓存结果。
-        不发外部请求，缓存为空时返回 {"status": "no_cache"}。
-        """
-        with _cf_cache_lock:
-            if _cf_cached_result is None:
-                return {
-                    "status": "no_cache",
-                    "message": "尚无缓存，请先调用 POST /api/insights/generate",
-                }
-            return dict(_cf_cached_result)
-
-    # ------------------------------------------------------------------
-    # 公开接口 3：主动生成洞察（唯一可触发外部请求的入口）
+    # 公开接口 2：主动生成洞察（唯一可触发外部请求的入口，仅供每日简报服务调用）
     # ------------------------------------------------------------------
 
     def generate_insights(self, summary_data: dict) -> dict:
@@ -493,12 +475,3 @@ class CloudflareAIAdapter:
             _cf_daily_count += 1
 
         return new_entry
-
-    # ------------------------------------------------------------------
-    # 向后兼容：保留 get_insights() 作为 generate_insights() 的别名
-    # 原有调用方不受影响，但已不推荐直接调用此方法。
-    # ------------------------------------------------------------------
-
-    def get_insights(self, summary_data: dict) -> dict:
-        """向后兼容别名，内部调用 generate_insights()。"""
-        return self.generate_insights(summary_data)

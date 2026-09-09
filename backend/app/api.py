@@ -9,7 +9,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
-from .auth import get_current_action_token, verify_internal_auth
 from .db import connection, get_engine
 from .heatwave_watchdog import get_heatwave_status
 from .ml_adapter import HeatWaveMLAdapter, CloudflareAIAdapter
@@ -133,11 +132,11 @@ def refresh_meta(conn: Connection | None = Depends(connection)) -> dict:
 
     return {
         "data_version": data_version,
-        "as_of_date": meta.get("asOfDate", "2026-08-30"),
-        "last_updated_at": meta.get("generatedAt", datetime.now().isoformat()),
-        "total_rows": meta.get("fullRows", 1685923),
+        "as_of_date": meta.get("asOfDate"),
+        "last_updated_at": meta.get("generatedAt"),
+        "total_rows": meta.get("fullRows"),
         "status": meta_status,
-        "seed": meta.get("seed", 42),
+        "seed": meta.get("seed"),
     }
 
 
@@ -423,18 +422,6 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
                 base_insights["notice"] = "HeatWave AutoML 特征表已就绪，模型训练与评估尚未完成；暂不提供可信预测质量。"
                 base_insights["summary"] = "AutoML 特征已建立，训练/评分未完成，暂无可信模型质量。"
 
-            target_models = base_insights.get("targetModels", [])
-            for tm in target_models:
-                if tm.get("type") == "REGRESSION":
-                    tm["status"] = "READY" if reg_ok else ("VALIDATION_FAILED" if reg_quality is not None else "NOT_EVALUATED")
-                    tm["algorithm"] = reg_info.get("algorithm", "HeatWave AutoML LinearRegression")
-                    tm["quality"] = reg_quality  # 真实值或 None（前端显示"—"），不再硬编码
-                elif tm.get("type") == "CLASSIFICATION":
-                    tm["status"] = "READY" if cls_ok else ("VALIDATION_FAILED" if cls_quality is not None else "NOT_EVALUATED")
-                    tm["algorithm"] = cls_info.get("algorithm", "HeatWave AutoML DecisionTreeClassifier")
-                    tm["quality"] = cls_quality  # 真实值或 None，不再硬编码
-
-        base_insights["action_token"] = get_current_action_token()
         return base_insights
     except Exception as e:
         logger.error("Failed to load insights status: %s", e, exc_info=True)
@@ -443,7 +430,6 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
         base_insights["hw_ml"] = {"status": "unavailable", "message": "服务端错误，状态不可用"}
         base_insights["cf_ai"] = {"status": "unavailable", "message": "服务端错误，状态不可用"}
         base_insights["summary"] = "研判引擎暂时不可用"
-        base_insights["action_token"] = get_current_action_token()
         return base_insights
 
 
@@ -455,59 +441,6 @@ def insights_risk_explanation(org_id: int, conn: Connection | None = Depends(con
     """
     adapter = HeatWaveMLAdapter(conn)
     return adapter.explain_risk(org_id)
-
-
-@router.post(
-    "/insights/generate",
-    dependencies=[Depends(verify_internal_auth)],
-    responses={
-        401: {"description": "未授权访问：高危外部调用接口需要有效的内部访问凭据"},
-    },
-)
-def insights_generate(conn: Connection | None = Depends(connection)) -> dict:
-    """
-    主动触发 Cloudflare Workers AI 洞察生成。
-
-    触发规则（按优先级）：
-    - 缓存命中（相同指标指纹 + TTL 内）→ 直接返回缓存，status="cache_hit"
-    - 每日限额已耗尽 → 返回 status="rate_limited"
-    - 未启用 / 凭据缺失 / 过滤后无字段 → 安全降级
-    - 以上均通过 → 发起真实 HTTP 请求，成功后更新缓存
-
-    只有本接口会触发外部模型调用；GET /insights/status 和
-    GET /insights/latest 均不产生外部请求。
-    """
-    try:
-        cf_ai = CloudflareAIAdapter()
-        snap = dashboard_snapshot(conn)
-        overview_data: dict = snap.get("overview", {})
-        return cf_ai.generate_insights(overview_data)
-    except Exception as e:
-        logger.error("Failed to generate insights: %s", e, exc_info=True)
-        return {
-            "status": "unavailable",
-            "message": "服务端错误，CF AI 调用失败",
-        }
-
-
-@router.get("/insights/latest")
-def insights_latest() -> dict:
-    """
-    返回最近一次成功调用的缓存洞察结果。
-
-    此端点绝不触发任何外部请求。
-    缓存为空时返回 {"status": "no_cache"}。
-    缓存有效（TTL 内）或已过期均照常返回，前端可根据 generated_at 判断新鲜度。
-    """
-    try:
-        cf_ai = CloudflareAIAdapter()
-        return cf_ai.get_latest_cached_insights()
-    except Exception as e:
-        logger.error("Failed to fetch latest insights: %s", e, exc_info=True)
-        return {
-            "status": "unavailable",
-            "message": "服务端错误，无法读取最新洞察",
-        }
 
 
 @router.get("/insights/briefing")

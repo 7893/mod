@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { flushPromises } from '@vue/test-utils'
 import { useProjectStore } from '../project'
-import snapshotData from '../../data/v2-sim-snapshot.json'
+import snapshotData from '../../data/fallback-snapshot.json'
 import { calcDualRunConsistency } from '../../utils/qualityMetrics'
 
 describe('stores/project', () => {
@@ -127,13 +127,13 @@ describe('stores/project', () => {
 
     const mockApiResponse = {
       overview: {
-        docs_total: 9999999,
-        docs_today_added: 12345,
-        vouchers_total: 8888888,
-        vouchers_today_added: 9876,
-        as_of_date: '2026-09-06',
+        docsTotal: 9999999,
+        docsTodayAdded: 12345,
+        vouchersTotal: 8888888,
+        vouchersTodayAdded: 9876,
+        asOfDate: '2026-09-06',
         launched: 500,
-        launched_pct: 25.0,
+        launchedPct: 25.0,
       },
       entities: [
         {
@@ -144,9 +144,9 @@ describe('stores/project', () => {
           owner: '张三',
           status: '已上线',
           construction: 100,
-          opening_data: 100,
-          voucher_rate: 99.5,
-          updated_at: '2026-09-06',
+          openingData: 100,
+          voucherRate: 99.5,
+          updatedAt: '2026-09-06',
         },
       ],
     }

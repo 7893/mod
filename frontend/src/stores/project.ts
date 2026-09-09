@@ -1,7 +1,7 @@
 import { formatDateTime } from '../formatters/metrics.ts'
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import snapshotData from '../data/v2-sim-snapshot.json'
+import snapshotData from '../data/fallback-snapshot.json'
 
 /** 展示四态，与后端 business_rules.DISPLAY_STATUSES 一致：DB 六态由后端折叠，「已上线」含「稳定运行」。 */
 export type RolloutStatus = '未启动' | '准备中' | '双轨运行' | '已上线'
@@ -169,33 +169,13 @@ export interface ConstructionData {
   }
 }
 
-export interface InsightModelTarget {
-  id: string
-  name: string
-  type: string
-  algorithm: string
-  target: string
-  status: string
-  quality?: number | null
-  features: string[]
-  description: string
-}
-
+/** 快照内的 insights 只承载规则告警；模型/预测状态由 /api/insights/status 单独提供。 */
 export interface InsightsData {
-  automlStatus: string
-  automlStatusDisplay: string
-  trainingAuthorized: boolean
-  cloudflareStatus: string
-  cloudflareStatusDisplay: string
-  dataReadyForTraining: boolean
-  totalTrainingRows: number
-  targetModels: InsightModelTarget[]
   ruleBasedAlerts: Array<{
     level: string
     title: string
     detail: string
   }>
-  notice: string
 }
 
 export interface ProjectSnapshot {
@@ -408,19 +388,6 @@ export const useProjectStore = defineStore('project', () => {
     Object.assign(row, patch, { updatedAt: '刚刚' })
   }
 
-  function fixKeys(obj: any): any {
-    if (Array.isArray(obj)) return obj.map(fixKeys)
-    if (obj !== null && typeof obj === 'object') {
-      return Object.fromEntries(
-        Object.entries(obj).map(([k, v]) => [
-          k.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()),
-          fixKeys(v),
-        ])
-      )
-    }
-    return obj
-  }
-
   async function refresh(silent = false) {
     // KI-059：绝不整屏/顶栏转圈。首屏与轮询始终已有兜底或上一份有效快照可展示，
     // 因此只在“完全没有任何可展示数据”这种极端情况下才显示 loading。
@@ -436,7 +403,8 @@ export const useProjectStore = defineStore('project', () => {
       })
       if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       const raw = await response.json()
-      const live = fixKeys(raw) as ProjectSnapshot
+      // KI-075: 后端快照契约已全量 camelCase（后端有 camelCase 契约测试保障），前端不再做键名转换。
+      const live = raw as ProjectSnapshot
       if (requestSequence !== refreshSequence) return
       live.businessRules = live.businessRules || FALLBACK_BUSINESS_RULES
       snapshot.value = live
