@@ -24,7 +24,7 @@ interface CoverageSeriesItem {
 
 interface ComplianceSeriesItem {
   name: string
-  complianceRate: string
+  complianceRate: number | null
   highCount: number
 }
 
@@ -218,21 +218,21 @@ export function createBatchProgressOption(list: BatchProgressItem[]) {
       axisLine: { lineStyle: { color: chartInk.border } },
       axisLabel: { color: chartInk.textMuted, fontSize: 10, interval: 0 },
     },
+    // 建设完成度（单位进度均值）与上线率（单位数占比）分母不同，不能堆叠在同一根条里，只能并列。
     series: [
       {
-        name: '已上线', type: 'bar', stack: 'phase', barMaxWidth: 14,
+        name: '建设完成度', type: 'bar', barGap: '10%', barMaxWidth: 8,
+        data: reversed.map((batch) => batch.construction),
+        itemStyle: { color: chartPalette.accent, borderRadius: [0, 3, 3, 0] },
+        showBackground: true,
+        backgroundStyle: { color: chartInk.borderSoft },
+      },
+      {
+        name: '上线率', type: 'bar', barMaxWidth: 8,
         data: reversed.map((batch) => batch.launched),
-        itemStyle: { color: chartPalette.success, borderRadius: [3, 0, 0, 3] },
-      },
-      {
-        name: '已建设待上线', type: 'bar', stack: 'phase',
-        data: reversed.map((batch) => Math.max(0, batch.construction - batch.launched)),
-        itemStyle: { color: chartPalette.accent },
-      },
-      {
-        name: '待完成', type: 'bar', stack: 'phase',
-        data: reversed.map((batch) => Math.max(0, 100 - batch.construction)),
-        itemStyle: { color: chartPalette.neutral, borderRadius: [0, 3, 3, 0] },
+        itemStyle: { color: chartPalette.success, borderRadius: [0, 3, 3, 0] },
+        showBackground: true,
+        backgroundStyle: { color: chartInk.borderSoft },
       },
     ],
   }
@@ -359,7 +359,7 @@ export function createBatchComplianceOption(list: ComplianceSeriesItem[]) {
       },
       {
         name: '合规率', type: 'line',
-        data: list.map((batch) => Number(batch.complianceRate)),
+        data: list.map((batch) => batch.complianceRate),
         symbolSize: 5,
         lineStyle: { color: chartPalette.success, width: 2 },
         itemStyle: { color: chartPalette.success },

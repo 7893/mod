@@ -7,7 +7,7 @@ describe('LiveActivityTicker', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders fallback governance activities when fetch is empty', async () => {
+  it('renders an honest empty state instead of fabricated activities when fetch is empty', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -20,8 +20,8 @@ describe('LiveActivityTicker', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('治理自愈动态广播')
-    expect(wrapper.text()).toContain('北方特种装备工业集团')
-    expect(wrapper.text()).toContain('现场排查')
+    expect(wrapper.text()).toContain('暂无治理活动记录')
+    expect(wrapper.findAll('button').length).toBe(0)
   })
 
   it('renders live activities returned from api and advances on next button click', async () => {
