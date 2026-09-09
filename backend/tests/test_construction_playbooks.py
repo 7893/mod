@@ -19,6 +19,7 @@ from simulation.construction_playbooks import (
     TrainingCertificationPlaybook,
     TransitionReviewPlaybook,
 )
+from simulation.construction_models import DUAL_RUN_DIFFERENCE_REASONS
 from simulation.engine_context import ConstructionBaseline, IdAllocator
 
 
@@ -152,7 +153,10 @@ def test_dual_run_check_playbook_matched(baseline: ConstructionBaseline):
     )
     assert event.dual_run.result == "一致"
     assert event.dual_run.diff_amount == Decimal("0.00")
+    assert event.dual_run.difference_reason is None
     assert event.associated_task.owner == "赵敏"
+    assert event.associated_task.status == "已完成"
+    assert "新旧系统双轨平行对账核验" in event.associated_task.name
 
 
 def test_dual_run_check_playbook_forced_diff(baseline: ConstructionBaseline):
@@ -166,7 +170,26 @@ def test_dual_run_check_playbook_forced_diff(baseline: ConstructionBaseline):
     )
     assert event.dual_run.result == "不一致"
     assert event.dual_run.diff_amount > Decimal("0.00")
+    assert event.dual_run.difference_reason is not None
+    c_type = event.dual_run.check_type
+    assert event.dual_run.difference_reason in DUAL_RUN_DIFFERENCE_REASONS[c_type]
     assert event.associated_task.status == "进行中"
+    assert "双轨对账差异专项排查" in event.associated_task.name
+
+
+def test_dual_run_check_playbook_financial_rhythm(baseline: ConstructionBaseline):
+    """Verify month-end financial rhythm triggers specialized task naming."""
+    playbook = DualRunCheckPlaybook(baseline, seed=42)
+    allocator = IdAllocator(baseline.next_ids)
+    # Month-end close date (day 30)
+    event = playbook.generate(
+        org_id=4,
+        event_date=date(2026, 9, 30),
+        id_allocator=allocator,
+        force_diff=False,
+    )
+    assert event.dual_run.result == "一致"
+    assert "月末财务结账平行试算平衡核验" in event.associated_task.name
 
 
 def test_dual_run_check_playbook_gate_violation(baseline: ConstructionBaseline):

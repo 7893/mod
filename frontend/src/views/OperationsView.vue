@@ -110,6 +110,10 @@ const dualRunPass = computed(() => (
   dualRunStats.value ? dualRunStats.value.consistencyPct >= 95 : null
 ))
 
+const dualRunBreakdown = computed(() => {
+  return store.snapshot.operations?.dualRunBreakdown || []
+})
+
 const qualityAuditList = computed(() => {
   return buildQualityAuditList(
     store.snapshot.quality,
@@ -224,9 +228,16 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
             <b class="font-mono text-cockpit-kpi font-bold mt-1" :class="dualRunPass ? 'text-emerald-400' : 'text-amber-400'">
               {{ formatPercent(dualRunStats.consistencyPct) }}
             </b>
-            <div class="flex items-center gap-2 mt-3 text-cockpit-xs">
+            <div class="flex items-center gap-2 mt-1.5 text-cockpit-xs">
               <span class="text-slate-500">门禁 ≥ 95%</span>
               <span class="font-medium" :class="dualRunPass ? 'text-emerald-400' : 'text-amber-400'">{{ dualRunPass ? '已达标' : '待提升' }}</span>
+            </div>
+            <!-- 三大对账维度穿透 (KI-053) -->
+            <div v-if="dualRunBreakdown.length" class="flex flex-col gap-1 mt-2 pt-2 border-t border-surface-veil-06">
+              <div v-for="item in dualRunBreakdown" :key="item.type" class="flex items-center justify-between text-cockpit-xs text-slate-400">
+                <span class="truncate max-w-20" :title="item.type">{{ item.type.replace('核对', '').replace('比对', '') }}</span>
+                <span class="font-mono font-medium text-slate-200">{{ formatPercent(item.rate) }}</span>
+              </div>
             </div>
           </div>
           <VChart class="col-span-8 w-full h-full min-h-0" :option="dualRunOutcomeOption" autoresize />

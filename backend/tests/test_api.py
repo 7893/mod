@@ -581,6 +581,13 @@ def test_ki061_fallback_snapshot_contracts():
     assert ops["dualRunConsistent"] > 0
     assert ops["dualRunConsistent"] + ops["dualRunInconsistent"] == ops["dualRunResult"]
     assert 0 <= ops["dualRunConsistencyPct"] <= 100
+    if "dualRunBreakdown" in ops:
+        assert isinstance(ops["dualRunBreakdown"], list)
+        for item in ops["dualRunBreakdown"]:
+            assert "type" in item
+            assert "consistent" in item
+            assert "inconsistent" in item
+            assert "rate" in item
 
 
 def test_ki061_refresh_meta_and_health_probe_source_distinction(monkeypatch):

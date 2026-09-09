@@ -259,6 +259,13 @@ export interface ProjectSnapshot {
     dualRunConsistent?: number
     dualRunInconsistent?: number
     dualRunConsistencyPct?: number
+    dualRunBreakdown?: Array<{
+      type: string
+      consistent: number
+      inconsistent: number
+      total: number
+      rate: number
+    }>
   }
   operationsTrend?: OperationsTrendItem[]
   quality?: {

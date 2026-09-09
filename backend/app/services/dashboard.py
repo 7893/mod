@@ -501,16 +501,43 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
         LIMIT 8
         """, {"anchor_date": anchor_date})
         operations_trend = build_operations_trend(operation_trend_source)
-        dual_counts = {
-            row["result"]: row["count"]
-            for row in mappings(conn, "SELECT result, COUNT(*) AS count FROM dual_run_result GROUP BY result")
-        }
-        dual_consistent = dual_counts.get("一致", 0)
+        dual_type_rows = mappings(conn, """
+        SELECT check_type, result, COUNT(*) AS count
+        FROM dual_run_result
+        GROUP BY check_type, result
+        """)
+        dual_consistent = 0
+        dual_inconsistent = 0
+        breakdown_by_type = {}
+        for r in dual_type_rows:
+            ct = r["check_type"]
+            res = r["result"]
+            cnt = int(r["count"])
+            if ct not in breakdown_by_type:
+                breakdown_by_type[ct] = {"consistent": 0, "inconsistent": 0, "total": 0}
+            if res == "一致":
+                dual_consistent += cnt
+                breakdown_by_type[ct]["consistent"] += cnt
+            else:
+                dual_inconsistent += cnt
+                breakdown_by_type[ct]["inconsistent"] += cnt
+            breakdown_by_type[ct]["total"] += cnt
+
         operations["dualRunConsistent"] = dual_consistent
-        operations["dualRunInconsistent"] = dual_counts.get("不一致", 0)
+        operations["dualRunInconsistent"] = dual_inconsistent
         operations["dualRunConsistencyPct"] = (
             round(dual_consistent * 100 / ops["dual_run_count"], 2) if ops["dual_run_count"] else 0
         )
+        operations["dualRunBreakdown"] = [
+            {
+                "type": ct,
+                "consistent": data["consistent"],
+                "inconsistent": data["inconsistent"],
+                "total": data["total"],
+                "rate": round(data["consistent"] * 100.0 / data["total"], 1) if data["total"] else 0.0,
+            }
+            for ct, data in sorted(breakdown_by_type.items())
+        ]
         
         # 小表行数（快速查询）
         small_tables_sql = """

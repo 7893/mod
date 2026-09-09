@@ -26,6 +26,7 @@ from .construction_models import (
     ConstructionTaskFootprint,
     DataReadinessEventFootprint,
     DataReadinessRecordFootprint,
+    DUAL_RUN_DIFFERENCE_REASONS,
     DualRunCheckEventFootprint,
     DualRunResultRecordFootprint,
     InterfaceDebuggingEventFootprint,
@@ -367,7 +368,7 @@ class DualRunCheckPlaybook(BaseConstructionPlaybook):
         event_date: date,
         id_allocator: Optional[IdAllocator] = None,
         check_type: Optional[str] = None,
-        force_diff: bool = False,
+        force_diff: Optional[bool] = False,
     ) -> DualRunCheckEventFootprint:
         org = self._get_org(org_id)
         if org["status"] != "双轨运行中":
@@ -379,17 +380,32 @@ class DualRunCheckPlaybook(BaseConstructionPlaybook):
         dual_id = id_allocator.next_id("dual_run_result") if id_allocator else 500000 + org_id
         base_amt = Decimal(f"{self.rng.randint(500000, 4500000)}.{self.rng.randint(10, 99)}")
 
-        if force_diff:
+        # 财务周期强节律机制 (KI-053):
+        # 自然月 26~31 日及月初 1~2 日为月末结账对账攻坚期，对账量倍增且科目集中结转，差异暴露概率脉冲式上升
+        is_month_end = event_date.day >= 26 or event_date.day <= 2
+        if force_diff is True:
+            has_diff = True
+        elif force_diff is False:
+            has_diff = False
+        else:
+            # 随日历自适应节律：月末结账期不一致率自然上升至 ~8%，平时平稳在 ~2%
+            diff_chance = 0.08 if is_month_end else 0.02
+            has_diff = self.rng.random() < diff_chance
+
+        if has_diff:
             diff_val = Decimal(f"{self.rng.randint(50, 800)}.{self.rng.randint(10, 99)}")
             v1_amt = base_amt
             v2_amt = base_amt + diff_val
             diff_amt = diff_val
             result_str = "不一致"
+            reasons = DUAL_RUN_DIFFERENCE_REASONS.get(c_type, DUAL_RUN_DIFFERENCE_REASONS["业务单据金额核对"])
+            diff_reason = self.rng.choice(reasons)
         else:
             v1_amt = base_amt
             v2_amt = base_amt
             diff_amt = Decimal("0.00")
             result_str = "一致"
+            diff_reason = None
 
         record = DualRunResultRecordFootprint(
             id=dual_id,
@@ -400,20 +416,37 @@ class DualRunCheckPlaybook(BaseConstructionPlaybook):
             diff_amount=diff_amt,
             result=result_str,
             check_date=event_date,
+            difference_reason=diff_reason,
         )
 
         owner = self._get_org_user(org_id)
         task_id = id_allocator.next_id("construction_task") if id_allocator else 550000 + org_id
+
+        # 动态业务任务命名与进度关联 (KI-053)
+        if has_diff:
+            task_name = f"双轨对账差异专项排查与单边分录冲销（{c_type}）"
+            task_status = "进行中"
+            task_progress = 85
+            task_actual = None
+        else:
+            if is_month_end:
+                task_name = f"月末财务结账平行试算平衡核验（{c_type}）"
+            else:
+                task_name = f"新旧系统双轨平行对账核验（{c_type}）"
+            task_status = "已完成"
+            task_progress = 100
+            task_actual = event_date
+
         task = ConstructionTaskFootprint(
             id=task_id,
             org_id=org_id,
-            name="新旧系统首周业务单据与凭证平行核对",
+            name=task_name,
             type="双轨验证",
             owner=owner,
             plan_time=event_date,
-            actual_time=event_date if not force_diff else None,
-            status="已完成" if not force_diff else "进行中",
-            progress=100 if not force_diff else 85,
+            actual_time=task_actual,
+            status=task_status,
+            progress=task_progress,
             update_time=event_date,
         )
 
