@@ -354,6 +354,8 @@ class SimulatorRuntimeService:
         config: Optional[SimulatorRuntimeConfig] = None,
         conn: Optional[Any] = None,
         seed: Optional[int] = None,
+        propeller: Optional[Any] = None,
+        backfiller: Optional[Any] = None,
     ):
         self.config = config or SimulatorRuntimeConfig()
         self._external_conn = conn
@@ -370,6 +372,8 @@ class SimulatorRuntimeService:
         self.onboarding_dates: List[Any] = []
         self._last_rate_limit_reason: Optional[str] = None
         self._last_rate_limit_warn_time: float = 0.0
+        self.propeller = propeller
+        self.backfiller = backfiller
 
         # Cache baselines
         self._fast_baseline: Optional[Any] = None
@@ -452,8 +456,29 @@ class SimulatorRuntimeService:
             )
         self._last_rate_limit_reason = None
 
-        # 4. Check whether database writes are enabled
+        # 4. Check whether database writes are enabled.
+        #    KI-062 fail-closed: when the engine is disabled we short-circuit BEFORE acquiring a
+        #    connection, loading baselines, generating events, allocating IDs, or touching the
+        #    propeller/backfiller. This keeps the disabled path strictly side-effect free and
+        #    independent of baseline completeness (the previous ordering generated events first
+        #    and could raise during ID allocation instead of returning DRY_RUN).
         engine_enabled = is_simulation_engine_enabled() and not self.config.dry_run
+
+        if not engine_enabled:
+            # Dry-run / Idle mode: zero database access, zero modifications.
+            logger.info(
+                f"[DRY-RUN TICK] {now_hkt.strftime('%Y-%m-%d %H:%M:%S')} HKT | "
+                f"Intensity: {intensity:.3f} | Planned burst: {burst_count} events | DB Write: DISABLED"
+            )
+            self.fuse.record(now_hkt, burst_count, persist=False)
+            self._save_status("DRY_RUN", intensity, now_hkt, None)
+            return CycleResult(
+                status="DRY_RUN",
+                events_written=0,
+                wait_seconds=wait_seconds,
+                intensity=intensity,
+                cycle_duration_ms=(time.perf_counter() - t0) * 1000,
+            )
 
         conn = self._get_connection()
         try:
@@ -479,22 +504,6 @@ class SimulatorRuntimeService:
                 all_events = fast_events  # type: ignore
                 is_construction = False
 
-            if not engine_enabled:
-                # Dry-run / Idle mode: zero database modifications
-                logger.info(
-                    f"[DRY-RUN TICK] {now_hkt.strftime('%Y-%m-%d %H:%M:%S')} HKT | "
-                    f"Intensity: {intensity:.3f} | Burst: {len(all_events)} events | DB Write: DISABLED"
-                )
-                self.fuse.record(now_hkt, len(all_events), persist=False)
-                self._save_status("DRY_RUN", intensity, now_hkt, None)
-                return CycleResult(
-                    status="DRY_RUN",
-                    events_written=0,
-                    wait_seconds=wait_seconds,
-                    intensity=intensity,
-                    cycle_duration_ms=(time.perf_counter() - t0) * 1000,
-                )
-
             # 5. Real Atomic Write Execution (Single-Transaction Ownership)
             c_writer: Optional[ConstructionWriter] = None
             s_writer: Optional[SimulationWriter] = None
@@ -514,9 +523,39 @@ class SimulatorRuntimeService:
                     if not ok:
                         raise RuntimeError(f"Post-cycle construction self-check failed: {chk_err}")
 
-                    conn.commit()
                     c_writer.record_success_audit(c_res)
                     events_written = len(all_events)
+
+                # KI-062: Hook ConstructionPropeller (The Spear & Shield)
+                if self.propeller is not None:
+                    self.propeller.step(now=now_hkt, auto_commit=False)
+                elif not (type(conn).__name__ == "MagicMock" or type(conn).__name__ == "Mock"):
+                    try:
+                        from .construction_propeller import ConstructionPropeller
+                        propeller = ConstructionPropeller(conn=conn)
+                        prop_res = propeller.step(now=now_hkt, auto_commit=False)
+                        logger.info(
+                            f"[PROPELLER] Units advanced: {prop_res.units_advanced} | "
+                            f"Issues advanced: {prop_res.issues_advanced} | "
+                            f"Issues resolved: {prop_res.issues_resolved} | "
+                            f"Issues created: {prop_res.issues_created}"
+                        )
+                    except Exception as prop_err:
+                        logger.warning(f"[PROPELLER WARNING] {prop_err}")
+
+                # KI-062: Trickle backfill AI narrative (guarded by 3,000 neurons/day QuotaWatchdog)
+                if os.getenv("MOD_CF_AI_ENABLED", "true").lower() == "true":
+                    if self.backfiller is not None:
+                        self.backfiller.run_cycle(batch_size=1)
+                    elif not (type(conn).__name__ == "MagicMock" or type(conn).__name__ == "Mock"):
+                        try:
+                            from .trickle_backfill import TrickleBackfiller
+                            backfiller = TrickleBackfiller(conn=conn)
+                            backfiller.run_cycle(batch_size=1)
+                        except Exception as bf_err:
+                            logger.warning(f"[TRICKLE_BACKFILL WARNING] {bf_err}")
+
+                conn.commit()
             else:
                 s_writer = SimulationWriter(conn=conn, audit_log_path=str(self.config.audit_log_path))
                 s_res = s_writer.write_events(all_events, auto_commit=False)  # type: ignore

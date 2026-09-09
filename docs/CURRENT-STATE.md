@@ -1,6 +1,6 @@
 # MOD 当前状态
 
-更新日期：2026-09-08
+更新日期：2026-09-09
 状态：现行事实入口
 适用范围：当前运行、数据、功能、质量、安全状态与操作边界
 
@@ -229,9 +229,20 @@
 ## 本地质量基线
 
 - 2026-09-07 记录的旧质量基线为前端 84 项 Vitest、后端 139 项 pytest；该数字作为历史增长节点保留，不再代表当前总数。
-- 前端：Vue 3、TypeScript、Vite；当前 18 个测试文件、98 项 Vitest 单测、类型检查与生产构建通过。
-- 后端：FastAPI、SQLAlchemy；当前 208 项 pytest 测试通过；KI-060 已将 Starlette `TestClient` 的开发依赖
+- 前端：Vue 3、TypeScript、Vite；当前 20 个测试文件、103 项 Vitest 单测、类型检查与生产构建通过。
+- 后端：FastAPI、SQLAlchemy；当前 224 项 pytest 测试通过（新增 GI-003 矛与盾攻防博弈与 Cloudflare AI 看门狗 10 项全生命周期测试用例全绿，以及 KI-062 推进器与滴灌回填主循环接线回归测试 2 项全绿，全量测试已完成 100% 离线自洽化改造，移除直连生产库的冗余 live 测试）；KI-060 已将 Starlette `TestClient` 的开发依赖
   从已弃用的 `httpx` 回退路径迁移至精确锁定的 `httpx2==2.12.0`，并将对应弃用警告设为测试失败。
+- 矛与盾攻防博弈与合规治理引擎（GI-003 阶段一至阶段三 & KI-062/KI-063 治理闭环）：
+  - 测试套件离线自洽与凭据脱敏（KI-063）：移除了测试与代码中硬编码的内网 IP 与账号默认值，构建内存 `MockLedgerConnection` 与隔离 Mock 消除测试对真实生产库的直连与写库操作，完全符合 ENFORCEMENT 闸门 A/B 要求。
+  - 模拟主循环接线闭环（KI-062，`simulation/runtime_service.py`）：将治理推进器（`ConstructionPropeller`）与涓流回填（`TrickleBackfiller`）正式挂接到慢电影建设周期主循环，由 `MOD_SIMULATION_ENGINE_ENABLED` 失败关闭门禁控制，彻底闭合「有引擎无接线」的技术债缺口。
+  - 数据库就绪三张治理与配额审计表：`governance_issue`（存量 45 单）、`issue_timeline`（存量 139 条流水）、`sim_ai_quota_ledger`（日级看门狗流水账）。
+  - 盾（`simulation/governance_state_machine.py`）：六态治理有限状态机、容量为 8 的专家专班调度池、15% 严苛二次返工回路、五大行业高拟真离线叙事库。
+  - 矛（`simulation/construction_propeller.py`）：批次推进与 88% 阻力陷阱动力学，结合消缺解冻与推进器协同。
+  - 配额看门狗（`simulation/quota_watchdog.py`）：每日硬限制 3,000 Neurons，超额自动触发 FUSED 熔断阻断外网请求，确保账单恒为 $0.00。
+  - AI 算力挂接与零故障降级（`simulation/cf_ai_client.py`）：接入 Cloudflare Workers AI，异常或断网时平滑降级至本地离线叙事库。
+  - 涓流回填流水线（`simulation/trickle_backfill.py`）：受控微批量（≤3 单）异步富化存量工单与时间线，实现历史数据真实有机充填。
+  - 治理与配额端点（`backend/app/api.py`, `backend/app/services/governance.py`）：提供工单分页查询、详情透视、全景时间线、一键督办（`POST /api/governance/issues/{id}/dispatch`）、配额透视（`GET /api/governance/ai-quota`）以及单工单 AI 富化（`POST /api/governance/issues/{id}/enrich`）。
+  - 前端 E/F 屏双向交互抽屉（`ComplianceInspectDrawer.vue`, `AiQuotaCapsule.vue`）：E 屏提供六态流转 Stepper、专班展示、多节点流水展示、一键督办上帝之手与 AI 深度研判；F 屏挂载 Cloudflare AI 每日安全算力额度监控胶囊（$0.00 零费用硬防护）。
 - Ruff 检查已清零并纳入 `make check`。
 - 文档治理闸门已纳入 `make check` 与 CI：阻断已跟踪文档删除、冻结正文减损、KI 状态分裂、必需元数据缺失与现行索引漏项；核心行为变更未同步本文时直接失败，不再仅输出警告。
 - CHANGELOG 从 `.git-cliff-baseline` 记录的真实公开就绪提交起计，使用锁定的 git-cliff 2.13.1 生成；质量闸门校验基线可达性、配置与生成标记，`v*` tag/人工触发工作流只上传变更日志产物，无仓库写权限。
