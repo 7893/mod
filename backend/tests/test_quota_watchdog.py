@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from datetime import date
 from unittest.mock import MagicMock, patch
+import os
 
 
 from simulation.cf_ai_client import CloudflareAIClient
@@ -183,19 +184,18 @@ def test_cf_ai_client_quota_fuse_fallback():
 def test_cf_ai_client_quota_ledger_error_fails_closed_to_local():
     mock_watchdog = MagicMock(spec=QuotaWatchdog)
     mock_watchdog.try_reserve.side_effect = RuntimeError("ledger unavailable")
-    client = CloudflareAIClient(watchdog=mock_watchdog)
-    # CI 环境无凭据配置；mock _credentials_configured 使测试能走到 watchdog 逻辑
-    client._credentials_configured = lambda: True
+    # CI 环境无凭据；注入虚拟环境变量使客户端认为已配置，从而走到 watchdog 逻辑
+    with patch.dict(os.environ, {"CLOUDFLARE_ACCOUNT_ID": "test_acc", "CLOUDFLARE_API_TOKEN": "test_tok"}):
+        client = CloudflareAIClient(watchdog=mock_watchdog)
+        result = client.enrich_issue(
+            issue_id="ISS-TEST-QUOTA",
+            issue_type="数据校验失败",
+            unit_name="测试单位",
+            province="北京",
+        )
 
-    result = client.enrich_issue(
-        issue_id="ISS-TEST-QUOTA",
-        issue_type="数据校验失败",
-        unit_name="测试单位",
-        province="北京",
-    )
-
-    assert "QUOTA_UNAVAILABLE" in result.source
-    assert result.neurons_used == 0.0
+        assert "QUOTA_UNAVAILABLE" in result.source
+        assert result.neurons_used == 0.0
 
 
 def test_cf_ai_client_network_error_resilience():
