@@ -8,7 +8,7 @@ import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, Visua
 import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
 import RolloutLedgerTable from '../components/RolloutLedgerTable.vue'
-import { calmAnimation, chartInk, chartPalette } from '../charts/theme.ts'
+import { calmAnimation, chartInk, chartPalette, chartTooltip } from '../charts/theme.ts'
 import { buildCoverageComposition, buildRolloutComposition } from '../charts/panelData.ts'
 import { createCoverageOption, createRolloutCompositionOption } from '../charts/panelOptions.ts'
 import { createRolloutCommandOption, createRolloutTrendMatrixOption } from '../charts/rolloutOptions.ts'
@@ -74,9 +74,7 @@ const provinceRolloutOption = computed(() => ({
   tooltip: {
     trigger: 'axis',
     axisPointer: { type: 'shadow' },
-    backgroundColor: chartColors.bg,
-    borderColor: chartColors.border,
-    textStyle: { color: chartInk.textPrimary, fontSize: 12 },
+    ...chartTooltip,
   },
   grid: { left: 4, right: 10, top: 4, bottom: 4, containLabel: true },
   xAxis: {

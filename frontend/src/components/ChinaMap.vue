@@ -206,6 +206,7 @@ const legendStops = computed(() => {
 const option = computed(() => ({
   backgroundColor: 'transparent',
   tooltip: {
+    confine: true,
     trigger: 'item',
     padding: 0,
     borderWidth: 0,
