@@ -18,23 +18,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Dict, List, Optional
 
-# Lifecycle stage chains (strictly ordered, forward-only)
-ORG_LIFECYCLE_STAGES = (
-    "未启动",
-    "准备中",
-    "已具备双轨条件",
-    "双轨运行中",
-    "已上线",
-    "稳定运行",
-)
-
-BATCH_LIFECYCLE_STAGES = (
-    "未启动",
-    "准备中",
-    "双轨运行中",
-    "已上线",
-    "稳定运行",
-)
+# Lifecycle stage chains (strictly ordered, forward-only) — single source in app.business_rules
+from app.business_rules import BATCH_LIFECYCLE_STAGES, ORG_LIFECYCLE_STAGES  # noqa: E402,F401
 
 TASK_TYPES = (
     "基础环境",

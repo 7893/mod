@@ -7,6 +7,12 @@ from decimal import Decimal
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from ..business_rules import (
+    DISPLAY_STATUS_MAPPING,
+    ORG_STATUS_NOT_STARTED,
+    SQL_INFERRED_BATCH_ID,
+)
+
 
 def _rows(conn: Connection, sql: str, params: dict | None = None) -> list[dict]:
     return [_numbers(dict(row)) for row in conn.execute(text(sql), params or {}).mappings()]
@@ -191,25 +197,14 @@ def compose_issue_sections(
 
 
 def build_entities(conn: Connection, updated_at: str, anchor_date: str | None = None) -> list[dict]:
-    rows = _rows(conn, """
+    rows = _rows(conn, f"""
         WITH batch_mapped AS (
             SELECT 
                 o.id,
                 o.name,
                 o.region,
                 o.status,
-                CASE
-                    WHEN o.batch_id = 8 THEN 8
-                    WHEN o.status = '双轨运行中' THEN 6
-                    WHEN o.id <= 2005 AND o.status = '稳定运行' AND o.id <= 150 THEN 1
-                    WHEN o.id <= 2005 AND o.status = '稳定运行' AND o.id <= 330 THEN 2
-                    WHEN o.id <= 2005 AND o.status = '稳定运行' THEN 3
-                    WHEN o.id <= 2005 AND o.status = '已上线' AND o.id <= 580 THEN 4
-                    WHEN o.id <= 2005 AND o.status = '已上线' THEN 5
-                    WHEN o.id <= 2005 AND o.id > 1600 AND o.id <= 2000 THEN 7
-                    WHEN o.batch_id BETWEEN 1 AND 7 THEN o.batch_id
-                    ELSE 8
-                END AS batchId
+                {SQL_INFERRED_BATCH_ID} AS batchId
             FROM org_unit o
         ),
         batch_names AS (
@@ -253,12 +248,6 @@ def build_entities(conn: Connection, updated_at: str, anchor_date: str | None = 
         LEFT JOIN dual_agg dr ON dr.org_id = o.id
         ORDER BY o.id
     """)
-    status_mapping = {
-        "双轨运行中": "双轨运行",
-        "稳定运行": "已上线",
-        "已具备双轨条件": "准备中",
-        "未启动": "准备中",
-    }
     for row in rows:
         row["province"] = _normalize_region(row.pop("region"))
         raw_status = row.pop("rawStatus")
@@ -266,12 +255,12 @@ def build_entities(conn: Connection, updated_at: str, anchor_date: str | None = 
         if row.get("readinessStatus") == "校验通过":
             row["readinessStatus"] = "已校验"
         if row["batchId"] == 8:
-            row["status"] = "未启动"
+            row["status"] = ORG_STATUS_NOT_STARTED
             row["construction"] = 0.0
             row["openingData"] = 0.0
             row["voucherRate"] = None
         else:
-            row["status"] = status_mapping.get(raw_status, raw_status)
+            row["status"] = DISPLAY_STATUS_MAPPING.get(raw_status, raw_status)
             row["voucherRate"] = float(vr) if vr is not None else None
         row["updatedAt"] = updated_at
     return rows

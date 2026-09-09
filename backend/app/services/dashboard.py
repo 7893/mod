@@ -9,7 +9,7 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
-from ..business_rules import public_business_rules
+from ..business_rules import ORG_STATUS_DUAL_RUNNING, SQL_INFERRED_BATCH_ID, SQL_LAUNCHED_STATUSES, public_business_rules
 from ..config import get_display_timezone, get_settings
 from .dashboard_sections import build_construction_summary, build_entities, build_issue_sections
 
@@ -32,7 +32,7 @@ FROM business_document
 WHERE submit_time < :anchor_date
 """
 
-REGION_SUMMARY_SQL = """
+REGION_SUMMARY_SQL = f"""
 WITH task_agg AS (
     SELECT org_id, ROUND(AVG(progress), 1) AS construction_pct
     FROM construction_task
@@ -48,8 +48,8 @@ doc_agg AS (
 SELECT
     o.region AS region,
     COUNT(DISTINCT o.id) AS total,
-    SUM(CASE WHEN o.status IN ('已上线', '稳定运行') THEN 1 ELSE 0 END) AS launched,
-    SUM(CASE WHEN o.status = '双轨运行中' THEN 1 ELSE 0 END) AS `dual`,
+    SUM(CASE WHEN o.status IN {SQL_LAUNCHED_STATUSES} THEN 1 ELSE 0 END) AS launched,
+    SUM(CASE WHEN o.status = '{ORG_STATUS_DUAL_RUNNING}' THEN 1 ELSE 0 END) AS `dual`,
     ROUND(AVG(COALESCE(t.construction_pct, 0)), 1) AS constructionPct,
     COALESCE(SUM(d.docs_today_added), 0) AS todayAdded
 FROM org_unit o
@@ -181,7 +181,7 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
         }
 
         # Overview - 优化版：使用 daily_stats 汇总表 + 简化查询
-        overview_sql = """
+        overview_sql = f"""
         SELECT
             ds.org_count AS org_total,
             ds.user_count AS contacts_total,
@@ -191,8 +191,8 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             ds.voucher_count AS vouchers_total,
             ds.voucher_today AS vouchers_today_added,
             ds.stat_date AS vouchers_as_of_date,
-            (SELECT COUNT(*) FROM org_unit WHERE status IN ('已上线', '稳定运行')) AS launched,
-            (SELECT COUNT(*) FROM org_unit WHERE status = '双轨运行中') AS dual_run,
+            (SELECT COUNT(*) FROM org_unit WHERE status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+            (SELECT COUNT(*) FROM org_unit WHERE status = '{ORG_STATUS_DUAL_RUNNING}') AS dual_run,
             (SELECT ROUND(AVG(progress), 1) FROM construction_task) AS construction_pct,
             (SELECT CAST(REPLACE(voucher_generate_success_rate, '%', '') AS DECIMAL(10, 2))
              FROM metric_snapshot WHERE snapshot_date <= :anchor_date ORDER BY snapshot_date DESC LIMIT 1) AS voucher_success_pct,
@@ -217,23 +217,12 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
         as_of_date = str(ov_row["as_of_date"])
 
         # Batches (pre-aggregate standard 8-batch rollout matrix)
-        rollout_rows = mappings(conn, """
+        rollout_rows = mappings(conn, f"""
         WITH batch_mapped AS (
             SELECT 
                 o.id,
                 o.status,
-                CASE
-                    WHEN o.batch_id = 8 THEN 8
-                    WHEN o.status = '双轨运行中' THEN 6
-                    WHEN o.id <= 2005 AND o.status = '稳定运行' AND o.id <= 150 THEN 1
-                    WHEN o.id <= 2005 AND o.status = '稳定运行' AND o.id <= 330 THEN 2
-                    WHEN o.id <= 2005 AND o.status = '稳定运行' THEN 3
-                    WHEN o.id <= 2005 AND o.status = '已上线' AND o.id <= 580 THEN 4
-                    WHEN o.id <= 2005 AND o.status = '已上线' THEN 5
-                    WHEN o.id <= 2005 AND o.id > 1600 AND o.id <= 2000 THEN 7
-                    WHEN o.batch_id BETWEEN 1 AND 7 THEN o.batch_id
-                    ELSE 8
-                END AS batchId
+                {SQL_INFERRED_BATCH_ID} AS batchId
             FROM org_unit o
         ),
         task_agg AS (
@@ -255,9 +244,9 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             bn.id AS batchId,
             bn.name AS name,
             COUNT(bm.id) AS total,
-            SUM(bm.status IN ('已上线', '稳定运行')) AS launched,
-            SUM(bm.status = '双轨运行中') AS `dual`,
-            ROUND(100.0 * SUM(bm.status IN ('已上线', '稳定运行')) / NULLIF(COUNT(bm.id), 0), 1) AS launchedPct,
+            SUM(bm.status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+            SUM(bm.status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`,
+            ROUND(100.0 * SUM(bm.status IN {SQL_LAUNCHED_STATUSES}) / NULLIF(COUNT(bm.id), 0), 1) AS launchedPct,
             ROUND(AVG(COALESCE(t.construction_pct, 0)), 1) AS constructionPct
         FROM batch_names bn
         LEFT JOIN batch_mapped bm ON bm.batchId = bn.id
@@ -292,12 +281,12 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
 
         # KI-065: A4 走势以今日为中心构建对称时间窗（前3节点 + 今日居中 + 后3节点，共7节点）
         # 过滤 COUNT(*) > 100 剔除单次试点/增量入库噪声，确保各节点为全量快照
-        past_trend_rows = mappings(conn, """
+        past_trend_rows = mappings(conn, f"""
         SELECT
             DATE_FORMAT(snapshot_date, '%m-%d') AS date,
             DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
-            SUM(status IN ('已上线', '稳定运行')) AS launched,
-            SUM(status = '双轨运行中') AS `dual`
+            SUM(status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+            SUM(status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`
         FROM rollout_status_snapshot
         WHERE snapshot_date < :center_date
         GROUP BY snapshot_date
@@ -315,12 +304,12 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             "dual": ov_row["dual_run"],
         }
 
-        future_trend_rows = mappings(conn, """
+        future_trend_rows = mappings(conn, f"""
         SELECT
             DATE_FORMAT(snapshot_date, '%m-%d') AS date,
             DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
-            SUM(status IN ('已上线', '稳定运行')) AS launched,
-            SUM(status = '双轨运行中') AS `dual`
+            SUM(status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+            SUM(status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`
         FROM rollout_status_snapshot
         WHERE snapshot_date > :center_date
         GROUP BY snapshot_date
@@ -333,12 +322,12 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
         needed_past = 3 - len(past_trend_rows)
         needed_future = 3 - len(future_trend_rows)
         if needed_past > 0 and len(future_trend_rows) == 3:
-            extra_future = mappings(conn, """
+            extra_future = mappings(conn, f"""
             SELECT
                 DATE_FORMAT(snapshot_date, '%m-%d') AS date,
                 DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
-                SUM(status IN ('已上线', '稳定运行')) AS launched,
-                SUM(status = '双轨运行中') AS `dual`
+                SUM(status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+                SUM(status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`
             FROM rollout_status_snapshot
             WHERE snapshot_date > :center_date
             GROUP BY snapshot_date
@@ -348,12 +337,12 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             """, {"center_date": today_display_date, "extra_limit": needed_past})
             future_trend_rows.extend(extra_future)
         elif needed_future > 0 and len(past_trend_rows) == 3:
-            extra_past = mappings(conn, """
+            extra_past = mappings(conn, f"""
             SELECT
                 DATE_FORMAT(snapshot_date, '%m-%d') AS date,
                 DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
-                SUM(status IN ('已上线', '稳定运行')) AS launched,
-                SUM(status = '双轨运行中') AS `dual`
+                SUM(status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+                SUM(status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`
             FROM rollout_status_snapshot
             WHERE snapshot_date < :center_date
             GROUP BY snapshot_date
@@ -368,7 +357,7 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             r["launched"] = numeric(r["launched"])
             r["dual"] = numeric(r["dual"])
 
-        rollout_trend_rows = mappings(conn, """
+        rollout_trend_rows = mappings(conn, f"""
         WITH recent_dates AS (
             SELECT DISTINCT snapshot_date
             FROM rollout_status_snapshot
@@ -379,18 +368,7 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
         batch_mapped AS (
             SELECT
                 o.id,
-                CASE
-                    WHEN o.batch_id = 8 THEN 8
-                    WHEN o.status = '双轨运行中' THEN 6
-                    WHEN o.id <= 2005 AND o.status = '稳定运行' AND o.id <= 150 THEN 1
-                    WHEN o.id <= 2005 AND o.status = '稳定运行' AND o.id <= 330 THEN 2
-                    WHEN o.id <= 2005 AND o.status = '稳定运行' THEN 3
-                    WHEN o.id <= 2005 AND o.status = '已上线' AND o.id <= 580 THEN 4
-                    WHEN o.id <= 2005 AND o.status = '已上线' THEN 5
-                    WHEN o.id <= 2005 AND o.id > 1600 AND o.id <= 2000 THEN 7
-                    WHEN o.batch_id BETWEEN 1 AND 7 THEN o.batch_id
-                    ELSE 8
-                END AS batchId
+                {SQL_INFERRED_BATCH_ID} AS batchId
             FROM org_unit o
         ),
         batch_names AS (
@@ -406,8 +384,8 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             bm.batchId AS batchId,
             bn.name AS name,
             COUNT(*) AS total,
-            ROUND(100.0 * SUM(r.status IN ('已上线', '稳定运行')) / COUNT(*), 1) AS launchedPct,
-            ROUND(100.0 * SUM(r.status = '双轨运行中') / COUNT(*), 1) AS dualPct
+            ROUND(100.0 * SUM(r.status IN {SQL_LAUNCHED_STATUSES}) / COUNT(*), 1) AS launchedPct,
+            ROUND(100.0 * SUM(r.status = '{ORG_STATUS_DUAL_RUNNING}') / COUNT(*), 1) AS dualPct
         FROM rollout_status_snapshot r
         JOIN recent_dates d ON d.snapshot_date = r.snapshot_date
         JOIN batch_mapped bm ON bm.id = r.org_id

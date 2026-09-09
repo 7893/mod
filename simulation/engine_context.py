@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List
 
+from app.business_rules import SQL_LAUNCHED_STATUSES
+
 
 @dataclass
 class SimulationBaseline:
@@ -68,7 +70,7 @@ def load_simulation_baseline(conn: Any) -> SimulationBaseline:
         )
 
     # 2. Query online units
-    cursor.execute("SELECT id FROM org_unit WHERE status IN ('已上线', '稳定运行') ORDER BY id;")
+    cursor.execute(f"SELECT id FROM org_unit WHERE status IN {SQL_LAUNCHED_STATUSES} ORDER BY id;")
     rows = cursor.fetchall()
     online_org_ids = [r[0] for r in rows]
     if not online_org_ids:

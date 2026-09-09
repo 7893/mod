@@ -23,6 +23,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import asyncio
 
+from app.business_rules import SQL_ACTIVE_BUSINESS_STATUSES
 from simulation.models import (
     ActiveScenario as ActiveScenario,
     BusinessEvent,
@@ -83,7 +84,7 @@ class BusinessSimulator:
             with engine.connect() as conn:
                 # 选择已上线或运行中的单位
                 rows = conn.execute(text(
-                    "SELECT id, region FROM org_unit WHERE status IN ('稳定运行', '双轨运行中', '已上线', '已具备双轨条件') LIMIT 5000"
+                    f"SELECT id, region FROM org_unit WHERE status IN {SQL_ACTIVE_BUSINESS_STATUSES} LIMIT 5000"
                 )).fetchall()
                 self._org_cache = [(r[0], r[1]) for r in rows]
                 self._org_cache_time = now
