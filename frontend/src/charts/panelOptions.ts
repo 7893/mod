@@ -130,14 +130,14 @@ export function createRolloutCompositionOption(list: RolloutSeriesItem[]) {
 export function createCoverageOption(coverage: CoverageSeriesItem | null) {
   return {
     ...calmAnimation,
-    tooltip: { trigger: 'item', ...chartTooltip },
-    title: {
-      text: coverage ? `${coverage.rate}%` : '—',
-      subtext: '单位覆盖率',
-      left: 'center',
-      top: '36%',
-      textStyle: { color: chartInk.textPrimary, fontSize: 18, fontFamily: 'monospace' },
-      subtextStyle: { color: chartInk.textMuted, fontSize: 10 },
+    tooltip: {
+      trigger: 'item',
+      ...chartTooltip,
+      formatter: (params: any) => {
+        if (!coverage) return '暂无数据'
+        const val = params.value != null ? Number(params.value).toLocaleString() : ''
+        return `单位覆盖率 <b>${coverage.rate}%</b><br/>${params.name}: <b>${val}</b> (${params.percent}%)`
+      },
     },
     series: [{
       name: '联系人覆盖',

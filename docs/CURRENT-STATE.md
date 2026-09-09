@@ -229,9 +229,13 @@
 ## 本地质量基线
 
 - 2026-09-07 记录的旧质量基线为前端 84 项 Vitest、后端 139 项 pytest；该数字作为历史增长节点保留，不再代表当前总数。
-- 前端：Vue 3、TypeScript、Vite；当前 22 个测试文件、108 项 Vitest 单测、类型检查与生产构建通过。
-- 后端：FastAPI、SQLAlchemy；当前 229 项 pytest 测试通过（新增 GI-004 动态自愈生态、东八区生物钟、跨屏因果涟漪与动态广播 5 项测试全绿，累计 229 项全量测试 100% 离线自洽通过）；KI-060 已将 Starlette `TestClient` 的开发依赖
+- 前端：Vue 3、TypeScript、Vite；当前 23 个测试文件、112 项 Vitest 单测、类型检查与生产构建通过。
+- 后端：FastAPI、SQLAlchemy；当前 230 项 pytest 测试通过（新增 KI-065 对称走势快照测试，全量离线测试 100% 通过）；KI-060 已将 Starlette `TestClient` 的开发依赖
   从已弃用的 `httpx` 回退路径迁移至精确锁定的 `httpx2==2.12.0`，并将对应弃用警告设为测试失败。
+- 大屏图表细节优化（KI-065，DONE）：
+  - 全屏 Tooltip 越界治理：`charts/theme.ts` 的 `chartTooltip` 基线统一加入 `confine: true`，`RolloutView.vue` 与 `ChinaMap.vue` 补齐该约束，确保全屏 28 处图表在面板边缘悬浮时不溢出面板容器、不被相邻卡片遮挡。
+  - A4 时间轴居中：`backend/app/services/dashboard.py` 优化走势快照窗口构建算法，剔除增量试点噪声（`HAVING COUNT(*) > 100`），构建以今日（09-09）为中心的 7 节点对称时间窗（3 过去 + 今日居中 + 3 未来），`OverviewTrendChart.vue` 配套增加对称截窗逻辑，今日刻度稳定落在横轴中间。
+  - C5 覆盖率环图去字留白：`charts/panelOptions.ts::createCoverageOption` 移除环心标题与“单位覆盖率”文字，避免在小尺寸环图内挤占重叠，数值与分布改由受限 Tooltip 呈现。
 - 矛与盾攻防博弈与合规治理引擎（GI-003/GI-004 阶段一至阶段五 & KI-062/KI-063 治理闭环）：
   - 昼夜作息与月末生物钟（GI-004，`simulation/governance_state_machine.py`）：引入 $k_{\text{rhythm}}$ 节律因子，工作日早晚黄金工段 1.8x 加速、午间 0.5x 放缓、夜间 22:00-07:00 彻底冻结（杜绝半夜出具验收通报虚假繁荣）、月末 25 日起叠加 1.5x 冲刺乘数，二次核验返工率动态适配。
   - 30~45 单动态平衡走廊（GI-004，`simulation/construction_propeller.py`）：实时感知未结案库存；低于 35 单时提升阻力暗礁触发率至 50% 并放缓消缺，高于 45 单时降低阻力触发率至 5% 并加速消缺，确保大盘恒定平稳呼吸，告别全绿死水与人工干预。

@@ -68,3 +68,15 @@ def test_build_operations_trend_keeps_missing_rate_honest():
 
     assert trend[0]["integrations"] == 0
     assert trend[0]["integrationSuccessPct"] is None
+
+
+def test_fallback_snapshot_trend_structure():
+    from app.services.dashboard import load_fallback_snapshot
+    snapshot = load_fallback_snapshot()
+    assert "trend" in snapshot
+    assert len(snapshot["trend"]) == 7
+    for item in snapshot["trend"]:
+        assert "date" in item
+        assert "fullDate" in item
+        assert "launched" in item
+

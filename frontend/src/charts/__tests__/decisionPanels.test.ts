@@ -3,8 +3,9 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createLaunchGateOption } from '../constructionOptions'
 import { createOperationsTrendOption, createQualityAuditVolumeOption } from '../operationsOptions'
-import { createOperationalGuardOption } from '../panelOptions'
+import { createCoverageOption, createOperationalGuardOption } from '../panelOptions'
 import { createRolloutTrendMatrixOption } from '../rolloutOptions'
+import { chartTooltip } from '../theme'
 
 describe('decision panel options', () => {
   it('keeps the five stable zones while replacing their low-value titles', () => {
@@ -91,5 +92,20 @@ describe('decision panel options', () => {
     const values = option.series[0].data.map((item) => item.value)
     expect(values[0]).not.toBe(values[1])
     expect(values.every((value) => value < 10)).toBe(true)
+  })
+
+  it('builds C5 coverage ring without center title and with confined tooltip (KI-065)', () => {
+    const option = createCoverageOption({ rate: 85.5, covered: 1710, gap: 290 })
+    expect(option).not.toHaveProperty('title')
+    expect(option.tooltip.confine).toBe(true)
+    const formatter = option.tooltip.formatter as (params: any) => string
+    const tip = formatter({ name: '已覆盖单位', value: 1710, percent: 85.5 })
+    expect(tip).toContain('85.5%')
+    expect(tip).toContain('已覆盖单位')
+    expect(tip).toContain('1,710')
+  })
+
+  it('enforces confine: true baseline on chartTooltip to prevent overflow (KI-065)', () => {
+    expect(chartTooltip.confine).toBe(true)
   })
 })

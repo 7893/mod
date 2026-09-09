@@ -286,36 +286,83 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
                 b["launchedPct"] = numeric(b["launchedPct"]) or 0.0
                 b["constructionPct"] = numeric(b["constructionPct"]) or 0.0
 
-        # Trend (last 7 snapshots up to anchor date, guaranteeing coherence with live totals)
-        trend_rows = mappings(conn, """
+        # KI-065: A4 走势以今日为中心构建对称时间窗（前3节点 + 今日居中 + 后3节点，共7节点）
+        # 过滤 COUNT(*) > 100 剔除单次试点/增量入库噪声，确保各节点为全量快照
+        past_trend_rows = mappings(conn, """
         SELECT
             DATE_FORMAT(snapshot_date, '%m-%d') AS date,
             DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
             SUM(status IN ('已上线', '稳定运行')) AS launched,
             SUM(status = '双轨运行中') AS `dual`
         FROM rollout_status_snapshot
-        WHERE snapshot_date <= :anchor_date
+        WHERE snapshot_date < :center_date
         GROUP BY snapshot_date
+        HAVING COUNT(*) > 100
         ORDER BY snapshot_date DESC
-        LIMIT 6
-        """, {"anchor_date": anchor_date})
-        trend_rows.reverse()
+        LIMIT 3
+        """, {"center_date": today_display_date})
+        past_trend_rows.reverse()
+
+        # 今日居中基准点：与总盘 KPI 卡片（launched 与 dual_run）100% 严丝合缝
+        today_trend_row = {
+            "date": today_display_date.strftime("%m-%d"),
+            "fullDate": str(today_display_date),
+            "launched": launched,
+            "dual": ov_row["dual_run"],
+        }
+
+        future_trend_rows = mappings(conn, """
+        SELECT
+            DATE_FORMAT(snapshot_date, '%m-%d') AS date,
+            DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
+            SUM(status IN ('已上线', '稳定运行')) AS launched,
+            SUM(status = '双轨运行中') AS `dual`
+        FROM rollout_status_snapshot
+        WHERE snapshot_date > :center_date
+        GROUP BY snapshot_date
+        HAVING COUNT(*) > 100
+        ORDER BY snapshot_date ASC
+        LIMIT 3
+        """, {"center_date": today_display_date})
+
+        # 若过去或未来快照不足3个，向另一侧补充以保障共计7个走势节点
+        needed_past = 3 - len(past_trend_rows)
+        needed_future = 3 - len(future_trend_rows)
+        if needed_past > 0 and len(future_trend_rows) == 3:
+            extra_future = mappings(conn, """
+            SELECT
+                DATE_FORMAT(snapshot_date, '%m-%d') AS date,
+                DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
+                SUM(status IN ('已上线', '稳定运行')) AS launched,
+                SUM(status = '双轨运行中') AS `dual`
+            FROM rollout_status_snapshot
+            WHERE snapshot_date > :center_date
+            GROUP BY snapshot_date
+            HAVING COUNT(*) > 100
+            ORDER BY snapshot_date ASC
+            LIMIT :extra_limit OFFSET 3
+            """, {"center_date": today_display_date, "extra_limit": needed_past})
+            future_trend_rows.extend(extra_future)
+        elif needed_future > 0 and len(past_trend_rows) == 3:
+            extra_past = mappings(conn, """
+            SELECT
+                DATE_FORMAT(snapshot_date, '%m-%d') AS date,
+                DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
+                SUM(status IN ('已上线', '稳定运行')) AS launched,
+                SUM(status = '双轨运行中') AS `dual`
+            FROM rollout_status_snapshot
+            WHERE snapshot_date < :center_date
+            GROUP BY snapshot_date
+            HAVING COUNT(*) > 100
+            ORDER BY snapshot_date DESC
+            LIMIT :extra_limit OFFSET 3
+            """, {"center_date": today_display_date, "extra_limit": needed_future})
+            past_trend_rows = list(reversed(extra_past)) + past_trend_rows
+
+        trend_rows = past_trend_rows + [today_trend_row] + future_trend_rows
         for r in trend_rows:
             r["launched"] = numeric(r["launched"])
             r["dual"] = numeric(r["dual"])
-
-        # 补齐最新基准锚点日期状态，确保走势末端与总盘 KPI 卡片 100% 严丝合缝
-        anchor_date_fmt = anchor_date.strftime("%m-%d")
-        anchor_full_fmt = str(anchor_date)
-        if not trend_rows or trend_rows[-1]["fullDate"] != anchor_full_fmt:
-            trend_rows.append({
-                "date": anchor_date_fmt,
-                "fullDate": anchor_full_fmt,
-                "launched": launched,
-                "dual": ov_row["dual_run"],
-            })
-        if len(trend_rows) > 7:
-            trend_rows = trend_rows[-7:]
 
         rollout_trend_rows = mappings(conn, """
         WITH recent_dates AS (

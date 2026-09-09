@@ -35,8 +35,9 @@ export const chartSeriesColors = [
 
 const axisLabel = { color: chartInk.textMuted, fontSize: 11 }
 
-/** 统一 tooltip：深底、细边、无花哨阴影。 */
+/** 统一 tooltip：深底、细边、无花哨阴影，全局 confine 限制在图表容器内防越界遮挡 (KI-065)。 */
 export const chartTooltip = {
+  confine: true,
   backgroundColor: chartInk.bgTooltip,
   borderColor: chartInk.border,
   borderWidth: 1,
