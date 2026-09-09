@@ -551,3 +551,91 @@ async def simulator_status() -> dict:
             detail="Simulator status temporarily unavailable",
         )
 
+
+# ===== Governance Issues & Lifecycle APIs =====
+
+@router.get("/governance/issues")
+def governance_issues_list(
+    status: str | None = None,
+    batch_id: int | None = None,
+    issue_type: str | None = None,
+    unit_id: int | None = None,
+    page: int = 1,
+    page_size: int = 20,
+    conn: Connection | None = Depends(connection),
+) -> dict:
+    if conn is None:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+    from .services.governance import list_governance_issues
+    return list_governance_issues(
+        conn,
+        status=status,
+        batch_id=batch_id,
+        issue_type=issue_type,
+        unit_id=unit_id,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/governance/issues/{issue_id}")
+def governance_issue_detail(
+    issue_id: str,
+    conn: Connection | None = Depends(connection),
+) -> dict:
+    if conn is None:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+    from .services.governance import get_governance_issue
+    issue = get_governance_issue(conn, issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    return issue
+
+
+@router.get("/governance/issues/{issue_id}/timeline")
+def governance_issue_timeline(
+    issue_id: str,
+    conn: Connection | None = Depends(connection),
+) -> list[dict]:
+    if conn is None:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+    from .services.governance import get_issue_timeline
+    return get_issue_timeline(conn, issue_id)
+
+
+@router.post("/governance/issues/{issue_id}/dispatch")
+def governance_issue_dispatch(
+    issue_id: str,
+    conn: Connection | None = Depends(connection),
+) -> dict:
+    if conn is None:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+    from .services.governance import dispatch_issue
+    updated = dispatch_issue(conn, issue_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    return updated
+
+
+@router.get("/governance/ai-quota")
+def governance_ai_quota(
+    conn: Connection | None = Depends(connection),
+) -> dict:
+    if conn is None:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+    from .services.governance import get_ai_quota_status
+    return get_ai_quota_status(conn)
+
+
+@router.post("/governance/issues/{issue_id}/enrich")
+def governance_issue_enrich(
+    issue_id: str,
+    conn: Connection | None = Depends(connection),
+) -> dict:
+    if conn is None:
+        raise HTTPException(status_code=503, detail="Database connection unavailable")
+    from .services.governance import enrich_governance_issue
+    updated = enrich_governance_issue(conn, issue_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    return updated

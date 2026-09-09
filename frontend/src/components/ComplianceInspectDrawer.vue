@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { X } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  RotateCcw,
+  Send,
+  ShieldAlert,
+  Sparkles,
+  UserCheck,
+  X,
+} from 'lucide-vue-next'
 import { formatPercent } from '../formatters/metrics.ts'
 
 export interface ComplianceIssueUnit {
@@ -18,89 +29,323 @@ export interface ComplianceIssueUnit {
   detailNote: string
 }
 
-defineProps<{
+export interface GovernanceIssue {
+  id: string
+  unitId: number
+  unitName: string
+  province: string
+  batchId: number
+  issueType: string
+  severity: string
+  status: string
+  owner: string | null
+  title: string
+  description: string | null
+  aiEnriched: number
+  reworkCount: number
+  createdAt: string
+  updatedAt: string
+  resolvedAt: string | null
+}
+
+export interface TimelineEvent {
+  id: number
+  issueId: string
+  action: string
+  actor: string
+  detail: string
+  occurredAt: string
+}
+
+const props = defineProps<{
   unit: ComplianceIssueUnit | null
 }>()
 
 const emit = defineEmits<{
   (e: 'close'): void
+  (e: 'dispatched', issue: GovernanceIssue): void
 }>()
+
+const issue = ref<GovernanceIssue | null>(null)
+const timeline = ref<TimelineEvent[]>([])
+const loading = ref(false)
+const dispatching = ref(false)
+const enriching = ref(false)
+const actionNotice = ref<string | null>(null)
+
+const statusSteps = [
+  { key: 'DISCOVERED', label: '发现' },
+  { key: 'ASSIGNED', label: '指派' },
+  { key: 'IN_PROGRESS', label: '攻坚' },
+  { key: 'VERIFYING', label: '核验' },
+  { key: 'RESOLVED', label: '销项' },
+]
+
+const currentStepIndex = computed(() => {
+  if (!issue.value) return 0
+  const st = issue.value.status
+  const idx = statusSteps.findIndex((s) => s.key === st)
+  return idx !== -1 ? idx : (st === 'CLOSED' ? 4 : 2)
+})
+
+async function fetchIssueAndTimeline(unitId: number) {
+  loading.value = true
+  actionNotice.value = null
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues?unit_id=${unitId}&page_size=1`)
+    if (res.ok) {
+      const data = await res.json()
+      if (data.items && data.items.length > 0) {
+        const item = data.items[0]
+        issue.value = item
+        await fetchTimeline(item.id)
+      } else {
+        issue.value = null
+        timeline.value = []
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load governance issue:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function fetchTimeline(issueId: string) {
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issueId}/timeline`)
+    if (res.ok) {
+      timeline.value = await res.json()
+    }
+  } catch (err) {
+    console.warn('Failed to load timeline:', err)
+  }
+}
+
+async function handleDispatch() {
+  if (!issue.value) return
+  dispatching.value = true
+  actionNotice.value = null
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issue.value.id}/dispatch`, {
+      method: 'POST',
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      issue.value = updated
+      await fetchTimeline(updated.id)
+      actionNotice.value = '特派军令状已下达！攻坚专班进入强力处置。'
+      emit('dispatched', updated)
+    }
+  } catch (err) {
+    console.warn('Dispatch failed:', err)
+  } finally {
+    dispatching.value = false
+  }
+}
+
+async function handleEnrich() {
+  if (!issue.value) return
+  enriching.value = true
+  actionNotice.value = null
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issue.value.id}/enrich`, {
+      method: 'POST',
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      issue.value = updated
+      await fetchTimeline(updated.id)
+      actionNotice.value = 'AI 专家研判完成，已回填深层根因与销项举措。'
+    }
+  } catch (err) {
+    console.warn('Enrich failed:', err)
+  } finally {
+    enriching.value = false
+  }
+}
+
+watch(
+  () => props.unit,
+  (newUnit) => {
+    if (newUnit) {
+      fetchIssueAndTimeline(newUnit.id)
+    } else {
+      issue.value = null
+      timeline.value = []
+      actionNotice.value = null
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <div v-if="unit" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end" @click.self="emit('close')">
-    <aside class="w-96 h-full bg-slate-900 border-l border-white/10 p-5 flex flex-col gap-4 shadow-2xl overflow-y-auto">
+    <aside class="w-96 h-full bg-slate-900 border-l border-white/10 p-5 flex flex-col gap-3.5 shadow-2xl overflow-y-auto">
+      <!-- 头部 -->
       <header class="flex items-center justify-between border-b border-white/5 pb-3">
         <div>
-          <span class="font-mono text-cockpit-xs text-sky-400 font-bold">MOD-{{ unit.id }}</span>
-          <h3 class="text-cockpit-md font-semibold text-slate-100">单位合规监督核查</h3>
+          <div class="flex items-center gap-1.5">
+            <span class="font-mono text-cockpit-xs text-sky-400 font-bold">MOD-{{ unit.id }}</span>
+            <span v-if="issue" class="font-mono text-cockpit-xs text-slate-500 font-semibold">{{ issue.id }}</span>
+          </div>
+          <h3 class="text-cockpit-md font-semibold text-slate-100">合规攻防与督办协同</h3>
         </div>
-        <button type="button" class="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors cursor-pointer" @click="emit('close')">
+        <button
+          type="button"
+          class="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors cursor-pointer"
+          @click="emit('close')"
+        >
           <X :size="18" />
         </button>
       </header>
 
+      <!-- 单位卡片 -->
       <div class="p-3 rounded-lg bg-surface-veil-03 border border-surface-veil-06 flex flex-col gap-1">
-        <b class="text-cockpit-md font-semibold text-slate-100">{{ unit.name }}</b>
-        <span class="text-cockpit-sm text-slate-400">{{ unit.province }} · {{ unit.batch }} · 联系人：{{ unit.owner }}</span>
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <span class="text-cockpit-sm font-semibold text-slate-300">合规风险标签</span>
-        <div class="flex items-center gap-1.5 flex-wrap">
+        <div class="flex items-center justify-between">
+          <b class="text-cockpit-md font-semibold text-slate-100 truncate">{{ unit.name }}</b>
           <span
-            v-for="t in unit.tags"
-            :key="t"
-            class="px-2 py-0.5 rounded text-cockpit-xs font-medium border"
-            :class="t === '超期挂账' || t === '票据异常'
-              ? 'bg-rose-950/40 text-rose-400 border-rose-500/30'
-              : 'bg-amber-950/40 text-amber-400 border-amber-500/30'"
+            v-if="issue"
+            class="px-1.5 py-0.5 rounded text-cockpit-xs font-semibold"
+            :class="issue.status === 'RESOLVED' ? 'text-emerald-400 bg-emerald-950/40' : 'text-amber-400 bg-amber-950/40'"
           >
-            {{ t }}
+            {{ issue.status === 'RESOLVED' ? '已闭环销项' : '攻坚治理中' }}
           </span>
         </div>
+        <span class="text-cockpit-sm text-slate-400">{{ unit.province }} · {{ unit.batch }} · 经办人：{{ unit.owner }}</span>
       </div>
 
-      <div class="flex flex-col gap-1.5">
-        <span class="text-cockpit-sm font-semibold text-slate-300">监督核查要点（点到为止）</span>
-        <p class="text-cockpit-sm text-slate-300 bg-surface-veil-03 p-3 rounded-lg border border-surface-veil-06 leading-relaxed">
-          {{ unit.detailNote }}
-        </p>
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <span class="text-cockpit-sm font-semibold text-slate-300">支撑指标事实源</span>
-        <div class="grid grid-cols-2 gap-2 text-cockpit-xs">
-          <div class="p-2 rounded bg-surface-veil-03 border border-surface-veil-06">
-            <span class="text-slate-400 block">建设完成率</span>
-            <b class="font-mono text-cockpit-sm text-sky-400">{{ unit.construction }}%</b>
+      <!-- 治理状态机六态步进指示器 -->
+      <div v-if="issue" class="p-2.5 rounded-lg bg-surface-veil-03 border border-surface-veil-06 flex flex-col gap-2">
+        <div class="flex items-center justify-between text-cockpit-xs">
+          <span class="font-medium text-slate-300">治理推进状态机 (The Shield)</span>
+          <span v-if="issue.reworkCount > 0" class="inline-flex items-center gap-1 text-rose-400 font-semibold">
+            <RotateCcw :size="10" />
+            二次返工 x{{ issue.reworkCount }}
+          </span>
+        </div>
+        <div class="grid grid-cols-5 gap-1 text-center font-mono text-cockpit-xs">
+          <div
+            v-for="(st, idx) in statusSteps"
+            :key="st.key"
+            class="py-1 rounded border transition-colors"
+            :class="idx <= currentStepIndex
+              ? (idx === currentStepIndex
+                ? 'bg-sky-500/20 border-sky-500/40 text-sky-300 font-bold'
+                : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-400')
+              : 'bg-surface-veil-03 border-surface-veil-06 text-slate-600'"
+          >
+            {{ st.label }}
           </div>
-          <div class="p-2 rounded bg-surface-veil-03 border border-surface-veil-06">
-            <span class="text-slate-400 block">期初数据准备</span>
-            <b class="font-mono text-cockpit-sm text-amber-400">{{ unit.openingData }}%</b>
-          </div>
-          <div class="p-2 rounded bg-surface-veil-03 border border-surface-veil-06">
-            <span class="text-slate-400 block">运行状态</span>
-            <b class="text-cockpit-sm text-slate-200">{{ unit.status }}</b>
-          </div>
-          <div class="p-2 rounded bg-surface-veil-03 border border-surface-veil-06">
-            <span class="text-slate-400 block">双轨核对率</span>
-            <b class="font-mono text-cockpit-sm text-emerald-400">{{ formatPercent(unit.voucherRate) }}</b>
-          </div>
+        </div>
+        <div class="flex items-center justify-between text-cockpit-xs text-slate-400 pt-1 border-t border-surface-veil-06">
+          <span class="flex items-center gap-1">
+            <UserCheck :size="11" class="text-sky-400" />
+            专班专员：{{ issue.owner || '指挥中心调度中' }}
+          </span>
+          <span class="font-mono text-slate-500">严苛返工率 15%</span>
         </div>
       </div>
 
-      <div class="mt-auto pt-3 border-t border-white/5">
-        <p class="text-cockpit-xs text-slate-500 mb-3">
-          * 仅核查建设推进与运行风险事实，不做被建设系统内部逐笔会计审计。
-        </p>
+      <!-- 上帝之手双向督办动作条 -->
+      <div v-if="issue && issue.status !== 'RESOLVED'" class="flex items-center gap-2">
         <button
           type="button"
-          class="w-full py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-medium transition-colors text-cockpit-sm cursor-pointer"
-          @click="emit('close')"
+          :disabled="dispatching"
+          class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold transition-colors text-cockpit-xs cursor-pointer shadow-lg shadow-sky-950/40"
+          @click="handleDispatch"
         >
-          完成核查
+          <Send :size="12" :class="{ 'animate-pulse': dispatching }" />
+          <span>{{ dispatching ? '特派指令下达中…' : '一键督办（指挥部令）' }}</span>
         </button>
+
+        <button
+          type="button"
+          :disabled="enriching"
+          class="flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-surface-veil-03 hover:bg-white/10 border border-surface-veil-06 disabled:opacity-50 text-slate-200 font-medium transition-colors text-cockpit-xs cursor-pointer"
+          title="调用 Cloudflare Workers AI 深度研判（受 3,000 Neurons/日 硬限制保护，保障 $0.00 账单）"
+          @click="handleEnrich"
+        >
+          <Sparkles :size="12" class="text-amber-400" :class="{ 'animate-spin': enriching }" />
+          <span>{{ enriching ? 'AI研判中…' : 'AI深度研判' }}</span>
+        </button>
+      </div>
+
+      <!-- 操作通知反馈 -->
+      <div v-if="actionNotice" class="p-2 rounded bg-emerald-950/30 border border-emerald-500/30 text-emerald-400 text-cockpit-xs flex items-center gap-1.5">
+        <CheckCircle2 :size="13" class="flex-shrink-0" />
+        <span>{{ actionNotice }}</span>
+      </div>
+
+      <!-- 专家深入研判内容 -->
+      <div v-if="issue && issue.description" class="flex flex-col gap-1.5">
+        <span class="text-cockpit-sm font-semibold text-slate-300">工单叙事与研判</span>
+        <div class="text-cockpit-xs text-slate-300 bg-surface-veil-03 p-3 rounded-lg border border-surface-veil-06 leading-relaxed max-h-40 overflow-y-auto whitespace-pre-wrap">
+          {{ issue.description }}
+        </div>
+      </div>
+
+      <!-- 全生命周期流转时间线 -->
+      <div class="flex flex-col gap-2 flex-1 min-h-0">
+        <div class="flex items-center justify-between">
+          <span class="text-cockpit-sm font-semibold text-slate-300">全生命周期治理流水</span>
+          <span class="font-mono text-cockpit-xs text-slate-500">{{ timeline.length }} 个关键节点</span>
+        </div>
+
+        <div v-if="timeline.length > 0" class="flex flex-col gap-2 overflow-y-auto pr-1">
+          <div
+            v-for="ev in timeline"
+            :key="ev.id"
+            class="p-2 rounded-lg bg-surface-veil-03 border border-surface-veil-06 flex flex-col gap-1 text-cockpit-xs"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1.5">
+                <span
+                  class="px-1.5 py-0.5 rounded font-medium"
+                  :class="ev.action === '一键督办'
+                    ? 'bg-rose-950/40 text-rose-400 border border-rose-500/30'
+                    : (ev.action.includes('AI')
+                      ? 'bg-sky-950/40 text-sky-400 border border-sky-500/30'
+                      : (ev.action.includes('销项')
+                        ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-slate-800 text-slate-300'))"
+                >
+                  {{ ev.action }}
+                </span>
+                <span class="text-slate-300 font-medium truncate">{{ ev.actor }}</span>
+              </div>
+              <span class="font-mono text-slate-500 text-cockpit-xs">{{ ev.occurredAt }}</span>
+            </div>
+            <p class="text-slate-400 leading-normal">{{ ev.detail }}</p>
+          </div>
+        </div>
+
+        <div v-else class="text-center py-4 text-slate-500 text-cockpit-xs">
+          {{ loading ? '正在读取时间线流水…' : '暂无流转记录' }}
+        </div>
+      </div>
+
+      <!-- 底座指标核验 -->
+      <div class="flex flex-col gap-1.5 pt-2 border-t border-white/5">
+        <div class="grid grid-cols-4 gap-1.5 text-cockpit-xs text-center">
+          <div class="p-1.5 rounded bg-surface-veil-03 border border-surface-veil-06">
+            <span class="text-slate-500 block">建设</span>
+            <b class="font-mono text-sky-400">{{ unit.construction }}%</b>
+          </div>
+          <div class="p-1.5 rounded bg-surface-veil-03 border border-surface-veil-06">
+            <span class="text-slate-500 block">期初</span>
+            <b class="font-mono text-amber-400">{{ unit.openingData }}%</b>
+          </div>
+          <div class="p-1.5 rounded bg-surface-veil-03 border border-surface-veil-06">
+            <span class="text-slate-500 block">状态</span>
+            <b class="text-slate-300 truncate block">{{ unit.status }}</b>
+          </div>
+          <div class="p-1.5 rounded bg-surface-veil-03 border border-surface-veil-06">
+            <span class="text-slate-500 block">双轨</span>
+            <b class="font-mono text-emerald-400">{{ formatPercent(unit.voucherRate) }}</b>
+          </div>
+        </div>
       </div>
     </aside>
   </div>

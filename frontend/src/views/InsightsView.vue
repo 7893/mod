@@ -20,6 +20,7 @@ import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/compone
 import CockpitPanel from '../components/CockpitPanel.vue'
 import ModelContractCard from '../components/ModelContractCard.vue'
 import AtRiskUnitTable, { type AtRiskUnit } from '../components/AtRiskUnitTable.vue'
+import AiQuotaCapsule from '../components/AiQuotaCapsule.vue'
 import { formatPercent } from '../formatters/metrics.ts'
 import { isRegressionEffective, isClassifierEffective, isAutomlReady } from '../utils/modelEvaluation.ts'
 import { useProjectStore } from '../stores/project.ts'
@@ -456,7 +457,10 @@ const readyModelCount = computed(() => insights.value.targetModels.filter((model
         subtitle="Cloudflare Workers AI · 每日自动生成 · 只读研判"
       >
         <template #actions>
-          <span v-if="briefing?.briefingDate" class="font-mono text-cockpit-xs text-slate-500">{{ briefing.briefingDate }}</span>
+          <div class="flex items-center gap-2">
+            <AiQuotaCapsule />
+            <span v-if="briefing?.briefingDate" class="font-mono text-cockpit-xs text-slate-500">{{ briefing.briefingDate }}</span>
+          </div>
         </template>
         <div class="flex flex-col h-full min-h-0 gap-2">
           <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/60 border border-white/10 text-slate-400 text-cockpit-xs flex-shrink-0">
