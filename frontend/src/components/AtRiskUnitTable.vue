@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { Search, X } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { X } from 'lucide-vue-next'
+import FilterSelect from './ledger/FilterSelect.vue'
+import LedgerPager from './ledger/LedgerPager.vue'
+import SearchInput from './ledger/SearchInput.vue'
+import { usePagedList } from '../composables/usePagedList.ts'
 import { formatPercent } from '../formatters/metrics.ts'
 
 export interface RiskAttribution {
@@ -45,10 +49,9 @@ const props = defineProps<{
   units: AtRiskUnit[]
 }>()
 
+const RISK_TYPE_OPTIONS = ['全部类型', '双轨核对差异', '建设严重滞后', '准备期卡顿'] as const
 const query = ref('')
-const selectedRiskType = ref('全部类型')
-const page = ref(1)
-const pageSize = ref(6)
+const selectedRiskType = ref<string>(RISK_TYPE_OPTIONS[0])
 
 const selectedUnit = ref<AtRiskUnit | null>(null)
 const loadingExplanation = ref(false)
@@ -114,17 +117,9 @@ const filteredRiskUnits = computed(() =>
   }),
 )
 
-const totalRiskPages = computed(() => Math.ceil(filteredRiskUnits.value.length / pageSize.value) || 1)
-
-watch([query, selectedRiskType], () => { page.value = 1 })
-watch(totalRiskPages, (total) => {
-  if (page.value > total) page.value = total
-})
-
-const paginatedRiskUnits = computed(() => {
-  const safePage = Math.min(Math.max(1, page.value), totalRiskPages.value)
-  const start = (safePage - 1) * pageSize.value
-  return filteredRiskUnits.value.slice(start, start + pageSize.value)
+const { page, totalPages: totalRiskPages, items: paginatedRiskUnits } = usePagedList(() => filteredRiskUnits.value, {
+  pageSize: 6,
+  resetOn: [query, selectedRiskType],
 })
 </script>
 
@@ -136,23 +131,8 @@ const paginatedRiskUnits = computed(() => {
         发现 <b class="font-mono text-rose-400">{{ filteredRiskUnits.length }}</b> 家掉队风险单位（点击查看可用解释）
       </span>
       <div class="flex items-center gap-2">
-        <label class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-300">
-          <Search :size="12" class="text-slate-400" />
-          <input
-            v-model="query"
-            placeholder="搜索单位/区域/联系人"
-            class="bg-transparent border-none outline-none text-slate-200 placeholder-slate-500 w-28 text-cockpit-xs"
-          />
-        </label>
-        <select
-          v-model="selectedRiskType"
-          class="px-2 py-0.5 rounded-lg bg-slate-800/80 border border-white/10 text-cockpit-xs text-slate-200 focus:outline-none focus:border-sky-500/40"
-        >
-          <option>全部类型</option>
-          <option>双轨核对差异</option>
-          <option>建设严重滞后</option>
-          <option>准备期卡顿</option>
-        </select>
+        <SearchInput v-model="query" placeholder="搜索单位/区域/联系人" compact />
+        <FilterSelect v-model="selectedRiskType" :options="RISK_TYPE_OPTIONS" compact />
       </div>
     </div>
 
@@ -216,28 +196,7 @@ const paginatedRiskUnits = computed(() => {
       </table>
     </div>
 
-    <!-- 分页 -->
-    <div class="flex items-center justify-between px-1 pt-0.5 text-cockpit-xs text-slate-400">
-      <span>预警困难户 {{ filteredRiskUnits.length }} 家 · 第 {{ page }} / {{ totalRiskPages }} 页</span>
-      <div class="flex items-center gap-1.5">
-        <button
-          type="button"
-          :disabled="page <= 1"
-          class="px-2 py-0.5 rounded bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-cockpit-xs cursor-pointer"
-          @click="page--"
-        >
-          上一页
-        </button>
-        <button
-          type="button"
-          :disabled="page >= totalRiskPages"
-          class="px-2 py-0.5 rounded bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-cockpit-xs cursor-pointer"
-          @click="page++"
-        >
-          下一页
-        </button>
-      </div>
-    </div>
+    <LedgerPager v-model="page" :total-pages="totalRiskPages" :summary="`预警困难户 ${filteredRiskUnits.length} 家`" compact />
 
     <!-- 掉队风险 SHAP 归因下钻抽屉 -->
     <div

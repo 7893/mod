@@ -1,130 +1,60 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { RotateCcw, Search, X } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { RotateCcw } from 'lucide-vue-next'
 import CockpitPanel from './CockpitPanel.vue'
+import EntityEditDrawer from './ledger/EntityEditDrawer.vue'
+import FilterSelect from './ledger/FilterSelect.vue'
+import LedgerPager from './ledger/LedgerPager.vue'
+import SearchInput from './ledger/SearchInput.vue'
+import { useEntityEditor } from '../composables/useEntityEditor.ts'
+import { usePagedList } from '../composables/usePagedList.ts'
 import { formatPercent } from '../formatters/metrics.ts'
-import { useProjectStore, type EntityRow, type RolloutStatus } from '../stores/project.ts'
+import { useProjectStore } from '../stores/project.ts'
+import {
+  ALL,
+  BATCH_ORDER,
+  NATIONAL_PROVINCE_ORDER,
+  countedOptions,
+  matchesEntityQuery,
+  matchesOption,
+} from '../utils/entityOptions.ts'
 
 const store = useProjectStore()
 const query = ref('')
-const selectedBatch = ref('全部')
-const selectedProvince = ref('全部')
-const editing = ref<EntityRow | null>(null)
-const draft = ref<Partial<EntityRow>>({})
-const page = ref(1)
-const pageSize = ref(20)
+const selectedBatch = ref(ALL)
+const selectedProvince = ref(ALL)
 
-const NATIONAL_PROVINCE_ORDER = [
-  '北京', '天津', '河北', '山西', '内蒙古',
-  '辽宁', '吉林', '黑龙江',
-  '上海', '江苏', '浙江', '安徽', '福建', '江西', '山东',
-  '河南', '湖北', '湖南', '广东', '广西', '海南',
-  '重庆', '四川', '贵州', '云南', '西藏',
-  '陕西', '甘肃', '青海', '宁夏', '新疆',
-  '香港', '澳门', '台湾',
-]
+const provinces = computed(() =>
+  countedOptions(store.entities, (row) => row.province, { order: NATIONAL_PROVINCE_ORDER, allLabel: '全部省份' }),
+)
+const batchOptions = computed(() =>
+  countedOptions(store.entities, (row) => row.batch, { order: BATCH_ORDER, allLabel: '全部批次' }),
+)
 
-const provinces = computed(() => {
-  const counts = new Map<string, number>()
-  store.entities.forEach((row) => {
-    counts.set(row.province, (counts.get(row.province) || 0) + 1)
-  })
-  const ordered = NATIONAL_PROVINCE_ORDER.filter((p) => counts.has(p)).map((p) => ({
-    value: p,
-    label: `${p} (${counts.get(p)}家)`,
-  }))
-  const remaining = [...counts.keys()]
-    .filter((p) => !NATIONAL_PROVINCE_ORDER.includes(p))
-    .map((p) => ({
-      value: p,
-      label: `${p} (${counts.get(p)}家)`,
-    }))
-  return [
-    { value: '全部', label: `全部省份 (${store.entities.length}家)` },
-    ...ordered,
-    ...remaining,
-  ]
+const filteredEntities = computed(() =>
+  store.entities.filter(
+    (row) =>
+      matchesOption(selectedBatch.value, row.batch) &&
+      matchesOption(selectedProvince.value, row.province) &&
+      matchesEntityQuery(row, query.value),
+  ),
+)
+
+const { page, totalPages, items: paginatedEntities } = usePagedList(() => filteredEntities.value, {
+  pageSize: 20,
+  resetOn: [selectedBatch, selectedProvince, query],
 })
 
-const BATCH_ORDER = ['第一批', '第二批', '第三批', '第四批', '第五批', '第六批', '第七批', '第八批']
-const batchOptions = computed(() => {
-  const counts = new Map<string, number>()
-  store.entities.forEach((row) => {
-    counts.set(row.batch, (counts.get(row.batch) || 0) + 1)
-  })
-  const ordered = BATCH_ORDER.filter((b) => counts.has(b)).map((b) => ({
-    value: b,
-    label: `${b} (${counts.get(b)}家)`,
-  }))
-  return [
-    { value: '全部', label: `全部批次 (${store.entities.length}家)` },
-    ...ordered,
-  ]
-})
-
-const filteredEntities = computed(() => {
-  const q = query.value.trim().toLowerCase()
-  return store.entities.filter((row) => {
-    const matchBatch = selectedBatch.value === '全部' || row.batch === selectedBatch.value
-    const matchProv = selectedProvince.value === '全部' || row.province === selectedProvince.value
-    const matchQuery = !q || (
-      row.name.toLowerCase().includes(q) ||
-      row.owner.toLowerCase().includes(q) ||
-      row.province.toLowerCase().includes(q) ||
-      row.batch.toLowerCase().includes(q) ||
-      String(row.id).includes(q) ||
-      `mod-${row.id}`.includes(q)
-    )
-    return matchBatch && matchProv && matchQuery
-  })
-})
-
-const totalPages = computed(() => Math.ceil(filteredEntities.value.length / pageSize.value) || 1)
-
-// 关键修复：筛选条件变动时强制归位第 1 页，彻底根除“分页死锁”
-watch([selectedBatch, selectedProvince, query], () => {
-  page.value = 1
-})
-
-// 边界保护：总页数变化时安全钳位
-watch(totalPages, (newTotal) => {
-  if (page.value > newTotal) {
-    page.value = Math.max(1, newTotal)
-  }
-})
-
-const isFiltered = computed(() => (
-  selectedBatch.value !== '全部' || selectedProvince.value !== '全部' || !!query.value
-))
+const isFiltered = computed(() => selectedBatch.value !== ALL || selectedProvince.value !== ALL || !!query.value)
 
 function resetFilters() {
-  selectedBatch.value = '全部'
-  selectedProvince.value = '全部'
+  selectedBatch.value = ALL
+  selectedProvince.value = ALL
   query.value = ''
   page.value = 1
 }
 
-const paginatedEntities = computed(() => {
-  const safePage = Math.min(Math.max(1, page.value), totalPages.value)
-  const start = (safePage - 1) * pageSize.value
-  return filteredEntities.value.slice(start, start + pageSize.value)
-})
-
-function openEdit(row: EntityRow) {
-  editing.value = row
-  draft.value = { ...row }
-}
-
-function save() {
-  if (!editing.value) return
-  store.updateEntity(editing.value.id, {
-    status: draft.value.status as RolloutStatus,
-    construction: Number(draft.value.construction),
-    openingData: Number(draft.value.openingData),
-    owner: String(draft.value.owner),
-  })
-  editing.value = null
-}
+const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEditor()
 </script>
 
 <template>
@@ -137,26 +67,9 @@ function save() {
   >
     <template #actions>
       <div class="flex items-center gap-2">
-        <div class="relative flex items-center">
-          <Search :size="13" class="absolute left-2.5 text-slate-400 pointer-events-none" />
-          <input
-            v-model="query"
-            placeholder="搜索单位/联系人/批次/省份"
-            class="pl-7 pr-2.5 py-1 text-cockpit-sm rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-sky-500/40 w-52 transition-colors"
-          />
-        </div>
-        <select
-          v-model="selectedBatch"
-          class="px-2.5 py-1 text-cockpit-sm rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-200 focus:outline-none focus:border-sky-500/40 transition-colors"
-        >
-          <option v-for="b in batchOptions" :key="b.value" :value="b.value">{{ b.label }}</option>
-        </select>
-        <select
-          v-model="selectedProvince"
-          class="px-2.5 py-1 text-cockpit-sm rounded-lg bg-surface-veil-03 border border-surface-veil-06 text-slate-200 focus:outline-none focus:border-sky-500/40 transition-colors"
-        >
-          <option v-for="p in provinces" :key="p.value" :value="p.value">{{ p.label }}</option>
-        </select>
+        <SearchInput v-model="query" placeholder="搜索单位/联系人/批次/省份" />
+        <FilterSelect v-model="selectedBatch" :options="batchOptions" />
+        <FilterSelect v-model="selectedProvince" :options="provinces" />
         <button
           v-if="isFiltered"
           type="button"
@@ -256,115 +169,9 @@ function save() {
         </table>
       </div>
 
-      <div class="flex items-center justify-between px-1 pt-1 text-cockpit-sm text-slate-400">
-        <span>共 {{ filteredEntities.length }} 条 · 第 {{ page }} / {{ totalPages }} 页</span>
-        <div class="flex items-center gap-2">
-          <button
-            :disabled="page <= 1"
-            class="px-2.5 py-1 rounded bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-cockpit-xs cursor-pointer"
-            @click="page--"
-          >
-            上一页
-          </button>
-          <button
-            :disabled="page >= totalPages"
-            class="px-2.5 py-1 rounded bg-surface-veil-03 border border-surface-veil-06 text-slate-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-cockpit-xs cursor-pointer"
-            @click="page++"
-          >
-            下一页
-          </button>
-        </div>
-      </div>
+      <LedgerPager v-model="page" :total-pages="totalPages" :summary="`共 ${filteredEntities.length} 条`" />
     </div>
   </CockpitPanel>
 
-  <!-- 编辑抽屉 -->
-  <div v-if="editing" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end" @click.self="editing = null">
-    <aside class="w-96 h-full bg-slate-900 border-l border-white/10 p-5 flex flex-col gap-4 shadow-2xl overflow-y-auto">
-      <header class="flex items-center justify-between border-b border-white/5 pb-3">
-        <div>
-          <span class="font-mono text-cockpit-xs text-sky-400 font-bold">MOD-{{ editing.id }}</span>
-          <h3 class="text-cockpit-md font-semibold text-slate-100">调整单位状态</h3>
-        </div>
-        <button class="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors cursor-pointer" @click="editing = null">
-          <X :size="18" />
-        </button>
-      </header>
-
-      <div class="p-3 rounded-lg bg-surface-veil-03 border border-surface-veil-06">
-        <b class="text-cockpit-md font-semibold text-slate-100 block">{{ editing.name }}</b>
-        <span class="text-cockpit-sm text-slate-400 mt-1 block">{{ editing.province }} · {{ editing.batch }}</span>
-      </div>
-
-      <form class="flex flex-col gap-3.5 flex-1" @submit.prevent="save">
-        <label class="flex flex-col gap-1 text-cockpit-sm text-slate-300 font-medium">
-          运行状态
-          <select
-            v-model="draft.status"
-            class="px-3 py-1.5 rounded-lg bg-slate-800 border border-white/10 text-slate-200 focus:outline-none focus:border-sky-500/40"
-          >
-            <option>未启动</option>
-            <option>准备中</option>
-            <option>建设中</option>
-            <option>双轨运行</option>
-            <option>已上线</option>
-          </select>
-        </label>
-
-        <label class="flex flex-col gap-1 text-cockpit-sm text-slate-300 font-medium">
-          项目联系人
-          <input
-            v-model="draft.owner"
-            class="px-3 py-1.5 rounded-lg bg-slate-800 border border-white/10 text-slate-200 focus:outline-none focus:border-sky-500/40"
-          />
-        </label>
-
-        <label class="flex flex-col gap-1 text-cockpit-sm text-slate-300 font-medium">
-          <div class="flex justify-between">
-            <span>建设完成率</span>
-            <b class="font-mono text-sky-400">{{ draft.construction }}%</b>
-          </div>
-          <input
-            v-model.number="draft.construction"
-            type="range"
-            min="0"
-            max="100"
-            class="w-full accent-sky-400 cursor-pointer"
-          />
-        </label>
-
-        <label class="flex flex-col gap-1 text-cockpit-sm text-slate-300 font-medium">
-          <div class="flex justify-between">
-            <span>期初数据完成率</span>
-            <b class="font-mono text-emerald-400">{{ draft.openingData }}%</b>
-          </div>
-          <input
-            v-model.number="draft.openingData"
-            type="range"
-            min="0"
-            max="100"
-            class="w-full accent-emerald-400 cursor-pointer"
-          />
-        </label>
-
-        <p class="text-cockpit-xs text-slate-500 mt-auto">保存后即刻更新当前快照状态</p>
-
-        <div class="flex items-center gap-2.5 pt-3 border-t border-white/5">
-          <button
-            type="button"
-            class="flex-1 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 transition-colors text-cockpit-sm font-medium cursor-pointer"
-            @click="editing = null"
-          >
-            取消
-          </button>
-          <button
-            type="submit"
-            class="flex-1 py-1.5 rounded-lg bg-sky-500 text-slate-950 font-semibold hover:bg-sky-400 transition-colors text-cockpit-sm cursor-pointer"
-          >
-            保存
-          </button>
-        </div>
-      </form>
-    </aside>
-  </div>
+  <EntityEditDrawer v-if="editing" v-model:draft="draft" :entity="editing" @close="closeEdit" @save="save" />
 </template>

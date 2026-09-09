@@ -225,6 +225,10 @@
   地图实时光圈与浮条由调色板外的荧光青改为 sky-400。未被引用的 `AnimatedProgress.vue`、`MarkdownLite.vue`
   已删除。新增 `scripts/project/lint_frontend_styles.py` 闸门（样式文件集、色值位置、旧变量、媒体查询位置、
   死选择器、`@reference`）纳入 `make check` 与 CI。待发布并需人工视觉验收。
+- 本地台账层已去重：C6/B7/F 屏三个表格组件的搜索框、筛选下拉、分页条、调态抽屉收敛为
+  `components/ledger/` 四个物料，分页状态机、抽屉编辑、省份/批次/状态顺序表与带计数选项构造分别
+  收敛为 `usePagedList`、`useEntityEditor`、`utils/entityOptions.ts`（均配套单测），三组件由 1234 行降至
+  约 790 行；`AtRiskUnitTable` 补齐总页数收缩到 0 时的最小页钳位。待发布。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态
