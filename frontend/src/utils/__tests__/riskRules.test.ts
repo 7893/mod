@@ -9,8 +9,13 @@ import {
 } from '../riskRules'
 
 const rules: BusinessRules = {
-  lifecycle: { dualRunConsistencyRateMin: 98 },
-  risk: { constructionLagRate: 88, openingDataLagRate: 88, lastActiveBatchId: 7 },
+  lifecycle: {
+    dualRunConsistencyRateMin: 98,
+    orgStages: ['未启动', '准备中', '双轨运行', '已上线', '稳定运行'],
+    launchedStatuses: ['已上线', '稳定运行'],
+    displayStatuses: ['未启动', '准备中', '双轨运行', '已上线'],
+  },
+  risk: { constructionLagRate: 88, constructionCriticalRate: 80, openingDataLagRate: 88, lastActiveBatchId: 7 },
 }
 
 function row(partial: Partial<EntityRow>): EntityRow {
@@ -36,13 +41,16 @@ describe('evaluateRiskFlags', () => {
     expect(evaluateRiskFlags(row({ status: '已上线', voucherRate: 50 }), rules).dualInconsistent).toBe(false)
   })
 
-  it('flags construction/opening-data lag only while in progress', () => {
-    const lagging = evaluateRiskFlags(row({ status: '建设中', construction: 50, openingData: 50 }), rules)
+  it('flags construction/opening-data lag only for dual-run units', () => {
+    const lagging = evaluateRiskFlags(row({ status: '双轨运行', construction: 50, openingData: 50 }), rules)
     expect(lagging.constructionLag).toBe(true)
     expect(lagging.openingDataLag).toBe(true)
     const done = evaluateRiskFlags(row({ status: '已上线', construction: 50, openingData: 50 }), rules)
     expect(done.constructionLag).toBe(false)
     expect(done.openingDataLag).toBe(false)
+    const preparing = evaluateRiskFlags(row({ status: '准备中', construction: 50, openingData: 50 }), rules)
+    expect(preparing.constructionLag).toBe(false)
+    expect(preparing.openingDataLag).toBe(false)
   })
 
   it('flags stuck preparation for batches at or before the last active one', () => {
@@ -56,8 +64,8 @@ describe('deriveAtRiskUnits', () => {
   it('assigns each unit its single most severe risk type and merges predictions', () => {
     const rows = [
       row({ id: 1, status: '双轨运行', voucherRate: 90, construction: 50 }),
-      row({ id: 2, status: '建设中', construction: 70 }),
-      row({ id: 3, status: '建设中', construction: 85 }),
+      row({ id: 2, status: '双轨运行', construction: 70 }),
+      row({ id: 3, status: '双轨运行', construction: 85 }),
       row({ id: 4, status: '准备中', batchId: 3 }),
       row({ id: 5 }),
     ]
@@ -71,6 +79,8 @@ describe('deriveAtRiskUnits', () => {
     ])
     expect(units[1].stagnantDays).toBe(12)
     expect(units[0].reason).toContain('98%')
+    expect(units[1].reason).toContain('低于 88% 滞后门禁')
+    expect(units[3].reason).toContain('第 7 批')
   })
 })
 
@@ -79,7 +89,7 @@ describe('deriveComplianceUnits', () => {
     const units = deriveComplianceUnits(
       [
         row({ id: 1, status: '双轨运行', voucherRate: 90, construction: 50, openingData: 50 }),
-        row({ id: 2, status: '建设中', construction: 70 }),
+        row({ id: 2, status: '双轨运行', construction: 70 }),
         row({ id: 3, status: '准备中', batchId: 2 }),
         row({ id: 4 }),
       ],
@@ -90,7 +100,7 @@ describe('deriveComplianceUnits', () => {
     expect(units[0].level).toBe('高')
     expect(units[1].tags).toEqual(['超预算迹象'])
     expect(units[1].level).toBe('中')
-    expect(units[2].tags).toEqual(['建设进度滞后'])
-    expect(units[2].primaryIssue).toBe('建设进度滞后')
+    expect(units[2].tags).toEqual(['准备期卡顿'])
+    expect(units[2].primaryIssue).toBe('准备期卡顿')
   })
 })

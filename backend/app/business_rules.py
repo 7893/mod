@@ -35,13 +35,15 @@ BATCH_LIFECYCLE_STAGES: tuple[str, ...] = (
 # 「已上线」口径：正式上线与稳定运行都算上线。
 LAUNCHED_STATUSES: tuple[str, ...] = (ORG_STATUS_LAUNCHED, ORG_STATUS_STABLE)
 
-# 六态数据库状态 → 前端五态展示（frontend RolloutStatus）。
+# 六态数据库状态 → 前端四态展示（frontend RolloutStatus）。
+# 「未启动」只由蓄水池（batch 8）分支直接产出；批次 1-7 内的未启动/已具备双轨条件都折叠为「准备中」。
 DISPLAY_STATUS_MAPPING: dict[str, str] = {
     ORG_STATUS_DUAL_RUNNING: "双轨运行",
     ORG_STATUS_STABLE: "已上线",
     ORG_STATUS_DUAL_READY: "准备中",
     ORG_STATUS_NOT_STARTED: "准备中",
 }
+DISPLAY_STATUSES: tuple[str, ...] = ("未启动", "准备中", "双轨运行", "已上线")
 
 
 def sql_status_list(statuses: Iterable[str]) -> str:
@@ -68,6 +70,8 @@ SQL_INFERRED_BATCH_ID = f"""CASE
 
 DUAL_RUN_CONSISTENCY_RATE_MIN = 98.0
 CONSTRUCTION_LAG_RATE = 88.0
+# 建设滞后单位再按此线分为「高危」(<) 与「重点关注」(>=)。
+CONSTRUCTION_CRITICAL_RATE = 80.0
 OPENING_DATA_LAG_RATE = 88.0
 LAST_ACTIVE_BATCH_ID = 7
 
@@ -78,9 +82,11 @@ def public_business_rules() -> dict[str, Any]:
             "dualRunConsistencyRateMin": DUAL_RUN_CONSISTENCY_RATE_MIN,
             "orgStages": list(ORG_LIFECYCLE_STAGES),
             "launchedStatuses": list(LAUNCHED_STATUSES),
+            "displayStatuses": list(DISPLAY_STATUSES),
         },
         "risk": {
             "constructionLagRate": CONSTRUCTION_LAG_RATE,
+            "constructionCriticalRate": CONSTRUCTION_CRITICAL_RATE,
             "openingDataLagRate": OPENING_DATA_LAG_RATE,
             "lastActiveBatchId": LAST_ACTIVE_BATCH_ID,
         },

@@ -70,7 +70,7 @@ export function createRolloutCommandOption(summary: RolloutCommandSummary) {
   const states = [
     { name: '待推进', value: pending, color: chartPalette.neutral },
     { name: '双轨运行', value: summary.dual, color: chartPalette.warning },
-    { name: '正式上线', value: summary.launched, color: chartPalette.success },
+    { name: '已上线', value: summary.launched, color: chartPalette.success },
   ]
 
   return {

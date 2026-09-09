@@ -63,7 +63,7 @@ const trendOption = computed(() => {
     },
     series: [
       {
-        name: '正式上线',
+        name: '已上线',
         type: 'line',
         smooth: true,
         data: list.map((v) => v.launched),
