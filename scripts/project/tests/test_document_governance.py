@@ -26,7 +26,9 @@ class DocumentGovernanceTests(unittest.TestCase):
         self.assertEqual(validate_contracts(), [])
 
     def test_history_integrity_manifest_matches_local_archive(self) -> None:
-        self.assertEqual(validate_history(require_all=True), [])
+        # require_all=True 만 의미 있는 환경(로컬 호스트, .env.systemd 존재 또는 MOD_REQUIRE_LOCAL_HISTORY=1)에서만 검사.
+        # CI 환경은 gitignored history 파일이 없으므로 require_all=None(자동 판단)으로 실행.
+        self.assertEqual(validate_history(require_all=None), [])
 
     def test_history_manifest_rejects_malformed_entries(self) -> None:
         from tempfile import TemporaryDirectory
