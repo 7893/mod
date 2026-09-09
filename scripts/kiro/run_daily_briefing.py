@@ -36,7 +36,7 @@ def main() -> int:
 
     from app.db import get_engine
     from app.services.daily_briefing import generate_and_store, get_latest
-    from app.services.dashboard import build_dashboard_snapshot_v2
+    from app.services.dashboard import build_dashboard_snapshot
     from app.integrations.cloudflare_ai import CloudflareAIAdapter
 
     engine = get_engine()
@@ -50,7 +50,7 @@ def main() -> int:
     display_tz = os.getenv("MOD_DISPLAY_TIMEZONE", "Asia/Hong_Kong")
 
     with engine.connect() as conn:
-        snap = build_dashboard_snapshot_v2(conn)
+        snap = build_dashboard_snapshot(conn)
         overview = snap.get("overview", {})
 
     cf = CloudflareAIAdapter()

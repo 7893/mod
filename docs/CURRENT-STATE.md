@@ -134,11 +134,11 @@
   数据库快照仍是累计数字唯一事实源，前端会话脉搏不再与快照相加。当前只支持同机单 API 进程，尚无共享
   outbox、跨实例消费者位点或完整重连续播保证，具体边界见 `development/LIVE-PROJECTION.md`。
 - 拟真引擎第一步（技术验证载体）已落地（`backend/app/simulation/`）：实现费用报销剧本（`ExpensePlaybook`）多表完整足迹生成与安全写库器（`SimulationWriter`），单事务原子落库 6 张表（`business_document`、`business_document_line`、`accounting_voucher`、`accounting_voucher_line`、`document_voucher_link`、`integration_result`）并级联同步 `daily_stats`；以存量治理成果为硬约束（时间线接续存量最新日期只向前生长、经办人 100% 命中本单位名录、仅限已上线单位门禁、只增不删、零 schema 变更、运行审计留痕）；开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭（`false`）；已通过 100 笔小试落库实测，KI-017 零回归。
-- 拟真引擎第二步（建设管控主线 + B模式生命周期推进器）已落地并已实测写库（`backend/app/simulation/` 与 `scripts/agy/run_step2_batch_write.py`）：
+- 拟真引擎第二步（建设管控主线 + B模式生命周期推进器）已落地并已实测写库（`backend/app/simulation/` 与 `archive/legacy-scripts/agy/run_step2_batch_write.py`）：
   - 核心模块：实现 7 类建设管控剧本生成器（入池、数据准备、培训认证、接口联调、双轨核对、跃迁评审、批次推进，`construction_playbooks.py`）、6 阶段生命周期状态机推进器（`lifecycle_advancer.py`，严格执行“只进不退、持续达标 N 天才跃迁、跃迁评审留痕快照”三条铁律）、快慢电影演进协调器与矛盾咬合机制（`evolution_coordinator.py`，~4% 自然涌现困难户与决策支撑风险视角 100% 咬合自洽）、建设安全事务写库器（`construction_writer.py`）；
-  - 严格分批写库落地：经主控授权，使用独立可控批量写库脚本（`scripts/agy/run_step2_batch_write.py`）执行 2026-09-05 建设主线业务足迹真实落库。写前自动对 7 张受影响表生成全量快照备份（`scripts/agy/output/backups/construction_backup_20260905_131434.json`，43.37 MB），按 2,000 行/批分 3 批逐批 commit（单事务单批次），实时打印进度与 ID 区间，累计安全写入 4,178 行；
+  - 严格分批写库落地：经主控授权，使用独立可控批量写库脚本（`archive/legacy-scripts/agy/run_step2_batch_write.py`）执行 2026-09-05 建设主线业务足迹真实落库。写前自动对 7 张受影响表生成全量快照备份（`scripts/agy/output/backups/construction_backup_20260905_131434.json`，43.37 MB），按 2,000 行/批分 3 批逐批 commit（单事务单批次），实时打印进度与 ID 区间，累计安全写入 4,178 行；
   - 当前数据规模：`org_unit` 2,000 家（未启动 760、准备中 238、已具备双轨条件 49、双轨运行中 205、已上线 282、稳定运行 466）；`construction_task` 62,104 行（新增 2,194 行）；`rollout_status_snapshot` 144,870 行（新增 20 行带专家决议留痕快照）；`training` 5,520 行（新增 476 行）；`dual_run_result` 30,288 行（新增 1,230 行）；`data_readiness` 2,000 行（238 行同步更新）；
-  - 验收脚本隔离与零回归：验收脚本（`scripts/agy/verify_step2_dry_run.py`）严格保持纯只读，与写库入口彻底分离，杜绝验收重复写库。写后 8 条硬闸门全量复测 100% PASS，KI-017 零回归。
+  - 验收脚本隔离与零回归：验收脚本（`archive/legacy-scripts/agy/verify_step2_dry_run.py`）严格保持纯只读，与写库入口彻底分离，杜绝验收重复写库。写后 8 条硬闸门全量复测 100% PASS，KI-017 零回归。
 - 拟真引擎第三步（常驻后台服务 · 持续实时增长）已落地（`backend/app/simulation/runtime_service.py`、`deploy/mod-simulator.service`、`scripts/agy/run_simulator_service.py`）：
   - 核心架构：将作息大脑 `HongKongDiurnalEngine`（24h 曲线、周末抑制、月末峰值、泊松突发）与已验证写库执行器装配为常驻后台服务 `SimulatorRuntimeService`，时钟严格对齐当前香港真实时间（`sim_time = current HKT`，不加速、不追赶、不倒插历史）；
   - 双重限流与硬保险丝：柔性作息强度与泊松间隔调度 + 滑动硬上限保险丝（每分钟 ≤ 20 笔、每天 ≤ 5000 笔可配，超限自动安全暂停并记审计日志）；

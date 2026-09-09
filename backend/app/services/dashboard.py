@@ -648,4 +648,3 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
 
 # 兼容别名：scripts/kiro/run_daily_briefing.py（生产 mod-daily-briefing.service）仍按旧名导入，
 # 该目录归 Kiro 所有；待其改用 build_dashboard_snapshot 后删除本行。
-build_dashboard_snapshot_v2 = build_dashboard_snapshot
