@@ -238,13 +238,13 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
 
       <!-- D7: 数据质量金标准核验 -->
       <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="核心业务约束与金标准稽核规则 (真实核验 0 异常如实展示)" class="col-span-2">
-        <div class="flex flex-col gap-2 h-full min-h-0">
-          <!-- 四项规则压缩成单行状态带，把主要面积交给趋势比较 -->
-          <div class="grid grid-cols-4 gap-2 flex-shrink-0">
+        <div class="grid grid-cols-12 gap-3 h-full min-h-0">
+          <!-- 四项规则左置纵向排布，缩短主图横条宽度，提升版面呼吸感 (KI-067) -->
+          <div class="col-span-5 flex flex-col justify-between gap-1.5 min-w-0 pr-2 border-r border-surface-veil-06">
             <div
               v-for="item in qualityAuditList"
               :key="item.id"
-              class="px-2.5 py-2 rounded-lg bg-surface-veil-03 border border-surface-veil-06 min-w-0"
+              class="px-2.5 py-1.5 rounded-lg bg-surface-veil-03 border border-surface-veil-06 min-w-0"
             >
               <div class="flex items-center justify-between gap-2">
                 <span class="text-cockpit-xs text-slate-300 font-medium truncate">{{ item.rule }}</span>
@@ -266,7 +266,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
             </div>
           </div>
 
-          <div class="flex flex-1 min-h-0 flex-col">
+          <div class="col-span-7 flex flex-1 min-h-0 flex-col">
             <div class="flex items-center justify-between px-1 text-cockpit-xs flex-shrink-0">
               <span class="font-medium text-slate-300">实际核验覆盖规模</span>
               <span class="font-mono text-slate-500">对数尺度 · 标签为真实数量</span>

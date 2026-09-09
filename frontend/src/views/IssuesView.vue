@@ -237,7 +237,7 @@ const paginatedTableUnits = computed(() => {
     <CockpitPanel
       title="重点监督单位清单与问题下钻"
       zone="E5"
-      subtitle="矛与盾读同一事实源 · 点击单位下钻查看合规风险类型（点到为止，不做逐笔会计审计）"
+      subtitle="单位指标态现场判定（阈值派生） · 点击单位下钻查看治理工单处置流转"
       class="flex-1 min-h-0"
     >
       <template #actions>

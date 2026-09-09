@@ -236,6 +236,12 @@
   - 全屏 Tooltip 越界治理：`charts/theme.ts` 的 `chartTooltip` 基线统一加入 `confine: true`，`RolloutView.vue` 与 `ChinaMap.vue` 补齐该约束，确保全屏 28 处图表在面板边缘悬浮时不溢出面板容器、不被相邻卡片遮挡。
   - A4 时间轴居中：`backend/app/services/dashboard.py` 优化走势快照窗口构建算法，剔除增量试点噪声（`HAVING COUNT(*) > 100`），构建以今日（09-09）为中心的 7 节点对称时间窗（3 过去 + 今日居中 + 3 未来），`OverviewTrendChart.vue` 配套增加对称截窗逻辑，今日刻度稳定落在横轴中间。
   - C5 覆盖率环图去字留白：`charts/panelOptions.ts::createCoverageOption` 移除环心标题与“单位覆盖率”文字，避免在小尺寸环图内挤占重叠，数值与分布改由受限 Tooltip 呈现。
+- 风险派生数据真实性与界面体验优化（KI-066 / KI-067，DONE）：
+  - E/F 屏风险真实派生（KI-066）：`backend/app/services/dashboard_sections.py::build_entities` 引入 `dual_run_result` CTE 预聚合，派生各单位真实凭证一致率（`voucherRate`），不再恒为 `None`；E 屏与 F 屏「双轨核对差异」与「借贷试算不平风险」维度恢复正常触发与自愈能力，单次聚合查询维持在 ~40ms 亚秒级。
+  - 金标稽核诚实性重构（KI-066）：`backend/app/services/dashboard.py` 将未执行全量离线扫表的借贷平衡、时序逻辑与孤儿链路 3 项异常数由硬编码 `0` 改为如实上报 `None`，恪守 KI-023 诚实性纪律，前端优雅降级展示为 unknown 灰色状态与 `—`；保留第四项经真库日结核验的组织状态演进追踪（`org_total`）。
+  - E 屏与 A1 语义分工澄清（KI-066）：E 屏 E5 面板副标题明确“单位指标态现场判定（阈值派生）与治理工单处置流转”分工；A1 顶部总览将演示投影会话计数澄清为「实时集成脉搏」，并采用 sky-400 色调与真库今日增量（emerald-400）进行视觉区隔。
+  - B2 雷达图 Tooltip 补齐百分号（KI-067）：`frontend/src/charts/constructionOptions.ts::createTaskStageRadarOption` 增加自定义 formatter，各阶段完成率读数规范补齐 `%` 后缀，语义严谨。
+  - D7 数据质量金标准面板重构（KI-067）：`frontend/src/views/OperationsView.vue` 将四项规则小卡改为左侧 5 列纵向排布、右侧 7 列承载核验覆盖规模条形图，有效消除主图长横条占满版面的局促感，版面呼吸感显著提升。
 - 矛与盾攻防博弈与合规治理引擎（GI-003/GI-004 阶段一至阶段五 & KI-062/KI-063 治理闭环）：
   - 昼夜作息与月末生物钟（GI-004，`simulation/governance_state_machine.py`）：引入 $k_{\text{rhythm}}$ 节律因子，工作日早晚黄金工段 1.8x 加速、午间 0.5x 放缓、夜间 22:00-07:00 彻底冻结（杜绝半夜出具验收通报虚假繁荣）、月末 25 日起叠加 1.5x 冲刺乘数，二次核验返工率动态适配。
   - 30~45 单动态平衡走廊（GI-004，`simulation/construction_propeller.py`）：实时感知未结案库存；低于 35 单时提升阻力暗礁触发率至 50% 并放缓消缺，高于 45 单时降低阻力触发率至 5% 并加速消缺，确保大盘恒定平稳呼吸，告别全绿死水与人工干预。

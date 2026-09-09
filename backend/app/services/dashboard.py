@@ -540,10 +540,13 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
         issues_summary, issues = build_issue_sections(conn, anchor_date_str)
         entities = build_entities(conn, as_of_date, anchor_date_str)
 
+        # KI-066 / KI-023 诚实性原则：借贷平衡、时序逻辑、孤儿链路未做离线全表稽核时如实传 None，
+        # 避免将未核验误报为 0 异常（前端已支持 unknown 灰态与 "—" 优雅降级展示）。
+        # 第四项组织状态演进追踪已由真库每日全量纳管校验覆盖，如实上报 org_total。
         quality = {
-            "voucherBalanceErrors": 0,
-            "timeOrderErrors": 0,
-            "orphanLinkErrors": 0,
+            "voucherBalanceErrors": None,
+            "timeOrderErrors": None,
+            "orphanLinkErrors": None,
             "organizationsWithStatusProgression": int(ov_row["org_total"]),
         }
 
