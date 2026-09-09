@@ -13,6 +13,8 @@ frontend-check:
 	cd frontend && pnpm run build
 
 doc-check:
+	python3 scripts/project/check_history_integrity.py
+	python3 scripts/project/check_semantic_contracts.py
 	python3 scripts/project/check_doc_links.py
 	python3 scripts/project/check_document_governance.py
 	python3 scripts/project/check_doc_sync.py

@@ -9,6 +9,8 @@ PROJECT_SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_SCRIPTS))
 
 from check_doc_sync import check_sync, is_core_file  # noqa: E402
+from check_history_integrity import load_manifest, validate as validate_history  # noqa: E402
+from check_semantic_contracts import validate_contracts  # noqa: E402
 from check_document_governance import (  # noqa: E402
     check_changes,
     missing_metadata,
@@ -20,6 +22,20 @@ from check_document_governance import (  # noqa: E402
 
 
 class DocumentGovernanceTests(unittest.TestCase):
+    def test_high_risk_semantic_contracts_match(self) -> None:
+        self.assertEqual(validate_contracts(), [])
+
+    def test_history_integrity_manifest_matches_local_archive(self) -> None:
+        self.assertEqual(validate_history(require_all=True), [])
+
+    def test_history_manifest_rejects_malformed_entries(self) -> None:
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "MANIFEST.sha256"
+            path.write_text("not-a-hash  docs/history/a.md\n", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_manifest(path)
+
     def test_parses_board_and_detail_status(self) -> None:
         board = "| KI-054 | 标题 | IN-PROGRESS | P1 | [详情](issues/KI-054-title.md) |"
         self.assertEqual(
