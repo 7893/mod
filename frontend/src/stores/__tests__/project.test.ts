@@ -186,5 +186,15 @@ describe('stores/project', () => {
     expect(dualStats).not.toBeNull()
     expect(dualStats!.consistent).toBe(ops.dualRunConsistent)
     expect(dualStats!.consistencyPct).toBeGreaterThanOrEqual(90)
+
+    if (ops.dualRunBreakdown) {
+      expect(Array.isArray(ops.dualRunBreakdown)).toBe(true)
+      for (const item of ops.dualRunBreakdown) {
+        expect(item.type).toBeDefined()
+        expect(item.consistent).toBeGreaterThanOrEqual(0)
+        expect(item.inconsistent).toBeGreaterThanOrEqual(0)
+        expect(item.rate).toBeGreaterThanOrEqual(0)
+      }
+    }
   })
 })

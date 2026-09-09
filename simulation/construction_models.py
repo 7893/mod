@@ -16,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 # Lifecycle stage chains (strictly ordered, forward-only)
 ORG_LIFECYCLE_STAGES = (
@@ -51,6 +51,31 @@ TASK_STATUSES = ("未开始", "进行中", "已完成")
 DUAL_RUN_CHECK_TYPES = ("业务单据金额核对", "凭证借贷汇总核对", "月末科目余额比对")
 DUAL_RUN_RESULTS = ("一致", "不一致")
 READINESS_OVERALL_STATUSES = ("未收集", "收集中", "校验通过", "已导入")
+
+# 真实财务双轨核对不一致原因专业语料库 (KI-053)
+DUAL_RUN_DIFFERENCE_REASONS: Dict[str, List[str]] = {
+    "月末科目余额比对": [
+        "月末总账外币折算总账结汇截断时差（汇兑损益偏差）",
+        "新老系统二级科目挂账科目映射规则不一致",
+        "预付账款跨期分摊与待摊费用截断时差",
+        "母子公司内部往来账双向抵销时间窗口未对齐",
+        "月末计提税费重算时差导致科目余额微差",
+    ],
+    "凭证借贷汇总核对": [
+        "新老系统银行对账单单边暂估调整分录未同步过账",
+        "固定资产多级折旧计提四舍五入累计尾差（借贷微差）",
+        "增值税多级税率重算分录尾差（借贷不平0.04~0.82元）",
+        "跨期收付转借贷科目汇总截断时间窗口不一致",
+        "工会经费与职工福利费计提科目归集口径微差",
+    ],
+    "业务单据金额核对": [
+        "采购发票跨期认证结算单据与暂估冲销金额差异",
+        "冲销凭证与历史红字发票关联钩稽时间差",
+        "跨期差旅报销单据尾数拆分与扣税重算差异",
+        "项目工程进度款预留质保金与应付款项账龄折算尾差",
+        "合同分期付款单据币种换算小数位截断偏差",
+    ],
+}
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +193,7 @@ class DualRunResultRecordFootprint:
     diff_amount: Decimal
     result: str
     check_date: date
+    difference_reason: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -447,6 +473,8 @@ def validate_dual_run_check(event: DualRunCheckEventFootprint) -> None:
     if calc_diff == Decimal("0.00"):
         if dr.result != "一致":
             raise ValueError("Zero diff_amount must have result '一致'")
+        if dr.difference_reason:
+            raise ValueError("Consistent dual run record must not have discrepancy reason")
     else:
         if dr.result != "不一致":
             raise ValueError(f"Non-zero diff_amount ({calc_diff}) must have result '不一致'")
