@@ -1,5 +1,7 @@
 """HeatWave AutoML table, training, and scoring SQL definitions."""
 
+from ..business_rules import SQL_LAUNCHED_STATUSES
+
 MODEL_REGRESSION = "MOD_REGRESSION_MODEL"
 MODEL_CLASSIFIER = "MOD_RISK_CLASSIFIER"
 
@@ -76,7 +78,7 @@ SELECT
         (SELECT MAX(snapshot_date) FROM rollout_status_snapshot),
         b.end_date
     ))                                                        AS days_since_go_live,
-    CASE WHEN o.status IN ('已上线','稳定运行') THEN 1 ELSE 0 END AS launched_flag,
+    CASE WHEN o.status IN {SQL_LAUNCHED_STATUSES} THEN 1 ELSE 0 END AS launched_flag,
     COALESCE(d30.cnt, 0)                                      AS doc_count_prev30,
     COALESCE(v30.cnt, 0)                                      AS voucher_count_prev30,
     COALESCE(ir30.cnt, 0)                                     AS integration_fail_cnt,
@@ -85,7 +87,7 @@ SELECT
     ROUND(COALESCE(d30.cnt, 0) / 30.0, 2)                     AS avg_daily_doc_prev7,
     /* 目标变量：当日新增单据数（基于近7天基准、体量规模、日历节律与受控波动） */
     CASE 
-        WHEN o.status NOT IN ('已上线','稳定运行') THEN 0.0
+        WHEN o.status NOT IN {SQL_LAUNCHED_STATUSES} THEN 0.0
         ELSE ROUND(GREATEST(0.0, 
             (COALESCE(d30.cnt, 0) / 30.0) * 1.08 + 
             (COALESCE(u.handler_cnt, 1) * 0.15) - 

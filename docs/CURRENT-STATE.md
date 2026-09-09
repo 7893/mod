@@ -238,6 +238,14 @@
 - 本地前端展示格式化已收口到 `formatters/metrics.ts`：新增 `formatDateTime`（顶栏时钟、AI 生成时间、
   台账审计时间共用），视图/组件/图表 tooltip/store 中 30 余处 `toLocaleString`/`Intl.*` 全部改为
   `formatCount`/`formatDateTime`，数字展示统一 zh-CN 千分位、空值统一 `—`。待发布。
+- 本地后端单位状态词表已收口到 `backend/app/business_rules.py` 单一来源：`ORG_LIFECYCLE_STAGES`/
+  `BATCH_LIFECYCLE_STAGES`（原 `simulation/construction_models.py` 定义处改为转引）、`LAUNCHED_STATUSES`
+  「已上线族」、`ACTIVE_BUSINESS_STATUSES`、数据库六态→前端五态的 `DISPLAY_STATUS_MAPPING`（原散在
+  `dashboard_sections.py`）、SQL 片段 `SQL_LAUNCHED_STATUSES` 与三处重复的推断批次 `SQL_INFERRED_BATCH_ID`；
+  `dashboard.py`/`dashboard_sections.py`/`heatwave_sql.py`/`business_simulator.py`/`simulation/engine_context.py`
+  中 40 余处状态字面量改为引用常量，`public_business_rules()` 新增只读 `orgStages`/`launchedStatuses`。
+  新增 `tests/test_business_rules.py` 契约测试（词表有序唯一、映射覆盖全部状态、SQL 模块禁止散写状态
+  字面量）。未改变任何 SQL 语义。待发布。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态
