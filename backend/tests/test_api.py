@@ -85,11 +85,11 @@ def test_normalize_operations_dict():
     assert normalized_camel["accountingVoucher"] == 200
 
 
-def test_v2_snapshot_file_integrity():
+def test_fallback_snapshot_file_integrity():
     """
-    Test fallback snapshot data integrity against V2 frozen baseline.
+    Test fallback snapshot data integrity against the frozen baseline.
     Note: In local test environment, DB connection falls back to this verified snapshot.
-    Online DB SQL path will be verified during USA read-only integration testing.
+    Online DB SQL path will be verified during production read-only integration testing.
     """
     snap = load_fallback_snapshot()
     overview = snap["overview"]

@@ -249,6 +249,9 @@
 - 本地 D7/F3/F5 去模板化：新增积木 `blocks/BriefingList`，F5 每日简报由三列彩色底卡+截断改为纵向分节全文
   展示；D7 核验卡去掉无语义的进度轨与胶囊标签；F3 分布图去掉面板内底卡并隐藏与柱标重叠的坐标刻度。
   已在 1920×1080 无头渲染核对，无控制台错误。待发布并需人工视觉验收。
+- 本地后端 KI-027 补遗：`PageV2→Page`、`build_dashboard_snapshot_v2→build_dashboard_snapshot`，docstring/错误消息中
+  残留的 `/api/v2/`、`V2`、`USA` 字样清除，删除无引用死 schema `RefreshMeta`/`Overview`；因 `scripts/kiro/run_daily_briefing.py`
+  （生产简报定时任务）仍按旧名导入且目录归 Kiro，`dashboard.py` 暂留一行兼容别名，待 Kiro 迁移后删除。待发布。
 - 页面 meta、根 `robots.txt`、Nginx 与 API 响应均设置禁止索引指令。
 
 ## 运行安全状态

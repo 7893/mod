@@ -1,4 +1,4 @@
-"""Dashboard V2 snapshot loading and normalization services."""
+"""Dashboard snapshot loading and normalization services."""
 
 from __future__ import annotations
 
@@ -159,7 +159,7 @@ def load_fallback_snapshot() -> dict:
     }
 
 
-def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
+def build_dashboard_snapshot(conn: Connection | None) -> dict:
     if conn is None:
         return load_fallback_snapshot()
     try:
@@ -655,5 +655,10 @@ def build_dashboard_snapshot_v2(conn: Connection | None) -> dict:
             "insights": insights_data,
         }
     except Exception as e:
-        print(f"Warning: V2 DB query failed ({e}), using fallback snapshot.")
+        print(f"Warning: DB query failed ({e}), using fallback snapshot.")
         return load_fallback_snapshot()
+
+
+# 兼容别名：scripts/kiro/run_daily_briefing.py（生产 mod-daily-briefing.service）仍按旧名导入，
+# 该目录归 Kiro 所有；待其改用 build_dashboard_snapshot 后删除本行。
+build_dashboard_snapshot_v2 = build_dashboard_snapshot
