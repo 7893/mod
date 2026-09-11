@@ -5,6 +5,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 export default function modHarness(pi: ExtensionAPI) {
+  // 2026-09-11: project-only adapter. Global configuration now loads local-harness.
+  // Preserve existing tools; /pre-flight delegates to the common deterministic CLI below.
   // 1. Session Start Banner
   pi.on("session_start", async (_event, ctx) => {
     ctx.ui?.notify?.("MOD Project Harness Active: Governance & Safe Tooling Enabled", "info");
@@ -93,7 +95,8 @@ export default function modHarness(pi: ExtensionAPI) {
     handler: async (_args, ctx) => {
       ctx.ui?.notify?.("Running targeted pre-flight checks...", "info");
       try {
-        const output = execSync("bash scripts/project/pre_flight.sh", {
+        // Previous command retained for traceability: bash scripts/project/pre_flight.sh
+        const output = execSync("node /home/ubuntu/local-harness/cli.mjs check --project /home/ubuntu/mod --run", {
           cwd: "/home/ubuntu/mod",
           encoding: "utf8",
         });

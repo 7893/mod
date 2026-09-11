@@ -111,6 +111,7 @@ generator/
 # Historical process docs may carry legacy real hosts/OCIDs; keep local, do not publish.
 docs/history/*
 !docs/history/MANIFEST.sha256
+!docs/history/2026-09-11-HARNESS-ENTRYPOINTS.md
 !docs/history/2026-09-11-FRONTEND-STANDARDS.md
 frontend/releases/
 frontend/current

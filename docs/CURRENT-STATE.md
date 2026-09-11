@@ -369,6 +369,10 @@ KI-060 更新前的本节原文完整保存在
 
 ## 操作边界
 
+2026-09-11 本机 harness 接入：公共包位于 `/home/ubuntu/local-harness/`，全局 Pi 加载公共扩展，
+MOD 专属工具只由项目自动发现。当前入口改为按领域读取，旧入口完整保全；检查按计划运行并返回摘要与日志位置。
+说明与限制见[本地 Harness](development/LOCAL-HARNESS.md)。该项仅变更本地开发工具，未发布生产。
+
 - 不运行历史协作状态机，不新增其中的任务或状态记录。
 - 临时脚本必须遵守 `development/CLI-SCRIPT-POLICY.md` 的 CLI 专属目录制度。
 - 实时投影的展示语义、事件链和多实例限制以 `development/LIVE-PROJECTION.md` 为准。

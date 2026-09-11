@@ -30,6 +30,10 @@
 
 ## 现行维护规范
 
+- [本地通用 Harness 接入](development/LOCAL-HARNESS.md)：领域读取、摘要验收与回滚。
+- [ADR-0011](decisions/0011-local-harness.md)：公共包与项目适配分离。
+- [Harness 入口迁移前原文](history/2026-09-11-HARNESS-ENTRYPOINTS.md)：旧入口完整保全。
+
 - [development/README.md](development/README.md)：现行开发规范导航。
 - [issues/](issues/)：已知问题独立文档目录（各问题完整上下文、分析与处理记录）。
 - [development/PROJECT-ORGANIZATION.md](development/PROJECT-ORGANIZATION.md)：源码分层、文件规模和目录职责。

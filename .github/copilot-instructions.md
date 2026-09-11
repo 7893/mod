@@ -1,7 +1,7 @@
-# GitHub Copilot instructions
+# MOD copilot entrypoint
 
-Read and follow `AGENTS.md`, `ENFORCEMENT.md`, `CONTRIBUTING.md`, `docs/CURRENT-STATE.md`, and the relevant
-standards under `docs/development/` before changing the project.
-
-Copilot-specific temporary or diagnostic scripts must be placed under `scripts/copilot/`. Do not write scripts
-into the repository root, another CLI's directory, `database/`, `generator/`, or `tools/`.
+Read AGENTS.md, then only the task-relevant references in .pi/harness.json.
+Do not preload entire project standards or CURRENT-STATE. Expand context when dependencies require it.
+Use the shared local harness for compact context and check summaries; plain scripts remain available.
+Temporary scripts belong in scripts/copilot/. Preserve unrelated work and historical content.
+Previous entry text is preserved in docs/history/2026-09-11-HARNESS-ENTRYPOINTS.md, not an active instruction source.
