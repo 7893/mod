@@ -23,6 +23,8 @@ Start with the current task, these rules, and the CURRENT-STATE "操作边界" s
 Get a domain index with:
     node /home/ubuntu/local-harness/cli.mjs context --scope frontend
 Scopes: frontend, backend, data, docs, tooling. Pi also exposes local_harness and /harness.
+For a mapped KI, prefer task --target KI-076 --intent investigate: target references/checks stay independent of unrelated diffs.
+Investigation is plan-only; repair/accept checks require explicit execution. Automated checks never close a KI.
 Read the relevant exact sections, then related source/tests. Add other domains only when dependencies require it.
 Do not preload all docs, all CURRENT-STATE, all skills, or previous KI records.
 The manifest .pi/harness.json is a navigation/check map, not a second copy of standards.

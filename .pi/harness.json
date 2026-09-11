@@ -37,7 +37,38 @@
       "references": [{ "path": "docs/development/LOCAL-HARNESS.md" }, { "path": "docs/development/CLI-SCRIPT-POLICY.md" }]
     }
   },
+  "targets": {
+    "KI-076": {
+      "domains": ["frontend"],
+      "references": [
+        { "path": "docs/issues/KI-076-FRONTEND-PRESENTATION-CONTRACT.md", "reason": "目标问题及验收要求；不是当前代码状态证明" },
+        { "path": "docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md", "heading": "## KI-076 展示契约补充（2026-09-11）", "reason": "该问题对应展示契约" },
+        { "path": "docs/development/FRONTEND-VISUAL-VERIFICATION.md", "reason": "视觉验收方法与隔离边界" }
+      ],
+      "files": [
+        { "path": "frontend/src/App.vue", "reason": "来源与时间提示" },
+        { "path": "frontend/src/stores/project.ts", "reason": "快照来源和刷新状态" },
+        { "path": "frontend/src/components/KioskSpotlightTour.vue", "reason": "巡航事件与交互" },
+        { "path": "frontend/src/components/LiveActivityTicker.vue", "reason": "治理事件数据源" },
+        { "path": "frontend/src/views/IssuesView.vue", "reason": "具体工单定位" },
+        { "path": "frontend/src/components/ComplianceInspectDrawer.vue", "reason": "工单读取与抽屉组合" },
+        { "path": "frontend/src/components/DrawerShell.vue", "reason": "窗口挂载与键盘焦点" },
+        { "path": "frontend/src/components/blocks/MetricGrid.vue", "reason": "完整指标入口" },
+        { "path": "frontend/src/components/blocks/ChartFacts.vue", "reason": "有限组合布局" },
+        { "path": "frontend/src/views/OperationsView.vue", "reason": "D 屏组合使用" },
+        { "path": "frontend/e2e/presentation.spec.ts", "reason": "六屏截图与交互回归" }
+      ],
+      "checks": {
+        "investigate": ["frontend-types", "frontend-tests", "visual-build", "visual-regression"],
+        "repair": ["frontend-style", "frontend-values", "frontend-types", "frontend-tests"],
+        "accept": ["acceptance", "visual-build", "visual-regression"]
+      },
+      "manual": ["人工确认初始视觉基准与审美", "逐项核对 KI 验收证据；检查通过不自动关闭 KI"]
+    }
+  },
   "checks": [
+    { "id": "visual-build", "domains": [], "cwd": "frontend", "argv": ["pnpm", "run", "build:visual"], "timeoutMs": 120000 },
+    { "id": "visual-regression", "domains": [], "cwd": "frontend", "argv": ["pnpm", "run", "test:visual"], "timeoutMs": 300000 },
     { "id": "doc-sync", "always": true, "domains": [], "argv": ["python3", "scripts/project/check_doc_sync.py"] },
     { "id": "backend", "domains": ["backend", "data"], "argv": ["make", "backend-check"], "timeoutMs": 180000 },
     { "id": "frontend-style", "domains": ["frontend"], "argv": ["python3", "scripts/project/lint_frontend_styles.py"] },
