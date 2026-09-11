@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "name": "MOD",
+  "common": [
+    { "path": "AGENTS.md" },
+    { "path": "docs/CURRENT-STATE.md", "heading": "## 操作边界" },
+    { "path": "docs/development/TESTING-STANDARD.md", "heading": "## 通用要求" }
+  ],
+  "domains": {
+    "frontend": {
+      "prefixes": ["frontend/"],
+      "references": [
+        { "path": "docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md", "heading": "## 契约一 · 骨架契约（Layout）" },
+        { "path": "docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md", "heading": "## 契约二 · 物料契约（Component）" },
+        { "path": "docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md", "heading": "## 契约三 · Token 契约（Style）" },
+        { "path": "docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md", "heading": "## KI-076 展示契约补充（2026-09-11）" },
+        { "path": "docs/development/FRONTEND-VISUAL-VERIFICATION.md" }
+      ]
+    },
+    "backend": {
+      "prefixes": ["backend/", "simulation/"],
+      "references": [
+        { "path": "docs/development/DEVELOPMENT-STANDARD.md", "heading": "## 后端" },
+        { "path": "docs/development/DEVELOPMENT-STANDARD.md", "heading": "## API 与兼容性" }
+      ]
+    },
+    "data": {
+      "prefixes": ["database/"],
+      "references": [{ "path": "docs/development/DATA-AND-SECURITY-STANDARD.md" }, { "path": "ENFORCEMENT.md", "heading": "### 闸门 B · 数据库与生产操作" }]
+    },
+    "docs": {
+      "prefixes": ["docs/", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "ENFORCEMENT.md", "CONTRIBUTING.md"],
+      "references": [{ "path": "docs/development/DOCUMENTATION-STANDARD.md" }, { "path": "docs/development/DOCUMENTATION-LIFECYCLE.md" }]
+    },
+    "tooling": {
+      "prefixes": [".pi/", "scripts/", "Makefile", ".github/", ".githooks/"],
+      "references": [{ "path": "docs/development/LOCAL-HARNESS.md" }, { "path": "docs/development/CLI-SCRIPT-POLICY.md" }]
+    }
+  },
+  "checks": [
+    { "id": "doc-sync", "always": true, "domains": [], "argv": ["python3", "scripts/project/check_doc_sync.py"] },
+    { "id": "backend", "domains": ["backend", "data"], "argv": ["make", "backend-check"], "timeoutMs": 180000 },
+    { "id": "frontend-style", "domains": ["frontend"], "argv": ["python3", "scripts/project/lint_frontend_styles.py"] },
+    { "id": "frontend-values", "domains": ["frontend"], "argv": ["python3", "scripts/project/lint_frontend_arbitrary_values.py"] },
+    { "id": "frontend-types", "domains": ["frontend"], "cwd": "frontend", "argv": ["pnpm", "run", "typecheck"] },
+    { "id": "frontend-tests", "domains": ["frontend"], "cwd": "frontend", "argv": ["pnpm", "test"] },
+    { "id": "documents", "domains": ["docs", "tooling"], "argv": ["make", "doc-check"] },
+    { "id": "acceptance", "full": true, "domains": [], "argv": ["make", "check"], "timeoutMs": 300000 }
+  ]
+}

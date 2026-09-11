@@ -5,6 +5,10 @@
 
 ## 已维护脚本
 
+- `pre_flight.sh`：本机公共 harness 存在时委托其按变更领域检查，返回摘要与日志路径；
+  否则使用文件内保留的原始检查实现。检查写入本地测试/构建产物，不发布或查库。
+  用 `make pre-flight` 验证，具体边界见 `docs/development/LOCAL-HARNESS.md`。
+
 - `frontend/capture-dashboard.mjs`：截取本地驾驶舱页面；通过 `MOD_SCREENSHOT_URL` 和
   `MOD_SCREENSHOT_PATH` 指定地址与输出路径。
 - `scan_secrets.py`：只读扫描暂存区或指定 Git 范围的新增行，供 pre-commit 与 CI 共用。

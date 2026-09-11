@@ -6,6 +6,9 @@
 
 ## 本文定位
 
+2026-09-11 上下文加载补充：以现行 `AGENTS.md` 的按领域入口为准；下文“加载约束”指加载相关章节，
+不要求每次任务全文读取所有规范或 `CURRENT-STATE.md`。旧表述保留；动作点闸门与全量提交验收仍然有效。
+
 本仓库已有完整的**内容型规范**：`AGENTS.md`、`CONTRIBUTING.md`、`docs/CURRENT-STATE.md` 与
 `docs/development/` 下的各项标准，清楚说明了“应该做什么、不应该做什么”。
 
