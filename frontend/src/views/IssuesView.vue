@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -16,7 +16,7 @@ import LedgerPager from '../components/ledger/LedgerPager.vue'
 import SearchInput from '../components/ledger/SearchInput.vue'
 import { usePagedList } from '../composables/usePagedList.ts'
 import ComplianceInspectDrawer, { type ComplianceIssueUnit } from '../components/ComplianceInspectDrawer.vue'
-import LiveActivityTicker from '../components/LiveActivityTicker.vue'
+import LiveActivityTicker, { type GovernanceActivity } from '../components/LiveActivityTicker.vue'
 import KioskSpotlightTour from '../components/KioskSpotlightTour.vue'
 import {
   calmAnimation,
@@ -44,6 +44,42 @@ const store = useProjectStore()
 const searchQuery = ref('')
 const selectedTag = ref<string>(TAG_FILTER_OPTIONS[0])
 const inspectingUnit = ref<ComplianceIssueUnit | null>(null)
+const activities = ref<GovernanceActivity[]>([])
+const inspectingIssueId = ref<string>()
+const inspectionNotice = ref('')
+let inspectController: AbortController | null = null
+
+function closeInspection() {
+  inspectController?.abort()
+  inspectingUnit.value = null
+  inspectingIssueId.value = undefined
+}
+function inspectUnit(unit: ComplianceIssueUnit) {
+  closeInspection()
+  inspectingUnit.value = unit
+}
+async function inspectActivity(issueId: string) {
+  closeInspection()
+  inspectionNotice.value = ''
+  const request = new AbortController()
+  inspectController = request
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${encodeURIComponent(issueId)}`, { signal: request.signal })
+    if (!response.ok) throw new Error('工单不可用')
+    const issue = await response.json()
+    if (request.signal.aborted) return
+    const entity = store.entities.find(row => row.id === issue.unitId)
+    if (!entity) throw new Error('当前快照未包含该单位，请刷新后查看')
+    inspectingIssueId.value = issueId
+    inspectingUnit.value = {
+      ...entity, level: issue.severity === 'HIGH' ? '高' : '中',
+      tags: [issue.issueType], primaryIssue: issue.title, detailNote: issue.description ?? '',
+    }
+  } catch (error) {
+    if (!request.signal.aborted) inspectionNotice.value = error instanceof Error ? error.message : '工单读取失败'
+  }
+}
+onUnmounted(() => inspectController?.abort())
 
 // 矛与盾咬合：与 F 屏困难户共用 utils/riskRules 判定，仅依据真实运行指标派生标签
 const complianceUnits = computed<ComplianceIssueUnit[]>(() =>
@@ -159,7 +195,8 @@ const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePag
     </CockpitPanel>
 
     <!-- GI #4 治理自愈动态广播流 -->
-    <LiveActivityTicker class="flex-shrink-0" />
+    <LiveActivityTicker class="flex-shrink-0" @activities="activities = $event" />
+    <p v-if="inspectionNotice" role="status" class="text-cockpit-sm text-amber-400">{{ inspectionNotice }}</p>
 
     <!-- 中部：E2 风险维度分布 + E3 水位构成 (弹性优先，Guardrail 扩大为 min-h-[200px] max-h-[300px]，E-2) -->
     <div class="grid grid-cols-issues-top gap-2.5 min-h-[200px] max-h-[300px] flex-1">
@@ -168,7 +205,7 @@ const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePag
       </CockpitPanel>
 
       <CockpitPanel title="合规评级构成" zone="E3" subtitle="达标与监督梯队分布比例">
-        <ChartBlock footnote="* 遵循业务真实水位（约 92%~96%），避免全绿失真">
+        <ChartBlock footnote="按当前快照单位指标计算，不预设合规率区间">
           <VChart :option="riskPieOption" autoresize />
         </ChartBlock>
       </CockpitPanel>
@@ -220,7 +257,7 @@ const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePag
                 v-for="unit in paginatedTableUnits"
                 :key="unit.id"
                 class="hover:bg-white/5 transition-colors cursor-pointer"
-                @click="inspectingUnit = unit"
+                @click="inspectUnit(unit)"
               >
                 <td class="px-3 py-1.5">
                   <div class="flex flex-col">
@@ -258,7 +295,7 @@ const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePag
                   <button
                     type="button"
                     class="px-2 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/25 transition-colors text-cockpit-xs font-medium cursor-pointer"
-                    @click.stop="inspectingUnit = unit"
+                    @click.stop="inspectUnit(unit)"
                   >
                     核查
                   </button>
@@ -276,9 +313,9 @@ const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePag
     </CockpitPanel>
 
     <!-- 下钻核查抽屉 -->
-    <ComplianceInspectDrawer :unit="inspectingUnit" @close="inspectingUnit = null" />
+    <ComplianceInspectDrawer :unit="inspectingUnit" :issue-id="inspectingIssueId" @close="closeInspection" />
 
     <!-- 展厅无人巡航模式浮窗 -->
-    <KioskSpotlightTour />
+    <KioskSpotlightTour :activities="activities" :suspended="!!inspectingUnit" @inspect="inspectActivity" />
   </div>
 </template>

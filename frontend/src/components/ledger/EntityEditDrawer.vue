@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DrawerShell from '../DrawerShell.vue'
 import { X } from 'lucide-vue-next'
 import type { EntityRow } from '../../stores/project.ts'
 import { STATUS_ORDER } from '../../utils/entityOptions.ts'
@@ -12,8 +13,7 @@ const fieldClass =
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end" @click.self="emit('close')">
-    <aside class="w-96 h-full bg-slate-900 border-l border-white/10 p-5 flex flex-col gap-4 shadow-2xl overflow-y-auto">
+  <DrawerShell label="调整单位状态" @close="emit('close')">
       <header class="flex items-center justify-between border-b border-white/5 pb-3">
         <div>
           <span class="font-mono text-cockpit-xs text-sky-400 font-bold">MOD-{{ entity.id }}</span>
@@ -21,6 +21,7 @@ const fieldClass =
         </div>
         <button
           type="button"
+          aria-label="关闭单位详情"
           class="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors cursor-pointer"
           @click="emit('close')"
         >
@@ -80,6 +81,5 @@ const fieldClass =
           </button>
         </div>
       </form>
-    </aside>
-  </div>
+  </DrawerShell>
 </template>

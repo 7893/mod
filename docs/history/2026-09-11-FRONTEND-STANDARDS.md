@@ -1,6 +1,19 @@
-# 前端整体规划与约束规范
+# 前端规范修订前历史切片
 
 更新日期：2026-09-11
+状态：历史
+适用范围：KI-076 修订前的前端与测试规范原文保全
+
+原始位置：docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md、docs/development/TESTING-STANDARD.md
+取代原因：路由、布局、测试入口与展示契约发生漂移；现行版本见原始位置。
+
+归档说明：正文事实保持原样；相对链接按归档目录调整，不代表历史结论重新验证。
+
+## 原文：docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md
+
+# 前端整体规划与约束规范
+
+更新日期：2026-09-09
 状态：现行
 适用范围：`frontend/` 下所有页面、组件、样式与状态；约束人类与 AI 的前端改动
 
@@ -34,12 +47,12 @@
 
 | 屏 | 路由 | 名称 | 职责 |
 |---|---|---|---|
-| A | `/#/a` | 全周期总览 | 驾驶舱首屏，全网态势与下钻入口 |
-| B | `/#/b` | 建设进度 | 建设完成度与阶段任务 |
-| C | `/#/c` | 推广上线 | 批次推进、省域上线、单位台账 |
-| D | `/#/d` | 业务与凭证运营 | 单据凭证全链路与质量 |
-| E | `/#/e` | 合规监督 | 实时广播、工单抽屉与同源事件巡航 |
-| F | `/#/f` | 风险预警 | 模型状态、决策简报与项目侧 AI 配额，不承诺云账单为零 |
+| A | `/dashboard` | 全周期总览 | 驾驶舱首屏，全网态势与下钻入口 |
+| B | `/construction` | 建设进度 | 建设完成度与阶段任务 |
+| C | `/rollout` | 推广上线 | 批次推进、省域上线、单位台账 |
+| D | `/operations` | 业务与凭证运营 | 单据凭证全链路与质量 |
+| E | `/issues` | 问题与风险 | 未解决事项、风险分级、实时广播走字流（`LiveActivityTicker`）、整改抽屉（`ComplianceInspectDrawer`）与展厅巡航（`KioskSpotlightTour`） |
+| F | `/insights` | 智能研判与预测 | AutoML/AI 状态、决策简报、Cloudflare AI 每日安全额度胶囊（`AiQuotaCapsule`，$0.00 零费用硬防护） |
 
 Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得替代业务标题；
 编号本身不绑定任何一套具体 CSS 实现。
@@ -108,8 +121,8 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
   不得在组件内写色值字面量。
 - SFC 内如需手写引用 Token 的 `<style>`，块首必须 `@reference "../styles.css";`。
 - 已定义的 Token（模板直接引用其工具类，禁止再写等价任意值）：
-  - 骨架：`grid-cols-cockpit`（三栏 390px/1fr/370px）、`grid-rows-dashboard-left` 与 `grid-rows-dashboard-stack`；
-    `grid-cols-construction`（B 屏 12 列）与 `grid-rows-construction`（上下 1.1fr/0.9fr）。
+  - 骨架：`grid-cols-cockpit`（三栏 390px/1fr/370px）、`grid-rows-cockpit-side`（1.15fr/1fr）、
+    `grid-cols-construction`（B 屏 12 列）与 `grid-rows-construction`（上下 0.95fr/1.05fr）。
   - 表面色：`bg-surface-base`（大屏底色）、`bg-surface-panel`、`border-surface-hairline`、
     `bg-surface-veil-06`、`bg-surface-veil-03`。
   - 字号：`text-cockpit-xs`(10)、`text-cockpit-sm`(11)、`text-cockpit-md`(13)、`text-cockpit-metric`(18)、
@@ -134,7 +147,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 
 ## 全局样式文件契约
 
-`frontend/src/styles.css` 只做导入；当前采用以下四层。增加文件必须有明确组件归属，并同步检查器与规范，禁止无归属的补丁文件：
+`frontend/src/styles.css` 只做导入；`frontend/src/styles/` 固定四层，不得新增文件：
 
 | 文件 | 职责 | 允许内容 |
 |---|---|---|
@@ -165,7 +178,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 - 同屏去重契约已扩展到 A8/B4/C3/D3/D7：A8 只做聚合运营异常、联系人只留 C5；B4 只做上线门禁与培训转化；C3 只做批次历史爬坡、C2 只做当前构成；D3 只做日吞吐趋势、D1/D2 分别保留累计规模与链路阶段；D7 在全量合规时比较真实核验覆盖规模，不再用四根相同 100% 柱填充空间。时间序列或异常字段缺失时必须显示明确空态。
 - 信息密度必须驱动具名骨架比例：A 屏左栏由 `dashboard-left` / `dashboard-stack` 固定 A2、A3、A4 的面积分工，B 屏上排 B2/B3 大于下排 B4/B5；C3 作为主分析画布占左侧 8 列并跨两行，C4/C5 作为辅助区在右侧 4 列上下叠放。比例只允许在 `theme.css` 的具名 Token 中维护。异步简报等首屏内容必须预留稳定槽位，数据到达不得推动主体布局；单行简报内容整体居中。
 - 笛卡尔图表的分类图例统一放入 `CockpitPanel` 标题行的 `actions` 插槽，不得侵占绘图区顶部或从右侧切割坐标系；窄面板使用 `PanelLegend compact` 只显示颜色块，原生悬停提示与无障碍文本提供完整含义。只有 B5 等环图适合保持“图形在左、图例或精确读数在右”的横向组织。
-- E/F 屏合规治理与 AI 算力护栏闭环（GI-003/GI-004）：E 屏顶端集成 `LiveActivityTicker.vue`，毫秒级轮播专班一线处置流水，赋予大屏环境生命体征；E 屏台账支持下钻唤起 `ComplianceInspectDrawer.vue`（六态 Stepper、专班责任人、一键督办上帝之手与 AI 深度研判）；空闲 45 秒由 `KioskSpotlightTour.vue` 自动唤醒展厅聚光灯巡航 HUD 浮窗，交互瞬时淡出；F 屏操作区嵌入 `AiQuotaCapsule.vue`，透视 Cloudflare AI 每日 3,000 Neurons 安全额度与熔断状态，坚守 $0.00 零费用硬防护。详见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](GOVERNANCE-SIMULATION-SYNTHESIS.md)。
+- E/F 屏合规治理与 AI 算力护栏闭环（GI-003/GI-004）：E 屏顶端集成 `LiveActivityTicker.vue`，毫秒级轮播专班一线处置流水，赋予大屏环境生命体征；E 屏台账支持下钻唤起 `ComplianceInspectDrawer.vue`（六态 Stepper、专班责任人、一键督办上帝之手与 AI 深度研判）；空闲 45 秒由 `KioskSpotlightTour.vue` 自动唤醒展厅聚光灯巡航 HUD 浮窗，交互瞬时淡出；F 屏操作区嵌入 `AiQuotaCapsule.vue`，透视 Cloudflare AI 每日 3,000 Neurons 安全额度与熔断状态，坚守 $0.00 零费用硬防护。详见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](../development/GOVERNANCE-SIMULATION-SYNTHESIS.md)。
 
 
 ## 重构执行顺序（后续 AI 必须按此顺序，不得跳步）
@@ -180,7 +193,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 4. **填内容**：所有面板用 `CockpitPanel` 包裹，格内只用 Token 与原子类填充。
 5. **删旧 CSS**：迁移完成后删除该屏对应的旧 `xxx.css`，并从 `styles.css` 移除其 `@import`。
 6. **验证**：`pnpm run typecheck`、`pnpm run build`、`make check` 全绿；**由人工做实际页面视觉验收**
-   并执行[固定场景浏览器回归](FRONTEND-VISUAL-VERIFICATION.md)。AI 可检查实际渲染与几何边界，人工负责审美与初始基准确认。
+   （AI 无法自行验收视觉），确认无错位、溢出、对齐问题后再提交。
 7. **一屏一提交**：每屏独立提交，信息说明迁移了哪屏、删了哪个旧 CSS。
 
 - 顺序原则：不为重构而一次性全改；优先迁移业务数据已稳定的屏，
@@ -191,13 +204,75 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 前端变更须与 `TESTING-STANDARD.md` 一致：`pnpm run typecheck`、`pnpm run build` 与
 全量 `make check` 通过；涉及视觉行为时补充实际页面验收。契约变更须同步本文。
 
-## KI-076 展示契约补充（2026-09-11）
+## 原文：docs/development/TESTING-STANDARD.md
 
-- `ChartFacts` 仅提供 `chart-led`、`facts-led` 两种组合，负责图表/事实栏的比例、分隔和事实滚动；D4/D5/D6 复用它，不在页面重新定义同构比例。
-- `MetricGrid` 的关键值不使用省略号，支持键盘聚焦横向阅读，标题与值提供完整提示；面板标题、副标题同样提供完整文本提示。
-- `DrawerShell` 通过 Teleport 挂载于 body，统一窗口边界、Escape、Tab 循环和焦点恢复；不在缩放画布里自行定位模态抽屉。
-- 巡航只展示治理广播已读取的事件；刷新返回空列表或失败即清空，禁止内置另一套单位和剧情。查看按钮按工单 ID 定位，不能只按名称猜测最新工单。
-- 数据状态区分 `实时数据`、`降级快照`、`刷新受阻`；业务日期与快照生成时间可查看，现实钟表不冒充业务时间。
-- 组件展例在 visual 构建的 `/#/components`，用于长数字、缺失值、空态和组合布局验证；不进入生产菜单。
-- 上文“毫秒级广播”“零费用硬防护”的历史迁移叙述不作为能力保证：广播当前每 30 秒轮询，配额只表示项目预算。
-- 修订前原文见[历史切片](../history/2026-09-11-FRONTEND-STANDARDS.md)。
+# 测试与验证规范
+
+更新日期：2026-09-02
+状态：现行
+适用范围：所有维护代码、配置、文档和部署变更
+
+## 通用要求
+
+- 修改前了解现有测试覆盖；修改时先运行相关检查，提交前必须从项目根目录运行 `make check`。
+- 行为新增或改变必须有测试；缺陷修复必须增加能复现旧问题的回归测试。
+- 不得通过删除断言、扩大忽略、静默捕获错误或降低检查强度来制造“通过”。
+- 断言不得写死会随数据、时间或环境变化的运行时事实（如数据行数、单位数、当日新增、
+  快照日期、累计业务量）。此类事实必须用派生或结构断言：与另一数据来源互相校验、
+  校验类型与取值范围、或校验格式（如日期用正则），使数据变化时测试不脆断。
+  纯函数的固定输入到固定输出映射、结构性常量（如省级数量 34、批次数 8）与接口契约常量
+  不在此列，应当写死。
+- 确因数据源缺陷导致某项契约当前无法满足时，用 `xfail` 标注并说明原因，保留断言待修复后转正，
+  不得删除或放宽该断言以掩盖问题。
+- 失败检查必须修复；确因环境无法执行时，交接中写明命令、失败原因和未验证风险。
+
+## 验证矩阵
+
+| 变更类型 | 最低要求 |
+|---|---|
+| Python 后端 | Ruff、相关 pytest、全量 `make check` |
+| API 路由或响应 | 正常、降级、错误状态和兼容字段测试 |
+| Vue/TypeScript 前端 | `pnpm test`（Vitest 单元测试）、`pnpm run typecheck`、`pnpm run build`、全量 `make check` |
+| CSS/布局 | 缩放单测、类型检查、生产构建；涉及视觉行为时补充实际页面验收 |
+| 配置或依赖 | 解析/启动检查、锁文件一致性、全量 `make check` |
+| 文档 | 链接和事实检查、`git diff --check`、全量 `make check` |
+| 生产（运行主机） | 用户/系统服务、单一 8100 监听、API、静态资源、禁止索引和日志核验 |
+
+## 前端测试规范 (Vitest)
+
+- **框架基座**：采用 `vitest` + `@vue/test-utils` + `happy-dom`，依赖版本严格精确锁定，测试文件统一采用 `__tests__/*.test.ts` 就近组织。
+- **覆盖核心**：
+  - 缩放引擎（`useScaleScreen.ts`）：基准等比计算、普通/全屏视口切换、上下限 clamp 钳夹、非正常尺寸保护；
+  - 核心状态机（`useAiInsights.ts` / `useDailyBriefing.ts`）：状态流转（`loading` / `ok` / `cache_hit` / `rate_limited` / `unavailable` / `error`）、并发节流与离线降级兜底；
+  - 格式化与数值边界（`formatters/metrics.ts`）：空值/NaN/零/负数/极大数值的安全兜底与 zh-CN 本地化展示；
+  - 状态管理（Pinia stores）：快照键名递归驼峰化转换（`fixKeys`）、SSE 实时投影序列有序性校验与跨场重置、数据刷新网络异常隔离；
+  - 模型可解释性判定（`modelEvaluation.ts`）：严守 KI-023/KI-028 规范，R² ≤ 0 及准确率退化（1.0）显式标为未达标。
+- **硬性约束**：
+  - **严禁向真实网络发请求**：所有 API 与模型请求（fetch）必须由 Mock 拦截处理，零后端依赖、零外部服务依赖；
+  - **稳定性与性能**：测试必须完全确定、秒级完成（毫秒级单测），严禁引入 flaky 用例；
+  - **门禁约束**：`pnpm test` 已纳入 `Makefile` 的 `frontend-check`，提交代码前必须保持全量全绿。
+
+## 提交前检查
+
+```bash
+git diff --check
+make check
+git diff
+git status --short
+```
+
+文档变更的 `make check` 必须同时通过：
+
+- Markdown 相对链接检查；
+- 文档删除与冻结正文保全检查；
+- KI 看板/详情状态一致性、必需元数据与索引覆盖检查；
+- 核心行为变更与 `CURRENT-STATE.md` 同步的阻断检查；
+- `scripts/project/tests/` 下文档治理工具的回归测试。
+
+检查结果必须对应当前工作树，不能引用修改前或旧提交的结果。
+
+## 生产验收
+
+部署后至少确认：系统级重复服务保持禁用、用户级服务为 active、`/api/v2/health` 返回 200、主页面及
+当前哈希静态资源返回 200、`robots.txt` 禁止抓取、HTML/API/资源响应包含严格 `X-Robots-Tag`，且日志
+没有模拟器 Tick、凭据泄露或连续异常。

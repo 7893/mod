@@ -25,7 +25,7 @@ LEGACY_VAR = re.compile(
     r"text-(?:xxs|xs|sm|base|md|lg|metric|stat|kpi|hero))\)"
 )
 CLASS_IN_SELECTOR = re.compile(r"\.([a-zA-Z_][\w-]*)")
-DYNAMIC_CLASS_PREFIXES = ("is-", "metric-grid--", "stat-list--", "status-list--")
+DYNAMIC_CLASS_PREFIXES = ("is-", "metric-grid--", "stat-list--", "status-list--", "chart-facts--")
 COMMENT = re.compile(r"/\*.*?\*/", re.S)
 STYLE_BLOCK = re.compile(r"<style\b[^>]*>(.*?)</style>", re.S)
 

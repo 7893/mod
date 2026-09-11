@@ -17,6 +17,10 @@
 
 ### 本轮重大缺陷
 
+- [KI-076 前端展示事实、组合布局与视觉回归缺口](issues/KI-076-FRONTEND-PRESENTATION-CONTRACT.md)
+
+配套验收：[前端视觉回归](development/FRONTEND-VISUAL-VERIFICATION.md)。
+修订前原文：[2026-09-11 前端规范历史切片](history/2026-09-11-FRONTEND-STANDARDS.md)。
 - [KI-070 驾驶舱跨屏业务口径与交互状态不一致](issues/KI-070-驾驶舱跨屏业务口径与交互状态不一致.md)
 - [KI-071 F 屏模型就绪与 SHAP 归因来源失真](issues/KI-071-F屏模型就绪与SHAP归因来源失真.md)
 - [KI-072 常驻模拟器生命周期编排、事务与安全状态未闭环](issues/KI-072-常驻模拟器生命周期编排事务与安全状态未闭环.md)

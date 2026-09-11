@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import DrawerShell from './DrawerShell.vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -59,6 +60,7 @@ export interface TimelineEvent {
 
 const props = defineProps<{
   unit: ComplianceIssueUnit | null
+  issueId?: string
 }>()
 
 const emit = defineEmits<{
@@ -105,14 +107,14 @@ async function fetchIssueAndTimeline(unitId: number) {
   actionNotice.value = null
   actionError.value = false
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues?unit_id=${unitId}&page_size=1`, {
+    const res = await fetch(props.issueId ? `${import.meta.env.BASE_URL}api/governance/issues/${encodeURIComponent(props.issueId)}` : `${import.meta.env.BASE_URL}api/governance/issues?unit_id=${unitId}&page_size=1`, {
       signal: controller.signal,
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
     if (sequence !== loadSequence || props.unit?.id !== unitId) return
-    if (data.items && data.items.length > 0) {
-      const item = data.items[0] as GovernanceIssue
+    const item = (props.issueId ? data : data.items?.[0]) as GovernanceIssue | undefined
+    if (item && item.unitId === unitId) {
       const loadedTimeline = await fetchTimeline(item.id, controller.signal)
       if (sequence !== loadSequence || props.unit?.id !== unitId) return
       issue.value = item
@@ -120,6 +122,7 @@ async function fetchIssueAndTimeline(unitId: number) {
     }
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') return
+    if (sequence !== loadSequence) return
     actionError.value = true
     actionNotice.value = '治理工单读取失败，请稍后重试。'
     console.warn('Failed to load governance issue:', err)
@@ -200,8 +203,8 @@ async function handleEnrich() {
 }
 
 watch(
-  () => props.unit,
-  (newUnit) => {
+  () => [props.unit, props.issueId] as const,
+  ([newUnit]) => {
     if (newUnit) {
       void fetchIssueAndTimeline(newUnit.id)
     } else {
@@ -214,11 +217,11 @@ watch(
   },
   { immediate: true },
 )
+onUnmounted(() => { ++loadSequence; loadController?.abort() })
 </script>
 
 <template>
-  <div v-if="unit" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end" @click.self="emit('close')">
-    <aside class="w-96 h-full bg-slate-900 border-l border-white/10 p-5 flex flex-col gap-3.5 shadow-2xl overflow-y-auto">
+  <DrawerShell v-if="unit" :label="`${unit.name} · 治理工单`" @close="emit('close')">
       <!-- 头部 -->
       <header class="flex items-center justify-between border-b border-white/5 pb-3">
         <div>
@@ -230,6 +233,7 @@ watch(
         </div>
         <button
           type="button"
+          aria-label="关闭治理工单"
           class="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors cursor-pointer"
           @click="emit('close')"
         >
@@ -240,7 +244,7 @@ watch(
       <!-- 单位卡片 -->
       <div class="p-3 rounded-lg bg-surface-veil-03 border border-surface-veil-06 flex flex-col gap-1">
         <div class="flex items-center justify-between">
-          <b class="text-cockpit-md font-semibold text-slate-100 truncate">{{ unit.name }}</b>
+          <b :title="unit.name" class="text-cockpit-md font-semibold text-slate-100 truncate">{{ unit.name }}</b>
           <span
             v-if="issue"
             class="px-1.5 py-0.5 rounded text-cockpit-xs font-semibold"
@@ -388,6 +392,5 @@ watch(
           </div>
         </div>
       </div>
-    </aside>
-  </div>
+  </DrawerShell>
 </template>

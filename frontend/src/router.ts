@@ -10,6 +10,7 @@ const InsightsView = () => import('./views/InsightsView.vue')
 export default createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
+    ...(import.meta.env.MODE === 'visual' ? [{ path: '/components', component: () => import('./views/ComponentGallery.vue') }] : []),
     { path: '/', redirect: '/a' },
     {
       path: '/a',

@@ -29,6 +29,9 @@ const { scale, viewportRef, baseWidth, baseHeight } = useScaleScreen({
   baseHeight: 980,
 })
 
+const sourceLabel = computed(() => store.connectionError ? '刷新受阻' : store.dataSource === 'fallback' ? '降级快照' : '实时数据')
+const sourceDetail = computed(() => [sourceLabel.value, store.snapshot.meta.asOfDate ? '业务日期：' + store.snapshot.meta.asOfDate : '', store.snapshot.meta.generatedAt ? '快照生成：' + store.snapshot.meta.generatedAt : ''].filter(Boolean).join(' · '))
+
 const formattedClock = computed(() => formatDateTime(now.value, { seconds: true, timeZone: store.snapshot.meta.displayTimezone }))
 
 const isFullscreen = ref(false)
@@ -134,9 +137,9 @@ onBeforeUnmount(() => {
         <div class="status-divider"></div>
 
         <div class="header-status">
-          <div class="status-item link-state" :class="{ error: store.connectionError, sync: store.loading }">
+          <div class="status-item link-state" :title="sourceDetail" :class="{ error: store.connectionError || store.dataSource === 'fallback', sync: store.loading }">
             <span class="link-dot"></span>
-            <span>{{ store.connectionError ? '快照' : store.loading ? '同步' : '在线' }}</span>
+            <span>{{ sourceLabel }}</span>
           </div>
           <div class="status-item sync-time">
             <Activity :size="14" />
