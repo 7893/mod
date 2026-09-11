@@ -1,30 +1,18 @@
 ---
 name: mod-data-security
-description: Database operation safety, credential security, read-only verification first, and migration boundaries.
+description: Index for database operation safety, credential security, and read-only verification.
 ---
-> **Authoritative Standard**: This skill is a condensed execution reference. For full data security rules, see [DATA-AND-SECURITY-STANDARD.md](../../../docs/development/DATA-AND-SECURITY-STANDARD.md).
+> **Authoritative Standard**: This skill is a condensed navigation index. For full data security rules, see [DATA-AND-SECURITY-STANDARD.md](../../../docs/development/DATA-AND-SECURITY-STANDARD.md).
 
+# MOD Data & Security Index
 
-# MOD Data & Security Standard Skill
+This skill serves as a navigation index. **Do not guess rules; read the referenced documents on-demand.**
 
-## 1. 只读检查先行 (Read-only Verification First)
-- Before writing any script that deletes or modifies database data, ALWAYS run a read-only query (or dry-run) to inspect row counts, foreign key dependencies, and potential cross-boundary effects.
-- Verify production credentials are kept in `.env.systemd` or environment files, NEVER hardcoded in git tracked code.
+## What to Read When...
 
-## 2. 生产库数据安全原则 (Production DB Safety)
-- Database deletion must follow dependency hierarchy from child/leaf tables to parent tables:
-  1. `integration_result`
-  2. `document_voucher_link`
-  3. `accounting_voucher_line`
-  4. `accounting_voucher`
-  5. `business_document_line`
-  6. `business_document`
-  7. `daily_stats` / `rollout_status_snapshot`
-- Always verify financial cross-check integrity:
-  - Debit equals Credit (`SUM(debit) == SUM(credit)`)
-  - No orphan vouchers or links.
-- Single transaction ownership: use `engine.begin()` context manager or transaction rollback on failure.
+- **Querying the database**: Read `docs/development/DATA-AND-SECURITY-STANDARD.md`. You MUST use `mod_db_query` or `scripts/project/safe_db_query.py`.
+- **Modifying or deleting data**: Read `docs/development/DATA-AND-SECURITY-STANDARD.md` (Section: Production DB Safety). Deletions must follow the foreign-key hierarchy.
+- **Handling credentials**: Read `docs/development/DATA-AND-SECURITY-STANDARD.md`. Never hardcode secrets; use `.env.systemd`.
 
-## 3. 凭据防泄漏 (Secret Scanning)
-- Do not commit `.env`, passwords, or tokens into Git.
-- CI and local pre-commit hook runs `python3 scripts/project/scan_secrets.py`.
+## Validation
+Always run read-only queries before any destructive actions. Secrets are checked automatically via `make check`.
