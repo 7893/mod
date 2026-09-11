@@ -162,13 +162,16 @@ jobs:
             simulation scripts deploy \
             ubuntu@"$TARGET_HOST":/home/ubuntu/mod/backend/releases/$TS/
 
-          ssh $SSH_OPTS ubuntu@"$TARGET_HOST" "
+          ssh $SSH_OPTS ubuntu@"$TARGET_HOST" "bash -s $TS" << 'EOF'
+            set -e
+            TS=$1
             ln -sfn /home/ubuntu/mod/frontend/releases/$TS /home/ubuntu/mod/frontend/current
             ln -sfn /home/ubuntu/mod/backend/releases/$TS /home/ubuntu/mod/backend/current
             ln -sfn . /home/ubuntu/mod/backend/current/app
 
             sudo systemctl reload nginx
             sudo systemctl restart mod.service
+
             HEALTH=""
             for i in $(seq 1 10); do
               sleep 2
@@ -192,10 +195,10 @@ jobs:
             fi
 
             for d in /home/ubuntu/mod/frontend/releases /home/ubuntu/mod/backend/releases; do
-              ls -1t \"\$d\" | tail -n +6 | while read -r old; do
-                rm -rf \"\$d/\$old\"
+              ls -1t "$d" | tail -n +6 | while read -r old; do
+                rm -rf "$d/$old"
               done
             done
 
             echo 'Deployment to USA verified successfully!'
-          "
+EOF
