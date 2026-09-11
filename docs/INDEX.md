@@ -117,6 +117,8 @@ Worker 均已退出当前运行架构。
 - [MOD-USA-手工配置与验收清单.txt](operations/MOD-USA-手工配置与验收清单.txt)：历史 DataEase/NocoDB 手工清单，已停用，禁止执行。
 - [USA-DIRECTORY-MAINTENANCE-20260902.md](operations/USA-DIRECTORY-MAINTENANCE-20260902.md)：USA 目录整理、防索引与遗留运行风险记录。
 - [USA-DEPLOYMENT-LAYOUT.md](operations/USA-DEPLOYMENT-LAYOUT.md)：迁移前部署目录规则，已失效，仅用于历史追溯。
+- [HARNESS-REFACTOR-20260911.md](operations/HARNESS-REFACTOR-20260911.md)：记录本地 Harness 脚手架代码剥离与历史包袱归档。
+- [NATIVE-CLIENT-CONFIG-20260911.md](operations/NATIVE-CLIENT-CONFIG-20260911.md)：记录本机各原生 AI Agent 客户端对 local-harness 的强制纪律接入。
 - [DISASTER-RECOVERY-RUNBOOK.md](runbooks/DISASTER-RECOVERY-RUNBOOK.md)：灾难恢复与数据还原标准操作手册。
 - [evidence/README.md](evidence/README.md)：脱敏验收证据的保存与使用边界。
 
