@@ -11,7 +11,8 @@ export default function modHarness(pi: ExtensionAPI) {
   // Preserve existing tools; /pre-flight delegates to the common deterministic CLI below.
   // 1. Session Start Banner
   pi.on("session_start", async (_event, ctx) => {
-    ctx.ui?.notify?.("MOD Project Harness Active: Governance & Safe Tooling Enabled", "info");
+    // Former banner retained: MOD Project Harness Active: Governance & Safe Tooling Enabled
+    ctx.ui?.notify?.("MOD project tools loaded; task policy is provided by the global Pi extension.", "info");
   });
 
   // 2. Custom Tool: Safe Read-only DB Query
@@ -91,33 +92,34 @@ export default function modHarness(pi: ExtensionAPI) {
     },
   });
 
-  // 4. Custom Command: /pre-flight
-  pi.registerCommand("pre-flight", {
-    // Previous description retained: Run targeted checks based on current git diff instead of slow full make check
-    description: "Plan session-scoped checks; /pre-flight --run executes outside investigation mode",
-    handler: async (_args, ctx) => {
-      // 2026-09-11: use the same Pi branch policy as /harness check. No shell fallback.
-      try {
-        const adapter = pathToFileURL(path.join(homedir(), "local-harness/session-check.mjs")).href;
-        const { sessionCheck } = await import(adapter);
-        const result = await sessionCheck(ctx, _args);
-        ctx.ui?.notify?.(JSON.stringify(result), result.passed === false ? "error" : "info");
-      } catch (error: any) {
-        ctx.ui?.notify?.(error.message, "error");
-      }
-      /* Superseded implementation preserved verbatim; not executed.
-      ctx.ui?.notify?.("Running targeted pre-flight checks...", "info");
-      try {
-        // Previous command retained for traceability: bash scripts/project/pre_flight.sh
-        const output = execSync("node /home/ubuntu/local-harness/cli.mjs check --project /home/ubuntu/mod --run", {
-          cwd: "/home/ubuntu/mod",
-          encoding: "utf8",
-        });
-        ctx.ui?.notify?.(`Pre-flight SUCCESS:\n${output}`, "info");
-      } catch (e: any) {
-        ctx.ui?.notify?.(`Pre-flight FAILED:\n${e.stdout || e.stderr || e.message}`, "warning");
-      }
-      */
-    },
-  });
+  // 2026-09-11 retired: /pre-flight is registered once by the global Pi extension.
+//   // 4. Custom Command: /pre-flight
+//   pi.registerCommand("pre-flight", {
+//     // Previous description retained: Run targeted checks based on current git diff instead of slow full make check
+//     description: "Plan session-scoped checks; /pre-flight --run executes outside investigation mode",
+//     handler: async (_args, ctx) => {
+//       // 2026-09-11: use the same Pi branch policy as /harness check. No shell fallback.
+//       try {
+//         const adapter = pathToFileURL(path.join(homedir(), "local-harness/session-check.mjs")).href;
+//         const { sessionCheck } = await import(adapter);
+//         const result = await sessionCheck(ctx, _args);
+//         ctx.ui?.notify?.(JSON.stringify(result), result.passed === false ? "error" : "info");
+//       } catch (error: any) {
+//         ctx.ui?.notify?.(error.message, "error");
+//       }
+//       /* Superseded implementation preserved verbatim; not executed.
+//       ctx.ui?.notify?.("Running targeted pre-flight checks...", "info");
+//       try {
+//         // Previous command retained for traceability: bash scripts/project/pre_flight.sh
+//         const output = execSync("node /home/ubuntu/local-harness/cli.mjs check --project /home/ubuntu/mod --run", {
+//           cwd: "/home/ubuntu/mod",
+//           encoding: "utf8",
+//         });
+//         ctx.ui?.notify?.(`Pre-flight SUCCESS:\n${output}`, "info");
+//       } catch (e: any) {
+//         ctx.ui?.notify?.(`Pre-flight FAILED:\n${e.stdout || e.stderr || e.message}`, "warning");
+//       }
+//       */
+//     },
+//   });
 }

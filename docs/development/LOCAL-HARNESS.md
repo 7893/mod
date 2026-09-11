@@ -6,6 +6,10 @@
 
 ## 职责与入口
 
+2026-09-11 减薄更新：/pre-flight 已移到全局 Pi 扩展注册，MOD 不再注册通用命令，
+旧注册块整段逐行注释保留。下文“保留 pre-flight 兼容入口”是此前阶段记录，现已被本条取代。
+没有加载全局扩展时不提供该命令；业务专用工具与项目测试门禁保留。
+
 公共实现位于本机 `/home/ubuntu/local-harness/`，全局 Pi 设置只加载公共 `extension.ts`。
 MOD 的 `.pi/extensions/mod-harness.ts` 由项目目录自动发现，保留查库、模拟器状态和 pre-flight 兼容入口。
 项目 `.pi/settings.json` 不再重复声明扩展路径，旧 JSON 保存在公共包的 `archive/2026-09-11/`。
