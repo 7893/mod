@@ -22,6 +22,12 @@ Skill 继续作为导航使用，详细规则仍以现行标准为唯一来源�
 
 ## 检查与报告
 
+2026-09-11 会话入口更新：Pi 内 `/pre-flight` 与 `/harness check` 现在读取同一原生会话分支任务，
+默认只展示计划，传 `--run` 才执行；没有任务、调查模式执行或项目不匹配时拒绝。
+先用 `/harness begin frontend` 或 `/harness begin KI-076 accept` 选择任务。
+旧直接执行进程的入口已在源码中注释保留，无回退执行；公共适配器缺失时明确报错。
+下列终端 CLI 和 make 命令不继承 Pi 会话状态，不能当作会话模式的替代入口。
+
 ```bash
 node /home/ubuntu/local-harness/cli.mjs context --scope frontend
 node /home/ubuntu/local-harness/cli.mjs read --scope frontend --ref 3
