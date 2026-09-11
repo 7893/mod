@@ -492,8 +492,9 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         dual_type_rows = mappings(conn, """
         SELECT check_type, result, COUNT(*) AS count
         FROM dual_run_result
+        WHERE check_date <= :anchor_date
         GROUP BY check_type, result
-        """)
+        """, {"anchor_date": anchor_date})
         dual_consistent = 0
         dual_inconsistent = 0
         breakdown_by_type = {}

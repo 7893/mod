@@ -232,6 +232,7 @@ def build_entities(conn: Connection, updated_at: str, anchor_date: str | None = 
             SELECT org_id,
                    ROUND(100.0 * SUM(CASE WHEN result = '一致' THEN 1 ELSE 0 END) / COUNT(*), 1) AS dual_rate
             FROM dual_run_result
+            WHERE check_date <= CURRENT_DATE()
             GROUP BY org_id
         )
         SELECT o.id, o.name, o.region, bm.batchId, bn.name AS batch,

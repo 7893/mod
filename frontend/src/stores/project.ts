@@ -412,7 +412,8 @@ export const useProjectStore = defineStore('project', () => {
         entities.value = live.entities
       }
       lastLoadedAt.value = new Date()
-      dataSource.value = live.meta?.source === 'fallback' || live.meta?.source === 'none' ? 'fallback' : 'live'
+      // 如果没有明确标注 source 为 'live'（比如静态文件或兜底），则认定为 fallback
+      dataSource.value = live.meta?.source === 'live' ? 'live' : 'fallback'
       connectionError.value = ''
     } catch (error) {
       if (requestSequence !== refreshSequence) return

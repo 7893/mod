@@ -33,7 +33,7 @@ describe('stores/project', () => {
     expect(store.entities.length).toBeGreaterThan(0)
     expect(store.connectionError).toBe('')
     expect(store.loading).toBe(false)
-    expect(store.dataSource).toBe('live')
+    expect(store.dataSource).toBe('fallback')
     expect(store.lastLoadedAt).toBeInstanceOf(Date)
     expect(store.snapshot.businessRules.lifecycle.dualRunConsistencyRateMin).toBe(98)
   })
@@ -83,7 +83,7 @@ describe('stores/project', () => {
     await flushPromises()
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ ...snapshotData, entities: [] }),
+      json: async () => ({ ...snapshotData, entities: [], meta: { ...snapshotData.meta, source: 'live' } }),
     })
 
     await store.refresh()
