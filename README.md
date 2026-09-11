@@ -21,7 +21,7 @@
 
 ## English
 
-Updated: 2026-09-08 · Status: Active project overview<br>
+Updated: 2026-09-12 · Status: Active project overview<br>
 Scope: Product positioning, architecture, development entry points, and repository navigation
 
 ### Overview
@@ -62,8 +62,8 @@ down into the organizations, batches, stages, and evidence behind every conclusi
 
 ```mermaid
 flowchart LR
-    V[Visitor] --> CF[Route 53 + CloudFront]
-    CF --> N[Nginx origin gate]
+    V[Visitor] --> DNS[Google Cloud DNS] --> CF[CloudFront CDN]
+    CF --> N[Nginx origin gate (USA)]
     N --> UI[Vue dashboard]
     N --> API[FastAPI read-only API]
     API --> DB[(MySQL HeatWave)]
@@ -135,7 +135,7 @@ MOD is available under the [MIT License](LICENSE).
 
 ## 简体中文
 
-更新日期：2026-09-08 · 状态：现行项目概览<br>
+更新日期：2026-09-12 · 状态：现行项目概览<br>
 适用范围：产品定位、运行架构、开发入口与仓库导航
 
 > [!IMPORTANT]
@@ -177,8 +177,8 @@ MOD 将复杂、多阶段的业务系统建设推广过程，转化为一套面�
 
 ```mermaid
 flowchart LR
-    V[访问者] --> CF[Route 53 + CloudFront]
-    CF --> N[Nginx 源站门禁]
+    V[访问者] --> DNS[Google Cloud DNS] --> CF[CloudFront CDN]
+    CF --> N[Nginx 源站门禁 (USA)]
     N --> UI[Vue 驾驶舱]
     N --> API[FastAPI 只读接口]
     API --> DB[(MySQL HeatWave)]
