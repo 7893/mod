@@ -17,8 +17,8 @@
 - 2026-09-11 恢复 USA 生产部署机与 JPA 专属开发机职责分离架构（ADR-0012）：
   - **JPA（开发工作区机）**：承载源码、Git 仓库、全套开发与测试工具链（`pytest`、`vitest`、`local-harness`）及本地 Osaka MySQL 开发测试库，负责通过 `publish.sh` 门禁执行远程构建发布。
   - **USA（纯生产部署机）**：承载生产运行环境，核心服务经轻量守护器统一归并为单一 `mod.service`（由 `scripts/project/run_unified.py` 同时拉起与托管 FastAPI 8100 端口与 `mod-simulator` 仿真引擎，支持一键热重载与崩溃自愈）与 MODO `modo.service`（统一托管 8000 端口与 `modo-ingest` 节点打卡），同子网局域网连接 US MySQL HeatWave（`10.0.0.145`，< 0.2ms 极速延迟），API 隔离使用 `mod_readonly` 账号。
-- 访客入口经 **AWS CloudFront** 前置（隐藏源站，见下条"源站隐藏架构"）；DNS 托管在 Route53，
-  站点主机名以指向 CloudFront 分发的 Alias 记录对外解析，DNS 层查不到源站真实 IP。同时 `usa.8n8m.cfd/mod` 支持无缝跳转访问。具体域名、分发 ID、
+- 访客入口经 **AWS CloudFront** 前置（隐藏源站，见下条"源站隐藏架构"）；DNS 托管在 **Google Cloud DNS**，
+  站点主机名以指向 CloudFront 分发的 CNAME 记录对外解析，DNS 层查不到源站真实 IP。同时 `usa.8n8m.cfd/mod` 支持无缝跳转访问。具体域名、分发 ID、
   回源地址等见部署配置，不写入文档。
 - 2026-09-11 规范与执行 Harness 升级：正式确立 `pi`（v0.85+）为统一执行底座；将长篇规约模块化解耦至 `.pi/skills/`；
   全仓确立 `mod_db_query` 免密只读查库标准及 `make pre-flight` 增量按需测试流水线。
@@ -113,17 +113,15 @@
 ## 功能状态
 
 - 源站隐藏架构（AWS CloudFront 前置，隐藏源站 IP）：
-  - 访客经 Route53 Alias → CloudFront 分发 → 回源到一个隐蔽回源域名（DNS-only，指向源站），回源协议 https-only。
+  - 访客经 Google Cloud DNS CNAME → CloudFront 分发 → 回源到一个隐蔽回源域名（DNS-only，指向源站），回源协议 https-only。
     （具体站点域名、分发 ID、回源域名、源站 IP 均见部署配置，不入文档。）
   - **回源密钥防绕过**：CloudFront 回源时注入一个自定义密钥头；源站 Nginx 校验该头，
     无正确密钥的请求（即绕过 CloudFront 直连源站 IP 或回源域名）一律 403。密钥值只存源站 Nginx 与 CloudFront 配置，不入库不入代码。
   - 效果：对站点主机名做 DNS 查询只见 CloudFront 的 IP、查不到源站；直连源站 IP / 回源域名均被 403；仅 CloudFront 回源可达。
   - 证书：viewer 侧用 us-east-1 的 ACM 证书（CloudFront 强制证书位于 us-east-1）；缓存策略 CachingDisabled
     （大屏数据动态 + SSE 实时，全站不缓存以保证正确性）；SSE 实时投影经 CloudFront 实测正常（回源超时 60s + 转发 Host 头）。
-  - 未迁移域名托管到 Cloudflare（DNS 在 Route53）；CloudFront 免费额度远超本项目用量。
-- DNS 安全（DNSSEC）：站点所在 zone 已在 Route53 启用 DNSSEC 签名（KSK 由一枚 us-east-1 的 KMS 非对称密钥
-  ECC_NIST_P256 / SIGN_VERIFY 承载），并已在域名注册商（TLD 层）登记对应 DS 记录，全链校验通过、多解析器实测 NOERROR。
-  防 DNS 劫持/应答篡改。密钥标识、DS 摘要、KeyTag 等敏感值见云端配置，不入文档。
+  - DNS 托管于 Google Cloud DNS（zone `fumingname`），CNAME 记录平稳指向 CloudFront 分发，解析延迟低且具备 Google 全球 Anycast 稳定性。
+- DNS 安全：CNAME 经 Google Cloud DNS 权威托管，CloudFront 全球边缘 HTTPS/TLS 1.3 终结，结合源站 Nginx 自定义回源 Secret 头校验，防 DNS 劫持与源站探测。
 - 反检索/反抓取（内部交流系统，谢绝一切采集）：三层防护叠加——`robots.txt`（`Disallow: /` 且显式点名 GPTBot/ClaudeBot/
   PerplexityBot/Google-Extended/Baiduspider 等 AI 与搜索爬虫）、HTML `<meta robots/googlebot/bingbot noindex,nofollow,noarchive,nosnippet,noimageindex>`、
   HTTP 响应头 `X-Robots-Tag` 同值；并在 Nginx 层按 `User-Agent` **硬拦截** AI/检索爬虫直接返回 403（不返回任何内容），
