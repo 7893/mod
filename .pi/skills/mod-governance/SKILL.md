@@ -1,29 +1,19 @@
 ---
 name: mod-governance
-description: Document lifecycle, CURRENT-STATE.md synchronization, atomic release, and CI check governance.
+description: Index for document lifecycle, CURRENT-STATE sync, and release governance.
 ---
-> **Authoritative Standard**: This skill is a condensed execution reference. For full governance rules, see [DOCUMENTATION-STANDARD.md](../../../docs/development/DOCUMENTATION-STANDARD.md) and [DOCUMENTATION-LIFECYCLE.md](../../../docs/development/DOCUMENTATION-LIFECYCLE.md).
+> **Authoritative Standard**: This skill is a condensed navigation index. For full governance rules, see [DOCUMENTATION-STANDARD.md](../../../docs/development/DOCUMENTATION-STANDARD.md) and [DOCUMENTATION-LIFECYCLE.md](../../../docs/development/DOCUMENTATION-LIFECYCLE.md).
 
+# MOD Governance Index
 
-# MOD Governance & Release Skill
+This skill serves as a navigation index. **Do not guess rules; read the referenced documents on-demand.**
 
-## 1. 状态同步铁律 (CURRENT-STATE Sync Rule)
-- Whenever any core file (`backend/app/*`, `frontend/src/*`, `simulation/*`, `deploy/*`) is modified:
-  - **`docs/CURRENT-STATE.md` MUST be updated in the same change/commit.**
-  - Failure to update `docs/CURRENT-STATE.md` will immediately fail `make check` via `check_doc_sync.py` (ENFORCEMENT.md Gate C).
+## What to Read When...
 
-## 2. 历史档案只读与不可变 (Immutable History)
-- Files under `docs/history/` are protected by `MANIFEST.sha256`.
-- Never modify or delete existing frozen history documents.
-- Any attempt to alter historical documents will fail `check_history_integrity.py`.
+- **Changing any core code**: Read `docs/development/DOCUMENTATION-STANDARD.md`. You MUST update `docs/CURRENT-STATE.md` in the same commit.
+- **Managing Known Issues (KIs)**: Read `docs/development/DOCUMENTATION-LIFECYCLE.md`.
+- **Modifying history docs**: STOP. History docs under `docs/history/` are immutable and protected by `MANIFEST.sha256`.
+- **Publishing/Deploying**: Read `docs/development/DOCUMENTATION-STANDARD.md` and use `scripts/project/publish.sh` AFTER running `make sim-status`.
 
-## 3. 发布与部署验证 (Publish Workflow)
-- Use `scripts/project/publish.sh` for atomic production deployment.
-- Deployment steps:
-  1. Frontend build
-  2. Backend & simulator release packaging
-  3. `make check` (all tests, linters, and governance scripts must pass)
-  4. Symlink atomic switch (`current -> releases/<timestamp>`)
-  5. Reload Nginx and restart systemd services (`mod-api`, `mod-simulator`)
-  6. Dual health probes (`/api/health`, `/api/simulator/status`, `/api/dashboard/snapshot`)
-  7. Automatic rollback if any probe fails.
+## Validation
+Governance is strictly enforced by `make check` (Gate C doc sync, history integrity, links).
