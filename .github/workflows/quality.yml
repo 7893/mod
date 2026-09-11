@@ -161,7 +161,7 @@ jobs:
             ln -sfn . /home/ubuntu/mod/backend/current/app
 
             sudo systemctl reload nginx
-            sudo systemctl restart mod-api mod-simulator
+            sudo systemctl restart mod
             sleep 4
 
             HEALTH=\$(curl -sf http://127.0.0.1:8100/api/health)

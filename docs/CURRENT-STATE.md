@@ -1,6 +1,6 @@
 # MOD 当前状态
 
-更新日期：2026-09-11
+更新日期：2026-09-12
 状态：现行事实入口
 适用范围：当前运行、数据、功能、质量、安全状态与操作边界
 
@@ -16,7 +16,7 @@
 
 - 2026-09-11 恢复 USA 生产部署机与 JPA 专属开发机职责分离架构（ADR-0012）：
   - **JPA（开发工作区机）**：承载源码、Git 仓库、全套开发与测试工具链（`pytest`、`vitest`、`local-harness`）及本地 Osaka MySQL 开发测试库，负责通过 `publish.sh` 门禁执行远程构建发布。
-  - **USA（纯生产部署机）**：承载生产运行环境（FastAPI `mod-api` 8100 端口、`mod-simulator`、MODO `modo-api` 8000 端口、`modo-ingest`、4 个定时器、Nginx 逆向代理），同子网局域网连接 US MySQL HeatWave（`10.0.0.145`，< 0.2ms 极速延迟），API 隔离使用 `mod_readonly` 账号。
+  - **USA（纯生产部署机）**：承载生产运行环境，核心服务经轻量守护器统一归并为单一 `mod.service`（由 `scripts/project/run_unified.py` 同时拉起与托管 FastAPI 8100 端口与 `mod-simulator` 仿真引擎，支持一键热重载与崩溃自愈）与 MODO `modo.service`（统一托管 8000 端口与 `modo-ingest` 节点打卡），同子网局域网连接 US MySQL HeatWave（`10.0.0.145`，< 0.2ms 极速延迟），API 隔离使用 `mod_readonly` 账号。
 - 访客入口经 **AWS CloudFront** 前置（隐藏源站，见下条"源站隐藏架构"）；DNS 托管在 Route53，
   站点主机名以指向 CloudFront 分发的 Alias 记录对外解析，DNS 层查不到源站真实 IP。同时 `usa.8n8m.cfd/mod` 支持无缝跳转访问。具体域名、分发 ID、
   回源地址等见部署配置，不写入文档。
