@@ -373,6 +373,9 @@ KI-060 更新前的本节原文完整保存在
 MOD 专属工具只由项目自动发现。当前入口改为按领域读取，旧入口完整保全；检查按计划运行并返回摘要与日志位置。
 说明与限制见[本地 Harness](development/LOCAL-HARNESS.md)。该项仅变更本地开发工具，未发布生产。
 
+任务范围补充：公共 harness 支持 investigate/repair/accept 及目标 KI 映射；MOD 已登记 KI-076，
+排查模式只返回计划，验收计划显式包括视觉回归与人工项。本次未执行该 KI 的真实排查或改变其状态。
+
 - 不运行历史协作状态机，不新增其中的任务或状态记录。
 - 临时脚本必须遵守 `development/CLI-SCRIPT-POLICY.md` 的 CLI 专属目录制度。
 - 实时投影的展示语义、事件链和多实例限制以 `development/LIVE-PROJECTION.md` 为准。
