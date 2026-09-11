@@ -201,4 +201,4 @@ jobs:
             done
 
             echo 'Deployment to USA verified successfully!'
-EOF
+          EOF
