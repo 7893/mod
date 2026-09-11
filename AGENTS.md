@@ -34,12 +34,28 @@ being told each time. Every task also reads this `AGENTS.md` first.
 
 | If you change... | You MUST read first |
 |---|---|
-| Frontend (Vue/CSS/views/components) | `docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md` (skeleton/component/Token three-layer contract; no ad-hoc CSS or arbitrary values) |
-| Backend / services / API | `docs/development/DEVELOPMENT-STANDARD.md` |
-| Database / data / credentials / migrations | `docs/development/DATA-AND-SECURITY-STANDARD.md` |
-| Docs / decisions / issues | `docs/development/DOCUMENTATION-STANDARD.md` + `docs/development/DOCUMENTATION-LIFECYCLE.md` |
+| Frontend (Vue/CSS/views/components) | `docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md` (or `.pi/skills/mod-frontend/`) |
+| Backend / services / API | `docs/development/DEVELOPMENT-STANDARD.md` (or `.pi/skills/mod-backend/`) |
+| Database / data / credentials / migrations | `docs/development/DATA-AND-SECURITY-STANDARD.md` (or `.pi/skills/mod-data-security/`) |
+| Docs / decisions / issues | `docs/development/DOCUMENTATION-STANDARD.md` + `docs/development/DOCUMENTATION-LIFECYCLE.md` (or `.pi/skills/mod-governance/`) |
 | CLI / one-off scripts | `docs/development/CLI-SCRIPT-POLICY.md` |
-| Any change (always) | `docs/development/TESTING-STANDARD.md`; run `make check` before every commit |
+| Any change (always) | `docs/development/TESTING-STANDARD.md`; run `make pre-flight` or `make check` before commit |
+
+## Shared Tool Entrypoint: `pi` Harness
+
+This repository provides a `pi` harness (v0.85+) as a shared tool entrypoint and recommended executor for agentic workflows. While different AI Agent CLIs (`agy`, Claude Code, Codex, Copilot, Cursor) operate in their own shells, they should leverage this harness to ensure consistent safety and context.
+
+All agents MUST observe these execution rules:
+1. **Database Access (Strictly Enforced)**:
+   - NEVER construct interactive MySQL CLI commands with plaintext credentials (`mysql -u ... -p...`).
+   - Use the registered tool `mod_db_query` via `pi -p "Use mod_db_query tool to select ..."` or call `scripts/project/safe_db_query.py`.
+   - Only read-only queries (`SELECT`, `SHOW`, `DESC`, `EXPLAIN`) are allowed for automated investigation.
+2. **Pre-flight Incremental Testing**:
+   - Before running a full `make check`, run `make pre-flight` (or `pi /pre-flight`). It dynamically inspects `git diff` and runs only the relevant test suites (backend `pytest/ruff` or frontend `vitest/vue-tsc`), accelerating feedback from 20s to 2s.
+3. **Simulator Health Gate**:
+   - Before running `publish.sh`, verify simulator status via `make sim-status` (or `pi -p "Use mod_simulator_status"`) to ensure the rate-limit fuse is not near cap (`>= 18/20`).
+4. **Modular Skills Directory (`.pi/skills/`)**:
+   - Domain standards are modularized in `.pi/skills/` (`mod-frontend`, `mod-backend`, `mod-data-security`, `mod-governance`). Agents should load skills on-demand to minimize token overhead.
 
 Enforcement of these standards is described in `ENFORCEMENT.md`. Where CI gates exist (e.g. frontend arbitrary-value
 lint, credential scan, commit-message check), a violation fails the build — read the standard, do not fight the gate.

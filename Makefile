@@ -1,4 +1,10 @@
-.PHONY: check backend-check frontend-check doc-check
+.PHONY: check backend-check frontend-check doc-check pre-flight sim-status
+
+pre-flight:
+	@./scripts/project/pre_flight.sh
+
+sim-status:
+	@python3 scripts/project/check_simulator_status.py
 
 check: backend-check frontend-check doc-check
 
