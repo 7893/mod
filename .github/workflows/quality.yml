@@ -169,16 +169,24 @@ jobs:
 
             sudo systemctl reload nginx
             sudo systemctl restart mod.service
-            sleep 4
+            HEALTH=""
+            for i in $(seq 1 10); do
+              sleep 2
+              HEALTH=$(curl -sf http://127.0.0.1:8100/api/health || true)
+              if echo "$HEALTH" | grep -q '"status":"ok"'; then
+                echo "Health probe passed on attempt $i"
+                break
+              fi
+              echo "Waiting for API to become ready (attempt $i)..."
+            done
 
-            HEALTH=\$(curl -sf http://127.0.0.1:8100/api/health)
-            if ! echo "\$HEALTH" | grep -q '"status":"ok"'; then
-              echo 'Health probe failed!'
+            if ! echo "$HEALTH" | grep -q '"status":"ok"'; then
+              echo "Health probe failed!"
               exit 1
             fi
 
-            SIM=\$(curl -sf http://127.0.0.1:8100/api/simulator/status)
-            if ! echo "\$SIM" | grep -q '"status":"RUNNING"'; then
+            SIM=$(curl -sf http://127.0.0.1:8100/api/simulator/status || true)
+            if ! echo "$SIM" | grep -q '"status":"RUNNING"'; then
               echo 'Simulator probe failed!'
               exit 1
             fi
