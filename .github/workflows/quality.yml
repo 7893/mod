@@ -3,6 +3,7 @@ name: Quality gates
 on:
   pull_request:
   push:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -92,3 +93,94 @@ jobs:
 
       - name: Run repository checks
         run: make check
+
+  deploy:
+    name: Deploy to USA Production
+    needs: check
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "11.22.0"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Deploy to USA Production Node
+        env:
+          TARGET_HOST: ${{ secrets.USA_HOST || secrets.DEPLOY_HOST_IP || secrets.DEPLOY_HOST }}
+          TARGET_KEY: ${{ secrets.USA_SSH_KEY || secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$TARGET_HOST" ] || [ -z "$TARGET_KEY" ]; then
+            echo "Skipping automated deployment: TARGET_HOST or TARGET_KEY secret not configured."
+            exit 0
+          fi
+
+          mkdir -p ~/.ssh
+          echo "$TARGET_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$TARGET_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          TS=$(date +"%Y%m%d-%H%M%S")
+          echo "Deploying release $TS to USA..."
+
+          ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=accept-new ubuntu@"$TARGET_HOST" \
+            "mkdir -p /home/ubuntu/mod/backend/releases/$TS /home/ubuntu/mod/frontend/releases/$TS /home/ubuntu/mod/deploy"
+
+          rsync -avz -e "ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=accept-new" \
+            frontend/dist/ ubuntu@"$TARGET_HOST":/home/ubuntu/mod/frontend/releases/$TS/
+
+          rsync -avz -e "ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=accept-new" \
+            --exclude='__pycache__' --exclude='*.pyc' --exclude='output/' --exclude='tmp/' \
+            --exclude='*.csv' --exclude='*.tsv' --exclude='*.sql*' --exclude='*.enc' --exclude='*.gz' \
+            backend/app/ simulation/ scripts/ deploy/ \
+            ubuntu@"$TARGET_HOST":/home/ubuntu/mod/backend/releases/$TS/
+
+          ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=accept-new ubuntu@"$TARGET_HOST" "
+            ln -sfn /home/ubuntu/mod/frontend/releases/$TS /home/ubuntu/mod/frontend/current
+            ln -sfn /home/ubuntu/mod/backend/releases/$TS /home/ubuntu/mod/backend/current
+            ln -sfn . /home/ubuntu/mod/backend/current/app
+
+            sudo systemctl reload nginx
+            sudo systemctl restart mod-api mod-simulator
+            sleep 4
+
+            HEALTH=\$(curl -sf http://127.0.0.1:8100/api/health)
+            if ! echo "\$HEALTH" | grep -q '"status":"ok"'; then
+              echo 'Health probe failed!'
+              exit 1
+            fi
+
+            SIM=\$(curl -sf http://127.0.0.1:8100/api/simulator/status)
+            if ! echo "\$SIM" | grep -q '"status":"RUNNING"'; then
+              echo 'Simulator probe failed!'
+              exit 1
+            fi
+
+            for d in /home/ubuntu/mod/frontend/releases /home/ubuntu/mod/backend/releases; do
+              ls -1t \"\$d\" | tail -n +6 | while read -r old; do
+                rm -rf \"\$d/\$old\"
+              done
+            done
+
+            echo 'Deployment to USA verified successfully!'
+          "
