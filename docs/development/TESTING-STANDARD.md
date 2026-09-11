@@ -1,6 +1,6 @@
 # 测试与验证规范
 
-更新日期：2026-09-02
+更新日期：2026-09-11
 状态：现行
 适用范围：所有维护代码、配置、文档和部署变更
 
@@ -25,7 +25,7 @@
 | Python 后端 | Ruff、相关 pytest、全量 `make check` |
 | API 路由或响应 | 正常、降级、错误状态和兼容字段测试 |
 | Vue/TypeScript 前端 | `pnpm test`（Vitest 单元测试）、`pnpm run typecheck`、`pnpm run build`、全量 `make check` |
-| CSS/布局 | 缩放单测、类型检查、生产构建；涉及视觉行为时补充实际页面验收 |
+| CSS/布局 | 缩放单测、类型检查、本地生产构建、固定场景浏览器回归；初始基准和重大视觉变更需人工审阅 |
 | 配置或依赖 | 解析/启动检查、锁文件一致性、全量 `make check` |
 | 文档 | 链接和事实检查、`git diff --check`、全量 `make check` |
 | 生产（运行主机） | 用户/系统服务、单一 8100 监听、API、静态资源、禁止索引和日志核验 |
@@ -35,9 +35,9 @@
 - **框架基座**：采用 `vitest` + `@vue/test-utils` + `happy-dom`，依赖版本严格精确锁定，测试文件统一采用 `__tests__/*.test.ts` 就近组织。
 - **覆盖核心**：
   - 缩放引擎（`useScaleScreen.ts`）：基准等比计算、普通/全屏视口切换、上下限 clamp 钳夹、非正常尺寸保护；
-  - 核心状态机（`useAiInsights.ts` / `useDailyBriefing.ts`）：状态流转（`loading` / `ok` / `cache_hit` / `rate_limited` / `unavailable` / `error`）、并发节流与离线降级兜底；
+  - 核心状态（`useInsightsStatus.ts` / `useDailyBriefing.ts`）：加载、模型未就绪、读取失败与无简报等真实响应边界；
   - 格式化与数值边界（`formatters/metrics.ts`）：空值/NaN/零/负数/极大数值的安全兜底与 zh-CN 本地化展示；
-  - 状态管理（Pinia stores）：快照键名递归驼峰化转换（`fixKeys`）、SSE 实时投影序列有序性校验与跨场重置、数据刷新网络异常隔离；
+  - 状态管理（Pinia stores）：后端 camelCase 契约、数据来源、刷新乱序与失败、SSE 序列有序性及跨场重置；
   - 模型可解释性判定（`modelEvaluation.ts`）：严守 KI-023/KI-028 规范，R² ≤ 0 及准确率退化（1.0）显式标为未达标。
 - **硬性约束**：
   - **严禁向真实网络发请求**：所有 API 与模型请求（fetch）必须由 Mock 拦截处理，零后端依赖、零外部服务依赖；
@@ -65,6 +65,14 @@ git status --short
 
 ## 生产验收
 
-部署后至少确认：系统级重复服务保持禁用、用户级服务为 active、`/api/v2/health` 返回 200、主页面及
-当前哈希静态资源返回 200、`robots.txt` 禁止抓取、HTML/API/资源响应包含严格 `X-Robots-Tag`，且日志
-没有模拟器 Tick、凭据泄露或连续异常。
+部署后至少确认：系统级 `mod-api` 服务正常、无重复监听、`/api/health` 及当前哈希静态资源状态正确，
+`robots.txt` 禁止抓取、HTML/API/资源响应包含严格 `X-Robots-Tag`，日志无凭据泄露或连续异常。
+生产发布另需授权，不由前端测试触发。
+
+## 固定场景浏览器回归
+
+执行入口和隔离规则见[前端视觉回归](FRONTEND-VISUAL-VERIFICATION.md)。
+在 `frontend/` 运行 `pnpm run build:visual` 后运行 `pnpm run test:visual`。
+六屏与组件展例使用冻结时钟、API 夹具和基准截图，额外覆盖来源状态、巡航下钻、抽屉及全屏交互。
+单测中 Teleport 被 stub 便于断言内容，真实浏览器测试必须验证 body 挂载，不能据单测推断窗口布局正确。
+修订前原文见[历史切片](../history/2026-09-11-FRONTEND-STANDARDS.md)。

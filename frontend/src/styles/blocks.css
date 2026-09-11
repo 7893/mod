@@ -87,8 +87,7 @@
   font-weight: 600;
   line-height: 1.15;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-x: auto;
 }
 
 .metric-cell__value small {
@@ -484,3 +483,11 @@
   color: var(--color-slate-500);
   font-family: var(--font-mono);
 }
+
+/* 图表与事实栏的有限组合，页面不另写比例与分隔线。 */
+.chart-facts { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: --spacing(3); flex: 1; min-height: 0; }
+.chart-facts__chart { min-width: 0; min-height: 0; }
+.chart-facts__facts { display: flex; flex-direction: column; justify-content: center; gap: --spacing(2); min-width: 0; min-height: 0; overflow-y: auto; padding-left: --spacing(3); border-left: 1px solid var(--color-surface-veil-06); }
+.chart-facts--facts-led { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+.chart-facts--facts-led .chart-facts__facts { grid-column: 1; grid-row: 1; padding-left: 0; padding-right: --spacing(3); border-left: 0; border-right: 1px solid var(--color-surface-veil-06); }
+.chart-facts--facts-led .chart-facts__chart { grid-column: 2; grid-row: 1; }

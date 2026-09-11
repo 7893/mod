@@ -113,9 +113,12 @@ class ExpensePlaybook:
         """Generate a single complete, valid, balanced event footprint."""
         # 1. Determine timeline
         baseline_dt = self.baseline.latest_business_date
+        # KI-077 fix: cap baseline to now to prevent future date pollution propagation
+        now = datetime.now()
+        effective_baseline = min(baseline_dt, now)
         if target_date is None:
             # Default to next business day at 08:30+
-            base_day = baseline_dt.date() + timedelta(days=1)
+            base_day = effective_baseline.date() + timedelta(days=1)
             target_date = datetime.combine(base_day, time(8, 30))
 
         if target_date.tzinfo is not None:
@@ -127,8 +130,12 @@ class ExpensePlaybook:
         else:
             submit_time = self._sample_worktime(target_date)
 
-        if submit_time <= baseline_dt:
-            submit_time = baseline_dt + timedelta(seconds=self.rng.randint(60, 3600))
+        if submit_time <= effective_baseline:
+            if effective_baseline == now:
+                # We are in the pollution scenario, don't generate in the future
+                submit_time = now - timedelta(seconds=self.rng.randint(0, 60))
+            else:
+                submit_time = effective_baseline + timedelta(seconds=self.rng.randint(60, 3600))
 
         # Strictly ordered future stages
         approve_delta = timedelta(seconds=self.rng.randint(180, 5400))  # 3 min ~ 1.5 hr
@@ -139,6 +146,13 @@ class ExpensePlaybook:
 
         int_delta = timedelta(seconds=self.rng.randint(15, 180))  # 15s ~ 3 min
         int_time = gen_time + int_delta
+
+        # KI-077 fix: final safety check, bound all timestamps to now if they drift into future
+        if int_time > now:
+            int_time = now
+            gen_time = min(gen_time, int_time - timedelta(seconds=1))
+            approve_time = min(approve_time, gen_time - timedelta(seconds=1))
+            submit_time = min(submit_time, approve_time - timedelta(seconds=1))
 
         # 2. Select actor: pick online unit weighted by org size (user count), with realistic applicant concentration
         # Causal link: larger entities submit proportionally higher volume

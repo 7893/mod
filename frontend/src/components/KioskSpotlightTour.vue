@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { Sparkles, Compass, X, ArrowRight, ShieldAlert } from 'lucide-vue-next'
+import { Sparkles, Compass, X, ArrowRight } from 'lucide-vue-next'
+
+import type { GovernanceActivity } from './LiveActivityTicker.vue'
 
 const props = withDefaults(
   defineProps<{
     idleTimeoutMs?: number
+    activities?: GovernanceActivity[]
+    suspended?: boolean
   }>(),
   {
     idleTimeoutMs: 45000,
+    activities: () => [],
+    suspended: false,
   },
 )
 
 const emit = defineEmits<{
-  (e: 'inspect', unitName: string): void
+  (e: 'inspect', issueId: string): void
 }>()
 
 const isKioskActive = ref(false)
@@ -20,37 +26,7 @@ const spotlightIndex = ref(0)
 let idleTimer: ReturnType<typeof setTimeout> | null = null
 let rotateTimer: ReturnType<typeof setInterval> | null = null
 
-const spotlightCases = [
-  {
-    title: '专班现场重点攻坚',
-    unitName: '北方特种装备工业集团',
-    province: '辽宁',
-    level: '高风险隐患',
-    issueType: '超期挂账',
-    detail: '因历史在建工程与SAP老科目映射断裂引发平账偏差，集团专项数据清洗专班已驻点攻坚 3 天。',
-    actionText: '推进中 · 正在执行坏账重分类补丁',
-  },
-  {
-    title: '最新突破性闭环销项',
-    unitName: '西南清洁能源投资集团',
-    province: '四川',
-    level: '已销项达标',
-    issueType: '票据异常',
-    detail: '双轨核对分录双方分文不差，一致率达 100%，已解除挂账锁定并成功跃迁为双轨试运行！',
-    actionText: '已销项 · 凭证流水平稳接入大盘',
-  },
-  {
-    title: '跨期税率差异智能消缺',
-    unitName: '华东现代能源开发公司',
-    province: '江苏',
-    level: '中度瑕疵',
-    issueType: '超预算迹象',
-    detail: '外围老系统接口响应超时，核心ERP接口联调团队下发自动转码插件，多阶段工序恢复推进。',
-    actionText: '核验中 · 压力测试全量通过',
-  },
-]
-
-const currentCase = computed(() => spotlightCases[spotlightIndex.value % spotlightCases.length])
+const currentCase = computed(() => props.activities[spotlightIndex.value % props.activities.length] ?? null)
 
 function resetIdleTimer() {
   if (idleTimer) clearTimeout(idleTimer)
@@ -81,8 +57,8 @@ onMounted(() => {
   resetIdleTimer()
 
   rotateTimer = setInterval(() => {
-    if (isKioskActive.value) {
-      spotlightIndex.value = (spotlightIndex.value + 1) % spotlightCases.length
+    if (isKioskActive.value && props.activities.length) {
+      spotlightIndex.value = (spotlightIndex.value + 1) % props.activities.length
     }
   }, 12000)
 })
@@ -106,7 +82,10 @@ onUnmounted(() => {
     leave-to-class="opacity-0 translate-y-4 scale-95"
   >
     <div
-      v-if="isKioskActive"
+      v-if="isKioskActive && currentCase && !suspended"
+      @mousemove.stop
+      @keydown.stop
+      @touchstart.stop
       class="fixed bottom-6 right-6 z-50 w-96 p-4 rounded-xl bg-slate-900/95 border border-sky-500/40 shadow-2xl backdrop-blur-xl text-slate-200"
     >
       <!-- Top header bar -->
@@ -126,16 +105,16 @@ onUnmounted(() => {
       </div>
 
       <!-- Content -->
-      <div class="space-y-2">
+      <div class="space-y-2" :data-issue-id="currentCase.issueId">
         <div class="flex items-center justify-between">
           <span class="text-cockpit-xs text-amber-400 font-medium flex items-center gap-1">
             <Sparkles :size="12" />
-            {{ currentCase.title }}
+            {{ currentCase.action }}
           </span>
           <span
             class="px-1.5 py-0.5 rounded text-cockpit-xs font-mono"
             :class="
-              currentCase.level === '已销项达标'
+              ['RESOLVED', 'CLOSED'].includes(currentCase.status)
                 ? 'bg-emerald-950/70 border border-emerald-500/40 text-emerald-300'
                 : 'bg-amber-950/70 border border-amber-500/40 text-amber-300'
             "
@@ -153,9 +132,10 @@ onUnmounted(() => {
         </p>
 
         <div class="p-2 rounded-lg bg-slate-800/70 border border-white/5 text-cockpit-xs flex items-center justify-between">
-          <span class="text-sky-300 truncate mr-2">{{ currentCase.actionText }}</span>
-          <span class="text-slate-500 font-mono flex-shrink-0 text-cockpit-xs">移动鼠标退出</span>
+          <span class="text-sky-300 truncate mr-2">{{ currentCase.occurredAt }}</span>
+          <span class="text-slate-500 font-mono flex-shrink-0 text-cockpit-xs">移出浮窗退出</span>
         </div>
+        <button type="button" class="flex items-center gap-1 text-sky-300 text-cockpit-sm" @click="emit('inspect', currentCase.issueId); dismiss()">查看工单 <ArrowRight :size="14" /></button>
       </div>
     </div>
   </Transition>

@@ -16,13 +16,14 @@ export default defineConfig(({ mode }) => {
   server: {
     host: '127.0.0.1',
     port: 4173,
-    proxy: {
+    proxy: mode === 'visual' ? undefined : {
       '/api': {
         target: 'http://127.0.0.1:8100',
       },
     },
   },
   build: {
+    outDir: mode === 'visual' ? 'output/visual-dist' : 'dist',
     // 大屏依赖体积大（echarts / 地图 GeoJSON），按库分包，改善首屏加载与浏览器缓存命中。
     // echarts 单库约 625KB 无法再拆，上调警告阈值以消除噪音（它是独立缓存单元，业务改动不影响它）。
     chunkSizeWarningLimit: 700,

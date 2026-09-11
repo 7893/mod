@@ -45,8 +45,8 @@ const gridStyle = computed(() => ({
       <component :is="item.icon" v-if="item.icon" :size="18" class="metric-cell__icon" />
 
       <div class="metric-cell__body">
-        <span class="metric-cell__label">{{ item.label }}</span>
-        <b class="metric-cell__value">
+        <span class="metric-cell__label" :title="item.label">{{ item.label }}</span>
+        <b class="metric-cell__value" tabindex="0" :title="`${item.value}${item.unit ?? ''}`" :aria-label="`${item.label}：${item.value}${item.unit ?? ''}`">
           {{ item.value }}<small v-if="item.unit">{{ item.unit }}</small>
         </b>
 

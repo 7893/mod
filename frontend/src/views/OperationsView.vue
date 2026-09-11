@@ -9,6 +9,7 @@ import { GridComponent, TooltipComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
 import CommandBand from '../components/blocks/CommandBand.vue'
+import ChartFacts from '../components/blocks/ChartFacts.vue'
 import EmptyNote from '../components/blocks/EmptyNote.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
 import StatList from '../components/blocks/StatList.vue'
@@ -243,33 +244,33 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
 
       <!-- D4: 凭证生成质效 -->
       <CockpitPanel title="凭证生成质效" zone="D4" subtitle="成功率、生成规模与凭证结构">
-        <div class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <VChart class="col-span-9 w-full h-full min-h-0" :option="voucherQualityOption" autoresize />
-          <MetricGrid class="col-span-3 border-l border-surface-veil-06 pl-3" :items="voucherFacts" flat fill />
-        </div>
+        <ChartFacts>
+          <template #chart><VChart class="w-full h-full min-h-0" :option="voucherQualityOption" autoresize /></template>
+          <template #facts><MetricGrid :items="voucherFacts" flat fill /></template>
+        </ChartFacts>
       </CockpitPanel>
 
       <!-- D5: 接口集成入账 (阶梯条充实内容，消除空旷感，D-2) -->
       <CockpitPanel title="接口集成入账" zone="D5" subtitle="实时与批量接口调用结果">
-        <div class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <div class="col-span-4 flex flex-col justify-center gap-2 pr-3 border-r border-surface-veil-06 min-w-0">
+        <ChartFacts variant="facts-led">
+          <template #facts>
             <MetricGrid :items="integrationHeadline" flat size="lg" />
             <MetricGrid :items="integrationFacts" flat size="xs" :columns="2" />
-          </div>
-          <VChart class="col-span-8 w-full h-full min-h-0" :option="integrationOutcomeOption" autoresize />
-        </div>
+          </template>
+          <template #chart><VChart class="w-full h-full min-h-0" :option="integrationOutcomeOption" autoresize /></template>
+        </ChartFacts>
       </CockpitPanel>
 
       <!-- D6: 双轨运行核对 -->
       <CockpitPanel title="双轨运行核对" zone="D6" subtitle="新老系统一致性对账">
-        <div v-if="dualRunStats && dualRunOutcomeOption" class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <div class="col-span-4 flex flex-col justify-center gap-2 pr-3 border-r border-surface-veil-06 min-w-0">
+        <ChartFacts v-if="dualRunStats && dualRunOutcomeOption" variant="facts-led">
+          <template #facts>
             <MetricGrid :items="dualRunHeadline" flat size="lg" />
             <!-- 三大对账维度穿透 (KI-053) -->
             <StatList v-if="dualRunBreakdownRows.length" :rows="dualRunBreakdownRows" flat density="dense" class="pt-2 border-t border-surface-veil-06" />
-          </div>
-          <VChart class="col-span-8 w-full h-full min-h-0" :option="dualRunOutcomeOption" autoresize />
-        </div>
+          </template>
+          <template #chart><VChart class="w-full h-full min-h-0" :option="dualRunOutcomeOption" autoresize /></template>
+        </ChartFacts>
         <EmptyNote v-else>当前快照未提供双轨明细</EmptyNote>
       </CockpitPanel>
 

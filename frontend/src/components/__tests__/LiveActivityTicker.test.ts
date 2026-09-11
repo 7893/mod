@@ -76,4 +76,23 @@ describe('LiveActivityTicker', () => {
     expect(wrapper.text()).toContain('大同煤业分公司')
     expect(wrapper.text()).toContain('11:25:00')
   })
+
+  it('clears old stories on an empty poll and cancels polling on unmount', async () => {
+    vi.useFakeTimers()
+    const event = { id: 1, issueId: 'I1', unitName: '旧事件单位', detail: '旧事件', occurredAt: '2026-09-11 10:00:00' }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [event] })
+      .mockResolvedValue({ ok: true, json: async () => [] })
+    vi.stubGlobal('fetch', fetchMock)
+    const wrapper = mount(LiveActivityTicker)
+    await flushPromises()
+    expect(wrapper.text()).toContain('旧事件单位')
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(wrapper.text()).not.toContain('旧事件单位')
+    expect(wrapper.emitted('activities')?.at(-1)).toEqual([[]])
+    wrapper.unmount()
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
 })

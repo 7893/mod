@@ -26,11 +26,11 @@ defineProps<{
         >
           {{ zone }}
         </span>
-        <h3 class="text-cockpit-md font-semibold tracking-wide text-slate-100 whitespace-nowrap truncate min-w-0">
+        <h3 :title="title" class="text-cockpit-md font-semibold tracking-wide text-slate-100 whitespace-nowrap truncate min-w-0">
           {{ title }}
         </h3>
         <span v-if="subtitle" class="text-slate-700 flex-shrink-0" aria-hidden="true">·</span>
-        <span v-if="subtitle" class="text-cockpit-xs text-slate-500 font-normal truncate min-w-0">
+        <span v-if="subtitle" :title="subtitle" class="text-cockpit-xs text-slate-500 font-normal truncate min-w-0">
           {{ subtitle }}
         </span>
       </div>

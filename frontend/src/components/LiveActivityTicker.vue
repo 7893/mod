@@ -16,6 +16,11 @@ export interface GovernanceActivity {
   status: string
 }
 
+const emit = defineEmits<{ (e: 'activities', records: GovernanceActivity[]): void }>()
+let pollTimer: ReturnType<typeof setInterval> | null = null
+let controller: AbortController | null = null
+const unavailable = ref(false)
+
 const activities = ref<GovernanceActivity[]>([])
 const currentIndex = ref(0)
 const isPaused = ref(false)
@@ -24,15 +29,24 @@ let timer: ReturnType<typeof setInterval> | null = null
 const currentActivity = computed(() => activities.value[currentIndex.value % activities.value.length] ?? null)
 
 async function fetchActivities() {
+  controller?.abort()
+  const request = new AbortController()
+  controller = request
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/recent-activities?limit=10`)
-    if (res.ok) {
-      const data = await res.json()
-      if (Array.isArray(data) && data.length > 0) {
-        activities.value = data
-      }
-    }
+    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/recent-activities?limit=10`, { signal: request.signal })
+    if (!res.ok) throw new Error('Activity request failed')
+    const data = await res.json()
+    if (request.signal.aborted) return
+    if (!Array.isArray(data)) throw new Error('Invalid activity payload')
+    activities.value = data.filter((item): item is GovernanceActivity => item && typeof item.issueId === 'string' && typeof item.detail === 'string' && typeof item.unitName === 'string' && typeof item.occurredAt === 'string')
+    currentIndex.value = 0
+    unavailable.value = false
+    emit('activities', activities.value)
   } catch (err) {
+    if (request.signal.aborted) return
+    unavailable.value = true
+    activities.value = []
+    emit('activities', [])
     console.warn('Failed to fetch governance activities:', err)
   }
 }
@@ -50,7 +64,8 @@ function prev() {
 }
 
 onMounted(() => {
-  fetchActivities()
+  void fetchActivities()
+  pollTimer = setInterval(() => { void fetchActivities() }, 30000)
   timer = setInterval(() => {
     if (!isPaused.value) {
       next()
@@ -60,6 +75,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
+  if (pollTimer) clearInterval(pollTimer)
+  controller?.abort()
 })
 </script>
 
@@ -71,7 +88,7 @@ onUnmounted(() => {
   >
     <!-- Left badge & pulse icon -->
     <div class="flex items-center gap-2 flex-shrink-0">
-      <span class="relative flex h-2 w-2">
+      <span v-if="activities.length" class="relative flex h-2 w-2">
         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
         <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
       </span>
@@ -84,7 +101,7 @@ onUnmounted(() => {
 
     <!-- Middle activity stream content with transition -->
     <div v-if="!currentActivity" class="flex-1 min-w-0 truncate text-slate-500">
-      暂无治理活动记录
+      {{ unavailable ? '治理活动暂不可用' : '暂无治理活动记录' }}
     </div>
     <div v-else class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
       <span class="font-mono text-slate-400 text-cockpit-xs">[{{ currentActivity.timeStr }}]</span>
