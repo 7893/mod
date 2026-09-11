@@ -20,8 +20,6 @@ import { useScaleScreen } from './composables/useScaleScreen.ts'
 
 const route = useRoute()
 const store = useProjectStore()
-const now = ref(new Date())
-let timer = 0
 
 // 全站统一缩放骨架：导航始终保留，内容画布固定以 1920×980 为设计基准。
 const { scale, viewportRef, baseWidth, baseHeight } = useScaleScreen({
@@ -32,7 +30,12 @@ const { scale, viewportRef, baseWidth, baseHeight } = useScaleScreen({
 const sourceLabel = computed(() => store.connectionError ? '刷新受阻' : store.dataSource === 'fallback' ? '降级快照' : '实时数据')
 const sourceDetail = computed(() => [sourceLabel.value, store.snapshot.meta.asOfDate ? '业务日期：' + store.snapshot.meta.asOfDate : '', store.snapshot.meta.generatedAt ? '快照生成：' + store.snapshot.meta.generatedAt : ''].filter(Boolean).join(' · '))
 
-const formattedClock = computed(() => formatDateTime(now.value, { seconds: true, timeZone: store.snapshot.meta.displayTimezone }))
+const dataTime = computed(() => {
+  const meta = store.snapshot.meta
+  if (meta.generatedAt) return formatDateTime(meta.generatedAt, { seconds: true, timeZone: meta.displayTimezone })
+  if (store.lastLoadedAt) return formatDateTime(store.lastLoadedAt, { seconds: true, timeZone: meta.displayTimezone })
+  return '—'
+})
 
 const isFullscreen = ref(false)
 
@@ -75,13 +78,7 @@ const isActive = (path: string) => {
   return route.path === path
 }
 
-onMounted(() => {
-  now.value = new Date()
-  timer = window.setInterval(() => { now.value = new Date() }, 1000)
-})
-
 onBeforeUnmount(() => {
-  window.clearInterval(timer)
   document.removeEventListener('fullscreenchange', syncFullscreenState)
 })
 </script>
@@ -141,9 +138,9 @@ onBeforeUnmount(() => {
             <span class="link-dot"></span>
             <span>{{ sourceLabel }}</span>
           </div>
-          <div class="status-item sync-time">
+          <div class="status-item sync-time" title="数据时点">
             <Activity :size="14" />
-            <span class="clock-mono">{{ formattedClock }}</span>
+            <span class="clock-mono">{{ dataTime }}</span>
           </div>
           <button class="header-btn" :class="{ spin: store.loading }" title="刷新数据" @click="handleManualRefresh">
             <RefreshCw :size="16" />
