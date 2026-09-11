@@ -93,7 +93,7 @@ else
     # 远程同步与发布至 USA
     echo "[4/8] 同步产物至 USA 生产机..."
     ssh "$REMOTE_HOST" "mkdir -p $REMOTE_ROOT/backend/releases/$TS $REMOTE_ROOT/frontend/releases/$TS $REMOTE_ROOT/deploy"
-    rsync -az "$BE_RELEASE_DIR/" "$REMOTE_HOST:$REMOTE_ROOT/backend/releases/$TS/"
+    rsync -az --exclude='output/' --exclude='tmp/' --exclude='*.csv' --exclude='*.tsv' --exclude='*.sql*' --exclude='*.enc' --exclude='*.gz' "$BE_RELEASE_DIR/" "$REMOTE_HOST:$REMOTE_ROOT/backend/releases/$TS/"
     rsync -az "$FE_RELEASE_DIR/" "$REMOTE_HOST:$REMOTE_ROOT/frontend/releases/$TS/"
     rsync -az "$REPO_ROOT/deploy/" "$REMOTE_HOST:$REMOTE_ROOT/deploy/"
 
