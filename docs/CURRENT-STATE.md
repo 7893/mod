@@ -1,6 +1,6 @@
 # MOD 当前状态
 
-更新日期：2026-09-12
+更新日期：2026-09-13
 状态：现行事实入口
 适用范围：当前运行、数据、功能、质量、安全状态与操作边界
 
@@ -349,7 +349,7 @@ KI-060 更新前的本节原文完整保存在
 - [KI-071](issues/KI-071-F屏模型就绪与SHAP归因来源失真.md)：模型数量、负 R²、解释来源、缺失指标和请求乱序
   已完成本地修复；未创建、重训或调用生产 HeatWave 模型。
 - [KI-072](issues/KI-072-常驻模拟器生命周期编排事务与安全状态未闭环.md)：六阶段编排、事务所有权、重启状态、
-  原子限流、配额预留和状态/发布门禁已在本地实现；新增 MySQL `GET_LOCK` 数据库级领导锁与 STANDBY 备用状态防止双实例并发写入；云厂商计费边界仍待授权环境验收。
+  原子限流、配额预留和状态/发布门禁已闭环；新增 MySQL `GET_LOCK` 数据库级领导锁与 STANDBY 备用状态防止双实例并发写入；2026-09-13 代码已部署至 USA 生产节点并通过线上探针验证，已满足验收并关闭为 DONE。
 - [KI-073](issues/KI-073-实时投影与持久化模拟器双轨事件链事实分裂.md)：独立随机投影已移除，SSE 只消费提交后
   日志；实现基于 JSONL 的 `replay_from_id()` 与 `Last-Event-ID` 断线重放机制及日志轮转，已满足验收并关闭为 DONE。
 - [KI-074](issues/KI-074-历史文档未版本化保全与语义治理闸门缺失.md)：23 份受限历史资料已通过 `scripts/project/sanitize_history.py` 自动化生成 `.sanitized.md` 脱敏副本并纳入版本库跟踪；建立 `docs/development/SANITIZATION-RULES.md` 脱敏标准；53 份历史原件与脱敏副本全部纳入 `docs/history/MANIFEST.sha256` 与 `docs/HISTORY-CATALOG.md`；交付灾备备份与本地解密演练工具 `scripts/project/backup_history_to_r2.py` 及回归测试 `scripts/project/tests/test_history_backup_drill.py`；全量灾备演练和完整性测试 100% 通过；已满足验收并关闭为 DONE。
