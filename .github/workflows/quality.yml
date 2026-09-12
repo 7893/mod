@@ -140,14 +140,15 @@ jobs:
           echo "$TARGET_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
 
+          SSH_CM_OPTS="-o ControlMaster=auto -o ControlPath=~/.ssh/cm-%r@%h:%p -o ControlPersist=120s"
           if [ -n "$TARGET_KNOWN_HOST" ]; then
             echo "$TARGET_KNOWN_HOST" >> ~/.ssh/known_hosts
             chmod 644 ~/.ssh/known_hosts
-            SSH_OPTS="-i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes -o ConnectTimeout=10"
+            SSH_OPTS="-i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes -o ConnectTimeout=10 $SSH_CM_OPTS"
             echo "Strict SSH host key verification enabled."
           else
             echo "Warning: TARGET_KNOWN_HOST not configured, falling back to permissive checking."
-            SSH_OPTS="-i ~/.ssh/id_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
+            SSH_OPTS="-i ~/.ssh/id_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 $SSH_CM_OPTS"
           fi
 
           TS=$(date +"%Y%m%d-%H%M%S")
@@ -237,3 +238,5 @@ jobs:
 
             echo 'Deployment to USA verified successfully!'
           EOF
+
+          ssh -O exit -o ControlPath=~/.ssh/cm-%r@%h:%p ubuntu@"$TARGET_HOST" 2>/dev/null || true
