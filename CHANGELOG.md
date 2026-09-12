@@ -12,6 +12,19 @@
 
 - Add automated frontend cd to usa
 - Warn on unsynced current-state
+- Fall back when base unreachable
+- Add automated deploy job for usa
+- Fix rsync directory layout for backend
+- Add retry loop to health probe
+- Refactor remote deploy with bash heredoc
+- Fix yaml eof indentation
+- Fix yaml snapshot probe indentation
+- Add retry loops for deploy probes
+- Multiplex ssh connections with controlmaster
+
+### 回退
+
+- Restore risk-breathe animation
 
 ### 工程维护
 
@@ -23,6 +36,10 @@
 - Split vendor chunks and close issues
 - Add gateway usage inspection script
 - Remove unused ui dependencies
+- Bring simulation package under ruff gate
+- Remove historical harness code
+- Rename deploy job and extend probe
+- Decouple simulator probe from deploy
 
 ### 文档
 
@@ -105,6 +122,39 @@
 - Mark ki-048 done
 - Define dual-run and exit criteria
 - Register ki-053 dual-run evolution
+- Add ki-059 assessment notes
+- Correct ki-059 heatwave diagnosis
+- Add ki-059 optimization guidance
+- Align ki-059 swr implementation note
+- Record test client deprecation
+- Rewrite bilingual project overview
+- Record snapshot refresh deadlock
+- Add governance simulation synthesis document
+- Align governance simulation specs and references
+- Permit authorized agent deployment delegation
+- Link github issue 4 in synthesis
+- Close stale ki reconcile gi mapping
+- Register ki-065 chart tooltip issue
+- Register ki-066 ki-067 dashboard issues
+- Register ki-068 d7 subtitle mismatch
+- Rescope and align ki-053 dual-run evolution
+- Register ki-069 dual-run rate overflow
+- Register five systemic defects
+- Register audit leftovers as known issue
+- Update ki-075 progress
+- Mark ki-075 item e done
+- Record harness milestone in ki-074
+- Update cloudfront dns state
+- Update readme index adr and ci
+- Close ki-077 future data cleanup
+- Update db ip after migration
+- Close ki-072 simulator leader lock
+- Fix readme architecture diagram syntax
+- Add ki-083 simulator restart race
+- Complete ki-081 outbox deployment verification
+- Deprecate github issues per adr 14
+- Enhance readme badges and english header
+- Text architecture and address removal
 
 ### 新增功能
 
@@ -159,10 +209,28 @@
 - Redesign low-value cockpit panels
 - Realistic accounting subjects and worktime
 - Enforce documentation preservation rules
+- Implement gi-004 dynamic living governance ecosystem
+- Enhance dual run variance realism
+- Add history integrity and semantic gates
+- Add frontend style contract gate
+- Refine presentation and governance ui
+- Fix pi harness architectural issues
+- Map ki investigation and acceptance
+- Adopt adr 0012 for usa
+- Unify core services into mod service
+- Center dashboard metrics and default cicd
+- Transactional outbox and ai trust
 
 ### 构建
 
 - Add frontend arbitrary value lint
+
+### 样式
+
+- Remove dead risk-breathe animation
+- Redesign d7 and adjust e ticker
+- Rename dashboard title to demo
+- Center b6 ledger summary metrics
 
 ### 测试
 
@@ -184,6 +252,19 @@
 - Enrich training panorama
 - Redesign primary command panels
 - Move ops scripts to project
+- Remove dead frontend stylesheets
+- Unify frontend design tokens
+- Deduplicate ledger table components
+- Converge screens onto block library
+- Centralize number and datetime formatting
+- Centralize org status vocabulary
+- Detemplate briefing audit and risk panels
+- Drop remaining v2 naming residue
+- Remove legacy five-layer simulator
+- Stop silently swallowing backend exceptions
+- Archive legacy scripts and close ki-075
+- Adopt shared local harness
+- Retire project preflight registration
 
 ### 问题修复
 
@@ -224,3 +305,42 @@
 - Unlink ignored history docs in index
 - Batch mapping for new units
 - Remove fabricated panel fallbacks
+- Complete changelog generation chain
+- Resolve ledger pagination deadlock for ki-059
+- Standardize b ledger zones and filters
+- Never show spinner with fallback
+- Migrate starlette test transport
+- Rebalance dashboard panel density
+- Resolve snapshot timeout for ki-061
+- Correct snapshot contract probe escaping
+- Resolve ki-063 offline regression test boundary
+- Resolve chart tooltip and centering
+- Resolve risk derivation and layout gaps
+- Align d7 quality subtitle wording
+- Resolve ki069 dual run rate overflow
+- Expose explanation source for shap
+- Unify cross-screen business rules
+- Unify simulator lifecycle and projection
+- Align frontend status vocabulary with backend
+- Derive rule alerts from rollout facts
+- Stop misleading chart and ticker displays
+- Expose snapshot source and type insights
+- Resolve ki-075 dead code cleanup
+- Remove dead links to gitignored paths
+- Mock credentials in ci quota test
+- Mock credentials for ci quota test
+- Skip require_all in ci history test
+- Fix degraded state and time
+- Inherit pi task check policy
+- Exclude data files in publish
+- Resolve ki-078 security baseline hardening
+- Leader lock and reconnection replay
+- Close ki-074 and ki-079 governance
+- Update sanitized internal links
+- Align drill verification with ci env
+- Prevent header status badge overlap
+- Format header time and align right
+- Harden cicd and simulator id buffer
+- Restore launched org status baseline query
+- Real time clock and fallback snapshot
+- Robust nginx restart during deploy
