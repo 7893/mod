@@ -441,7 +441,7 @@ KI-060 更新前的本节原文完整保存在
 
 - **USA 生产机 Fail2ban 加固**：排查并解封因误扫被拉黑的开发节点，在 USA `/etc/fail2ban/jail.local` 中配置 `ignoreip` 信任白名单（覆盖回环、VCN 私网网段、开发机与跳板机），并将 `mode` 从激进的 `aggressive` 调整为 `normal`，根除握手探针导致的误封问题。
 - **CI/CD 连接多路复用**：在 `.github/workflows/quality.yml` 中为部署任务配置 OpenSSH `ControlMaster`（`ControlMaster=auto`, `ControlPersist=120s`），并在任务结束时安全清理控制连接，将多次短时高频 SSH 握手收敛为单条长连接多路复用。
-- **CHANGELOG 全量刷新**：使用锁定的 `git-cliff 2.13.1` 工具链与 `cliff.toml` 配置，将 2026-09-08 至今包含 KI-059~KI-083、六屏架构升级与 ADR-0014 等全部合规提交增量刷新写入 `CHANGELOG.md`，契约校验全绿。
+- **CHANGELOG 全量刷新与 v0.9.0 标签发布**：使用锁定的 `git-cliff 2.13.1` 工具链，正式确立并发布项目首个语义化版本标签 `v0.9.0`，将包含六屏大屏、500 万真实凭证、SWR 异步快照及 KI-001~KI-083 全部治理提交系统化归入 `v0.9.0` 章节入册。
 
 ## 操作边界
 
