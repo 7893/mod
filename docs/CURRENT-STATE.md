@@ -432,6 +432,11 @@ KI-060 更新前的本节原文完整保存在
 - **顶栏实时时钟动态秒级跳动**：大屏头部右侧时钟由原本绑定静态快照 `meta.generatedAt` 时间戳改造为基于 `ref(new Date())` 与 1 秒定时器的动态时钟（`App.vue`），秒数持续跳动；同时在组件卸载时安全清理定时器，Tooltip 明确展示「当前时钟（实时跳动） · 快照时点：...」，并补齐单元测试。
 - **离线兜底快照更新**：通过 `scripts/project/build_fallback_snapshot.py` 将前端内置兜底快照 `frontend/src/data/fallback-snapshot.json` 更新为 2026-09-13 线上最新数据，消除首屏冷启动短暂呈现历史旧日期的视觉跳变。
 
+## 2026-09-13 彻底停用 GitHub Issues 与同名仓库纯净重建（ADR-0014，DONE）
+
+- **彻底清除与停用 GitHub Issues**：根据用户决策与 [ADR-0014](decisions/0014-停用GitHub-Issues统一使用本地KI问题跟踪体系.md)，彻底物理删除旧 GitHub 仓库并重建同名纯净仓库（`7893/mod`），在仓库创建时显式启用 `--disable-issues` 彻底禁用 Issues 功能；移除 `.github/ISSUE_TEMPLATE/` 目录；所有问题追踪统一在本地 `docs/KNOWN-ISSUES.md` 与 `docs/issues/` 闭环。
+- **仓库机密管理纪律**：在新建仓库完成初始推送后，立即通过安全通道重新注入 CI/CD 所需的 4 项部署机密（`USA_HOST`、`USA_USER`、`USA_SSH_KEY`、`USA_HOST_KEY`），严格保证生产环境自动部署流水线不中断。
+
 ## 操作边界
 
 2026-09-11 harness 减薄补充：/pre-flight 的注册已移到全局 Pi 扩展，MOD 旧注册块注释保留，

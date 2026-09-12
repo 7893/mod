@@ -40,10 +40,11 @@
 
 ## 后果
 
-- GitHub Issues 功能在仓库设置中保持开启（供外部贡献者提交反馈），但项目内部问题跟踪不使用此功能。
-- 所有新发现的问题、缺陷和技术债直接登记为 KI，遵循 `docs/development/DOCUMENTATION-STANDARD.md` 规范。
-- GI-xxx 编号体系废止。历史文档中出现的 GI-001~004 引用均视为旧版本记录，不再更新。
-- 任何 AI Agent 或协作者发现问题时，直接新建 `docs/issues/KI-xxx.md` 并更新 `docs/KNOWN-ISSUES.md`，不得在 GitHub Issues 新建条目。
+- **彻底物理清除与关闭 GitHub Issues**：为了彻底清除历史遗留的 GitHub Issues 并消除状态二义性，重建同名 GitHub 仓库（`7893/mod`），并在创建时使用 `--disable-issues` 彻底禁用 Issues 功能；删除仓库内 `.github/ISSUE_TEMPLATE/` 目录。
+- **机密管理与 CI/CD 自动恢复**：由于重建 GitHub 仓库会连带清空 GitHub Actions Secrets，必须在仓库初始化后立即通过安全运维通道重新注入 4 项部署机密（`USA_HOST`、`USA_USER`、`USA_SSH_KEY`、`USA_HOST_KEY`），保障自动化持续集成与部署通道稳定运行。
+- **本地闭环单一真理源**：所有新发现的问题、缺陷、技术债和治理任务一律统一在本地 `docs/KNOWN-ISSUES.md` 看板与 `docs/issues/KI-xxx.md` 中登记，遵循 `docs/development/DOCUMENTATION-STANDARD.md` 规范。
+- GI-xxx 编号体系废止。历史文档中出现的 GI-001~004 引用均视为旧版本记录，不再更新；今后彻底不再使用 GitHub Issues。
+- 任何 AI Agent 或协作者发现问题时，直接新建 `docs/issues/KI-xxx.md` 并更新 `docs/KNOWN-ISSUES.md`，严禁在 GitHub Issues 新建条目。
 
 ---
 
