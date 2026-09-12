@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import threading
 from datetime import datetime, timezone
@@ -19,11 +20,11 @@ from datetime import datetime, timezone
 #    get_status() 不触发外部请求。
 # 3. 强缓存：相同聚合指标指纹（SHA-256 截断）且 TTL 内直接复用缓存；
 #    TTL 默认 6 小时，由 MOD_CF_AI_CACHE_TTL_SECONDS 配置。
-# 4. 每日限额：默认 20 次真实调用/UTC 日，由 MOD_CF_AI_DAILY_LIMIT 配置；
+# 4. 进程内每日限额（非持久化预算闸门）：默认 20 次真实调用/UTC 日，由 MOD_CF_AI_DAILY_LIMIT 配置；
 #    超出返回 {"status": "rate_limited"}，按 UTC 日期自动重置。
 # 5. 数据白名单：只允许下列宏观聚合整数/浮点字段进入请求体；
 #    任何单位名称、联系人、单据明细、凭证编号、区域文字或凭据均被过滤掉。
-# 6. 短超时：HTTP 请求 10 秒（connect 3 s + read 7 s），超时即降级。
+# 6. 短超时：HTTP 请求套接字超时 10 秒，超时即降级。
 # 7. 安全降级：任何异常（网络、HTTP 4xx/5xx、JSON 解析、字段缺失）均捕获后
 #    返回 {"status": "unavailable"}，绝不向上抛出，绝不伪造结果。
 # 8. 不读取凭据到内存以外：账号 ID 和 API Token 仅从环境变量读取，
@@ -37,7 +38,7 @@ from datetime import datetime, timezone
 #   MOD_CF_AI_MODEL             模型名（默认 @cf/meta/llama-3.1-8b-instruct）
 #   MOD_CF_AI_GATEWAY           AI Gateway 名（默认 mod-gateway；置空则直连，见 ADR-0010）
 #   MOD_CF_AI_CACHE_TTL_SECONDS 缓存 TTL 秒数（默认 21600 = 6 小时）
-#   MOD_CF_AI_DAILY_LIMIT       每 UTC 日最多真实调用次数（默认 20）
+#   MOD_CF_AI_DAILY_LIMIT       每 UTC 日最多请求尝试次数（当前进程，重启重置）（默认 20）
 #
 # 白名单字段（宏观聚合数字，无个人/单位/凭证信息）
 # ------------------------------------------------
@@ -74,14 +75,14 @@ _CF_AI_GATEWAY_ENDPOINT = (
 
 # 发给 AI 的系统提示，限定任务范围
 _SYSTEM_PROMPT = (
-    "你是新一代数智财务运营管控平台的高级AI决策顾问。"
-    "你将收到全国34个省级行政区、2000家大型单位系统推广的宏观聚合统计指标（均为模拟演练数据）。"
-    "请以精炼、专业、管理层视角给出结构化的智能研判报告，包含三方面："
-    "1.【整体推进成效】：简述当前建设与上线成果亮点；"
-    "2.【关键瓶颈聚焦】：针对未解决问题、高风险项或双轨阶段提出警示；"
-    "3.【管理行动建议】：给出下阶段推广指挥部的针对性督导举措。"
-    "语言精炼干练、具有集团指挥部决策汇报风格，严禁臆造具体人名或单号。"
+    "你是财务运营演练看板的摘要助手。输入仅为模拟数据的全国汇总数字，"
+    "不包含趋势、区域对比、问题原因或经过验证的未来预测。"
+    "只描述提供的指标，不推断增长、改善、延期或因果，不编造区域、单位、人名、单号。"
+    "建议必须表述为待核实的检查动作，不得声称已定位瓶颈。"
+    "仅用三个 Markdown 二级标题：## 当前概况、## 待核实事项、## 建议检查。"
+    "每节最多两条短句，总计不超过350个汉字；缺少依据时明确说明数据不足。"
 )
+
 
 # HTTP 超时配置（秒）
 _CF_AI_CONNECT_TIMEOUT = 3.0
@@ -97,7 +98,7 @@ def _filter_to_whitelist(data: dict) -> dict:
     result: dict[str, int | float] = {}
     for key in _CF_AI_ALLOWED_FIELDS:
         val = data.get(key)
-        if isinstance(val, (int, float)) and not isinstance(val, bool):
+        if isinstance(val, (int, float)) and not isinstance(val, bool) and math.isfinite(val):
             result[key] = val
     return result
 
@@ -202,6 +203,7 @@ class CloudflareAIAdapter:
                 "utc_date": today,
                 "calls_today": count,
                 "daily_limit": self._daily_limit,
+                "scope": "process",
                 "remaining_today": max(0, self._daily_limit - count),
             }
 
@@ -247,7 +249,7 @@ class CloudflareAIAdapter:
         2. 白名单过滤后无有效字段 → 安全降级，不发请求。
         3. 指纹命中且 TTL 内 → 直接返回缓存，不发请求。
         4. 当日限额已耗尽 → 返回 rate_limited，不发请求。
-        5. 以上均不符合 → 发起真实 HTTP 请求，成功后更新缓存与计数。
+        5. 以上均不符合 → 发起真实 HTTP 请求，请求前预占计数，成功后更新缓存。
 
         Parameters
         ----------
@@ -323,11 +325,13 @@ class CloudflareAIAdapter:
                     "data_boundary": sorted(_CF_AI_ALLOWED_FIELDS),
                 }
 
+            _cf_daily_count += 1  # 原子预占真实请求次数，失败也计数
+
         # ---- 5. 构造用户消息（纯数字键值对，无文本字段）----
         user_message = "当前项目宏观指标（均为虚构模拟数据）：\n"
         for k, v in sorted(safe_payload.items()):
             user_message += f"  {k}: {v}\n"
-        user_message += "\n请给出简洁的管理层洞察。"
+        user_message += "\n请仅按提供的指标生成摘要，并明确未知事项。"
 
         # ---- 6. 构造请求 ----
         # 首选 AI Gateway 端点（统一入口 + 缓存/限流/日志）；未配置网关名时回退直连。
@@ -362,20 +366,14 @@ class CloudflareAIAdapter:
         try:
             import urllib.request
             import urllib.error
-            import socket
 
             req_data = json.dumps(body).encode("utf-8")
             req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
 
-            old_timeout = socket.getdefaulttimeout()
-            socket.setdefaulttimeout(_CF_AI_CONNECT_TIMEOUT + _CF_AI_READ_TIMEOUT)
-            try:
-                with urllib.request.urlopen(
-                    req, timeout=_CF_AI_CONNECT_TIMEOUT + _CF_AI_READ_TIMEOUT
-                ) as resp:
-                    raw = resp.read()
-            finally:
-                socket.setdefaulttimeout(old_timeout)
+            with urllib.request.urlopen(
+                req, timeout=_CF_AI_CONNECT_TIMEOUT + _CF_AI_READ_TIMEOUT
+            ) as resp:
+                raw = resp.read()
 
         except urllib.error.HTTPError as exc:
             return {
@@ -412,16 +410,16 @@ class CloudflareAIAdapter:
                 "data_boundary": sorted(safe_payload.keys()),
             }
 
-        if not resp_json.get("success"):
-            errors = resp_json.get("errors", [])
+        if not isinstance(resp_json, dict) or not resp_json.get("success"):
             return {
                 "status": "unavailable",
                 "message": "CF AI 返回 success=false，已降级",
-                "cf_errors": errors[:3] if errors else [],
                 "data_boundary": sorted(safe_payload.keys()),
             }
 
         result = resp_json.get("result") or {}
+        if isinstance(result, dict) and result.get("finish_reason") == "length":
+            return {"status": "unavailable", "message": "AI 输出被截断，未保存"}
         insight_text: str = ""
 
         if isinstance(result, dict):
@@ -429,8 +427,10 @@ class CloudflareAIAdapter:
             if choices and isinstance(choices, list) and len(choices) > 0:
                 first_choice = choices[0]
                 if isinstance(first_choice, dict):
+                    if first_choice.get("finish_reason") == "length":
+                        return {"status": "unavailable", "message": "AI 输出被截断，未保存"}
                     msg = first_choice.get("message") or {}
-                    insight_text = msg.get("content") or ""
+                    insight_text = msg.get("content") if isinstance(msg, dict) else ""
 
             if not insight_text:
                 insight_text = (
@@ -442,7 +442,7 @@ class CloudflareAIAdapter:
         elif isinstance(result, str):
             insight_text = result
 
-        if not insight_text:
+        if not isinstance(insight_text, str) or not insight_text.strip():
             return {
                 "status": "unavailable",
                 "message": "CF AI 响应中无有效洞察文本，已降级",
@@ -451,7 +451,7 @@ class CloudflareAIAdapter:
 
         # ---- 9. 写入缓存 + 更新计数（线程安全）----
         generated_at = datetime.now().isoformat()
-        remaining_calls = max(0, self._daily_limit - (_cf_daily_count + 1))
+        remaining_calls = self._get_daily_count_snapshot()["remaining_today"]
         new_entry = {
             "status": "ok",
             "content": insight_text.strip(),
@@ -467,11 +467,5 @@ class CloudflareAIAdapter:
             _cf_cached_result = new_entry
             _cf_cached_at = monotonic()
             _cf_cached_fingerprint = fp
-            # 再次确认日期（防止跨日边界竞态），递增计数
-            today2 = _utc_date_str()
-            if _cf_daily_date != today2:
-                _cf_daily_date = today2
-                _cf_daily_count = 0
-            _cf_daily_count += 1
 
         return new_entry

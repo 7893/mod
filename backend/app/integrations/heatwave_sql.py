@@ -84,6 +84,7 @@ SELECT
     COALESCE(ir30.cnt, 0)                                     AS integration_fail_cnt,
     COALESCE(u.handler_cnt, 1)                                AS handler_count,
     COALESCE(hc.handler_conc, 0.0)                            AS handler_concentration,
+    /* Legacy column name retained for schema compatibility: actual window is 30 days. */
     ROUND(COALESCE(d30.cnt, 0) / 30.0, 2)                     AS avg_daily_doc_prev7,
     /* 目标变量：当日新增单据数（基于近7天基准、体量规模、日历节律与受控波动） */
     CASE 

@@ -16,14 +16,18 @@ export const useLiveProjectionStore = defineStore('live-projection', () => {
   })
 
   function apply(event: LiveProjectionEvent) {
-    if (projectionId.value !== event.projectionId) {
+    if (event.resetRequired) {
+      void project.refresh(true)
+    }
+    if (event.resetRequired || projectionId.value !== event.projectionId) {
       projectionId.value = event.projectionId
       sequence.value = 0
       cumulative.value = { documents: 0, vouchers: 0, integrations: 0 }
     }
-    if (event.sequence <= sequence.value) return
+    if (event.sequence <= sequence.value) return false
     sequence.value = event.sequence
     cumulative.value = { ...event.cumulative }
+    return true
   }
 
   return { cumulative, liveOverview, apply }

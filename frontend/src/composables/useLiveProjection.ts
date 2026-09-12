@@ -15,6 +15,8 @@ export interface LiveProjectionEvent {
   amount?: string
   badgeTone?: string
   batchName?: string
+  resetRequired?: boolean
+  resetReason?: string
   mode: 'committed_simulation'
 }
 
@@ -24,12 +26,14 @@ export interface LiveProjectionCounts {
   integrations: number
 }
 
-type ProjectionHandler = (event: LiveProjectionEvent) => void
+type ProjectionHandler = (event: LiveProjectionEvent) => boolean | void
 
 export function parseEvent(raw: string): LiveProjectionEvent {
   const value = JSON.parse(raw) as Record<string, unknown>
   return {
     id: String(value.id),
+    resetRequired: value.reset_required === true,
+    resetReason: typeof value.reset_reason === 'string' ? value.reset_reason : undefined,
     sequence: Number(value.sequence),
     occurredAt: String(value.occurred_at),
     businessType: value.business_type as LiveProjectionEvent['businessType'],
@@ -58,10 +62,13 @@ export function useLiveProjection(onEvent: ProjectionHandler) {
     eventSource = new EventSource(`${import.meta.env.BASE_URL}api/live-projection/events`)
     eventSource.onopen = () => { connected.value = true }
     eventSource.onerror = () => { connected.value = false }
+    eventSource.addEventListener('source_unavailable', () => { connected.value = false })
     eventSource.onmessage = (message) => {
       try {
         const event = parseEvent(message.data)
-        onEvent(event)
+        connected.value = true
+        if (event.resetRequired) recentEvent.value = null
+        if (onEvent(event) === false) return
         if (event.businessType !== 'projection_state') {
           recentEvent.value = event
           if (clearRecentTimer !== null) window.clearTimeout(clearRecentTimer)

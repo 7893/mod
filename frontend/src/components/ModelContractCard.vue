@@ -64,7 +64,7 @@ const qualityOption = computed(() => ({
       fontSize: 14,
       formatter: qualityLabel.value,
     },
-    data: [{ value: qualityPercent.value, name: '验证质量' }],
+    data: [{ value: qualityPercent.value, name: '测试集拟合' }],
   }],
 }))
 </script>
@@ -103,7 +103,7 @@ const qualityOption = computed(() => ({
           <b class="block font-mono text-slate-200 truncate mt-0.5">{{ model.algorithm }}</b>
         </div>
         <div class="min-w-0">
-          <span class="block text-slate-500">预测目标</span>
+          <span class="block text-slate-500">拟合目标</span>
           <code class="block font-mono text-emerald-400 truncate mt-0.5">{{ model.target }}</code>
         </div>
       </div>

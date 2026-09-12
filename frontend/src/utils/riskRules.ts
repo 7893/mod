@@ -39,6 +39,7 @@ export function evaluateRiskFlags(row: EntityRow, rules: BusinessRules): RiskFla
 /** 预测侧补充特征（HeatWave AutoML 输出），按 orgId 索引。 */
 export interface RiskPrediction {
   orgId: number | string
+  model?: string
   stagnantDays?: number
   progressSlope14d?: number
   trainingErrorScissors?: number
@@ -50,7 +51,9 @@ export function indexPredictions(preds: unknown): Map<number, RiskPrediction> {
   const map = new Map<number, RiskPrediction>()
   if (!Array.isArray(preds)) return map
   for (const p of preds as RiskPrediction[]) {
-    if (p && p.orgId != null) map.set(Number(p.orgId), p)
+    if (p && p.orgId != null && (!p.model || p.model === 'MOD_RISK_CLASSIFIER')) {
+      map.set(Number(p.orgId), p)
+    }
   }
   return map
 }

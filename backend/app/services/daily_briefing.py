@@ -1,7 +1,7 @@
 """每日指挥部决策简报服务。
 
 设计（ADR-0010 第二期）：
-- 后台离线生成：由定时任务调用 generate_and_store()，把聚合指标 + AutoML 预测结果
+- 后台离线生成：由定时任务调用 generate_and_store()，把宏观聚合指标
   喂给 Cloudflare AI（经 mod-gateway），生成一段自然语言研判，写入 daily_briefing 表。
 - 前台零交互：大屏只读最新简报（get_latest），绝不在渲染时同步调外部模型。
 - 诚实：模型未达标时简报不谎报预测；simulated=聚合指标为演示数据。
@@ -13,6 +13,8 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
+
+from app.config import get_display_timezone
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
@@ -56,8 +58,11 @@ def get_latest(conn: Connection | None) -> dict:
         return {"status": "no_briefing", "message": "简报表尚未就绪"}
     if not row:
         return {"status": "no_briefing", "message": "尚未生成任何简报"}
+    is_stale = str(row["briefing_date"]) != datetime.now(get_display_timezone()).date().isoformat()
     return {
         "status": "ok",
+        "isStale": is_stale,
+        "freshness": "stale" if is_stale else "current",
         "briefingDate": str(row["briefing_date"]),
         "content": row["content"],
         "model": row["model"],

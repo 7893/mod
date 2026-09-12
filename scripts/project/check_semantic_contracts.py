@@ -49,22 +49,29 @@ def validate_contracts(root: Path = ROOT) -> list[str]:
 
     broker = _read(root, "backend/app/live_projection/broker.py")
     live_doc = _read(root, "docs/development/LIVE-PROJECTION.md")
-    if "CommittedEventJournal" not in broker:
-        errors.append("live projection drift: broker does not consume the committed journal")
+    if "OutboxReader" not in broker or "CommittedEventJournal" in broker:
+        errors.append("live projection drift: broker must consume the transactional outbox only")
     for forbidden in ("RealisticSimulationEngine", "_load_units_pool"):
         if forbidden in broker:
             errors.append(f"live projection drift: broker contains `{forbidden}`")
-    if "持久提交日志" not in live_doc:
-        errors.append("live projection documentation drift: committed journal is not documented")
+    if "sim_event_outbox" not in live_doc:
+        errors.append("live projection documentation drift: transactional outbox is not documented")
 
     runtime = _read(root, "simulation/runtime_service.py")
     for expected in (
         "EvolutionCoordinator",
         "auto_commit=False",
-        "projection_journal.append",
+        "self.projection_writer(conn,",
     ):
         if expected not in runtime:
             errors.append(f"simulator orchestration drift: missing `{expected}`")
+
+    writer = _read(root, "backend/app/live_projection/outbox_writer.py")
+    for expected in ("FOR UPDATE", "pruned_through", "get_autocommit", "MAX_RETAINED_EVENTS"):
+        if expected not in writer:
+            errors.append(f"transactional outbox safety drift: missing `{expected}`")
+    if "projection_journal.append" in runtime or "conn.commit(" in writer:
+        errors.append("outbox transaction drift: independent journal write or writer-owned commit")
 
     heatwave = _read(root, "backend/app/integrations/heatwave_ml.py")
     risk_table = _read(root, "frontend/src/components/AtRiskUnitTable.vue")

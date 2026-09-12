@@ -37,7 +37,7 @@ from zoneinfo import ZoneInfo
 import pymysql
 
 from app.live_projection.simulation_engine import HongKongDiurnalEngine
-from app.live_projection.journal import CommittedEventJournal
+from app.live_projection.outbox_writer import append_outbox
 from .construction_models import validate_construction_event
 from .pool_onboarding import ReservePoolAdmissionPlaybook
 from .construction_writer import ConstructionWriter
@@ -67,7 +67,6 @@ class SimulatorRuntimeConfig:
     status_file_path: Path = field(default_factory=lambda: Path("output/simulator_status.json"))
     audit_log_path: Path = field(default_factory=lambda: Path("output/simulation_audit.log"))
     lifecycle_state_path: Optional[Path] = None
-    projection_journal_path: Optional[Path] = None
     slow_movie_interval_cycles: int = 6
     min_wait_seconds: float = 2.5
     max_wait_seconds: float = 90.0
@@ -438,7 +437,7 @@ class SimulatorRuntimeService:
         seed: Optional[int] = None,
         propeller: Optional[Any] = None,
         backfiller: Optional[Any] = None,
-        projection_journal: Optional[CommittedEventJournal] = None,
+        projection_writer=None,
     ):
         self.config = config or SimulatorRuntimeConfig()
         self._external_conn = conn
@@ -457,10 +456,7 @@ class SimulatorRuntimeService:
         self._last_rate_limit_warn_time: float = 0.0
         self.propeller = propeller
         self.backfiller = backfiller
-        journal_path = self.config.projection_journal_path or self.config.status_file_path.with_name(
-            "committed_projection_events.jsonl"
-        )
-        self.projection_journal = projection_journal or CommittedEventJournal(journal_path)
+        self.projection_writer = projection_writer or append_outbox
 
         # Cache baselines
         self._fast_baseline: Optional[Any] = None
@@ -576,7 +572,6 @@ class SimulatorRuntimeService:
 
         conn = None
         lifecycle_state_saved = True
-        projection_journal_saved = True
         db_lock_acquired = False
         try:
             conn = self._get_connection()
@@ -682,19 +677,10 @@ class SimulatorRuntimeService:
                 if not ok:
                     raise RuntimeError(f"Post-cycle fast-movie self-check failed: {chk_err}")
 
+                self.projection_writer(conn, [self._projection_record(event, now_hkt) for event in all_events])
                 conn.commit()
                 s_writer.record_success_audit(s_res)
                 events_written = len(all_events)
-                try:
-                    self.projection_journal.append([
-                        self._projection_record(event, now_hkt) for event in all_events
-                    ])
-                except Exception as journal_error:
-                    projection_journal_saved = False
-                    self.fail_closed_mgr.trip(
-                        "Committed events could not be handed to live projection",
-                        {"error": str(journal_error), "event_count": events_written},
-                    )
 
             # Success: reservation already counted. Slow-movie cycles usually commit fewer
             # events than the planned burst, so release only the unused capacity.
@@ -702,17 +688,6 @@ class SimulatorRuntimeService:
             self.fuse.release(now_hkt, max(0, reservation_count - events_written), persist=True)
             if not lifecycle_state_saved:
                 err_msg = "Committed lifecycle events but failed to persist restart state; service halted"
-                self._save_status("ERROR", intensity, now_hkt, err_msg)
-                return CycleResult(
-                    status="ERROR",
-                    events_written=events_written,
-                    wait_seconds=wait_seconds,
-                    intensity=intensity,
-                    error=err_msg,
-                    cycle_duration_ms=(time.perf_counter() - t0) * 1000,
-                )
-            if not projection_journal_saved:
-                err_msg = "Events committed but projection hand-off failed; service halted"
                 self._save_status("ERROR", intensity, now_hkt, err_msg)
                 return CycleResult(
                     status="ERROR",

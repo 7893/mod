@@ -10,8 +10,8 @@ Key Objectives (KI-015 / KI-023):
      Unit random split (80% train / 20% test = 1600/400, deterministic seed=42).
      Cross-sectional features only; excludes time-series doc volume fluctuations.
    - Document Delta Regression (ml_feat_doc_delta / daily_doc_delta):
-     Strict temporal split (80% early train / 20% future test = 1600/400).
-     Respects timeline progression; strictly avoids future lookahead leakage.
+     Unit cohort holdout (80% train / 20% test, same observation snapshot).
+     Sorted by unit age; this is not future-date validation. Targets are synthetic.
 2. HeatWave AutoML Training:
    - Executes sys.ML_TRAIN natively on train tables.
 3. Independent Evaluation:
@@ -186,7 +186,7 @@ def check_feature_integrity(conn: Any) -> dict[str, Any]:
 
     logger.info(
         "Feature verification passed: ml_feat_risk (%d rows, cross-sectional, 0 time leakage), "
-        "ml_feat_doc_delta (%d rows, temporal)",
+        "ml_feat_doc_delta (%d rows, unit cohort)",
         risk_count,
         doc_count,
     )
@@ -202,7 +202,7 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
     """
     Perform rigorous train/test split:
     1. Risk model: Random unit split (80% train / 20% test = 1600/400).
-    2. Doc delta model: Temporal split (80% train / 20% test = 1600/400).
+    2. Doc delta model: Unit cohort holdout (80% train / 20% test = 1600/400).
     """
     logger.info("Executing train/test split on feature tables...")
 
@@ -259,7 +259,7 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
         (test_risk_pos / test_risk_cnt * 100) if test_risk_cnt else 0,
     )
 
-    # 2. Doc delta regression split: strictly temporal
+    # 2. Doc delta regression split: by unit cohort, not observation date
     # Earliest batches / highest days_since_go_live -> Train; latest -> Test
     doc_rows = conn.execute(
         text(
@@ -298,7 +298,7 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
     test_doc_cnt = conn.execute(text("SELECT COUNT(*) FROM `mod`.`ml_feat_doc_delta_test`")).scalar()
 
     logger.info(
-        "Doc delta temporal split complete: Train %d rows (earlier timeline), Test %d rows (future timeline)",
+        "Doc delta unit cohort split complete: Train %d rows, Test %d rows (same snapshot)",
         train_doc_cnt,
         test_doc_cnt,
     )
@@ -315,7 +315,7 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
         "doc": {
             "train_count": train_doc_cnt,
             "test_count": test_doc_cnt,
-            "split_method": "temporal_80_20(days_since_go_live_desc)",
+            "split_method": "unit_cohort_80_20(days_since_go_live_desc)",
         },
     }
 
@@ -678,8 +678,8 @@ def persist_metadata_and_audit(
     now = datetime.now()
 
     models_to_save = [
-        (cls_eval, "MOD_RISK_CLASSIFIER", "批次延期风险智能分类模型", "risk_flag", "unit_random_80_20"),
-        (reg_eval, "MOD_REGRESSION_MODEL", "业务单据日增量预测模型", "daily_doc_delta", "temporal_80_20"),
+        (cls_eval, "MOD_RISK_CLASSIFIER", "风险规则标签拟合实验", "risk_flag", "unit_random_80_20"),
+        (reg_eval, "MOD_REGRESSION_MODEL", "单量合成标签拟合实验", "daily_doc_delta", "unit_cohort_80_20"),
     ]
 
     for ev, handle, name, target, split_method in models_to_save:
@@ -704,6 +704,8 @@ def persist_metadata_and_audit(
         meta_dict["test_score"] = ev["test_score"]
         meta_dict["train_score"] = ev["train_score"]
         meta_dict["verified"] = True
+        meta_dict["prediction_purpose"] = "synthetic_rule_fit"
+        meta_dict["business_validated"] = False
         meta_dict["verified_at"] = now.isoformat()
         meta_dict["test_metrics"] = ev["test_metrics"]
         meta_dict["train_metrics"] = ev["train_metrics"]
@@ -836,8 +838,8 @@ def print_comparison_report(cls_eval: dict[str, Any], reg_eval: dict[str, Any]) 
     # Regression Table
     print("\n[模型 2 · 业务单据日增量预测 (MOD_REGRESSION_MODEL)]")
     print("  - 特征表: `mod`.ml_feat_doc_delta | 目标列: daily_doc_delta")
-    print("  - 切分方式: 严格按时间先后切分 (早期批次 1600 行训练 / 晚期批次 400 行测试)")
-    print("  - 特征审查: 严禁打乱时序，前瞻窗口严格限制于截面以前，杜绝未来泄漏")
+    print("  - 切分方式: 按上线天数排序切分单位截面（非未来观测日期留出）")
+    print("  - 特征审查: 标签由同截面公式生成，评估仅证明合成标签拟合能力")
     print("  " + "-" * 70)
     print(f"  {'指标':<16} | {'训练集自评分 (虚高拟合)':<24} | {'测试集独立评估 (真实泛化)':<24}")
     print("  " + "-" * 70)

@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 from datetime import datetime
@@ -520,16 +521,19 @@ class HeatWaveMLAdapter:
 
                 for r in rows:
                     pred_flag = int(r["pred_value"]) if r["pred_value"] is not None else 0
-                    risk_score = 0.85 if pred_flag == 1 else 0.15
+                    risk_score = None
                     pred_json_raw = r.get("prediction_json")
                     if pred_json_raw:
                         try:
                             pj = json.loads(pred_json_raw) if isinstance(pred_json_raw, str) else pred_json_raw
                             probs = pj.get("probabilities", {})
-                            if "1" in probs and probs["1"] is not None:
-                                risk_score = round(float(probs["1"]), 4)
+                            value = probs.get("1")
+                            if value is not None and not isinstance(value, bool):
+                                candidate = float(value)
+                                if math.isfinite(candidate) and 0 <= candidate <= 1:
+                                    risk_score = round(candidate, 4)
                         except (ValueError, TypeError, AttributeError):
-                            logger.debug("risk prediction_json 解析失败，回退固定分值 (org_id=%s)", r.get("org_id"))
+                            logger.debug("risk probability unavailable (org_id=%s)", r.get("org_id"))
 
                     predictions.append(
                         {
@@ -538,6 +542,8 @@ class HeatWaveMLAdapter:
                             "model": MODEL_CLASSIFIER,
                             "riskFlag": pred_flag,
                             "riskScore": risk_score,
+                            "probabilitySource": "MODEL" if risk_score is not None else "UNAVAILABLE",
+                            "predictionPurpose": "synthetic_rule_fit",
                             "region": r.get("region"),
                             "batchId": r.get("batch_id"),
                             "constructionPct": r.get("construction_pct"),
@@ -673,8 +679,8 @@ class HeatWaveMLAdapter:
                 "construction_pct": float(row.get("construction_pct") or 0.0),
                 "unresolved_issues": int(row.get("unresolved_issues") or 0),
                 "high_risk_issues": int(row.get("high_risk_issues") or 0),
-                "doc_success_pct": float(row.get("doc_success_pct") or 100.0),
-                "integration_success_pct": float(row.get("integration_success_pct") or 100.0),
+                "doc_success_pct": float(row["doc_success_pct"] if row.get("doc_success_pct") is not None else 100.0),
+                "integration_success_pct": float(row["integration_success_pct"] if row.get("integration_success_pct") is not None else 100.0),
                 "days_since_start": int(row.get("days_since_start") or 0),
                 "progress_slope_14d": float(row.get("progress_slope_14d") or 0.0),
                 "stagnant_days": int(row.get("stagnant_days") or 0),
@@ -696,7 +702,7 @@ class HeatWaveMLAdapter:
 
                 for k, v in raw_attrs.items():
                     col = k.replace("_attribution", "")
-                    if col in factor_defs and v is not None:
+                    if col in factor_defs and v is not None and math.isfinite(float(v)):
                         attributions[col] = float(v)
                 if attributions:
                     explanation_source = "HEATWAVE_SHAP"
@@ -712,7 +718,7 @@ class HeatWaveMLAdapter:
             slope = float(row.get("progress_slope_14d") or 0.0)
             scissors = float(row.get("training_error_scissors") or 0.0)
             conc = float(row.get("handler_concentration") or 0.0)
-            integ_pct = float(row.get("integration_success_pct") or 100.0)
+            integ_pct = float(row["integration_success_pct"] if row.get("integration_success_pct") is not None else 100.0)
 
             attributions = {
                 "high_risk_issues": high_r * 0.35,
@@ -728,9 +734,7 @@ class HeatWaveMLAdapter:
 
         # 4. 提取对风险正向贡献最大的 Top 3 因子并归一化为百分比
         sorted_factors = sorted(attributions.items(), key=lambda x: x[1], reverse=True)
-        top3 = [(k, max(0.001, v)) for k, v in sorted_factors[:3] if v > 0]
-        if not top3:
-            top3 = [(sorted_factors[0][0], 1.0)]
+        top3 = [(k, v) for k, v in sorted_factors[:3] if v > 0]
 
         total_weight = sum(w for _, w in top3)
         top_attributions = []
@@ -754,6 +758,8 @@ class HeatWaveMLAdapter:
         return {
             "status": "ok",
             "explanationSource": explanation_source,
+            "weightBasis": "positive_top3_relative",
+            "predictionPurpose": "synthetic_rule_fit",
             "orgId": org_id,
             "orgName": row.get("org_name") or f"单位 #{org_id}",
             "riskFlag": int(row.get("risk_flag") or 0),
