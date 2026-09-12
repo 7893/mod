@@ -377,50 +377,15 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
         base_insights["quota_remaining"] = cf_status.get("quota", {}).get("remaining_today", 20)
         base_insights["quota_reset_at"] = "UTC 00:00"
 
-        # 动态更新 AutoML 运行与就绪状态
-        if hw_status.get("status") == "ready":
-            models_info = hw_status.get("models", {})
-            reg_info = models_info.get("regression", {})
-            cls_info = models_info.get("classifier", {})
-
-            # 真实性判定（两层）：
-            # 1) 有无真实评估分（quality is not None）——无则"训练/评分未完成"。
-            # 2) 真实分是否达到"有意义"阈值——回归 R² 须 > 0（至少优于用均值瞎猜），
-            #    分类 accuracy 须在 (0, 1) 且非退化；否则视为"验证未达标"，不得对外称"可提供预测"。
-            reg_quality = reg_info.get("quality")
-            cls_quality = cls_info.get("quality")
-
-            def _model_effective(task: str, q) -> bool:
-                if q is None:
-                    return False
-                if task == "regression":
-                    return q > 0.0  # 负或零 R² 说明无预测能力
-                # classification: 退化的 1.0（数据过度可分）与 <=0.5 均不作为可信预测对外展示
-                return 0.5 < q < 1.0
-
-            reg_ok = _model_effective("regression", reg_quality)
-            cls_ok = _model_effective("classification", cls_quality)
-            has_real_quality = reg_quality is not None or cls_quality is not None
-            any_effective = reg_ok or cls_ok
-
-            if any_effective:
-                base_insights["automlStatus"] = "READY"
-                base_insights["automlStatusDisplay"] = "已就绪"
-                base_insights["trainingAuthorized"] = True
-                base_insights["notice"] = "Oracle HeatWave AutoML 库内模型已完成训练与独立测试集验证，提供通过验证的预测。"
-                base_insights["summary"] = "Oracle MySQL HeatWave AutoML 库内预测已激活（仅展示通过验证的模型）。"
-            elif has_real_quality:
-                base_insights["automlStatus"] = "VALIDATION_FAILED"
-                base_insights["automlStatusDisplay"] = "已训练，验证未达标"
-                base_insights["trainingAuthorized"] = False
-                base_insights["notice"] = "模型已在独立测试集上评估，但真实泛化指标未达可信阈值（回归 R²≤0 或分类退化），暂不作为可信预测对外提供。"
-                base_insights["summary"] = "模型已训练并经测试集验证，但泛化能力未达标，暂不展示为可信预测。"
-            else:
-                base_insights["automlStatus"] = "NOT_EVALUATED"
-                base_insights["automlStatusDisplay"] = "训练/评分未完成"
-                base_insights["trainingAuthorized"] = False
-                base_insights["notice"] = "HeatWave AutoML 特征表已就绪，模型训练与评估尚未完成；暂不提供可信预测质量。"
-                base_insights["summary"] = "AutoML 特征已建立，训练/评分未完成，暂无可信模型质量。"
+        # Current training SQL derives labels from same-snapshot formulas, not future outcomes.
+        # Preserve measured fit scores, but never infer business validation from them.
+        base_insights["automlStatus"] = "EXPERIMENTAL"
+        base_insights["automlStatusDisplay"] = "合成标签实验"
+        base_insights["trainingAuthorized"] = False
+        base_insights["predictionPurpose"] = "synthetic_rule_fit"
+        base_insights["businessValidated"] = False
+        base_insights["notice"] = "当前模型拟合合成标签；测试分不证明未来单量或延期预测能力。风险名单由业务规则产生。"
+        base_insights["summary"] = "规则预警与模型实验分开展示，尚无经业务结果验证的未来预测。"
 
         return base_insights
     except Exception as e:

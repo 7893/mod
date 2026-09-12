@@ -27,7 +27,7 @@ import type { BlockTone, MetricItem, StatusRow } from '../components/blocks/type
 import ModelContractCard from '../components/ModelContractCard.vue'
 import AtRiskUnitTable, { type AtRiskUnit } from '../components/AtRiskUnitTable.vue'
 import AiQuotaCapsule from '../components/AiQuotaCapsule.vue'
-import { isRegressionEffective, isClassifierEffective, isAutomlReady } from '../utils/modelEvaluation.ts'
+import { describeExperimentalModel } from '../utils/modelEvaluation.ts'
 import { useProjectStore } from '../stores/project.ts'
 import { useInsightsStatus } from '../composables/useInsightsStatus.ts'
 import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
@@ -165,49 +165,15 @@ const riskDistChartOption = computed(() => {
   }
 })
 
-/**
- * 严守 KI-023/KI-028 规范：
- * 模型质量分只展示通过独立测试集验证的真实值；
- * 回归 R² <= 0、分类准确率退化（1.0）显式标记为"已训练，验证未达标"，不把不可信指标当预测能力展示。
- */
+// KI-080: fit scores describe synthetic-label experiments, not validated future outcomes.
 const insights = computed(() => {
   const hw = insightsStatus.value?.hw_ml
   const regQuality = hw?.models?.regression?.quality ?? null
   const clsQuality = hw?.models?.classifier?.quality ?? null
-  const regEffective = isRegressionEffective(regQuality)
-  const clsEffective = isClassifierEffective(clsQuality)
-  const isReady = isAutomlReady(insightsStatus.value?.automlStatus, regQuality, clsQuality)
-
   return {
-    automlStatusDisplay: isReady ? '已就绪 (In-DB Ready)' : '已训练，验证未达标',
-    isReady,
     targetModels: [
-      {
-        id: 'model-doc-volume-forecast',
-        name: '业务单据日增量预测模型',
-        type: 'REGRESSION',
-        algorithm: hw?.models?.regression?.algorithm || 'HeatWave AutoML LinearRegression',
-        target: 'daily_doc_delta (当日新增单据)',
-        status: regEffective ? '已就绪' : '已训练，验证未达标',
-        quality: regQuality,
-        features: ['上线天数', '前7天日均单据', '经办人数', '经办人集中度', '集成失败数'],
-        description: regEffective
-          ? `基于时序独立测试集评估，测试集 R² = ${regQuality?.toFixed(4)}，达成有效正向拟合，库内推理已就绪。`
-          : '基于真实测试集评估，当前测试集 R² ≤ 0（特征不足），按 KI-028 规范如实标为验证未达标。',
-      },
-      {
-        id: 'model-rollout-duration-forecast',
-        name: '批次延期风险智能分类模型',
-        type: 'CLASSIFICATION',
-        algorithm: hw?.models?.classifier?.algorithm || 'HeatWave AutoML LogisticRegression',
-        target: 'risk_flag (0:正常 / 1:高危延期)',
-        status: clsEffective ? '已就绪' : '已训练，验证未达标',
-        quality: clsQuality,
-        features: ['建设推进斜率', '工期停滞天数', '未解决问题数', '培训报错剪刀差', '经办人集中度'],
-        description: clsEffective && clsQuality != null
-          ? `基于按单位独立分层测试集评估，泛化准确率 = ${(clsQuality * 100).toFixed(1)}%，消除退化，库内推理与 SHAP 归因已就绪。`
-          : '基于真实测试集评估，分类标签过度可分（退化为 1.0），按 KI-028 规范如实标为验证未达标。',
-      },
+      describeExperimentalModel('REGRESSION', regQuality, hw?.models?.regression?.algorithm),
+      describeExperimentalModel('CLASSIFICATION', clsQuality, hw?.models?.classifier?.algorithm),
     ],
     ruleBasedAlerts: store.snapshot.insights?.ruleBasedAlerts ?? [],
   }
@@ -226,13 +192,13 @@ const modelQualityRows = computed(() => insights.value.targetModels.map((model) 
   const progressQuality = quality == null ? 0 : Math.max(0, Math.min(1, quality))
   const regression = model.type === 'REGRESSION'
   return {
-    label: regression ? '单据增量回归' : '延期风险分类',
+    label: regression ? '单量标签拟合' : '风险标签拟合',
     value: quality == null ? '—' : (regression ? `R² ${quality.toFixed(4)}` : `Acc ${(quality * 100).toFixed(1)}%`),
     progress: progressQuality * 100,
   }
 }))
 
-const readyModelCount = computed(() => insights.value.targetModels.filter((model) => model.status === '已就绪').length)
+const evaluatedModelCount = computed(() => insights.value.targetModels.filter((model) => model.quality != null).length)
 
 const riskHeadline = computed<MetricItem[]>(() => [
   { label: '风险单位', value: riskUnitTotal.value, tone: 'danger', hint: '三类风险合计' },
@@ -255,7 +221,7 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
     <CockpitPanel
       title="风险研判指挥盘"
       zone="F1"
-      subtitle="困难户风险构成与 AutoML 独立测试集质量同屏"
+      subtitle="规则风险构成与合成标签拟合分同屏"
       class="flex-shrink-0"
     >
       <CommandBand :chart-span="7">
@@ -267,14 +233,14 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
         </template>
         <template #aside>
           <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs">
-            <span class="font-medium text-slate-300">AutoML 质量门禁</span>
-            <b class="font-mono" :class="insights.isReady ? 'text-emerald-400' : 'text-amber-400'">{{ readyModelCount }}/{{ insights.targetModels.length }} 可用</b>
+            <span class="font-medium text-slate-300">AutoML 实验评估</span>
+            <b class="font-mono text-amber-400">{{ evaluatedModelCount }}/{{ insights.targetModels.length }} 已评估 · 非未来预测</b>
           </div>
           <div class="grid grid-rows-2 gap-1.5 flex-1 min-h-0 pt-1.5">
-            <div v-for="(model, index) in modelQualityRows" :key="model.label" class="grid grid-cols-12 items-center gap-2 min-w-0">
+            <div v-for="model in modelQualityRows" :key="model.label" class="grid grid-cols-12 items-center gap-2 min-w-0">
               <span class="col-span-4 text-cockpit-xs text-slate-400 truncate">{{ model.label }}</span>
               <div class="col-span-5 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                <div class="h-full rounded-full" :class="index === 0 ? 'bg-sky-400' : 'bg-emerald-400'" :style="{ width: `${model.progress}%` }" />
+                <div class="h-full rounded-full bg-sky-400" :style="{ width: `${model.progress}%` }" />
               </div>
               <b class="col-span-3 font-mono text-cockpit-xs text-slate-200 text-right whitespace-nowrap">{{ model.value }}</b>
             </div>
@@ -296,21 +262,19 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
 
       <!-- 右上：F4 HeatWave AutoML 预测模型 (严守 KI-023/KI-028 真实性) -->
       <CockpitPanel
-        title="AutoML 预测模型与质量验证"
+        title="AutoML 模型实验与拟合评估"
         zone="F4"
-        subtitle="Oracle HeatWave 库内机器学习 · 严守真实评估门禁"
+        subtitle="合成标签实验 · 尚未验证未来预测能力"
       >
         <div class="flex flex-col h-full min-h-0 gap-2">
-          <NoteBanner v-if="!insights.isReady" :icon="Lock" tone="warning">
-            质量门禁生效 · 未达标指标不作为可信预测能力
-          </NoteBanner>
-          <NoteBanner v-else :icon="Sparkles" tone="success">
-            独立测试集达标 · {{ readyModelCount }}/{{ insights.targetModels.length }} 模型可用 · 仅对已验证模型提供推理
+          <NoteBanner :icon="Lock" tone="warning">
+            当前标签由规则生成 · 拟合分不代表未来预测能力
           </NoteBanner>
 
+
           <div class="grid grid-rows-2 gap-2 flex-1 min-h-0">
-            <ModelContractCard :model="insights.targetModels[0]" empty-label="验证未达标 (R² ≤ 0)" :ready="insights.isReady && insights.targetModels[0].status === '已就绪'" />
-            <ModelContractCard :model="insights.targetModels[1]" empty-label="验证未达标 (标签过度可分)" :ready="insights.isReady && insights.targetModels[1].status === '已就绪'" />
+            <ModelContractCard :model="insights.targetModels[0]" empty-label="单位截面留出评估 · 非未来时间验证" :ready="false" />
+            <ModelContractCard :model="insights.targetModels[1]" empty-label="随机单位留出评估 · 非实际延期标签" :ready="false" />
           </div>
         </div>
       </CockpitPanel>
@@ -319,7 +283,7 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
       <CockpitPanel
         title="综合态势预警与瓶颈排查"
         zone="F3"
-        subtitle="确定性规则研判与批次推进堵点"
+        subtitle="业务规则决定风险名单 · 模型仅补充特征"
       >
         <div class="grid grid-cols-12 gap-3 h-full min-h-0 items-stretch">
           <!-- 左侧：风险维度分布小图 (撑起空间，消除空旷感) -->
@@ -358,7 +322,7 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
           </div>
         </template>
         <div class="flex flex-col h-full min-h-0 gap-2">
-          <NoteBanner :icon="ShieldAlert">AI 辅助研判 · 事实数据来自库内运行指标</NoteBanner>
+          <NoteBanner :icon="ShieldAlert">{{ briefing?.isStale ? '历史简报 · 今日尚未更新，请勿作为当前态势' : 'AI 汇总摘要 · 原因与行动需另行核实' }}</NoteBanner>
 
           <div class="flex-1 min-h-0">
             <!-- 加载中 -->

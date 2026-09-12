@@ -146,3 +146,20 @@ describe('stores/liveProjection', () => {
     expect(overview.vouchersTodayAdded).toBe(initialVouchersToday)
   })
 })
+
+it('refreshes the authoritative snapshot on an explicit retention reset', async () => {
+  setActivePinia(createPinia())
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => snapshotData })
+  const project = useProjectStore()
+  const refresh = vi.spyOn(project, 'refresh').mockResolvedValue(undefined)
+  const live = useLiveProjectionStore()
+  live.apply(makeEvent({ sequence: 20, cumulative: { documents: 20, vouchers: 20, integrations: 20 } }))
+  live.apply(makeEvent({ sequence: 5, businessType: 'projection_state', resetRequired: true,
+    resetReason: 'retention_or_stream_changed', cumulative: { documents: 5, vouchers: 5, integrations: 5 } }))
+  expect(refresh).toHaveBeenCalledWith(true)
+  expect(live.cumulative.documents).toBe(5)
+  expect(live.apply(makeEvent({ sequence: 5 }))).toBe(false)
+  expect(live.apply(makeEvent({ sequence: 6 }))).toBe(true)
+  project.stopPolling()
+  vi.restoreAllMocks()
+})

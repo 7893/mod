@@ -1,4 +1,4 @@
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 /**
  * 每日指挥部决策简报（ADR-0010 第二期）。
@@ -9,6 +9,8 @@ export interface DailyBriefing {
   briefingDate?: string
   content?: string
   model?: string
+  isStale?: boolean
+  freshness?: string
   generatedAt?: string
 }
 
@@ -17,19 +19,32 @@ export function useDailyBriefing() {
   const briefing = ref<DailyBriefing | null>(null)
   const loading = ref(true)
 
+  let timer: ReturnType<typeof setInterval> | undefined
+  let sequence = 0
+
   async function fetchBriefing(): Promise<void> {
-    loading.value = true
+    const request = ++sequence
+    loading.value = !briefing.value
     try {
       const res = await fetch(`${apiBase}/insights/briefing`)
-      briefing.value = await res.json()
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      if (request === sequence) briefing.value = data
     } catch {
-      briefing.value = { status: 'no_briefing' }
+      if (request === sequence) briefing.value = { status: 'no_briefing' }
     } finally {
-      loading.value = false
+      if (request === sequence) loading.value = false
     }
   }
 
-  onMounted(fetchBriefing)
+  onMounted(() => {
+    void fetchBriefing()
+    timer = setInterval(fetchBriefing, 60_000)
+  })
+  onUnmounted(() => {
+    sequence++
+    if (timer !== undefined) clearInterval(timer)
+  })
 
   return { briefing, loading, fetchBriefing }
 }

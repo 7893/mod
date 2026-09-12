@@ -42,7 +42,11 @@ def _mock_conn_with_lock() -> MagicMock:
     """Create a mock connection that supports GET_LOCK/RELEASE_LOCK (KI-072)."""
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
-    mock_cursor.fetchone.return_value = (1,)  # GET_LOCK returns 1 on success
+    mock_conn.get_autocommit.return_value = False
+    mock_cursor.fetchone.side_effect = lambda: (
+        (0, 0, 0, 0, 0) if 'sim_event_outbox_state' in mock_cursor.execute.call_args.args[0] else (1,)
+    )
+    mock_cursor.fetchall.return_value = []
     mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
     mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
     return mock_conn
@@ -670,3 +674,54 @@ def test_rate_limit_fuse_atomic_reservation_visible_across_instances(tmp_path):
     ok, msg = second.reserve(now_hkt, count=2)
     assert ok is False
     assert "hard cap" in msg
+
+
+def test_outbox_failure_rolls_back_before_business_commit(tmp_path, monkeypatch):
+    monkeypatch.setenv('MOD_SIMULATION_ENGINE_ENABLED', 'true')
+    config = SimulatorRuntimeConfig(
+        fail_closed_flag_path=tmp_path / 'flag', fuse_state_path=tmp_path / 'fuse',
+        status_file_path=tmp_path / 'status', audit_log_path=tmp_path / 'audit',
+    )
+    conn = _mock_conn_with_lock()
+    writer = MagicMock(side_effect=RuntimeError('outbox unavailable'))
+    service = SimulatorRuntimeService(config=config, conn=conn, projection_writer=writer, seed=42)
+    service._fast_baseline = _mock_fast_baseline()
+    service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
+    service._construction_baseline = _mock_construction_baseline()
+    service._construction_allocator = IdAllocator(service._construction_baseline.next_ids)
+    monkeypatch.setattr('simulation.runtime_service.SimulationWriter.write_events',
+                        lambda self, events, **kwargs: MagicMock(success=True))
+    monkeypatch.setattr(PostCycleSelfChecker, 'check_fast_movie_events', lambda conn, events: (True, ''))
+    result = service.step_cycle(datetime(2026, 9, 7, 10, tzinfo=HK_TZ))
+    assert result.status == 'ERROR'
+    writer.assert_called_once()
+    assert writer.call_args.args[0] is conn
+    conn.commit.assert_not_called()
+    conn.rollback.assert_called_once()
+
+
+def test_outbox_is_staged_before_outer_commit_and_no_journal_is_created(tmp_path, monkeypatch):
+    monkeypatch.setenv('MOD_SIMULATION_ENGINE_ENABLED', 'true')
+    config = SimulatorRuntimeConfig(
+        fail_closed_flag_path=tmp_path / 'flag', fuse_state_path=tmp_path / 'fuse',
+        status_file_path=tmp_path / 'status', audit_log_path=tmp_path / 'audit',
+    )
+    conn = _mock_conn_with_lock()
+    calls = []
+    conn.commit.side_effect = lambda: calls.append('commit')
+    def stage_outbox(connection, records):
+        assert connection is conn
+        assert records and records[0]['event_id'].startswith('document-')
+        calls.append('outbox')
+    service = SimulatorRuntimeService(config=config, conn=conn, projection_writer=stage_outbox, seed=42)
+    service._fast_baseline = _mock_fast_baseline()
+    service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
+    service._construction_baseline = _mock_construction_baseline()
+    service._construction_allocator = IdAllocator(service._construction_baseline.next_ids)
+    monkeypatch.setattr('simulation.runtime_service.SimulationWriter.write_events',
+                        lambda self, events, **kwargs: MagicMock(success=True))
+    monkeypatch.setattr(PostCycleSelfChecker, 'check_fast_movie_events', lambda conn, events: (True, ''))
+    result = service.step_cycle(datetime(2026, 9, 7, 10, tzinfo=HK_TZ))
+    assert result.status == 'SUCCESS'
+    assert calls == ['outbox', 'commit']
+    assert not list(tmp_path.glob('*.jsonl'))

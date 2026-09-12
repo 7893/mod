@@ -133,3 +133,7 @@ Worker 均已退出当前运行架构。
 新增的脱敏历史治理快照：[2026-09-08 CHANGELOG 机制治理前快照](history/2026-09-08-CHANGELOG机制治理前快照.md)、
 [2026-09-08 本地质量基线更新前快照](history/2026-09-08-本地质量基线更新前快照.md)、
 2026-09-09 KI-070~074 治理前现状切片（本地存档，含敏感信息，不纳入版本库）。
+
+- [KI-080 · AI 输出可信度与能力边界失真](issues/KI-080-AI-OUTPUT-TRUST.md)：本地修复与验收记录。
+
+- [实时投影 outbox 切换与恢复步骤](operations/PROJECTION-OUTBOX-MIGRATION.md)：KI-081 待执行的 schema、权限和生产验收。

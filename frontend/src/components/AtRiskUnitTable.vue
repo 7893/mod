@@ -239,7 +239,7 @@ const { page, totalPages: totalRiskPages, items: paginatedRiskUnits } = usePaged
           <div class="flex items-center justify-between">
             <span class="text-cockpit-sm font-semibold text-slate-300">{{ explanationTitle }}</span>
             <span class="text-cockpit-xs font-mono" :class="isNativeShap ? 'text-sky-400' : 'text-amber-400'">
-              {{ isNativeShap ? 'SHAP 贡献 Top 3' : (currentExplanation?.explanationSource === 'RULE_BASED' ? '规则偏离度 Top 3' : '解释不可用') }}
+              {{ isNativeShap ? 'SHAP 正向贡献 Top 3（相对占比）' : (currentExplanation?.explanationSource === 'RULE_BASED' ? '规则偏离度 Top 3（相对占比）' : '解释不可用') }}
             </span>
           </div>
           <div v-if="loadingExplanation" class="text-cockpit-xs text-slate-500 py-3 text-center">

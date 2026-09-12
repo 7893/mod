@@ -104,3 +104,11 @@ describe('deriveComplianceUnits', () => {
     expect(units[2].primaryIssue).toBe('准备期卡顿')
   })
 })
+
+it('does not overwrite classifier features with regression results for the same unit', () => {
+  const map = indexPredictions([
+    { orgId: 8, model: 'MOD_RISK_CLASSIFIER', stagnantDays: 9 },
+    { orgId: 8, model: 'MOD_REGRESSION_MODEL' },
+  ])
+  expect(map.get(8)?.stagnantDays).toBe(9)
+})

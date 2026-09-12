@@ -176,7 +176,7 @@ const chooseProvince = (name: string) => {
       :title="briefingSummary ? '点击查看智能研判全文' : undefined"
       @click="router.push('/f')"
     >
-      <span class="flex-shrink-0 font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">AI 简报</span>
+      <span class="flex-shrink-0 font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">{{ briefing?.isStale ? `历史简报 ${briefing.briefingDate}` : 'AI 简报' }}</span>
       <span class="text-cockpit-sm text-slate-300 truncate min-w-0 max-w-4xl">{{ briefingSummary }}</span>
       <ChevronRight :size="13" class="flex-shrink-0 text-sky-400" />
     </button>

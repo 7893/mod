@@ -30,4 +30,4 @@ async def projection_events(
 @router.get("/status")
 async def projection_status() -> dict:
     broker = get_live_projection_broker()
-    return {"enabled": broker.enabled, **broker.state_payload()}
+    return await broker.status()

@@ -78,3 +78,16 @@ describe('utils/modelEvaluation (KI-023 / KI-028 / KI-034 ADR-0010)', () => {
     })
   })
 })
+
+import { describeExperimentalModel } from '../modelEvaluation'
+
+it('preserves fit scores without claiming future prediction readiness', () => {
+  for (const type of ['REGRESSION', 'CLASSIFICATION'] as const) {
+    const model = describeExperimentalModel(type, 0.99)
+    expect(model.status).toBe('实验已评估')
+    expect(model.quality).toBe(0.99)
+    expect(model.description).toContain('不证明')
+    expect(describeExperimentalModel(type, null).status).toBe('实验未评估')
+    expect(describeExperimentalModel(type, NaN).quality).toBeNull()
+  }
+})

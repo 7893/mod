@@ -84,3 +84,28 @@ describe('useDailyBriefing', () => {
     unmount()
   })
 })
+
+it('polls stale briefings and clears its timer on unmount', async () => {
+  vi.useFakeTimers()
+  try {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true,
+      json: async () => ({ status: 'ok', isStale: true, briefingDate: '2026-09-01' }) })
+    const { result, unmount } = runInSetup(() => useDailyBriefing())
+    await vi.advanceTimersByTimeAsync(0)
+    expect(result.briefing.value?.isStale).toBe(true)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+    unmount()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+  } finally { vi.useRealTimers() }
+})
+
+it('rejects HTTP errors even when their JSON body looks successful', async () => {
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 503,
+    json: async () => ({ status: 'ok', content: 'wrong' }) })
+  const { result, unmount } = runInSetup(() => useDailyBriefing())
+  await flushPromises()
+  expect(result.briefing.value?.status).toBe('no_briefing')
+  unmount()
+})
