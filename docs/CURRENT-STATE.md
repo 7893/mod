@@ -437,6 +437,12 @@ KI-060 更新前的本节原文完整保存在
 - **彻底清除与停用 GitHub Issues**：根据用户决策与 [ADR-0014](decisions/0014-停用GitHub-Issues统一使用本地KI问题跟踪体系.md)，彻底物理删除旧 GitHub 仓库并重建同名纯净仓库（`7893/mod`），在仓库创建时显式启用 `--disable-issues` 彻底禁用 Issues 功能；移除 `.github/ISSUE_TEMPLATE/` 目录；所有问题追踪统一在本地 `docs/KNOWN-ISSUES.md` 与 `docs/issues/` 闭环。
 - **仓库机密管理纪律**：在新建仓库完成初始推送后，立即通过安全通道重新注入 CI/CD 所需的 4 项部署机密（`USA_HOST`、`USA_USER`、`USA_SSH_KEY`、`USA_HOST_KEY`），严格保证生产环境自动部署流水线不中断。
 
+## 2026-09-13 生产机 Fail2ban 防火墙加固、SSH 复用与 CHANGELOG 刷新（DONE）
+
+- **USA 生产机 Fail2ban 加固**：排查并解封因误扫被拉黑的开发节点，在 USA `/etc/fail2ban/jail.local` 中配置 `ignoreip` 信任白名单（覆盖回环、VCN 私网网段、开发机与跳板机），并将 `mode` 从激进的 `aggressive` 调整为 `normal`，根除握手探针导致的误封问题。
+- **CI/CD 连接多路复用**：在 `.github/workflows/quality.yml` 中为部署任务配置 OpenSSH `ControlMaster`（`ControlMaster=auto`, `ControlPersist=120s`），并在任务结束时安全清理控制连接，将多次短时高频 SSH 握手收敛为单条长连接多路复用。
+- **CHANGELOG 全量刷新**：使用锁定的 `git-cliff 2.13.1` 工具链与 `cliff.toml` 配置，将 2026-09-08 至今包含 KI-059~KI-083、六屏架构升级与 ADR-0014 等全部合规提交增量刷新写入 `CHANGELOG.md`，契约校验全绿。
+
 ## 操作边界
 
 2026-09-11 harness 减薄补充：/pre-flight 的注册已移到全局 Pi 扩展，MOD 旧注册块注释保留，
