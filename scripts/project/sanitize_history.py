@@ -85,6 +85,12 @@ def sanitize_text(text: str, stable_id: str, raw_filename: str, raw_hash: str) -
     for pattern, replacement in REPLACEMENTS:
         content = pattern.sub(replacement, content)
 
+    # Rewrite internal links to restricted history files to their sanitized counterparts
+    for _, raw_name in RESTRICTED_FILES:
+        raw_sanitized = raw_name.replace(".md", ".sanitized.md")
+        content = content.replace(f"./{raw_name}", f"./{raw_sanitized}")
+        content = content.replace(f"({raw_name})", f"({raw_sanitized})")
+
     header = (
         f"> **保全说明**：本文件为历史资料 `docs/history/{raw_filename}` 的公开脱敏副本。\n"
         f"> **稳定 ID**：{stable_id}\n"
