@@ -60,6 +60,7 @@
 
 .metric-grid--center .metric-cell {
   align-items: center;
+  justify-content: center;
   text-align: center;
 }
 
@@ -81,6 +82,16 @@
 }
 
 .metric-grid--center .metric-cell__hint {
+  text-align: center;
+}
+
+.metric-grid--inline.metric-grid--center .metric-cell {
+  justify-content: center;
+}
+
+.metric-grid--inline.metric-grid--center .metric-cell__body {
+  width: auto;
+  align-items: center;
   text-align: center;
 }
 

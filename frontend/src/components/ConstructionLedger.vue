@@ -155,7 +155,7 @@ const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEdit
           <span>返回建设进度全景</span>
         </button>
       </template>
-      <MetricGrid :items="summaryItems" variant="inline" :columns="4" />
+      <MetricGrid :items="summaryItems" variant="inline" :columns="4" align="center" />
     </CockpitPanel>
 
     <!-- 台账主表 -->
