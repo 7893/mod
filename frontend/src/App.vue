@@ -15,7 +15,7 @@ import {
   WifiOff,
 } from 'lucide-vue-next'
 import { useProjectStore } from './stores/project.ts'
-import { formatCount, formatDateTime } from './formatters/metrics.ts'
+import { formatCount, formatDateParts, formatDateTime } from './formatters/metrics.ts'
 import { useScaleScreen } from './composables/useScaleScreen.ts'
 
 const route = useRoute()
@@ -30,12 +30,13 @@ const { scale, viewportRef, baseWidth, baseHeight } = useScaleScreen({
 const sourceLabel = computed(() => store.connectionError ? '刷新受阻' : store.dataSource === 'fallback' ? '降级快照' : '实时数据')
 const sourceDetail = computed(() => [sourceLabel.value, store.snapshot.meta.asOfDate ? '业务日期：' + store.snapshot.meta.asOfDate : '', store.snapshot.meta.generatedAt ? '快照生成：' + store.snapshot.meta.generatedAt : ''].filter(Boolean).join(' · '))
 
-const dataTime = computed(() => {
+const dataTimeParts = computed(() => {
   const meta = store.snapshot.meta
-  if (meta.generatedAt) return formatDateTime(meta.generatedAt, { seconds: true, timeZone: meta.displayTimezone })
-  if (store.lastLoadedAt) return formatDateTime(store.lastLoadedAt, { seconds: true, timeZone: meta.displayTimezone })
-  return '—'
+  const target = meta.generatedAt || store.lastLoadedAt
+  return formatDateParts(target, { seconds: true, timeZone: meta.displayTimezone })
 })
+const dataTime = computed(() => dataTimeParts.value.full)
+
 
 const isFullscreen = ref(false)
 
@@ -140,7 +141,10 @@ onBeforeUnmount(() => {
           </div>
           <div class="status-item sync-time" title="数据时点">
             <Activity :size="14" />
-            <span class="clock-mono">{{ dataTime }}</span>
+            <span class="clock-mono">
+              <span v-if="dataTimeParts.date" class="clock-date">{{ dataTimeParts.date }}</span>
+              <span class="clock-time">{{ dataTimeParts.time }}</span>
+            </span>
           </div>
           <button class="header-btn" :class="{ spin: store.loading }" title="刷新数据" @click="handleManualRefresh">
             <RefreshCw :size="16" />
