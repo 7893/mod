@@ -1,14 +1,27 @@
 <div align="center">
   <h1>MOD</h1>
-  <h3>Enterprise System Rollout Command Center</h3>
+  <p><strong>Real-time Command Cockpit & Digital Twin for Enterprise System Rollout</strong></p>
   <p>
-    An AI-assisted command-center dashboard for enterprise system rollout, operations, risk, and compliance,<br>
-    powered by high-fidelity synthetic data.
+    A decision-ready, high-density command center powered by Vue 3, ECharts, FastAPI, MySQL HeatWave AutoML, and live event simulation.
   </p>
+
   <p>
+    <a href="https://github.com/7893/mod/actions/workflows/quality.yml"><img src="https://github.com/7893/mod/actions/workflows/quality.yml/badge.svg" alt="Quality gates" /></a>
+    <a href="https://mod.fuming.name/"><img src="https://img.shields.io/badge/Live%20Demo-mod.fuming.name-22c55e?logo=googlechrome&logoColor=white" alt="Live Demo" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
+    <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white" alt="Vue 3" />
+    <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/MySQL-HeatWave-4479A1?logo=mysql&logoColor=white" alt="MySQL HeatWave" />
+  </p>
+
+  <p>
+    <a href="https://mod.fuming.name/"><strong>Explore Live Cockpit »</strong></a>
+    <br />
     <a href="#english">English</a> ·
     <a href="#简体中文">简体中文</a> ·
     <a href="docs/INDEX.md">Documentation</a> ·
+    <a href="docs/CURRENT-STATE.md">Current State</a> ·
     <a href="docs/KNOWN-ISSUES.md">Known Issues</a>
   </p>
 </div>
