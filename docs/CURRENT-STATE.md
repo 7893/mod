@@ -72,7 +72,7 @@
     - **SWR 状态机有界失败与熔断**：为后台快照构建独立连接增加会话级超时 `SET SESSION max_execution_time = 15000`，新增刷新超时（20s 自动释放重置）与失败退避（15s 防风暴重试）机制；使用 daemon 线程保障服务停止在 systemd 5 秒内退出。
     - **fallback 数据契约对齐**：补齐前后端 fallback 快照（`v2-sim-snapshot.json`）的 `rolloutTrend`、`operationsTrend` 及 `operations` 双轨明细字段（`dualRunConsistent`、`dualRunInconsistent`、`dualRunConsistencyPct`、`integrationSuccess`、`integrationFailed`），消除降级时 C3、D3、D6 面板假性空白。
     - **健康探针与发布门禁收紧**：`/api/health` 增加 `snapshot` 元数据（含 `source`、`status`、`last_refreshed_at`、`last_refresh_duration_ms`、`last_error`、`is_stale`、`consecutive_failures`）；`/api/dashboard/refresh-meta` 严格根据 `_snapshot_source` 真实返回 `data_version`（`live` 或 `frozen`）与 `status`（`ok` 或 `fallback`），禁止仅凭 DB 连接存在谎报 `live`；`publish.sh` 增加 C3/D3/D6 字段完整性发布门禁。
-  - **前端零转圈策略（`stores/project.ts`）**：store 初始即用内置兜底快照（`data/v2-sim-snapshot.json`）预填 `snapshot`/`entities`，`loading` 初值为 `false`；`refresh()` 仅在「完全没有任何可展示数据」时才置 `loading`。因兜底数据恒存在，首屏与轮询刷新（含后端快照冷启动 >1s 的极端情形）都走静默替换，顶栏刷新指示与各屏内容区均不出现转圈/白屏。轮询刷新沿用 `silent=true`。六个屏幕（A~F）共享同一 store 快照渲染，切屏不重新请求、无独立整屏加载态；F 屏「每日简报」「风险解释」为局部按需小加载态，不影响整屏。
+  - **前端零转圈策略（`stores/project.ts`）**：store 初始即用内置兜底快照（`data/fallback-snapshot.json`）预填 `snapshot`/`entities`，`loading` 初值为 `false`；`refresh()` 仅在「完全没有任何可展示数据」时才置 `loading`。因兜底数据恒存在，首屏与轮询刷新（含后端快照冷启动 >1s 的极端情形）都走静默替换，顶栏刷新指示与各屏内容区均不出现转圈/白屏。轮询刷新沿用 `silent=true`。六个屏幕（A~F）共享同一 store 快照渲染，切屏不重新请求、无独立整屏加载态；F 屏「每日简报」「风险解释」为局部按需小加载态，不影响整屏。
 - 数据库为托管 MySQL HeatWave（库 `mod`，Always Free 规格），连接主机、端口与凭据
   仅存于运行主机的本地环境文件，不写入版本库或文档。原运行环境的旧数据库实例已删除。
 - 运行主机使用系统级 systemd 服务 `mod-api.service` 运行项目内 FastAPI 虚拟环境，监听
@@ -426,6 +426,11 @@ KI-060 更新前的本节原文完整保存在
   - 根因：`mod-simulator` 重启时，`IdAllocator` 读取 `MAX(id)` 与旧进程在途未提交事务存在时间窗口竞态，导致分配与已落库记录冲突并触发 `Duplicate entry`，连续 3 次失败引起 `FAIL_CLOSED_TRIPPED` 熔断；
   - 修复：在 `simulation/engine_context.py` 中引入 `DEFAULT_ID_RESTART_BUFFER = 100`，规范已上线组织基线范围（`SQL_LAUNCHED_STATUSES`），重启加载基线读取 `MAX(id)` 时自动增加缓冲，避开边界碰撞；在 `simulation/runtime_service.py` 写入异常回滚分支中重置 `_fast_baseline = None` 与 `_fast_allocator = None`，保证后续周期自愈重试时重新从数据库获取最新基线与缓冲分配器，避免死循环递增冲突；
   - 验收记录见 [KI-083](issues/KI-083-模拟器重启ID分配器竞态导致短暂熔断.md)。
+
+## 2026-09-13 大屏顶栏实时秒级时钟与离线兜底快照更新（DONE）
+
+- **顶栏实时时钟动态秒级跳动**：大屏头部右侧时钟由原本绑定静态快照 `meta.generatedAt` 时间戳改造为基于 `ref(new Date())` 与 1 秒定时器的动态时钟（`App.vue`），秒数持续跳动；同时在组件卸载时安全清理定时器，Tooltip 明确展示「当前时钟（实时跳动） · 快照时点：...」，并补齐单元测试。
+- **离线兜底快照更新**：通过 `scripts/project/build_fallback_snapshot.py` 将前端内置兜底快照 `frontend/src/data/fallback-snapshot.json` 更新为 2026-09-13 线上最新数据，消除首屏冷启动短暂呈现历史旧日期的视觉跳变。
 
 ## 操作边界
 

@@ -70,4 +70,29 @@ describe('App fullscreen navigation', () => {
     expect(commandMainRule).toContain('align-items: flex-start')
     expect(scaleBoxRule).toContain('transform-origin: top center')
   })
+
+  it('renders and ticks real-time clock every second', async () => {
+    vi.useFakeTimers()
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', component: { template: '<div>screen</div>' } }],
+    })
+    await router.push('/')
+    await router.isReady()
+
+    const wrapper = mount(App, {
+      global: { plugins: [createPinia(), router] },
+    })
+
+    const clockTime = wrapper.find('.clock-time')
+    expect(clockTime.exists()).toBe(true)
+    expect(clockTime.text()).toMatch(/^\d{2}:\d{2}:\d{2}$/)
+
+    vi.advanceTimersByTime(2000)
+    await nextTick()
+
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
 })
+

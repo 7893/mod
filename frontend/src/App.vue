@@ -30,10 +30,12 @@ const { scale, viewportRef, baseWidth, baseHeight } = useScaleScreen({
 const sourceLabel = computed(() => store.connectionError ? '刷新受阻' : store.dataSource === 'fallback' ? '降级快照' : '实时数据')
 const sourceDetail = computed(() => [sourceLabel.value, store.snapshot.meta.asOfDate ? '业务日期：' + store.snapshot.meta.asOfDate : '', store.snapshot.meta.generatedAt ? '快照生成：' + store.snapshot.meta.generatedAt : ''].filter(Boolean).join(' · '))
 
+const currentTime = ref(new Date())
+let clockTimer: ReturnType<typeof setInterval> | null = null
+
 const dataTimeParts = computed(() => {
   const meta = store.snapshot.meta
-  const target = meta.generatedAt || store.lastLoadedAt
-  return formatDateParts(target, { seconds: true, timeZone: meta.displayTimezone })
+  return formatDateParts(currentTime.value, { seconds: true, timeZone: meta?.displayTimezone || 'Asia/Shanghai' })
 })
 const dataTime = computed(() => dataTimeParts.value.full)
 
@@ -52,10 +54,13 @@ const toggleFullscreen = async () => {
   }
 }
 
-// 同步 isFullscreen 状态（ESC 退出也能感知）
+// 同步 isFullscreen 状态（ESC 退出也能感知）与启动秒级时钟
 onMounted(() => {
   syncFullscreenState()
   document.addEventListener('fullscreenchange', syncFullscreenState)
+  clockTimer = setInterval(() => {
+    currentTime.value = new Date()
+  }, 1000)
 })
 
 const handleManualRefresh = () => {
@@ -81,6 +86,10 @@ const isActive = (path: string) => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('fullscreenchange', syncFullscreenState)
+  if (clockTimer) {
+    clearInterval(clockTimer)
+    clockTimer = null
+  }
 })
 </script>
 
@@ -139,7 +148,7 @@ onBeforeUnmount(() => {
             <span class="link-dot"></span>
             <span>{{ sourceLabel }}</span>
           </div>
-          <div class="status-item sync-time" title="数据时点">
+          <div class="status-item sync-time" :title="`当前时钟 (实时跳动) · 快照时点：${store.snapshot.meta.generatedAt || store.snapshot.meta.asOfDate || '—'}`">
             <Activity :size="14" />
             <span class="clock-mono">
               <span v-if="dataTimeParts.date" class="clock-date">{{ dataTimeParts.date }}</span>
