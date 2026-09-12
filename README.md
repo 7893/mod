@@ -1,7 +1,7 @@
 <div align="center">
   <h1>MOD</h1>
-  <p><strong>大型核心系统推广上线实时指挥驾驶舱与数字孪生平台</strong></p>
-  <p><strong>Real-time Command Cockpit & Digital Twin for Enterprise System Rollout</strong></p>
+  <p><strong>大型核心系统推广上线实时指挥驾驶舱</strong></p>
+  <p><strong>Real-time Command Cockpit for Enterprise System Rollout</strong></p>
   <p>
     基于 Vue 3、ECharts、FastAPI 与 MySQL HeatWave AutoML 构建的企业级高密度、多屏协同决策指挥中心
   </p>
@@ -27,7 +27,7 @@
 </div>
 
 > [!IMPORTANT]
-> MOD 是用于演示验证、数字孪生模拟与工程研究的完整系统。大屏展示的 3,200+ 机构单位、41,000+ 人员、490 万财务凭证及全业务流转事件，均为自主拟真引擎生成的合规合成数据，全程不使用任何真实企业敏感数据。
+> MOD 是用于演示验证、业务仿真与工程研究的完整系统。大屏展示的 3,200+ 机构单位、41,000+ 人员、490 万财务凭证及全业务流转事件，均为自主拟真引擎生成的合规合成数据，全程不使用任何真实企业敏感数据。
 
 ---
 
@@ -73,37 +73,43 @@ MOD 将跨 34 个省级行政区、数千家分级单位、多批次推进的大
 ### 四、系统运行架构
 
 ```text
-               ┌──────────────────────────────────────┐
-               │          Global DNS / CDN            │
-               │        (全球加速与源站安全前置)       │
-               └──────────────────┬───────────────────┘
-                                  │ (HTTPS / TLS)
-                                  ▼
-               ┌──────────────────────────────────────┐
-               │          Nginx Origin Gate           │
-               │         (源站门禁与统一反向代理)       │
-               └──────────┬────────────────┬──────────┘
-                          │                │
-             (静态资源分发)│                │ (API 动态代理)
-                          ▼                ▼
-               ┌─────────────────┐  ┌─────────────────┐
-               │    Vue 3 SPA    │  │ FastAPI Backend │
-               │  (响应式驾驶舱)  │  │  (只读业务接口)  │
-               └────────┬────────┘  └────────┬────────┘
-                        │                    │
-           (离线兜底渲染) │                    │ (读写与聚合查询)
-                        ▼                    ▼
-               ┌─────────────────┐  ┌─────────────────┐
-               │ Bundled Snapshot│  │ MySQL HeatWave  │
-               │  (内置合成快照)  │  │ (列存加速/AutoML)│
-               └─────────────────┘  └────────▲────────┘
-                                             │
-                                             │ (事务演化推进)
-                                    ┌────────┴────────┐
-                                    │  mod-simulator  │
-                                    │ (自主拟真引擎)  │
-                                    └─────────────────┘
+                ┌─────────────────────────────────────────────┐
+                │               Global DNS / CDN              │
+                │         Edge Acceleration & Security        │
+                └──────────────────────┬──────────────────────┘
+                                       │ HTTPS / TLS
+                                       ▼
+                ┌─────────────────────────────────────────────┐
+                │              Nginx Origin Gate              │
+                │         Reverse Proxy & Path Routing        │
+                └─────────┬─────────────────────────┬─────────┘
+                          │ (Static Assets)         │ (API Proxy /api/*)
+                          ▼                         ▼
+                ┌───────────────────┐     ┌───────────────────┐
+                │     Vue 3 SPA     │     │  FastAPI Backend  │
+                │   Responsive UI   │     │   Read-Only API   │
+                └─────────┬─────────┘     └─────────┬─────────┘
+                          │ (Offline SWR)           │ (Query & Cache)
+                          ▼                         ▼
+                ┌───────────────────┐     ┌───────────────────┐
+                │  Bundled Snapshot │     │   MySQL HeatWave  │
+                │   Offline Guard   │     │ In-Memory & AutoML│
+                └───────────────────┘     └─────────▲─────────┘
+                                                    │ (Transaction Feed)
+                                                    │ (Autonomous Loop)
+                                          ┌─────────┴─────────┐
+                                          │   mod-simulator   │
+                                          │  Synthetic Engine │
+                                          └───────────────────┘
 ```
+
+**架构分层说明**：
+- **边缘防护与全球加速（Global DNS / CDN）**：提供基于边缘节点的 DDoS 防护、TLS 终结与就近访问加速。
+- **源站反向代理门禁（Nginx Origin Gate）**：统一安全门禁，严格隔离私网服务，负责 `/assets/*` 前端静态资源直发与 `/api/*` 后端接口安全反向代理。
+- **前端交互驾驶舱（Vue 3 SPA）**：基于 Vue 3、TypeScript 与 ECharts 构建的响应式指挥看板，内置离线快照兜底（Bundled Snapshot），保障冷启动与网络波动时零白屏、零转圈。
+- **高性能后端核心（FastAPI Backend）**：只读高性能异步业务接口层，基于 SWR 机制异步预热内存缓存，保持全接口 SLA < 1.0s。
+- **湖仓一体数据与机器学习底座（MySQL HeatWave）**：支撑千万级明细列存内存分析与 AutoML 智能风险研判模型。
+- **高保真业务仿真引擎（mod-simulator）**：全天候按真实作息节律驱动业务单据与会计凭证演化推进，为系统提供合规合成数据源。
 
 标准生产交付由 GitHub Actions 流水线在代码 push 至 `main` 分支时自动触发全量门禁检验与生产机原子软链部署；运行凭据严格保留在代码库之外。
 
@@ -202,37 +208,43 @@ The command cockpit comprises 6 dense, interconnected screens sharing global Pin
 ### 4. System Architecture
 
 ```text
-               ┌──────────────────────────────────────┐
-               │          Global DNS / CDN            │
-               │    (Edge Acceleration & Security)    │
-               └──────────────────┬───────────────────┘
-                                  │ (HTTPS / TLS)
-                                  ▼
-               ┌──────────────────────────────────────┐
-               │          Nginx Origin Gate           │
-               │    (Reverse Proxy & Path Routing)    │
-               └──────────┬────────────────┬──────────┘
-                          │                │
-            (Static Dist) │                │ (/api/* Proxy)
-                          ▼                ▼
-               ┌─────────────────┐  ┌─────────────────┐
-               │    Vue 3 SPA    │  │ FastAPI Backend │
-               │ (Cockpit Shell) │  │ (Read-only API) │
-               └────────┬────────┘  └────────┬────────┘
-                        │                    │
-          (SWR Fallback)│                    │ (Read / Aggregate)
-                        ▼                    ▼
-               ┌─────────────────┐  ┌─────────────────┐
-               │ Bundled Snapshot│  │ MySQL HeatWave  │
-               │ (Offline Guard) │  │(In-Memory/AutoML│
-               └─────────────────┘  └────────▲────────┘
-                                             │
-                                             │ (State Evolution)
-                                    ┌────────┴────────┐
-                                    │  mod-simulator  │
-                                    │(Autonomous Loop)│
-                                    └─────────────────┘
+                ┌─────────────────────────────────────────────┐
+                │               Global DNS / CDN              │
+                │         Edge Acceleration & Security        │
+                └──────────────────────┬──────────────────────┘
+                                       │ HTTPS / TLS
+                                       ▼
+                ┌─────────────────────────────────────────────┐
+                │              Nginx Origin Gate              │
+                │         Reverse Proxy & Path Routing        │
+                └─────────┬─────────────────────────┬─────────┘
+                          │ (Static Assets)         │ (API Proxy /api/*)
+                          ▼                         ▼
+                ┌───────────────────┐     ┌───────────────────┐
+                │     Vue 3 SPA     │     │  FastAPI Backend  │
+                │   Responsive UI   │     │   Read-Only API   │
+                └─────────┬─────────┘     └─────────┬─────────┘
+                          │ (Offline SWR)           │ (Query & Cache)
+                          ▼                         ▼
+                ┌───────────────────┐     ┌───────────────────┐
+                │  Bundled Snapshot │     │   MySQL HeatWave  │
+                │   Offline Guard   │     │ In-Memory & AutoML│
+                └───────────────────┘     └─────────▲─────────┘
+                                                    │ (Transaction Feed)
+                                                    │ (Autonomous Loop)
+                                          ┌─────────┴─────────┐
+                                          │   mod-simulator   │
+                                          │  Synthetic Engine │
+                                          └───────────────────┘
 ```
+
+**Architecture Layer Breakdown**:
+- **Global DNS / CDN**: Edge-level DDoS protection, TLS termination, and accelerated static asset routing.
+- **Nginx Origin Gate**: Origin-side security ingress routing `/assets/*` to frontend static artifacts and reverse-proxying `/api/*` to the FastAPI backend.
+- **Vue 3 SPA**: Interactive command cockpit built with Vue 3, TypeScript, and ECharts, featuring bundled snapshot fallbacks to guarantee zero spinners during cold starts or network lags.
+- **FastAPI Backend**: Read-only asynchronous service layer utilizing SWR prewarming caches to uphold strict SLA < 1.0s.
+- **MySQL HeatWave**: Lakehouse in-memory columnar acceleration for multi-million row aggregations and integrated AutoML risk attribution.
+- **mod-simulator**: High-fidelity autonomous simulation engine driving realistic enterprise business transaction and accounting voucher streams.
 
 Standard production delivery runs through GitHub Actions CI/CD upon push to `main` with full quality gates and atomic release symlinks on the dedicated production host. Runtime credentials remain strictly outside Git.
 
