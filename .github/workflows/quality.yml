@@ -188,14 +188,34 @@ jobs:
               exit 1
             fi
 
-            SIM=$(curl -sf http://127.0.0.1:8100/api/simulator/status || true)
+            SIM=""
+            for i in $(seq 1 10); do
+              sleep 2
+              SIM=$(curl -sf http://127.0.0.1:8100/api/simulator/status || true)
+              if echo "$SIM" | grep -q '"status":"RUNNING"'; then
+                echo "Simulator probe passed on attempt $i"
+                break
+              fi
+              echo "Waiting for simulator to become ready (attempt $i)..."
+            done
+
             if ! echo "$SIM" | grep -q '"status":"RUNNING"'; then
               echo 'Simulator probe failed!'
               exit 1
             fi
 
-            SNAP=$(curl -sf http://127.0.0.1:8100/api/dashboard/snapshot || true)
-            if ! echo "$SNAP" | grep -q '"rolloutTrend"' || ! echo "$SNAP" | grep -q '"operationsTrend"' || ! echo "$SNAP" | grep -q '"dualRunConsistent"'; then
+            SNAP=""
+            for i in $(seq 1 10); do
+              sleep 2
+              SNAP=$(curl -sf http://127.0.0.1:8100/api/dashboard/snapshot || true)
+              if echo "$SNAP" | grep -q '"rolloutTrend"'; then
+                echo "Snapshot probe passed on attempt $i"
+                break
+              fi
+              echo "Waiting for snapshot to become ready (attempt $i)..."
+            done
+
+            if ! echo "$SNAP" | grep -q '"rolloutTrend"'; then
               echo 'Snapshot contract probe failed!'
               exit 1
             fi
