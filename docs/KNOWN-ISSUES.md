@@ -8,8 +8,7 @@
 `docs/development/DATA-AND-SECURITY-STANDARD.md` 确认范围、只读核查、备份与授权。
 体制类改进（约束、规范、文档、组织、流程）不在本文，另行推进。
 
-新需求/新功能/待办任务请在 GitHub Issues 中登记（模板位于 `.github/ISSUE_TEMPLATE/`），
-已发现问题与缺陷登记于此看板。每个已知问题的详细背景、分析与处置记录见 `docs/issues/`。
+项目已彻底停用 GitHub Issues（详见 [ADR-0014](decisions/0014-停用GitHub-Issues统一使用本地KI问题跟踪体系.md)）。所有需求、任务、缺陷与技术债务统一在仓内任务与已知问题看板中闭环管理。每个已知问题的详细背景、分析与处置记录见 `docs/issues/`。
 
 条目状态取值：OPEN（待处理）、IN-PROGRESS（处理中）、DONE（已完成，保留供追溯）。
 

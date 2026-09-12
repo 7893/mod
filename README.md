@@ -123,8 +123,8 @@ make check
 | [Known issues](docs/KNOWN-ISSUES.md) | Defect and technical-debt board with detailed KI records |
 | [Changelog](CHANGELOG.md) | Generated release history from the verified Git baseline |
 
-Feature requests and planned work belong in GitHub Issues. Confirmed defects and technical debt are tracked on the
-repository's known-issues board.
+Feature requests and planned work belong in internal repository tasks. Confirmed defects and technical debt are tracked on the
+repository's known-issues board (GitHub Issues are permanently disabled per [ADR-0014](docs/decisions/0014-停用GitHub-Issues统一使用本地KI问题跟踪体系.md)).
 
 ### License
 
@@ -237,7 +237,7 @@ make check
 | [已知问题](docs/KNOWN-ISSUES.md) | 缺陷与技术债务看板，以及各 KI 详情 |
 | [变更记录](CHANGELOG.md) | 从已核验 Git 基线生成的发布历史 |
 
-新功能和计划任务使用 GitHub Issues 登记；已确认缺陷和技术债务进入仓库内的已知问题看板。
+本项目彻底停用 GitHub Issues（详见 [ADR-0014](docs/decisions/0014-停用GitHub-Issues统一使用本地KI问题跟踪体系.md)）。需求、任务与已确认缺陷统一在仓内任务与已知问题看板中闭环跟踪。
 
 ### 开源许可
 
