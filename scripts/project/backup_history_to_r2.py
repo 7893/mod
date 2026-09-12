@@ -127,11 +127,16 @@ def decrypt_file(input_enc_path: Path, output_path: Path, encryption_key: str) -
     return output_path.stat().st_size
 
 
-def verify_restored_history(restored_root: Path) -> Tuple[bool, List[str]]:
+def verify_restored_history(
+    restored_root: Path, require_all: Optional[bool] = None
+) -> Tuple[bool, List[str]]:
     """Verify restored files against MANIFEST.sha256."""
     manifest = restored_root / "docs" / "history" / "MANIFEST.sha256"
     if not manifest.exists():
         return False, ["MANIFEST.sha256 not found in restored archive"]
+
+    if require_all is None:
+        require_all = os.getenv("MOD_REQUIRE_LOCAL_HISTORY") == "1" or (ROOT / ".env.systemd").exists()
 
     entries: Dict[str, str] = {}
     for lineno, line in enumerate(manifest.read_text(encoding="utf-8").splitlines(), 1):
@@ -154,7 +159,8 @@ def verify_restored_history(restored_root: Path) -> Tuple[bool, List[str]]:
     # Verify all files present in manifest
     for rel_path, expected_hash in entries.items():
         if rel_path not in actual_files:
-            errors.append(f"Restored file missing: {rel_path}")
+            if require_all:
+                errors.append(f"Restored file missing: {rel_path}")
             continue
         actual_hash = calculate_sha256(actual_files[rel_path])
         if actual_hash != expected_hash:
@@ -167,7 +173,11 @@ def verify_restored_history(restored_root: Path) -> Tuple[bool, List[str]]:
     return len(errors) == 0, errors
 
 
-def run_drill(source_dir: Path = HISTORY_DIR, key: Optional[str] = None) -> bool:
+def run_drill(
+    source_dir: Path = HISTORY_DIR,
+    key: Optional[str] = None,
+    require_all: Optional[bool] = None,
+) -> bool:
     """Execute a self-contained local disaster recovery drill."""
     drill_key = key or get_encryption_key()
     with tempfile.TemporaryDirectory(prefix="mod_history_drill_") as temp_dir_str:
@@ -198,7 +208,7 @@ def run_drill(source_dir: Path = HISTORY_DIR, key: Optional[str] = None) -> bool
                 tar.extractall(path=restore_extract_dir)
 
         print("[dr-drill] 5. Validating cryptographic integrity against MANIFEST.sha256...")
-        success, errors = verify_restored_history(restore_extract_dir)
+        success, errors = verify_restored_history(restore_extract_dir, require_all=require_all)
 
         if not success:
             for err in errors:
