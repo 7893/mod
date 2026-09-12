@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List
 
+from app.business_rules import SQL_LAUNCHED_STATUSES
+
 
 @dataclass
 class SimulationBaseline:
@@ -66,27 +68,29 @@ def load_simulation_baseline(conn: Any, id_buffer: int = DEFAULT_ID_RESTART_BUFF
     row = cursor.fetchone()
     latest_business_date = row[0] if row and row[0] else datetime(2026, 9, 4, 0, 0, 0)
 
-    # 2. Query online units pool
-    cursor.execute("SELECT id FROM org_unit WHERE status = 'ONLINE' ORDER BY id;")
-    online_org_ids = [r[0] for r in cursor.fetchall()]
+    # 2. Query online units
+    cursor.execute(f"SELECT id FROM org_unit WHERE status IN {SQL_LAUNCHED_STATUSES} ORDER BY id;")
+    rows = cursor.fetchall()
+    online_org_ids = [r[0] for r in rows]
     if not online_org_ids:
-        raise RuntimeError("Simulation baseline check failed: 0 online org units found.")
+        raise RuntimeError("Simulation baseline check failed: no online units found in org_unit.")
 
-    # 3. Query real users for online units
-    cursor.execute(
-        "SELECT org_id, name, role FROM sys_user WHERE org_id IN ("
-        + ",".join(str(oid) for oid in online_org_ids)
-        + ") ORDER BY org_id, id;"
-    )
+    # 3. Query users for online units
+    cursor.execute("SELECT org_id, name, role FROM sys_user ORDER BY org_id, id;")
+    user_rows = cursor.fetchall()
     org_users: Dict[int, List[Dict[str, str]]] = {}
-    for r in cursor.fetchall():
+    for r in user_rows:
         org_id, name, role = r[0], r[1], r[2]
-        org_users.setdefault(org_id, []).append({"name": name, "role": role or ""})
+        if org_id not in org_users:
+            org_users[org_id] = []
+        org_users[org_id].append({"name": name, "role": role or ""})
 
-    for oid in online_org_ids:
-        if not org_users.get(oid):
+    # Validate that every online org has users
+    for org_id in online_org_ids:
+        users = org_users.get(org_id, [])
+        if not users:
             raise RuntimeError(
-                f"Simulation baseline check failed: org_id {oid} is ONLINE but has 0 users in sys_user."
+                f"Simulation baseline check failed: online org_id {org_id} has 0 users in sys_user."
             )
 
     # 4. Query current MAX(id) for all relevant tables

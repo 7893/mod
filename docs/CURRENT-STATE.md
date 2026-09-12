@@ -424,7 +424,7 @@ KI-060 更新前的本节原文完整保存在
   - 验收记录见 [KI-082](issues/KI-082-CICD安全加固与发布能力收敛.md)。
 - **模拟器重启 ID 竞态与自愈熔断消除（KI-083）**：
   - 根因：`mod-simulator` 重启时，`IdAllocator` 读取 `MAX(id)` 与旧进程在途未提交事务存在时间窗口竞态，导致分配与已落库记录冲突并触发 `Duplicate entry`，连续 3 次失败引起 `FAIL_CLOSED_TRIPPED` 熔断；
-  - 修复：在 `simulation/engine_context.py` 中引入 `DEFAULT_ID_RESTART_BUFFER = 100`，重启加载基线读取 `MAX(id)` 时自动增加缓冲，避开边界碰撞；在 `simulation/runtime_service.py` 写入异常回滚分支中重置 `_fast_baseline = None` 与 `_fast_allocator = None`，保证后续周期自愈重试时重新从数据库获取最新基线与缓冲分配器，避免死循环递增冲突；
+  - 修复：在 `simulation/engine_context.py` 中引入 `DEFAULT_ID_RESTART_BUFFER = 100`，规范已上线组织基线范围（`SQL_LAUNCHED_STATUSES`），重启加载基线读取 `MAX(id)` 时自动增加缓冲，避开边界碰撞；在 `simulation/runtime_service.py` 写入异常回滚分支中重置 `_fast_baseline = None` 与 `_fast_allocator = None`，保证后续周期自愈重试时重新从数据库获取最新基线与缓冲分配器，避免死循环递增冲突；
   - 验收记录见 [KI-083](issues/KI-083-模拟器重启ID分配器竞态导致短暂熔断.md)。
 
 ## 操作边界
