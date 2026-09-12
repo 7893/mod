@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatCount, formatDateTime, formatPercent } from '../metrics'
+import { formatCount, formatDateTime, formatDateParts, formatPercent } from '../metrics'
 
 describe('formatters/metrics', () => {
   describe('formatCount', () => {
@@ -77,3 +77,21 @@ describe('formatDateTime', () => {
     expect(formatDateTime('not-a-date')).toBe('not-a-date')
   })
 })
+
+describe('formatDateParts', () => {
+  const instant = new Date('2026-09-09T14:05:09Z')
+
+  it('splits month-day and time without year', () => {
+    expect(formatDateParts(instant, { timeZone: 'Asia/Shanghai', seconds: true })).toEqual({
+      date: '09-09',
+      time: '22:05:09',
+      full: '09-09 22:05:09',
+    })
+  })
+
+  it('degrades gracefully on empty input', () => {
+    expect(formatDateParts(null)).toEqual({ date: '', time: '—', full: '—' })
+    expect(formatDateParts('')).toEqual({ date: '', time: '—', full: '—' })
+  })
+})
+
