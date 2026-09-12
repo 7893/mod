@@ -140,7 +140,7 @@ const provinceRolloutOption = computed(() => ({
       subtitle="总体上线水位、在途单位结构与推广覆盖上下文"
       class="flex-shrink-0"
     >
-      <CommandBand :facts="commandFacts" :fact-columns="2">
+      <CommandBand :facts="commandFacts" :fact-columns="2" align="center">
         <template #chart>
           <VChart class="w-full h-full min-h-0" :option="rolloutCommandOption" autoresize />
         </template>

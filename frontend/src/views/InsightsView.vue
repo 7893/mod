@@ -261,7 +261,7 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
       <CommandBand :chart-span="7">
         <template #chart>
           <div class="grid grid-cols-12 h-full min-h-0">
-            <MetricGrid class="col-span-3" :items="riskHeadline" flat fill />
+            <MetricGrid class="col-span-3 border-r border-surface-veil-06 pr-2" :items="riskHeadline" flat fill align="center" />
             <VChart class="col-span-9 w-full h-full min-h-0" :option="riskOverviewOption" autoresize />
           </div>
         </template>

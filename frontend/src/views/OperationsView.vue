@@ -195,7 +195,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       :subtitle="`主链路规模与数据结构效率 · 截至 ${store.snapshot.overview.docsAddedAsOfDate || store.snapshot.meta.asOfDate}`"
       class="flex-shrink-0"
     >
-      <CommandBand :chart-span="8" :facts="scaleFacts">
+      <CommandBand :chart-span="8" :facts="scaleFacts" align="center">
         <template #chart>
           <div class="flex items-center justify-between text-cockpit-xs flex-shrink-0 px-1">
             <span class="font-medium text-slate-300">主链路累计规模谱</span>
@@ -254,8 +254,8 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       <CockpitPanel title="接口集成入账" zone="D5" subtitle="实时与批量接口调用结果">
         <ChartFacts variant="facts-led">
           <template #facts>
-            <MetricGrid :items="integrationHeadline" flat size="lg" />
-            <MetricGrid :items="integrationFacts" flat size="xs" :columns="2" />
+            <MetricGrid :items="integrationHeadline" flat size="lg" align="center" />
+            <MetricGrid :items="integrationFacts" flat size="xs" :columns="2" align="center" />
           </template>
           <template #chart><VChart class="w-full h-full min-h-0" :option="integrationOutcomeOption" autoresize /></template>
         </ChartFacts>
@@ -265,9 +265,9 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       <CockpitPanel title="双轨运行核对" zone="D6" subtitle="新老系统一致性对账">
         <ChartFacts v-if="dualRunStats && dualRunOutcomeOption" variant="facts-led">
           <template #facts>
-            <MetricGrid :items="dualRunHeadline" flat size="lg" />
+            <MetricGrid :items="dualRunHeadline" flat size="lg" align="center" />
             <!-- 三大对账维度穿透 (KI-053) -->
-            <StatList v-if="dualRunBreakdownRows.length" :rows="dualRunBreakdownRows" flat density="dense" class="pt-2 border-t border-surface-veil-06" />
+            <StatList v-if="dualRunBreakdownRows.length" :rows="dualRunBreakdownRows" flat density="dense" class="pt-2 border-t border-surface-veil-06 px-2" />
           </template>
           <template #chart><VChart class="w-full h-full min-h-0" :option="dualRunOutcomeOption" autoresize /></template>
         </ChartFacts>
@@ -277,7 +277,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       <!-- D7: 数据质量金标准核验 -->
       <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="核心业务约束与金标准稽核规则 · 未离线稽核项如实标注，不虚报 0 异常" class="col-span-2">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <MetricGrid class="col-span-7 pr-3 border-r border-surface-veil-06" :items="qualityAuditItems" :columns="2" fill size="sm" />
+          <MetricGrid class="col-span-7 pr-3 border-r border-surface-veil-06" :items="qualityAuditItems" :columns="2" fill size="sm" align="center" />
 
           <!-- 右侧：覆盖规模图表 -->
           <div class="col-span-5 flex flex-1 min-h-0 flex-col pl-1">

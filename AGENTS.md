@@ -8,7 +8,7 @@ Do not load that historical snapshot at task startup.
 - Inspect git status and relevant diffs. Preserve existing work and all historical content.
 - Work within the requested scope. Database writes, service/cloud changes and production publishing require explicit authority.
 - Credentials stay in approved environment mechanisms; never print or commit secrets.
-- Source workspace and production share a host. Local builds are isolated; publish.sh changes production and needs authorization.
+- Default CI/CD deploys via GitHub Actions workflow upon push to main; manual publish.sh is direct fallback and needs authorization.
 - Do not modify frozen artifacts or other projects unless the user explicitly places them in scope.
 - Temporary scripts belong in your CLI's scripts/<owner>/ directory; stable shared scripts in scripts/project/ need documentation.
 - Preserve tracked docs. Superseded text stays marked or archived intact; never silently discard it.

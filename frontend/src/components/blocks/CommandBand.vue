@@ -12,8 +12,9 @@ withDefaults(
     chartSpan?: number
     facts?: MetricItem[]
     factColumns?: number
+    align?: 'left' | 'center'
   }>(),
-  { chartSpan: 9 },
+  { chartSpan: 9, align: 'left' },
 )
 
 function span(n: number) {
@@ -28,7 +29,7 @@ function span(n: number) {
     </section>
     <section class="flex flex-col min-h-0" :style="span(12 - chartSpan)">
       <slot name="aside">
-        <MetricGrid v-if="facts?.length" :items="facts" flat fill size="xs" :columns="factColumns" />
+        <MetricGrid v-if="facts?.length" :items="facts" flat fill size="xs" :columns="factColumns" :align="align" />
       </slot>
     </section>
   </div>
