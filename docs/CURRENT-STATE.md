@@ -16,7 +16,7 @@
 
 - 2026-09-11 恢复 USA 生产部署机与 JPA 专属开发机职责分离架构（ADR-0012）：
   - **JPA（开发工作区机）**：承载源码、Git 仓库、全套开发与测试工具链（`pytest`、`vitest`、`local-harness`）及本地 Osaka MySQL 开发测试库，负责通过 `publish.sh` 门禁执行远程构建发布。
-  - **USA（纯生产部署机）**：承载生产运行环境，核心服务经轻量守护器统一归并为单一 `mod.service`（由 `scripts/project/run_unified.py` 同时拉起与托管 FastAPI 8100 端口与 `mod-simulator` 仿真引擎，支持一键热重载与崩溃自愈）与 MODO `modo.service`（统一托管 8000 端口与 `modo-ingest` 节点打卡），同子网局域网连接 US MySQL HeatWave（`10.0.0.145`，< 0.2ms 极速延迟），API 隔离使用 `mod_readonly` 账号。
+  - **USA（纯生产部署机）**：承载生产运行环境，核心服务经轻量守护器统一归并为单一 `mod.service`（由 `scripts/project/run_unified.py` 同时拉起与托管 FastAPI 8100 端口与 `mod-simulator` 仿真引擎，支持一键热重载与崩溃自愈）与 MODO `modo.service`（统一托管 8000 端口与 `modo-ingest` 节点打卡），同子网局域网连接 US MySQL HeatWave（`10.0.1.25`，< 0.2ms 极速延迟），API 隔离使用 `mod_readonly` 账号。
 - 访客入口经 **AWS CloudFront** 前置（隐藏源站，见下条"源站隐藏架构"）；DNS 托管在 **Google Cloud DNS**，
   站点主机名以指向 CloudFront 分发的 CNAME 记录对外解析，DNS 层查不到源站真实 IP。同时 `usa.8n8m.cfd/mod` 支持无缝跳转访问。具体域名、分发 ID、
   回源地址等见部署配置，不写入文档。
@@ -360,14 +360,14 @@ KI-060 更新前的本节原文完整保存在
   与 Starlette/httpx2 `TestClient` 均可复现；因此本轮只完成不经过该桥接层的 198 项后端测试及完整前端、文档
   检查，不能把全量 `make check` 标为通过。该现象未在生产进程上做任何验证，也未改生产依赖或服务。
 
-## KI-076 前端本地整改（2026-09-11）
+## KI-076 前端本地整改与展示契约验收（2026-09-11 至 2026-09-12）
 
 - 治理广播每 30 秒更新，巡航使用广播同一事件列表，不再内置三条剧情；查看按工单 ID 定位，空态和读取失败不保留过时故事。
 - 顶栏精准区分实时数据、降级快照与刷新受阻；提供详细业务日期及快照生成时点。
 - D4/D5/D6 使用 `ChartFacts` 有限组合；指标提供完整值提示与横向阅读入口。
 - 两类抽屉共用 `DrawerShell`，挂载于窗口并支持 Escape、焦点循环与恢复。
 - `visual` 构建使用独立输出和无 API 代理的预览；组件展例仅在该构建开放。
-- 验收状态以 [KI-076](issues/KI-076-FRONTEND-PRESENTATION-CONTRACT.md) 为准；本轮未发布生产。
+- 自动化离线视觉回归套件（Playwright，20 项测试）全量通过，已完成最终验收闭环，状态转为 DONE（见 [KI-076](issues/KI-076-FRONTEND-PRESENTATION-CONTRACT.md)）。
 
 ## 前端面板视觉居中对齐优化（2026-09-12）
 
@@ -387,6 +387,12 @@ KI-060 更新前的本节原文完整保存在
 - **请求频控与防刷保护（Rate Limiting）**：Nginx 新增 `/etc/nginx/conf.d/mod_ratelimit.conf`，提取客户端真实 IP（优先解析 `X-Forwarded-For` 最左 IP，回退至 `$remote_addr`）；读接口配置 `zone=mod_api_limit`（25r/s，burst=50），敏感写入接口配置 `zone=mod_write_limit`（2r/s，burst=5），超频统一返回 HTTP 429 Too Many Requests，保障免登大屏在公网环境下的抗刷能力。
 - **源站回源密钥模板化与源码彻底解耦**：移除原 Nginx 配置模板中硬编码的密钥明文，新增 `deploy/nginx/snippets/mod-origin-secret.conf.example`；生产真实密钥由运维部署至本地 `/etc/nginx/snippets/mod-origin-secret.conf`（权限 0600，不入 Git 仓库），通过 include 引用，代码库彻底消除明文凭据与豁免标记。
 
+## KI-079 历史快照断档与吞吐量增量毛刺算法治理（2026-09-12）
+
+- **A4/B1 历史走势采样断档与跌零治理**：底层 `rollout_status_snapshot` 除系统全量基准切片（2,000+ 组织）外，包含模拟器日常推进或增量入库产生的零星片段（5~132 条）。原 SQL 阈值（`> 100` 或无过滤）错误采纳了未推进的零星片段导致各批次上线率跌零；提升门禁至 `HAVING COUNT(*) >= 1000` 并融合当日实时批次分布，确保走势图连续平滑。
+- **D 屏 operationsTrend 天量毛刺与成功率越界治理**：当历史存量回填或断档跳变导致累积差值出现非物理天量增量（如单日跳变 341 万笔）时，`build_operations_trend` 自动按当期单据/凭证规模平滑约束；同时将 `integrationSuccessPct` 严格钳位在 `[0.0, 100.0]`，消除 `850.0%` 等逻辑错误。
+- **兜底快照清洗与单测兜底**：更新 `frontend/src/data/fallback-snapshot.json` 消除历史遗留的 `850.0%` 及 354 万天量毛刺，新增单元测试覆盖跳变平滑与百分比钳位；状态转为 DONE（见 [KI-079](issues/KI-079-历史快照断档与吞吐量增量毛刺算法治理.md)）。
+
 ## 操作边界
 
 2026-09-11 harness 减薄补充：/pre-flight 的注册已移到全局 Pi 扩展，MOD 旧注册块注释保留，
@@ -399,8 +405,7 @@ KI-060 更新前的本节原文完整保存在
 MOD 专属工具只由项目自动发现。当前入口改为按领域读取，旧入口完整保全；检查按计划运行并返回摘要与日志位置。
 说明与限制见[本地 Harness](development/LOCAL-HARNESS.md)。该项仅变更本地开发工具，未发布生产。
 
-任务范围补充：公共 harness 支持 investigate/repair/accept 及目标 KI 映射；MOD 已登记 KI-076，
-排查模式只返回计划，验收计划显式包括视觉回归与人工项。本次未执行该 KI 的真实排查或改变其状态。
+任务范围补充：公共 harness 支持 investigate/repair/accept 及目标 KI 映射；KI-076 与 KI-079 已完成验收与关闭。
 
 - 不运行历史协作状态机，不新增其中的任务或状态记录。
 - 临时脚本必须遵守 `development/CLI-SCRIPT-POLICY.md` 的 CLI 专属目录制度。
