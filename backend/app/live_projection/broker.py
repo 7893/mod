@@ -119,9 +119,17 @@ class LiveProjectionBroker:
             "source_available": self.journal.path.exists(),
         }
 
-    async def stream(self):
+    async def stream(self, last_event_id: str | None = None):
+        """Stream events, optionally replaying from last_event_id for reconnection (KI-073)."""
         queue = self.subscribe()
         try:
+            # Replay missed events if reconnecting
+            if last_event_id:
+                for record in self.journal.replay_from_id(last_event_id):
+                    event = self.ingest_record(record)
+                    if event is not None:
+                        yield self._sse(event.as_payload())
+
             yield self._sse(self.state_payload())
             while True:
                 try:

@@ -38,6 +38,16 @@ from simulation.runtime_service import (
 HK_TZ = ZoneInfo("Asia/Hong_Kong")
 
 
+def _mock_conn_with_lock() -> MagicMock:
+    """Create a mock connection that supports GET_LOCK/RELEASE_LOCK (KI-072)."""
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchone.return_value = (1,)  # GET_LOCK returns 1 on success
+    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    return mock_conn
+
+
 def _create_sample_fast_event(
     amount: Decimal = Decimal("1500.50"),
     submit_time: datetime = datetime(2026, 9, 5, 9, 30, 0),
@@ -285,7 +295,7 @@ def test_runtime_service_dry_run_cycle(tmp_path):
         audit_log_path=tmp_path / "audit.log",
         dry_run=True,
     )
-    mock_conn = MagicMock()
+    mock_conn = _mock_conn_with_lock()
     service = SimulatorRuntimeService(config=config, conn=mock_conn, seed=42)
     service._fast_baseline = _mock_fast_baseline()
     service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
@@ -331,7 +341,7 @@ def test_runtime_service_consecutive_failure_trips_flag(tmp_path, monkeypatch):
         audit_log_path=tmp_path / "audit.log",
         dry_run=False,
     )
-    mock_conn = MagicMock()
+    mock_conn = _mock_conn_with_lock()
     service = SimulatorRuntimeService(config=config, conn=mock_conn, seed=42)
     service._fast_baseline = _mock_fast_baseline()
     service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
@@ -397,7 +407,7 @@ def test_runtime_service_successful_writes(tmp_path, monkeypatch):
         audit_log_path=tmp_path / "audit.log",
         dry_run=False,
     )
-    mock_conn = MagicMock()
+    mock_conn = _mock_conn_with_lock()
     service = SimulatorRuntimeService(config=config, conn=mock_conn, seed=42)
     service._fast_baseline = _mock_fast_baseline()
     service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
@@ -527,7 +537,7 @@ def test_runtime_service_single_transaction_rollback_on_self_check_failure(tmp_p
         fuse_state_path=tmp_path / "fuse.json",
         dry_run=False,
     )
-    mock_conn = MagicMock()
+    mock_conn = _mock_conn_with_lock()
     service = SimulatorRuntimeService(config=config, conn=mock_conn, seed=42)
     service._fast_baseline = _mock_fast_baseline()
     service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
@@ -565,7 +575,7 @@ def test_slow_movie_substep_failure_rolls_back_without_success_audit(tmp_path, m
         fuse_state_path=tmp_path / "fuse.json",
         dry_run=False,
     )
-    mock_conn = MagicMock()
+    mock_conn = _mock_conn_with_lock()
     propeller = MagicMock()
     propeller.step.side_effect = RuntimeError("propeller failed")
     service = SimulatorRuntimeService(config=config, conn=mock_conn, propeller=propeller, seed=42)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 
 def default_journal_path() -> Path:
@@ -66,3 +66,48 @@ class CommittedEventJournal:
                     return source.tell(), records
             finally:
                 fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+
+
+
+    def replay_from_id(self, last_event_id: str | None) -> Iterator[dict[str, Any]]:
+        """Replay events after the given event_id for reconnection support (KI-073).
+
+        If last_event_id is None or not found, yields nothing (client starts fresh).
+        """
+        if not self.path.exists() or not last_event_id:
+            return
+
+        import fcntl
+
+        with open(self.lock_path, "a", encoding="utf-8") as lock_fd:
+            fcntl.flock(lock_fd.fileno(), fcntl.LOCK_SH)
+            try:
+                found = False
+                with open(self.path, "r", encoding="utf-8") as source:
+                    for line in source:
+                        try:
+                            record = json.loads(line)
+                            if not isinstance(record, dict):
+                                continue
+                            if found:
+                                yield record
+                            elif record.get("event_id") == last_event_id:
+                                found = True
+                        except json.JSONDecodeError:
+                            continue
+            finally:
+                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+
+    def rotate_if_needed(self, max_size_mb: int = 10) -> bool:
+        """Rotate journal file if it exceeds max size (KI-073 防止文件无限增长)."""
+        if not self.path.exists():
+            return False
+        try:
+            size_mb = self.path.stat().st_size / (1024 * 1024)
+            if size_mb > max_size_mb:
+                old_path = self.path.with_suffix(".jsonl.old")
+                self.path.rename(old_path)
+                return True
+        except OSError:
+            pass
+        return False
