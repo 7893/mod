@@ -95,7 +95,7 @@ jobs:
         run: make check
 
   deploy:
-    name: Deploy to USA Production
+    name: Deploy
     needs: check
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
@@ -125,7 +125,7 @@ jobs:
         working-directory: frontend
         run: pnpm build
 
-      - name: Deploy to USA Production Node
+      - name: Deploy
         env:
           TARGET_HOST: ${{ secrets.USA_HOST || secrets.DEPLOY_HOST_IP || secrets.DEPLOY_HOST }}
           TARGET_KEY: ${{ secrets.USA_SSH_KEY || secrets.DEPLOY_SSH_KEY }}
@@ -189,7 +189,7 @@ jobs:
             fi
 
             SIM=""
-            for i in $(seq 1 10); do
+            for i in $(seq 1 20); do
               sleep 2
               SIM=$(curl -sf http://127.0.0.1:8100/api/simulator/status || true)
               if echo "$SIM" | grep -q '"status":"RUNNING"'; then
