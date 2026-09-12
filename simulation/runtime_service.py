@@ -713,6 +713,11 @@ class SimulatorRuntimeService:
                 with suppress(Exception):
                     conn.rollback()
 
+            # KI-083: Discard in-memory baselines and allocators after failure / rollback
+            # so the next retry cycle reloads clean DB truth rather than colliding on stale IDs.
+            self._fast_baseline = None
+            self._fast_allocator = None
+
             if "is_construction" in locals() and is_construction:
                 # Lifecycle generation mutates in-memory evidence before staging its
                 # matching rows. Discard it after rollback; the next cycle reloads DB

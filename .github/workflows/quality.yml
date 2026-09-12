@@ -129,6 +129,7 @@ jobs:
         env:
           TARGET_HOST: ${{ secrets.USA_HOST || secrets.DEPLOY_HOST_IP || secrets.DEPLOY_HOST }}
           TARGET_KEY: ${{ secrets.USA_SSH_KEY || secrets.DEPLOY_SSH_KEY }}
+          TARGET_KNOWN_HOST: ${{ secrets.USA_HOST_KEY }}
         run: |
           if [ -z "$TARGET_HOST" ] || [ -z "$TARGET_KEY" ]; then
             echo "Skipping automated deployment: TARGET_HOST or TARGET_KEY secret not configured."
@@ -139,10 +140,18 @@ jobs:
           echo "$TARGET_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
 
+          if [ -n "$TARGET_KNOWN_HOST" ]; then
+            echo "$TARGET_KNOWN_HOST" >> ~/.ssh/known_hosts
+            chmod 644 ~/.ssh/known_hosts
+            SSH_OPTS="-i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes -o ConnectTimeout=10"
+            echo "Strict SSH host key verification enabled."
+          else
+            echo "Warning: TARGET_KNOWN_HOST not configured, falling back to permissive checking."
+            SSH_OPTS="-i ~/.ssh/id_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
+          fi
+
           TS=$(date +"%Y%m%d-%H%M%S")
           echo "Deploying release $TS to USA..."
-
-          SSH_OPTS="-i ~/.ssh/id_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
 
           ssh $SSH_OPTS ubuntu@"$TARGET_HOST" \
             "mkdir -p /home/ubuntu/mod/backend/releases/$TS /home/ubuntu/mod/frontend/releases/$TS /home/ubuntu/mod/deploy"
@@ -209,6 +218,15 @@ jobs:
             if ! echo "$SNAP" | grep -q '"rolloutTrend"'; then
               echo 'Snapshot contract probe failed!'
               exit 1
+            fi
+
+            if [ -n "$SNAP" ]; then
+              echo "$SNAP" > /tmp/live_snapshot.json
+              python3 /home/ubuntu/mod/backend/releases/$TS/scripts/project/build_fallback_snapshot.py \
+                --from-file /tmp/live_snapshot.json \
+                --output /home/ubuntu/mod/backend/releases/$TS/fallback-snapshot.json 2>/dev/null || true
+              rm -f /tmp/live_snapshot.json
+              echo "Fallback snapshot refreshed on USA production node."
             fi
 
             for d in /home/ubuntu/mod/frontend/releases /home/ubuntu/mod/backend/releases; do

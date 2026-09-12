@@ -413,6 +413,18 @@ KI-060 更新前的本节原文完整保存在
 
 新增显式 schema 脚本与有界保留逻辑；旧 JSONL 不再由新运行链路追加，文件仍保留。本地全量 `make check` 通过（后端 260、前端 147、项目脚本 24 项），SQLite 事务与内存续播测试不能替代 MySQL 现场锁行为验证。尚未对生产数据库执行建表、权限变更、迁移、服务切换或部署；本地验证与未完成现场项目见 [KI-081](issues/KI-081-投影事件不入库与JSONL无限增长及双轨一致性根治.md)。
 
+## 2026-09-13 CI/CD 安全加固与模拟器重启 ID 缓冲治理（KI-082 与 KI-083，DONE）
+
+- **CI/CD SSH 严格主机校验与部署密钥治理（KI-082）**：
+  - 提取 USA 生产机公钥指纹配置到 GitHub Secrets `USA_HOST_KEY`；`.github/workflows/quality.yml` 的 deploy job 在存在该 Secret 时自动写入 `~/.ssh/known_hosts` 并启用 `StrictHostKeyChecking=yes`，消除 MITM 中间人攻击隐患；
+  - 增强发布健康探针：增加 `/api/dashboard/snapshot` 契约字段探测；部署成功后自动通过 `build_fallback_snapshot.py` 刷新 fallback 快照并输出至当前 release 目录（`/home/ubuntu/mod/backend/releases/$TS/fallback-snapshot.json`），解决降级快照长期陈旧问题；
+  - 治理 `scripts/project/publish.sh`：彻底移除抓取 Nginx 配置文件解析回源密钥的逻辑及所有 `# secret-scan: allow` 豁免标记，回源密钥仅从环境变量 `CLOUDFRONT_ORIGIN_SECRET` 读取，未配置时自动通过 SSH/本地直连 127.0.0.1:8100 执行探针；密钥安全扫描保持 0 告警；
+  - 验收记录见 [KI-082](issues/KI-082-CICD安全加固与发布能力收敛.md)。
+- **模拟器重启 ID 竞态与自愈熔断消除（KI-083）**：
+  - 根因：`mod-simulator` 重启时，`IdAllocator` 读取 `MAX(id)` 与旧进程在途未提交事务存在时间窗口竞态，导致分配与已落库记录冲突并触发 `Duplicate entry`，连续 3 次失败引起 `FAIL_CLOSED_TRIPPED` 熔断；
+  - 修复：在 `simulation/engine_context.py` 中引入 `DEFAULT_ID_RESTART_BUFFER = 100`，重启加载基线读取 `MAX(id)` 时自动增加缓冲，避开边界碰撞；在 `simulation/runtime_service.py` 写入异常回滚分支中重置 `_fast_baseline = None` 与 `_fast_allocator = None`，保证后续周期自愈重试时重新从数据库获取最新基线与缓冲分配器，避免死循环递增冲突；
+  - 验收记录见 [KI-083](issues/KI-083-模拟器重启ID分配器竞态导致短暂熔断.md)。
+
 ## 操作边界
 
 2026-09-11 harness 减薄补充：/pre-flight 的注册已移到全局 Pi 扩展，MOD 旧注册块注释保留，
