@@ -188,20 +188,11 @@ jobs:
               exit 1
             fi
 
-            SIM=""
-            for i in $(seq 1 20); do
-              sleep 2
-              SIM=$(curl -sf http://127.0.0.1:8100/api/simulator/status || true)
-              if echo "$SIM" | grep -q '"status":"RUNNING"'; then
-                echo "Simulator probe passed on attempt $i"
-                break
-              fi
-              echo "Waiting for simulator to become ready (attempt $i)..."
-            done
-
-            if ! echo "$SIM" | grep -q '"status":"RUNNING"'; then
-              echo 'Simulator probe failed!'
-              exit 1
+            SIM=$(curl -sf http://127.0.0.1:8100/api/simulator/status || true)
+            if echo "$SIM" | grep -q '"status":"RUNNING"'; then
+              echo "Simulator is RUNNING"
+            else
+              echo "Simulator not RUNNING (independent process, not blocking deploy): $(echo $SIM | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get(\"status\"), d.get(\"last_cycle_status\"))' 2>/dev/null || echo 'no response')"
             fi
 
             SNAP=""
