@@ -85,6 +85,7 @@
   align-items: center;
   gap: clamp(2px, 0.25vw, 6px);
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .nav-tab {
@@ -286,7 +287,7 @@
 }
 
 /* 顶栏按真实视口收缩 */
-@media (max-width: 1600px) {
+@media (max-width: 1880px) {
   .sync-time,
   .status-divider {
     display: none;
