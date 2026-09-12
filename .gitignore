@@ -112,8 +112,14 @@ generator/
 # Historical process docs may carry legacy real hosts/OCIDs; keep local, do not publish.
 docs/history/*
 !docs/history/MANIFEST.sha256
+!docs/history/*.sanitized.md
+!docs/history/2026-09-08-CHANGELOG机制治理前快照.md
+!docs/history/2026-09-08-本地质量基线更新前快照.md
+!docs/history/2026-09-09-KI070-074治理前现状切片.md
 !docs/history/2026-09-11-HARNESS-ENTRYPOINTS.md
 !docs/history/2026-09-11-FRONTEND-STANDARDS.md
+!docs/history/23-V2六屏驾驶舱页面区域与布局规范.md
+!docs/history/MOD-V2数据库整改执行提示词.txt
 frontend/releases/
 frontend/current
 backend/releases/

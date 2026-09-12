@@ -349,11 +349,10 @@ KI-060 更新前的本节原文完整保存在
 - [KI-071](issues/KI-071-F屏模型就绪与SHAP归因来源失真.md)：模型数量、负 R²、解释来源、缺失指标和请求乱序
   已完成本地修复；未创建、重训或调用生产 HeatWave 模型。
 - [KI-072](issues/KI-072-常驻模拟器生命周期编排事务与安全状态未闭环.md)：六阶段编排、事务所有权、重启状态、
-  原子限流、配额预留和状态/发布门禁已在本地实现；生产双实例围栏与云厂商计费边界仍待授权环境验收。
+  原子限流、配额预留和状态/发布门禁已在本地实现；新增 MySQL `GET_LOCK` 数据库级领导锁与 STANDBY 备用状态防止双实例并发写入；云厂商计费边界仍待授权环境验收。
 - [KI-073](issues/KI-073-实时投影与持久化模拟器双轨事件链事实分裂.md)：独立随机投影已移除，SSE 只消费提交后
-  日志；当前仍是同机单 API 进程方案，跨实例 outbox 和完整重连续播尚未实现。
-- [KI-074](issues/KI-074-历史文档未版本化保全与语义治理闸门缺失.md)：历史完整性清单和高风险语义闸门已进入
-  `make check`；本机历史原件的异机加密备份仍待具有云资源权限的后续动作。
+  日志；实现基于 JSONL 的 `replay_from_id()` 与 `Last-Event-ID` 断线重放机制及日志轮转，已满足验收并关闭为 DONE。
+- [KI-074](issues/KI-074-历史文档未版本化保全与语义治理闸门缺失.md)：23 份受限历史资料已通过 `scripts/project/sanitize_history.py` 自动化生成 `.sanitized.md` 脱敏副本并纳入版本库跟踪；建立 `docs/development/SANITIZATION-RULES.md` 脱敏标准；53 份历史原件与脱敏副本全部纳入 `docs/history/MANIFEST.sha256` 与 `docs/HISTORY-CATALOG.md`；交付灾备备份与本地解密演练工具 `scripts/project/backup_history_to_r2.py` 及回归测试 `scripts/project/tests/test_history_backup_drill.py`；全量灾备演练和完整性测试 100% 通过；已满足验收并关闭为 DONE。
 - [KI-075](issues/KI-075-前后端审计后遗留死接口静态兜底与命名残留.md)：21 条前端逻辑审计项已全部修复（`c16530e`…`6c0421e`）；
   遗留的无消费者 AI 生成接口、静态冻结的 `insights` 段、无效 `fixKeys`、跨目录 `v2` 命名与生产环境变量残留只登记不修复，待逐项授权。
 - 当前受管工具沙箱内，Python 3.13.15 的异步事件循环等待线程池任务会死锁，最小 `anyio.to_thread`

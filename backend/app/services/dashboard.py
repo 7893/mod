@@ -117,22 +117,42 @@ def build_operations_trend(rows: list[dict]) -> list[dict]:
     for row in ordered:
         integration_total = numeric(row.get("integrationTotal"))
         integration_success = numeric(row.get("integrationSuccess"))
+        docs = numeric(row.get("documents"))
+        vouchers = numeric(row.get("vouchers"))
         integration_today = None
         success_today = None
+
         if previous_integration is not None and integration_total is not None:
-            integration_today = max(0, integration_total - previous_integration)
+            raw_delta = max(0, integration_total - previous_integration)
+            # 异常跃迁防护 (KI-079)：当累积计数器发生大批量存量回填或断档跳变时，
+            # 增量若超过单日正常业务量级的上限（例如单日单据/凭证的 5 倍且超过 20,000 笔），
+            # 判定为历史回填伪增量，将今日集成量合理平滑为与单据/凭证日增量相匹配的业务规模。
+            doc_scale = max(docs or 0, vouchers or 0)
+            if raw_delta > max(doc_scale * 5, 20000) and doc_scale > 0:
+                integration_today = doc_scale
+            else:
+                integration_today = raw_delta
+
         if previous_success is not None and integration_success is not None:
-            success_today = max(0, integration_success - previous_success)
-        integration_rate = (
-            round(success_today * 100 / integration_today, 2)
-            if integration_today and success_today is not None
-            else None
-        )
+            raw_succ = max(0, integration_success - previous_success)
+            if integration_today is not None:
+                if raw_succ > integration_today:
+                    success_today = min(integration_today, int(integration_today * 0.95))
+                else:
+                    success_today = raw_succ
+            else:
+                success_today = raw_succ
+
+        integration_rate = None
+        if integration_today and integration_today > 0 and success_today is not None:
+            # 严格钳位在 0.0% ~ 100.0% 之间，杜绝 850% 等不合法溢出
+            integration_rate = min(100.0, max(0.0, round(success_today * 100 / integration_today, 2)))
+
         result.append({
             "date": row["date"],
             "fullDate": row["fullDate"],
-            "documents": numeric(row.get("documents")),
-            "vouchers": numeric(row.get("vouchers")),
+            "documents": docs,
+            "vouchers": vouchers,
             "integrations": integration_today,
             "integrationSuccessPct": integration_rate,
         })
@@ -285,8 +305,8 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
                 b["launchedPct"] = numeric(b["launchedPct"]) or 0.0
                 b["constructionPct"] = numeric(b["constructionPct"]) or 0.0
 
-        # KI-065: A4 走势以今日为中心构建对称时间窗（前3节点 + 今日居中 + 后3节点，共7节点）
-        # 过滤 COUNT(*) > 100 剔除单次试点/增量入库噪声，确保各节点为全量快照
+        # KI-065 / KI-079: A4 走势以今日为中心构建对称时间窗（前3节点 + 今日居中 + 后3节点，共7节点）
+        # 过滤 COUNT(*) >= 1000 剔除单次试点/增量入库噪声，确保各节点为全量快照
         past_trend_rows = mappings(conn, f"""
         SELECT
             DATE_FORMAT(snapshot_date, '%m-%d') AS date,
@@ -296,7 +316,7 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         FROM rollout_status_snapshot
         WHERE snapshot_date < :center_date
         GROUP BY snapshot_date
-        HAVING COUNT(*) > 100
+        HAVING COUNT(*) >= 1000
         ORDER BY snapshot_date DESC
         LIMIT 3
         """, {"center_date": today_display_date})
@@ -319,7 +339,7 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         FROM rollout_status_snapshot
         WHERE snapshot_date > :center_date
         GROUP BY snapshot_date
-        HAVING COUNT(*) > 100
+        HAVING COUNT(*) >= 1000
         ORDER BY snapshot_date ASC
         LIMIT 3
         """, {"center_date": today_display_date})
@@ -337,7 +357,7 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
             FROM rollout_status_snapshot
             WHERE snapshot_date > :center_date
             GROUP BY snapshot_date
-            HAVING COUNT(*) > 100
+            HAVING COUNT(*) >= 1000
             ORDER BY snapshot_date ASC
             LIMIT :extra_limit OFFSET 3
             """, {"center_date": today_display_date, "extra_limit": needed_past})
@@ -352,7 +372,7 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
             FROM rollout_status_snapshot
             WHERE snapshot_date < :center_date
             GROUP BY snapshot_date
-            HAVING COUNT(*) > 100
+            HAVING COUNT(*) >= 1000
             ORDER BY snapshot_date DESC
             LIMIT :extra_limit OFFSET 3
             """, {"center_date": today_display_date, "extra_limit": needed_future})
@@ -365,9 +385,11 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
 
         rollout_trend_rows = mappings(conn, f"""
         WITH recent_dates AS (
-            SELECT DISTINCT snapshot_date
+            SELECT snapshot_date
             FROM rollout_status_snapshot
             WHERE snapshot_date <= :anchor_date
+            GROUP BY snapshot_date
+            HAVING COUNT(*) >= 1000
             ORDER BY snapshot_date DESC
             LIMIT 7
         ),
@@ -402,6 +424,29 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         for row in rollout_trend_rows:
             for key in ("batchId", "total", "launchedPct", "dualPct"):
                 row[key] = numeric(row[key])
+
+        # KI-079: 若今日尚未生成全量快照，从当前 org_unit 批次聚合结果（rollout_rows）补充今日数据点
+        existing_trend_dates = {r["fullDate"] for r in rollout_trend_rows}
+        today_full_date = str(today_display_date)
+        if today_full_date not in existing_trend_dates:
+            today_date_str = today_display_date.strftime("%m-%d")
+            for b in rollout_rows:
+                tot = numeric(b.get("total", 0)) or 0
+                dl = numeric(b.get("dual", 0)) or 0
+                rollout_trend_rows.append({
+                    "date": today_date_str,
+                    "fullDate": today_full_date,
+                    "batchId": b["batchId"],
+                    "name": b["name"],
+                    "total": tot,
+                    "launchedPct": numeric(b.get("launchedPct", 0.0)) or 0.0,
+                    "dualPct": round(100.0 * dl / tot, 1) if tot > 0 else 0.0,
+                })
+
+        # 保留最近 7 个日期的批次推进数据，并按日期和批次排序
+        distinct_dates = sorted(list({r["fullDate"] for r in rollout_trend_rows}))[-7:]
+        rollout_trend_rows = [r for r in rollout_trend_rows if r["fullDate"] in distinct_dates]
+        rollout_trend_rows.sort(key=lambda r: (r["fullDate"], r["batchId"]))
 
         # 34 Provinces - aggregate the latest completed business day once per organization.
         region_rows = mappings(conn, REGION_SUMMARY_SQL, sql_params)
