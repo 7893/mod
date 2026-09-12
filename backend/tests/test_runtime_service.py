@@ -725,3 +725,72 @@ def test_outbox_is_staged_before_outer_commit_and_no_journal_is_created(tmp_path
     assert result.status == 'SUCCESS'
     assert calls == ['outbox', 'commit']
     assert not list(tmp_path.glob('*.jsonl'))
+
+
+def test_baseline_id_restart_buffer():
+    """Verify that load_simulation_baseline and load_construction_baseline add safety buffer (KI-083)."""
+    from simulation.engine_context import (
+        DEFAULT_ID_RESTART_BUFFER,
+        load_simulation_baseline,
+    )
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+
+    # Mock for load_simulation_baseline
+    mock_cursor.fetchone.side_effect = [
+        (datetime(2026, 9, 4),),  # submit_time
+        (100,),  # MAX(id) for business_document
+        (200,),  # MAX(id) for business_document_line
+        (300,),  # MAX(id) for accounting_voucher
+        (400,),  # MAX(id) for accounting_voucher_line
+        (500,),  # MAX(id) for integration_result
+    ]
+    mock_cursor.fetchall.side_effect = [
+        [(1,), (2,)],  # online orgs
+        [(1, "User1", "Role1"), (2, "User2", "Role2")],  # users
+    ]
+
+    baseline = load_simulation_baseline(mock_conn)
+    assert baseline.next_ids["business_document"] == 100 + DEFAULT_ID_RESTART_BUFFER
+    assert baseline.next_ids["business_document_line"] == 200 + DEFAULT_ID_RESTART_BUFFER
+    assert baseline.next_ids["accounting_voucher"] == 300 + DEFAULT_ID_RESTART_BUFFER
+    assert baseline.next_ids["accounting_voucher_line"] == 400 + DEFAULT_ID_RESTART_BUFFER
+    assert baseline.next_ids["integration_result"] == 500 + DEFAULT_ID_RESTART_BUFFER
+
+    # Custom buffer
+    mock_cursor.fetchone.side_effect = [
+        (datetime(2026, 9, 4),),
+        (10,), (20,), (30,), (40,), (50,),
+    ]
+    mock_cursor.fetchall.side_effect = [
+        [(1,)],
+        [(1, "User1", "Role1")],
+    ]
+    baseline_custom = load_simulation_baseline(mock_conn, id_buffer=25)
+    assert baseline_custom.next_ids["business_document"] == 10 + 25
+
+
+def test_cycle_error_resets_fast_baseline_and_allocator(tmp_path, monkeypatch):
+    """Verify that a cycle error discards in-memory fast baseline and allocator to avoid ID collision cascades (KI-083)."""
+    monkeypatch.setenv('MOD_SIMULATION_ENGINE_ENABLED', 'true')
+    config = SimulatorRuntimeConfig(
+        fail_closed_flag_path=tmp_path / 'flag', fuse_state_path=tmp_path / 'fuse',
+        status_file_path=tmp_path / 'status', audit_log_path=tmp_path / 'audit',
+    )
+    conn = _mock_conn_with_lock()
+    service = SimulatorRuntimeService(config=config, conn=conn, seed=42)
+    service._fast_baseline = _mock_fast_baseline()
+    service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
+
+    # Force write_events to throw Duplicate Entry IntegrityError
+    def failing_write(*args, **kwargs):
+        raise Exception("Duplicate entry '8609948' for key 'business_document.PRIMARY'")
+
+    monkeypatch.setattr('simulation.runtime_service.SimulationWriter.write_events', failing_write)
+
+    result = service.step_cycle(datetime(2026, 9, 7, 10, tzinfo=HK_TZ))
+    assert result.status == 'ERROR'
+    assert service._fast_baseline is None
+    assert service._fast_allocator is None

@@ -1,6 +1,6 @@
 # KI-083 · 模拟器重启后 ID 分配器与数据库最大值竞态导致短暂熔断
 
-- 状态：OPEN
+- 状态：DONE
 - 优先级：P3
 - 更新日期：2026-09-13
 - 适用范围：`simulation/engine_context.py` IdAllocator、`simulation/runtime_service.py` 重启初始化、fail-closed 熔断机制
@@ -110,9 +110,9 @@ next_ids[table] = max_id + 10  # 留出缓冲，避免边界竞争
 
 ## 完成定义
 
-- [ ] 重启模拟器后不再出现 Duplicate entry 导致的熔断
-- [ ] 不需要人工清除 flag 即可在一次重启后稳定运行
-- [ ] `make check` 全量通过
+- [x] 重启模拟器后不再出现 Duplicate entry 导致的熔断
+- [x] 不需要人工清除 flag 即可在一次重启后稳定运行
+- [x] `make check` 全量通过
 
 ---
 
@@ -124,3 +124,8 @@ next_ids[table] = max_id + 10  # 留出缓冲，避免边界竞争
 ## 进度
 
 - 2026-09-13 立项登记（OPEN）。首次触发于 KI-081 outbox 部署后重启模拟器，在 CI/CD 失败排查中发现。
+- 2026-09-13 修复与闭环（DONE）。
+  1. 在 `simulation/engine_context.py` 中引入 `DEFAULT_ID_RESTART_BUFFER = 100`，`load_simulation_baseline` 和 `load_construction_baseline` 在重启读取 `MAX(id)` 时自动增加安全缓冲，消除与重启前在途事务的边界竞态；
+  2. 在 `simulation/runtime_service.py` 的异常回滚逻辑中，遇到周期写入失败时重置 `_fast_baseline = None` 与 `_fast_allocator = None`，保证后续周期自愈重试时重新从数据库获取最新基准与缓冲 ID，避免死循环递增冲突；
+  3. 补充单元测试 `test_baseline_id_restart_buffer` 与 `test_cycle_error_resets_fast_baseline_and_allocator`，`pytest backend/tests/test_runtime_service.py` 22 项全量通过。
+

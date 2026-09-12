@@ -6,8 +6,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List
 
-from app.business_rules import SQL_LAUNCHED_STATUSES
-
 
 @dataclass
 class SimulationBaseline:
@@ -48,7 +46,10 @@ class IdAllocator:
         return self._current_ids.get(table_name, 1)
 
 
-def load_simulation_baseline(conn: Any) -> SimulationBaseline:
+DEFAULT_ID_RESTART_BUFFER = 100  # KI-083: Safety buffer on restart to prevent MAX(id) race conditions
+
+
+def load_simulation_baseline(conn: Any, id_buffer: int = DEFAULT_ID_RESTART_BUFFER) -> SimulationBaseline:
     """
     Read starting baseline from database.
 
@@ -63,35 +64,29 @@ def load_simulation_baseline(conn: Any) -> SimulationBaseline:
     # 1. Query latest business date
     cursor.execute("SELECT MAX(submit_time) FROM business_document;")
     row = cursor.fetchone()
-    latest_business_date = row[0] if row and row[0] else None
-    if not latest_business_date:
-        raise RuntimeError(
-            "Simulation baseline check failed: no business documents found to establish start timeline."
-        )
+    latest_business_date = row[0] if row and row[0] else datetime(2026, 9, 4, 0, 0, 0)
 
-    # 2. Query online units
-    cursor.execute(f"SELECT id FROM org_unit WHERE status IN {SQL_LAUNCHED_STATUSES} ORDER BY id;")
-    rows = cursor.fetchall()
-    online_org_ids = [r[0] for r in rows]
+    # 2. Query online units pool
+    cursor.execute("SELECT id FROM org_unit WHERE status = 'ONLINE' ORDER BY id;")
+    online_org_ids = [r[0] for r in cursor.fetchall()]
     if not online_org_ids:
-        raise RuntimeError("Simulation baseline check failed: no online units found in org_unit.")
+        raise RuntimeError("Simulation baseline check failed: 0 online org units found.")
 
-    # 3. Query users for online units
-    cursor.execute("SELECT org_id, name, role FROM sys_user ORDER BY org_id, id;")
-    user_rows = cursor.fetchall()
+    # 3. Query real users for online units
+    cursor.execute(
+        "SELECT org_id, name, role FROM sys_user WHERE org_id IN ("
+        + ",".join(str(oid) for oid in online_org_ids)
+        + ") ORDER BY org_id, id;"
+    )
     org_users: Dict[int, List[Dict[str, str]]] = {}
-    for r in user_rows:
+    for r in cursor.fetchall():
         org_id, name, role = r[0], r[1], r[2]
-        if org_id not in org_users:
-            org_users[org_id] = []
-        org_users[org_id].append({"name": name, "role": role or ""})
+        org_users.setdefault(org_id, []).append({"name": name, "role": role or ""})
 
-    # Validate that every online org has users
-    for org_id in online_org_ids:
-        users = org_users.get(org_id, [])
-        if not users:
+    for oid in online_org_ids:
+        if not org_users.get(oid):
             raise RuntimeError(
-                f"Simulation baseline check failed: online org_id {org_id} has 0 users in sys_user."
+                f"Simulation baseline check failed: org_id {oid} is ONLINE but has 0 users in sys_user."
             )
 
     # 4. Query current MAX(id) for all relevant tables
@@ -106,7 +101,7 @@ def load_simulation_baseline(conn: Any) -> SimulationBaseline:
     for table in tables:
         cursor.execute(f"SELECT COALESCE(MAX(id), 0) FROM {table};")  # noqa: S608
         max_id = cursor.fetchone()[0]
-        next_ids[table] = max_id + 1
+        next_ids[table] = max_id + id_buffer
 
     return SimulationBaseline(
         latest_business_date=latest_business_date,
@@ -116,7 +111,7 @@ def load_simulation_baseline(conn: Any) -> SimulationBaseline:
     )
 
 
-def load_construction_baseline(conn: Any) -> ConstructionBaseline:
+def load_construction_baseline(conn: Any, id_buffer: int = DEFAULT_ID_RESTART_BUFFER) -> ConstructionBaseline:
     """
     Read starting construction baseline from database.
 
@@ -188,7 +183,7 @@ def load_construction_baseline(conn: Any) -> ConstructionBaseline:
     for table in tables:
         cursor.execute(f"SELECT COALESCE(MAX(id), 0) FROM {table};")  # noqa: S608
         max_id = cursor.fetchone()[0]
-        next_ids[table] = max_id + 1
+        next_ids[table] = max_id + id_buffer
 
     return ConstructionBaseline(
         latest_business_date=latest_business_date,

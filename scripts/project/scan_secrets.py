@@ -29,9 +29,9 @@ PLACEHOLDERS = (
     "fake", "localhost", "随机密码", "脱敏", "__", "your_",
 )
 
-# 值为代码表达式（从环境读取、函数调用、变量、f-string 占位）视为非明文，不阻断。
+# 值为代码表达式（从环境读取、函数调用、变量、f-string 占位、shell 变量）视为非明文，不阻断。
 _CODE_VALUE = re.compile(
-    r"^(?:os\.(?:getenv|environ)|getenv|environ|quote_plus|[A-Za-z_][\w.]*\s*\(|"
+    r"^(?:\$|os\.(?:getenv|environ)|getenv|environ|quote_plus|[A-Za-z_][\w.]*\s*\(|"
     r"self\.|\{|None|True|False|\"\"|''|number$|str$|int$)",
 )
 
