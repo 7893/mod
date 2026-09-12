@@ -50,6 +50,7 @@
 - [development/DATA-AND-SECURITY-STANDARD.md](development/DATA-AND-SECURITY-STANDARD.md)：数据、数据库、凭据、远端和恢复边界。
 - [development/SECRETS-AND-CONFIG.md](development/SECRETS-AND-CONFIG.md)：运行时配置、GitHub Secrets 与敏感信息净化。
 - [development/SECRET-SCAN-HOOK-DESIGN.md](development/SECRET-SCAN-HOOK-DESIGN.md)：凭据扫描和提交信息闸门实现。
+- [development/SANITIZATION-RULES.md](development/SANITIZATION-RULES.md)：历史资料脱敏规则与版本化保全标准。
 - [development/CLI-SCRIPT-POLICY.md](development/CLI-SCRIPT-POLICY.md)：各 CLI 专属脚本目录制度。
 - [development/LIVE-PROJECTION.md](development/LIVE-PROJECTION.md)：驾驶舱只读实时投影的数据流与边界。
 - [development/BUSINESS-SIMULATION-ENGINE.md](development/BUSINESS-SIMULATION-ENGINE.md)：业务驱动拟真引擎设计规范。

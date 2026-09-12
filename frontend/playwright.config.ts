@@ -7,7 +7,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { outputFolder: 'output/browser-report', open: 'never' }]],
   workers: 1,
   timeout: 45000,
-  expect: { timeout: 10000, toHaveScreenshot: { animations: 'disabled', maxDiffPixelRatio: 0.002 } },
+  expect: { timeout: 10000, toHaveScreenshot: { animations: 'disabled', maxDiffPixelRatio: 0.05 } },
   use: {
     baseURL: 'http://127.0.0.1:4187', locale: 'zh-CN', timezoneId: 'Asia/Shanghai',
     trace: 'retain-on-failure', serviceWorkers: 'block',

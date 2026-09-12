@@ -66,3 +66,26 @@ def test_subscribers_receive_the_same_committed_event(tmp_path) -> None:
         broker.unsubscribe(second)
 
     asyncio.run(exercise())
+
+
+def test_journal_replay_from_id_and_rotation(tmp_path) -> None:
+    journal = CommittedEventJournal(tmp_path / "committed.jsonl")
+    records = [
+        {"event_id": f"evt-{i}", "committed_at": "2026-09-12T10:00:00+00:00", "increments": {"documents": 1, "vouchers": 1, "integrations": 1}}
+        for i in range(5)
+    ]
+    journal.append(records)
+
+    # Replay after evt-2: should yield evt-3 and evt-4
+    replayed = list(journal.replay_from_id("evt-2"))
+    assert [r["event_id"] for r in replayed] == ["evt-3", "evt-4"]
+
+    # Replay with None or non-existent ID yields nothing
+    assert list(journal.replay_from_id(None)) == []
+    assert list(journal.replay_from_id("evt-999")) == []
+
+    # Rotation test
+    assert journal.rotate_if_needed(max_size_mb=100) is False
+    assert journal.rotate_if_needed(max_size_mb=0) is True
+    assert (tmp_path / "committed.jsonl.old").exists()
+
