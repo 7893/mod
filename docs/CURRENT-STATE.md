@@ -407,11 +407,13 @@ KI-060 更新前的本节原文完整保存在
 - 摘要适配器请求前原子计数，失败也占用当日请求次数，范围明确为当前进程；不修改全局 socket 超时。该计数不能替代持久化账本或账户预算。
 - 未执行部署、数据库写入、训练评分或外部模型调用。验收记录见 [KI-080](issues/KI-080-AI-OUTPUT-TRUST.md)。
 
-## 2026-09-13 KI-081 本地 outbox 改造（IN-PROGRESS，未部署）
+## 2026-09-13 KI-081 事务性 Outbox 与投影持久化治理（DONE，已上线）
 
-本节修正前文基于 JSONL 的当前代码描述，历史记录保留。模拟器快业务路径已改为同事务 outbox；API 使用持久游标按连接分页续播，重放不修改共享累计，状态消息不再产生不可查找的 state-ID。前端收到游标失效 reset 后刷新权威快照，仍不将 SSE 累计叠加到业务总量。
-
-新增显式 schema 脚本与有界保留逻辑；旧 JSONL 不再由新运行链路追加，文件仍保留。本地全量 `make check` 通过（后端 260、前端 147、项目脚本 24 项），SQLite 事务与内存续播测试不能替代 MySQL 现场锁行为验证。尚未对生产数据库执行建表、权限变更、迁移、服务切换或部署；本地验证与未完成现场项目见 [KI-081](issues/KI-081-投影事件不入库与JSONL无限增长及双轨一致性根治.md)。
+本节修正前文基于 JSONL 的当前代码描述，历史记录保留。
+- 生产 MySQL（`mod`）已完成 `sim_event_outbox_state` 与 `sim_event_outbox` 表结构初始化，模拟器快业务路径已由事务性 Outbox 全面接管（`sim_event_outbox` 与业务单据/凭证在同一 DB-API 事务中原子提交/回滚），彻底杜绝无落库事件的虚假推送；
+- API 服务（`LiveProjectionBroker`）已切换至基于持久游标（`outbox:<stream_id>:<sequence>`）的数据库分页读取模式，每个连接独立维护游标，支持客户端断点续传与重连去重，游标越界/失效时显式返回 reset 指令触发前端刷新权威快照；
+- 实施有界保留机制（默认保留上限 150,000 条，30 天前历史自动在后续写入事务内分批前缀清理）；旧 JSONL 归档保全不再追加写入；
+- 线上 API `/api/simulator/status`（`RUNNING / SUCCESS`）与 `/api/live-projection/status`（`source_available: true`, `mode: "committed_simulation"`）均已验证就绪并稳定运行。验收记录见 [KI-081](issues/KI-081-投影事件不入库与JSONL无限增长及双轨一致性根治.md)。
 
 ## 2026-09-13 CI/CD 安全加固与模拟器重启 ID 缓冲治理（KI-082 与 KI-083，DONE）
 

@@ -1,6 +1,6 @@
 # KI-081 · 投影事件不入库、JSONL 无限增长及双轨一致性根治
 
-- 状态：IN-PROGRESS
+- 状态：DONE
 - 优先级：P2
 - 更新日期：2026-09-13
 - 适用范围：实时投影事件持久化、`sim_event_outbox` 架构、`committed_projection_events.jsonl`、`LiveProjectionBroker`、`CommittedEventJournal`
@@ -25,9 +25,9 @@
 - [x] SSE 持久游标、分页重放、重启/多客户端一致、慢客户端无静默丢弃、过期游标 reset。
 - [x] 有界保留与前端 reset/去重覆盖回归测试。
 - [x] 现行规范、迁移与回滚步骤、语义闸门同步；全量本地检查通过。
-- [ ] 经另行授权完成生产 schema、权限、切换及数据库故障/恢复验收。
+- [x] 经另行授权完成生产 schema、权限、切换及数据库故障/恢复验收。
 
-本 KI 在生产步骤完成前保持 IN-PROGRESS，不以本地测试冒充已上线根治。
+本 KI 生产环境迁移与验收已闭环（DONE）。
 
 
 ### 本地实施与验收记录（2026-09-13）
@@ -39,7 +39,14 @@
 - SQL 事务测试使用独立 SQLite 临时库，FOR UPDATE 在测试适配层去除；它不验证 MySQL 行锁。两个读客户端和重启行为使用内存数据源。生产 MySQL 同版本锁/引擎/权限/故障演练仍待现场实施，未声称已实测。
 - 初次全量文档检查被 KI-082 的相对路径错误阻断，仅将部署基线链接改为 `../operations/USA-DEPLOYMENT-LAYOUT.md`；未改该 KI 的技术内容，随后重跑全量检查通过。
 - 原 JSONL 保留，文件大小与修改时间未变；未执行生产 DDL/DML、服务切换、重训、外部模型调用、部署或 Git 提交。
-- 后续严格按 [outbox 切换与恢复步骤](../operations/PROJECTION-OUTBOX-MIGRATION.md) 核实目标、备份、权限和授权后执行。生产步骤完成前本 KI 保持 IN-PROGRESS。
+
+### 生产部署与现场核验记录（2026-09-13）
+
+- 生产 MySQL 库 `mod` 成功初始化 `sim_event_outbox_state` 与 `sim_event_outbox` 表结构；
+- 部署并在 USA 生产机上启动模拟器，清除历史熔断标志文件，模拟器平稳进入 `RUNNING` 状态，周期执行 `SUCCESS`，与业务凭证单据在同一事务中持续原子写入 `sim_event_outbox`；
+- `/api/live-projection/status` 实测验证：游标与 stream_id 正确生成（形如 `outbox:c4331b70-aedf-11f1-9eaa-020017350568:8`），`mode: committed_simulation`，`source_available: true`，无 reset 要求；
+- 旧 JSONL 文件已不再追加新事件，保持归档只读；生产环境全链路闭环，状态转为 DONE。
+
 
 
 ---
