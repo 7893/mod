@@ -705,3 +705,31 @@ def test_ki061_swr_timeout_and_error_recovery(monkeypatch):
     api_mod._snapshot_refreshing = False
     api_mod._snapshot_consecutive_failures = 0
     api_mod._snapshot_last_error = None
+
+
+def test_should_enable_docs_governance(monkeypatch):
+    """KI-078: 验证 API 交互文档与架构规范在生产模式下的屏蔽治理。"""
+    from unittest.mock import MagicMock
+    from app.main import should_enable_docs
+
+    # 1. 显式环境变量覆盖测试
+    monkeypatch.setenv("MOD_ENABLE_DOCS", "1")
+    assert should_enable_docs() is True
+
+    monkeypatch.setenv("MOD_ENABLE_DOCS", "true")
+    assert should_enable_docs() is True
+
+    monkeypatch.setenv("MOD_ENABLE_DOCS", "0")
+    assert should_enable_docs() is False
+
+    monkeypatch.setenv("MOD_ENABLE_DOCS", "false")
+    assert should_enable_docs() is False
+
+    # 2. 依据环境默认决策测试
+    monkeypatch.delenv("MOD_ENABLE_DOCS", raising=False)
+    monkeypatch.setattr("app.main.get_settings", lambda: MagicMock(environment="production"))
+    assert should_enable_docs() is False
+
+    monkeypatch.setattr("app.main.get_settings", lambda: MagicMock(environment="development"))
+    assert should_enable_docs() is True
+

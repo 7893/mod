@@ -103,6 +103,7 @@ archive/
 
 # Real deploy configs carry real domains/cert paths; publish *.example templates only.
 deploy/nginx/*.conf
+deploy/nginx/snippets/*.conf
 
 # Legacy DB/generator scripts carry internal host details; keep local, do not publish.
 database/

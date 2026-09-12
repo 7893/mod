@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -10,6 +11,7 @@ from starlette.responses import JSONResponse, Response
 
 
 from .api import router as router_v2
+from .config import get_settings
 from .live_projection import get_live_projection_broker
 from .live_projection.api import router as live_projection_router
 
@@ -66,11 +68,22 @@ async def lifespan(app: FastAPI):
     await live_projection.stop()
 
 
+def should_enable_docs() -> bool:
+    """生产环境默认关闭交互式文档与 OpenAPI 架构模式暴露 (KI-078)"""
+    env_flag = os.getenv("MOD_ENABLE_DOCS")
+    if env_flag is not None:
+        return env_flag.lower() in ("1", "true", "yes", "on")
+    return get_settings().environment != "production"
+
+
+enable_docs = should_enable_docs()
+
 app = FastAPI(
     title="MOD API",
     version="0.3.0",
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json",
+    docs_url="/api/docs" if enable_docs else None,
+    redoc_url=None,
+    openapi_url="/api/openapi.json" if enable_docs else None,
     lifespan=lifespan,
 )
 app.include_router(router_v2)

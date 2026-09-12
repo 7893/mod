@@ -381,6 +381,12 @@ KI-060 更新前的本节原文完整保存在
 - **F1 面板**：风险研判指挥盘首段风险单位核心指标采用居中对齐，第二段风险分布条形图调整图表左右内距向中轴收拢。
 - **CI/CD 默认流水线规范化**：确立以 GitHub Actions Workflow（`.github/workflows/quality.yml`）为默认 CI/CD 发布链路，push 至 main 分支自动触发完整质量门禁、前端打包与 USA 生产机原子软链部署；`scripts/project/publish.sh` 同步更新服务重启指令为 `mod.service` 并作为应急/直连备用渠道。
 
+## KI-078 安全基线治理与基石加固（2026-09-12）
+
+- **API 交互文档公网屏蔽**：生产模式（`MOD_ENV=production`）下 FastAPI 默认关闭 `docs_url` 与 `openapi_url`（支持通过 `MOD_ENABLE_DOCS=1` 显式开启），源站 Nginx 新增规则直接对 `/api/docs`、`/api/docs/` 与 `/api/openapi.json` 实施硬拦截响应 404，消除接口模式与数据结构的公网信息泄露。
+- **请求频控与防刷保护（Rate Limiting）**：Nginx 新增 `/etc/nginx/conf.d/mod_ratelimit.conf`，提取客户端真实 IP（优先解析 `X-Forwarded-For` 最左 IP，回退至 `$remote_addr`）；读接口配置 `zone=mod_api_limit`（25r/s，burst=50），敏感写入接口配置 `zone=mod_write_limit`（2r/s，burst=5），超频统一返回 HTTP 429 Too Many Requests，保障免登大屏在公网环境下的抗刷能力。
+- **源站回源密钥模板化与源码彻底解耦**：移除原 Nginx 配置模板中硬编码的密钥明文，新增 `deploy/nginx/snippets/mod-origin-secret.conf.example`；生产真实密钥由运维部署至本地 `/etc/nginx/snippets/mod-origin-secret.conf`（权限 0600，不入 Git 仓库），通过 include 引用，代码库彻底消除明文凭据与豁免标记。
+
 ## 操作边界
 
 2026-09-11 harness 减薄补充：/pre-flight 的注册已移到全局 Pi 扩展，MOD 旧注册块注释保留，
