@@ -58,6 +58,32 @@
   gap: --spacing(2);
 }
 
+.metric-grid--center .metric-cell {
+  align-items: center;
+  text-align: center;
+}
+
+.metric-grid--center .metric-cell__body {
+  align-items: center;
+  text-align: center;
+}
+
+.metric-grid--center .metric-cell__value {
+  text-align: center;
+}
+
+.metric-grid--center .metric-cell__track {
+  width: 100%;
+}
+
+.metric-grid--center .metric-cell__meta {
+  justify-content: center;
+}
+
+.metric-grid--center .metric-cell__hint {
+  text-align: center;
+}
+
 .metric-cell__icon {
   flex-shrink: 0;
   color: var(--color-slate-500);

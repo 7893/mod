@@ -194,6 +194,23 @@ jobs:
               exit 1
             fi
 
+            SNAP=$(curl -sf http://127.0.0.1:8100/api/dashboard/snapshot || true)
+            if ! echo "$SNAP" | python3 -c '
+import sys, json
+raw = sys.stdin.read()
+if not raw.strip():
+    sys.exit(1)
+data = json.loads(raw)
+if not data.get("rolloutTrend") or not data.get("operationsTrend"):
+    sys.exit(1)
+ops = data.get("operations", {})
+if "dualRunConsistent" not in ops or "dualRunInconsistent" not in ops:
+    sys.exit(1)
+'; then
+              echo 'Snapshot contract probe failed!'
+              exit 1
+            fi
+
             for d in /home/ubuntu/mod/frontend/releases /home/ubuntu/mod/backend/releases; do
               ls -1t "$d" | tail -n +6 | while read -r old; do
                 rm -rf "$d/$old"

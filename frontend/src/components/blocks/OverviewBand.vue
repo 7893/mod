@@ -31,9 +31,9 @@ const valueClasses = {
 
 <template>
   <div class="grid grid-cols-12 gap-3 h-20 min-h-0 items-stretch">
-    <div class="col-span-2 flex flex-col justify-center border-r border-surface-veil-06 pr-3 min-w-0">
+    <div class="col-span-2 flex flex-col justify-center items-center text-center border-r border-surface-veil-06 px-2 min-w-0">
       <span class="text-cockpit-sm text-slate-400">{{ primary.label }}</span>
-      <div class="flex items-baseline gap-1 mt-1">
+      <div class="flex items-baseline justify-center gap-1 mt-1">
         <b class="font-mono text-cockpit-metric" :class="valueClasses[primary.tone || 'accent']">{{ primary.value }}</b>
         <small v-if="primary.unit" class="text-cockpit-xs text-slate-500">{{ primary.unit }}</small>
       </div>
@@ -49,7 +49,7 @@ const valueClasses = {
     </div>
 
     <div class="col-span-3 grid grid-cols-3 gap-2 border-l border-surface-veil-06 pl-3 min-w-0">
-      <div v-for="fact in facts" :key="fact.label" class="flex flex-col justify-center min-w-0">
+      <div v-for="fact in facts" :key="fact.label" class="flex flex-col justify-center items-center text-center min-w-0">
         <span class="text-cockpit-xs text-slate-500 truncate">{{ fact.label }}</span>
         <b class="font-mono text-cockpit-md text-slate-200 mt-1 truncate">{{ fact.value }}<small v-if="fact.unit" class="text-cockpit-xs text-slate-500 ml-0.5">{{ fact.unit }}</small></b>
       </div>

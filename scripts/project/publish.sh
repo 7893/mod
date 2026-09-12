@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# publish.sh — 前后端统一原子发布脚本（JPA 开发机 -> USA 生产机远程软链发布模式）
+# publish.sh — 前后端统一原子发布脚本（备用直连发布渠道）
+#
+# 现行发布标准：默认通过 GitHub Actions CI/CD 流水线（push 至 main 分支自动触发 Quality gates 门禁与 USA 生产机自动化部署）。
+# 本脚本保留作为本地 JPA 开发机直连 USA 生产机的应急/备用发布通道（或通过 --local 本地模式测试）。
 #
 # 用法：bash scripts/project/publish.sh [--local]
 #
@@ -9,13 +12,13 @@
 #   3. 运行 make check（全绿才继续）
 #   4. 推送打包产物至 USA 生产机（或本地切换，若指定 --local）
 #   5. 原子切换前后端软链
-#   6. reload Nginx + restart mod-api + restart mod-simulator
+#   6. reload Nginx + restart mod.service
 #   7. 验证线上 HTTP 200 + 核心健康探针（/api/health, /api/simulator/status, /api/dashboard/snapshot）
 #   8. 失败时自动回滚到上一版本
 #   9. 清理旧 release（保留最近 5 个）
 #
 # 回滚命令（USA 生产机）：
-#   后端：ssh usa "ln -sfn /home/ubuntu/mod/backend/releases/<prev_ts> /home/ubuntu/mod/backend/current && sudo systemctl restart mod-api mod-simulator"
+#   后端：ssh usa "ln -sfn /home/ubuntu/mod/backend/releases/<prev_ts> /home/ubuntu/mod/backend/current && sudo systemctl restart mod.service"
 #   前端：ssh usa "ln -sfn /home/ubuntu/mod/frontend/releases/<prev_ts> /home/ubuntu/mod/frontend/current && sudo systemctl reload nginx"
 #
 # 本脚本必须由项目 Owner（用户）或主控 Agent 运行，或在其明确授权下由被授权的 Agent（如执行 Agent）调用。
@@ -106,8 +109,8 @@ else
     ln -sfn "$FE_RELEASE_DIR" "$FE_CURRENT"
     ln -sfn "$BE_RELEASE_DIR" "$BE_CURRENT"
 
-    echo "[5/8] 远程 reload Nginx + restart mod-api + restart mod-simulator on USA..."
-    ssh "$REMOTE_HOST" "sudo systemctl reload nginx && sudo systemctl restart mod-api && sudo systemctl restart mod-simulator"
+    echo "[5/8] 远程 reload Nginx + restart mod.service on USA..."
+    ssh "$REMOTE_HOST" "sudo systemctl reload nginx && sudo systemctl restart mod.service"
     sleep 4
 fi
 
@@ -135,7 +138,7 @@ rollback() {
             [ -n '$PREV_FE' ] && ln -sfn '$PREV_FE' '$REMOTE_ROOT/frontend/current'
             [ -n '$PREV_BE' ] && ln -sfn '$PREV_BE' '$REMOTE_ROOT/backend/current'
             sudo systemctl reload nginx
-            sudo systemctl restart mod-api mod-simulator
+            sudo systemctl restart mod.service
         "
     fi
     echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
@@ -244,6 +247,6 @@ if [ "$LOCAL_MODE" = true ]; then
     echo "  回滚命令（后端及常驻）: ln -sfn $BE_RELEASES/<prev_ts> $BE_CURRENT && sudo systemctl restart mod-api mod-simulator"
 else
     echo "  回滚命令（前端）: ssh usa 'ln -sfn $REMOTE_ROOT/frontend/releases/<prev_ts> $REMOTE_ROOT/frontend/current && sudo systemctl reload nginx'"
-    echo "  回滚命令（后端及常驻）: ssh usa 'ln -sfn $REMOTE_ROOT/backend/releases/<prev_ts> $REMOTE_ROOT/backend/current && sudo systemctl restart mod-api mod-simulator'"
+    echo "  回滚命令（后端及常驻）: ssh usa 'ln -sfn $REMOTE_ROOT/backend/releases/<prev_ts> $REMOTE_ROOT/backend/current && sudo systemctl restart mod.service'"
 fi
 echo "=========================================="

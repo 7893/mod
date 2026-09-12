@@ -38,7 +38,7 @@
 ## 改动边界
 
 默认只读检查。以下操作需要显式授权方可执行：数据库写入、生产服务启停、Nginx 变更、云资源变更、
-破坏性清理、或向本地仓库以外发布任何内容。生产发布部署（`scripts/project/publish.sh`）必须由项目 Owner（用户）或主控 Agent 亲自运行，或由其明确授权其他 Agent（如执行 Agent / 子 Agent）运行。不得修改 `/home/ubuntu/modo` 或其他项目。
+破坏性清理、或向本地仓库以外发布任何内容。生产发布部署默认通过 GitHub Actions CI/CD 流水线（push 至 main 分支触发 Quality gates 自动通过并部署）；本地脚本 `scripts/project/publish.sh` 保留为应急/直连备用发布通道，同样必须获得显式授权方可运行。不得修改 `/home/ubuntu/modo` 或其他项目。
 
 ## 提交约定
 

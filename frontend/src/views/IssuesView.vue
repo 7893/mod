@@ -188,8 +188,10 @@ const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePag
           <VChart class="w-full h-full min-h-0" :option="complianceOverviewOption" autoresize />
         </template>
         <template #aside>
-          <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs"><span class="font-medium text-slate-300">主要风险维度</span><span class="text-slate-500">TOP 3</span></div>
-          <StatList :rows="dominantComplianceTags" flat density="dense" />
+          <div class="flex flex-col justify-center h-full px-5">
+            <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs"><span class="font-medium text-slate-300">主要风险维度</span><span class="text-slate-500">TOP 3</span></div>
+            <StatList :rows="dominantComplianceTags" flat density="dense" />
+          </div>
         </template>
       </CommandBand>
     </CockpitPanel>

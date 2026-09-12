@@ -21,8 +21,10 @@ const props = withDefaults(
     fill?: boolean
     /** 平铺形态：去掉卡片底色与描边，单元格之间只用细分隔线。用于指挥带侧栏与面板内的事实栏。 */
     flat?: boolean
+    /** 对齐方式：默认靠左，可设为居中对齐。 */
+    align?: 'left' | 'center'
   }>(),
-  { variant: 'stacked', size: 'md', maxPerRow: 4, fill: false },
+  { variant: 'stacked', size: 'md', maxPerRow: 4, fill: false, align: 'left' },
 )
 
 const gridStyle = computed(() => ({
@@ -33,7 +35,15 @@ const gridStyle = computed(() => ({
 <template>
   <div
     class="metric-grid"
-    :class="[`metric-grid--${variant}`, `metric-grid--${size}`, { 'metric-grid--fill': fill, 'metric-grid--flat': flat }]"
+    :class="[
+      `metric-grid--${variant}`,
+      `metric-grid--${size}`,
+      {
+        'metric-grid--fill': fill,
+        'metric-grid--flat': flat,
+        'metric-grid--center': align === 'center',
+      },
+    ]"
     :style="gridStyle"
   >
     <div

@@ -11,7 +11,7 @@ export function createRiskOverviewOption(items: RiskOverviewItem[]) {
   return {
     ...calmAnimation,
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip },
-    grid: { left: 62, right: 58, top: 7, bottom: 7 },
+    grid: { left: '16%', right: '14%', top: 7, bottom: 7 },
     xAxis: { type: 'value', max, show: false },
     yAxis: {
       type: 'category', data: items.map((item) => item.name),
