@@ -25,6 +25,16 @@ from simulation.runtime_service import (
 HK_TZ = ZoneInfo("Asia/Hong_Kong")
 
 
+def _mock_conn_with_lock() -> MagicMock:
+    """Create a mock connection that supports GET_LOCK/RELEASE_LOCK (KI-072)."""
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchone.return_value = (1,)  # GET_LOCK returns 1 on success
+    mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    return mock_conn
+
+
 def _mock_fast_baseline() -> SimulationBaseline:
     return SimulationBaseline(
         latest_business_date=datetime(2026, 9, 4, 18, 0, 0),
@@ -77,7 +87,7 @@ def test_ki062_propeller_invoked_when_engine_enabled(tmp_path, monkeypatch):
         dry_run=False,
     )
 
-    mock_conn = MagicMock()
+    mock_conn = _mock_conn_with_lock()
     mock_propeller = MagicMock()
     mock_propeller.step.return_value = MagicMock(
         units_advanced=2, issues_advanced=1, issues_created=0, issues_resolved=1
@@ -129,7 +139,7 @@ def test_ki062_propeller_not_invoked_when_engine_disabled(tmp_path, monkeypatch)
         dry_run=False,
     )
 
-    mock_conn = MagicMock()
+    mock_conn = _mock_conn_with_lock()
     mock_propeller = MagicMock()
     mock_backfiller = MagicMock()
 

@@ -577,8 +577,28 @@ class SimulatorRuntimeService:
         conn = None
         lifecycle_state_saved = True
         projection_journal_saved = True
+        db_lock_acquired = False
         try:
             conn = self._get_connection()
+
+            # KI-072: Acquire database-level leader lock to prevent dual-instance conflicts
+            with conn.cursor() as cur:
+                cur.execute("SELECT GET_LOCK('mod_simulator_leader', 0) AS acquired")
+                lock_result = cur.fetchone()
+                if not lock_result or lock_result[0] != 1:
+                    logger.info("[STANDBY] Another simulator instance holds the leader lock. Skipping cycle.")
+                    self._save_status("STANDBY", intensity, now_hkt, "Another instance is leader")
+                    self.fuse.release(now_hkt, reservation_count, persist=True)
+                    return CycleResult(
+                        status="STANDBY",
+                        events_written=0,
+                        wait_seconds=wait_seconds,
+                        intensity=intensity,
+                        error="Another simulator instance is leader",
+                        cycle_duration_ms=(time.perf_counter() - t0) * 1000,
+                    )
+                db_lock_acquired = True
+
             self._ensure_baselines(conn)
             self.cycle_count += 1
 
@@ -760,6 +780,11 @@ class SimulatorRuntimeService:
                 cycle_duration_ms=(time.perf_counter() - t0) * 1000,
             )
         finally:
+            # KI-072: Release database-level leader lock
+            if db_lock_acquired and conn:
+                with suppress(Exception):
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT RELEASE_LOCK('mod_simulator_leader')")
             if not self._external_conn and conn:
                 conn.close()
 
