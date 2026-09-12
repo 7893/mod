@@ -178,7 +178,7 @@ jobs:
             ln -sfn /home/ubuntu/mod/backend/releases/$TS /home/ubuntu/mod/backend/current
             ln -sfn . /home/ubuntu/mod/backend/current/app
 
-            sudo systemctl reload nginx
+            sudo systemctl reload nginx || sudo systemctl restart nginx
             sudo systemctl restart mod.service
 
             HEALTH=""
