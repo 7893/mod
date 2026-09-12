@@ -21,7 +21,7 @@
 
 ## English
 
-Updated: 2026-09-12 · Status: Active project overview<br>
+Updated: 2026-09-13 · Status: Active project overview<br>
 Scope: Product positioning, architecture, development entry points, and repository navigation
 
 ### Overview
@@ -62,17 +62,18 @@ down into the organizations, batches, stages, and evidence behind every conclusi
 
 ```mermaid
 flowchart LR
-    V[Visitor] --> DNS[Google Cloud DNS] --> CF[CloudFront CDN]
-    CF --> N[Nginx origin gate (USA)]
-    N --> UI[Vue dashboard]
-    N --> API[FastAPI read-only API]
-    API --> DB[(MySQL HeatWave)]
-    SIM[Governed simulation service] --> DB
-    UI -. fallback .-> SNAP[Bundled synthetic snapshot]
+    V["Visitor"] --> DNS["Google Cloud DNS"] --> CF["CloudFront CDN"]
+    CF --> N["Nginx origin gate (USA)"]
+    N --> UI["Vue dashboard"]
+    N --> API["FastAPI read-only API"]
+    API --> DB[("MySQL HeatWave")]
+    SIM["Governed simulation service"] --> DB
+    UI -.->|"fallback"| SNAP["Bundled synthetic snapshot"]
 ```
 
-Production artifacts are isolated behind atomic release symlinks. Source edits and local builds do not become a
-production release automatically. Runtime credentials remain outside Git.
+Standard production delivery runs through GitHub Actions CI/CD upon push to `main` with full quality gates, with
+atomic release symlinks on the dedicated USA production host and unified service management under `mod.service`.
+Source edits and local builds do not become a production release automatically. Runtime credentials remain outside Git.
 
 ### Technology
 
@@ -135,7 +136,7 @@ MOD is available under the [MIT License](LICENSE).
 
 ## 简体中文
 
-更新日期：2026-09-12 · 状态：现行项目概览<br>
+更新日期：2026-09-13 · 状态：现行项目概览<br>
 适用范围：产品定位、运行架构、开发入口与仓库导航
 
 > [!IMPORTANT]
@@ -177,17 +178,17 @@ MOD 将复杂、多阶段的业务系统建设推广过程，转化为一套面�
 
 ```mermaid
 flowchart LR
-    V[访问者] --> DNS[Google Cloud DNS] --> CF[CloudFront CDN]
-    CF --> N[Nginx 源站门禁 (USA)]
-    N --> UI[Vue 驾驶舱]
-    N --> API[FastAPI 只读接口]
-    API --> DB[(MySQL HeatWave)]
-    SIM[受治理的拟真服务] --> DB
-    UI -. 降级 .-> SNAP[内置合成快照]
+    V["访问者"] --> DNS["Google Cloud DNS"] --> CF["CloudFront CDN"]
+    CF --> N["Nginx 源站门禁 (USA)"]
+    N --> UI["Vue 驾驶舱"]
+    N --> API["FastAPI 只读接口"]
+    API --> DB[("MySQL HeatWave")]
+    SIM["受治理的拟真服务"] --> DB
+    UI -.->|"降级"| SNAP["内置合成快照"]
 ```
 
-生产文件通过原子软链与源码工作区隔离，修改源码或执行本地构建不会自动形成生产发布；运行凭据始终保留在
-Git 仓库之外。
+标准生产发布通过 GitHub Actions CI/CD 流水线（push 至 `main` 分支自动触发完整质量门禁、前端构建与生产机原子软链部署），
+配合轻量守护 `mod.service` 统一托管。修改源码或执行本地构建不会自动形成生产发布；运行凭据始终保留在 Git 仓库之外。
 
 ### 技术栈
 
