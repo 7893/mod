@@ -49,6 +49,10 @@
   --color-surface-veil-06: rgb(255 255 255 / 0.06);  /* 弱分隔 */
   --color-surface-veil-03: rgb(255 255 255 / 0.03);  /* 更弱底纹 */
 
+  /* 滚动条 */
+  --color-scrollbar-thumb: rgb(255 255 255 / 0.15);
+  --color-scrollbar-thumb-hover: rgb(255 255 255 / 0.25);
+
   /* 仪表字号阶梯（等宽/紧凑信息密度） */
   --text-cockpit-xs: 10px;
   --text-cockpit-sm: 11px;
