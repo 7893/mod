@@ -73,6 +73,11 @@
     - **fallback 数据契约对齐**：补齐前后端 fallback 快照（`v2-sim-snapshot.json`）的 `rolloutTrend`、`operationsTrend` 及 `operations` 双轨明细字段（`dualRunConsistent`、`dualRunInconsistent`、`dualRunConsistencyPct`、`integrationSuccess`、`integrationFailed`），消除降级时 C3、D3、D6 面板假性空白。
     - **健康探针与发布门禁收紧**：`/api/health` 增加 `snapshot` 元数据（含 `source`、`status`、`last_refreshed_at`、`last_refresh_duration_ms`、`last_error`、`is_stale`、`consecutive_failures`）；`/api/dashboard/refresh-meta` 严格根据 `_snapshot_source` 真实返回 `data_version`（`live` 或 `frozen`）与 `status`（`ok` 或 `fallback`），禁止仅凭 DB 连接存在谎报 `live`；`publish.sh` 增加 C3/D3/D6 字段完整性发布门禁。
   - **前端零转圈策略（`stores/project.ts`）**：store 初始即用内置兜底快照（`data/fallback-snapshot.json`）预填 `snapshot`/`entities`，`loading` 初值为 `false`；`refresh()` 仅在「完全没有任何可展示数据」时才置 `loading`。因兜底数据恒存在，首屏与轮询刷新（含后端快照冷启动 >1s 的极端情形）都走静默替换，顶栏刷新指示与各屏内容区均不出现转圈/白屏。轮询刷新沿用 `silent=true`。六个屏幕（A~F）共享同一 store 快照渲染，切屏不重新请求、无独立整屏加载态；F 屏「每日简报」「风险解释」为局部按需小加载态，不影响整屏。
+- **单位台账后端分页（P1，2026-09-14）**：
+  - **架构改造**：原 `/api/organizations` 端点从 `dashboard_snapshot()` 取全量 3,202 条实体后在 Python 内存过滤分页，改为直接查库分页。新增 `query_entities_paginated()` 函数（`dashboard_sections.py`）支持 `page`、`page_size`、`region`、`status`、`batch`、`keyword` 参数，SQL 层 `WHERE` + `LIMIT/OFFSET` 真正分页。
+  - **前端重构**：`RolloutLedgerTable.vue` 从同步读取 `store.entities` 客户端分页改为调用新 composable `useOrganizations.ts` 异步服务端分页。筛选条件变化自动重置到第 1 页并发起 API 请求；加载态显示旋转指示器；空态与重置按钮保持不变。筛选选项计数仍从 `store.entities` 派生（后续可优化为独立 aggregation 接口）。
+  - **降级路径**：当数据库不可用时（`conn is None`），API 自动降级为从 fallback snapshot 内存过滤，保持与原逻辑一致的兜底能力。
+  - **测试更新**：`RolloutLedgerTable.test.ts` mock 改为同时拦截 `/api/dashboard/snapshot` 与 `/api/organizations`，模拟服务端分页响应。
 - 数据库为托管 MySQL HeatWave（库 `mod`，Always Free 规格），连接主机、端口与凭据
   仅存于运行主机的本地环境文件，不写入版本库或文档。原运行环境的旧数据库实例已删除。
 - 运行主机使用系统级 systemd 服务 `mod-api.service` 运行项目内 FastAPI 虚拟环境，监听

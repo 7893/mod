@@ -1,29 +1,23 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { RotateCcw } from 'lucide-vue-next'
+import { RotateCcw, Loader2 } from 'lucide-vue-next'
 import CockpitPanel from './CockpitPanel.vue'
 import EntityEditDrawer from './ledger/EntityEditDrawer.vue'
 import FilterSelect from './ledger/FilterSelect.vue'
 import LedgerPager from './ledger/LedgerPager.vue'
 import SearchInput from './ledger/SearchInput.vue'
 import { useEntityEditor } from '../composables/useEntityEditor.ts'
-import { usePagedList } from '../composables/usePagedList.ts'
+import { useOrganizations } from '../composables/useOrganizations.ts'
 import { formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
-import {
-  ALL,
-  BATCH_ORDER,
-  NATIONAL_PROVINCE_ORDER,
-  countedOptions,
-  matchesEntityQuery,
-  matchesOption,
-} from '../utils/entityOptions.ts'
+import { ALL, BATCH_ORDER, NATIONAL_PROVINCE_ORDER, countedOptions } from '../utils/entityOptions.ts'
 
 const store = useProjectStore()
 const query = ref('')
 const selectedBatch = ref(ALL)
 const selectedProvince = ref(ALL)
 
+// 用 store.entities 构建筛选选项（保持 option 的计数准确性需要后续优化）
 const provinces = computed(() =>
   countedOptions(store.entities, (row) => row.province, { order: NATIONAL_PROVINCE_ORDER, allLabel: '全部省份' }),
 )
@@ -31,18 +25,20 @@ const batchOptions = computed(() =>
   countedOptions(store.entities, (row) => row.batch, { order: BATCH_ORDER, allLabel: '全部批次' }),
 )
 
-const filteredEntities = computed(() =>
-  store.entities.filter(
-    (row) =>
-      matchesOption(selectedBatch.value, row.batch) &&
-      matchesOption(selectedProvince.value, row.province) &&
-      matchesEntityQuery(row, query.value),
-  ),
-)
-
-const { page, totalPages, items: paginatedEntities } = usePagedList(() => filteredEntities.value, {
+// 服务端分页
+const {
+  items: paginatedEntities,
+  total,
+  page,
+  totalPages,
+  loading,
+  goToPage,
+  refresh,
+} = useOrganizations({
   pageSize: 20,
-  resetOn: [selectedBatch, selectedProvince, query],
+  region: selectedProvince,
+  batch: selectedBatch,
+  keyword: query,
 })
 
 const isFiltered = computed(() => selectedBatch.value !== ALL || selectedProvince.value !== ALL || !!query.value)
@@ -51,10 +47,14 @@ function resetFilters() {
   selectedBatch.value = ALL
   selectedProvince.value = ALL
   query.value = ''
-  page.value = 1
 }
 
 const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEditor()
+
+// 分页器需要双向绑定支持
+function handlePageChange(newPage: number) {
+  goToPage(newPage)
+}
 </script>
 
 <template>
@@ -62,11 +62,12 @@ const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEdit
   <CockpitPanel
     title="单位台账"
     zone="C6"
-    :subtitle="isFiltered ? `筛选出 ${filteredEntities.length} 家 / 共 ${store.entities.length} 家纳管单位` : `共 ${filteredEntities.length} 家纳管单位`"
+    :subtitle="isFiltered ? `筛选出 ${total} 家 / 共 ${store.entities.length} 家纳管单位` : `共 ${total} 家纳管单位`"
     class="flex-1 min-h-0"
   >
     <template #actions>
       <div class="flex items-center gap-2">
+        <Loader2 v-if="loading" :size="14" class="animate-spin text-slate-400" />
         <SearchInput v-model="query" placeholder="搜索单位/联系人/批次/省份" />
         <FilterSelect v-model="selectedBatch" :options="batchOptions" />
         <FilterSelect v-model="selectedProvince" :options="provinces" />
@@ -149,7 +150,7 @@ const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEdit
                 </button>
               </td>
             </tr>
-            <tr v-if="!paginatedEntities.length">
+            <tr v-if="!loading && !paginatedEntities.length">
               <td colspan="10" class="px-3 py-10 text-center text-slate-500">
                 <div class="flex flex-col items-center justify-center gap-2">
                   <p>无匹配单位记录（当前筛选条件下未检索到数据）</p>
@@ -164,11 +165,19 @@ const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEdit
                 </div>
               </td>
             </tr>
+            <tr v-if="loading && !paginatedEntities.length">
+              <td colspan="10" class="px-3 py-10 text-center text-slate-500">
+                <div class="flex items-center justify-center gap-2">
+                  <Loader2 :size="16" class="animate-spin" />
+                  <span>加载中...</span>
+                </div>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
 
-      <LedgerPager v-model="page" :total-pages="totalPages" :summary="`共 ${filteredEntities.length} 条`" />
+      <LedgerPager :model-value="page" :total-pages="totalPages" :summary="`共 ${total} 条`" @update:model-value="handlePageChange" />
     </div>
   </CockpitPanel>
 
