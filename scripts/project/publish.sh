@@ -115,7 +115,7 @@ else
 
     echo "[5/8] 远程 reload Nginx + reload/restart mod.service on USA..."
     ssh "$REMOTE_HOST" "sudo systemctl reload nginx && (sudo systemctl reload mod.service || sudo systemctl restart mod.service)"
-    sleep 4
+    sleep 8  # 等待 SWR 缓存预热
 fi
 
 # 6. 验证

@@ -19,6 +19,7 @@ from .services.dashboard import (
     normalize_operations_dict,
     normalize_region,
 )
+from .services.dashboard_sections import query_entities_paginated
 
 logger = logging.getLogger(__name__)
 
@@ -310,29 +311,45 @@ def organizations(
     page_size: int = Query(50, ge=1, le=500),
     region: str | None = None,
     status: str | None = None,
+    batch: int | None = None,
     keyword: str | None = None,
     conn: Connection | None = Depends(connection),
 ) -> Page:
-    snap = dashboard_snapshot(conn)
-    entities = snap.get("entities", [])
-
-    filtered = entities
-    if region and region != "全部":
-        norm_r = normalize_region(region)
-        filtered = [e for e in filtered if e["province"] == norm_r or e["region"] == region]
-    if status and status != "全部":
-        filtered = [e for e in filtered if e["status"] == status]
-    if keyword:
-        kw = keyword.lower()
-        filtered = [
-            e for e in filtered
-            if kw in e["name"].lower() or kw in e["owner"].lower() or kw in e["province"].lower()
-        ]
-
-    total = len(filtered)
-    start = (page - 1) * page_size
-    items = filtered[start:start + page_size]
-    return Page(items=items, total=total, page=page, page_size=page_size)
+    """分页查询单位列表，直接查库，支持筛选。"""
+    if conn is None:
+        # 降级到 fallback snapshot
+        snap = dashboard_snapshot(conn)
+        entities = snap.get("entities", [])
+        filtered = entities
+        if region and region not in ("全部", "全部省份"):
+            norm_r = normalize_region(region)
+            filtered = [e for e in filtered if e["province"] == norm_r or e.get("region") == region]
+        if status and status not in ("全部", "全部状态"):
+            filtered = [e for e in filtered if e["status"] == status]
+        if batch:
+            filtered = [e for e in filtered if e.get("batchId") == batch]
+        if keyword:
+            kw = keyword.lower()
+            filtered = [
+                e for e in filtered
+                if kw in e["name"].lower() or kw in e["owner"].lower() or kw in e["province"].lower()
+            ]
+        total = len(filtered)
+        start = (page - 1) * page_size
+        items = filtered[start:start + page_size]
+        return Page(items=items, total=total, page=page, page_size=page_size)
+    
+    # 正常路径：直接查库分页
+    result = query_entities_paginated(
+        conn,
+        page=page,
+        page_size=page_size,
+        region=region,
+        status=status,
+        batch=batch,
+        keyword=keyword,
+    )
+    return Page(items=result.items, total=result.total, page=result.page, page_size=result.page_size)
 
 
 @router.get("/issues/summary")
