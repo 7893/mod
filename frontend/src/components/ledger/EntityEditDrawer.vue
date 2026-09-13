@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import DrawerShell from '../DrawerShell.vue'
-import { X } from 'lucide-vue-next'
+import { X, Loader2 } from 'lucide-vue-next'
 import type { EntityRow } from '../../stores/project.ts'
 import { STATUS_ORDER } from '../../utils/entityOptions.ts'
 
-defineProps<{ entity: EntityRow }>()
+defineProps<{ entity: EntityRow; saving?: boolean; error?: string | null }>()
 const draft = defineModel<Partial<EntityRow>>('draft', { required: true })
 const emit = defineEmits<{ (e: 'close'): void; (e: 'save'): void }>()
 
@@ -37,14 +37,14 @@ const fieldClass =
       <form class="flex flex-col gap-3.5 flex-1" @submit.prevent="emit('save')">
         <label class="flex flex-col gap-1 text-cockpit-sm text-slate-300 font-medium">
           运行状态
-          <select v-model="draft.status" :class="fieldClass">
+          <select v-model="draft.status" :class="fieldClass" :disabled="saving">
             <option v-for="s in STATUS_ORDER" :key="s">{{ s }}</option>
           </select>
         </label>
 
         <label class="flex flex-col gap-1 text-cockpit-sm text-slate-300 font-medium">
           项目联系人
-          <input v-model="draft.owner" :class="fieldClass" />
+          <input v-model="draft.owner" :class="fieldClass" :disabled="saving" />
         </label>
 
         <label class="flex flex-col gap-1 text-cockpit-sm text-slate-300 font-medium">
@@ -52,7 +52,7 @@ const fieldClass =
             <span>建设完成率</span>
             <b class="font-mono text-sky-400">{{ draft.construction }}%</b>
           </div>
-          <input v-model.number="draft.construction" type="range" min="0" max="100" class="w-full accent-sky-400 cursor-pointer" />
+          <input v-model.number="draft.construction" type="range" min="0" max="100" class="w-full accent-sky-400 cursor-pointer" :disabled="saving" />
         </label>
 
         <label class="flex flex-col gap-1 text-cockpit-sm text-slate-300 font-medium">
@@ -60,29 +60,29 @@ const fieldClass =
             <span>期初数据完成率</span>
             <b class="font-mono text-emerald-400">{{ draft.openingData }}%</b>
           </div>
-          <input v-model.number="draft.openingData" type="range" min="0" max="100" class="w-full accent-emerald-400 cursor-pointer" />
+          <input v-model.number="draft.openingData" type="range" min="0" max="100" class="w-full accent-emerald-400 cursor-pointer" :disabled="saving" />
         </label>
 
-        <p class="text-cockpit-xs text-slate-500 mt-auto">
-          <!-- KI-085 #12: 明确告知用户这是临时内存调整，非持久化 -->
-          <span class="text-amber-400/80">⚠ 临时调整：</span>
-          保存后仅更新当前会话视图，数据刷新（约60秒）后将恢复为系统真实状态。
-          如需永久变更，请通过后台管理流程操作。
+        <p v-if="error" class="text-cockpit-xs text-red-400 mt-auto">
+          ⚠ 保存失败：{{ error }}
         </p>
 
-        <div class="flex items-center gap-2.5 pt-3 border-t border-white/5">
+        <div class="flex items-center gap-2.5 pt-3 border-t border-white/5 mt-auto">
           <button
             type="button"
-            class="flex-1 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 transition-colors text-cockpit-sm font-medium cursor-pointer"
+            class="flex-1 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 transition-colors text-cockpit-sm font-medium cursor-pointer disabled:opacity-50"
+            :disabled="saving"
             @click="emit('close')"
           >
             取消
           </button>
           <button
             type="submit"
-            class="flex-1 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-medium transition-colors text-cockpit-sm shadow-sm shadow-sky-950 cursor-pointer"
+            class="flex-1 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-medium transition-colors text-cockpit-sm shadow-sm shadow-sky-950 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+            :disabled="saving"
           >
-            保存
+            <Loader2 v-if="saving" :size="14" class="animate-spin" />
+            {{ saving ? '保存中...' : '保存' }}
           </button>
         </div>
       </form>

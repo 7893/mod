@@ -12,7 +12,7 @@ from sqlalchemy.engine import Connection
 from .db import connection, get_engine
 from .heatwave_watchdog import get_heatwave_status
 from .ml_adapter import HeatWaveMLAdapter, CloudflareAIAdapter
-from .schemas import Page
+from .schemas import Page, EntityPatch
 from .services.dashboard import (
     build_dashboard_snapshot,
     load_fallback_snapshot as load_fallback_snapshot,
@@ -350,6 +350,75 @@ def organizations(
         keyword=keyword,
     )
     return Page(items=result.items, total=result.total, page=result.page, page_size=result.page_size)
+
+
+@router.patch("/organizations/{org_id}")
+def update_organization(
+    org_id: int,
+    patch: EntityPatch,
+    conn: Connection | None = Depends(connection),
+) -> dict:
+    """更新单位状态（调态）。"""
+    from .config import get_settings
+    
+    if conn is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="数据库不可用")
+    
+    if get_settings().is_readonly_mode:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前为只读模式，无法修改")
+    
+    # 检查单位是否存在
+    exists = conn.execute(text("SELECT id FROM org_unit WHERE id = :id"), {"id": org_id}).fetchone()
+    if not exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="单位不存在")
+    
+    # 构建更新字段
+    updates = []
+    params: dict = {"id": org_id}
+    
+    if patch.status is not None:
+        updates.append("status = :status")
+        params["status"] = patch.status
+    
+    if patch.owner is not None:
+        # 更新 sys_user 表中该单位的主联系人（财务总监）
+        conn.execute(
+            text("""
+                UPDATE sys_user 
+                SET name = :owner 
+                WHERE org_id = :id AND job = '财务总监'
+                LIMIT 1
+            """),
+            {"id": org_id, "owner": patch.owner},
+        )
+    
+    if patch.construction is not None:
+        # 更新 construction_task 的平均进度
+        conn.execute(
+            text("""
+                UPDATE construction_task 
+                SET progress = :progress 
+                WHERE org_id = :id
+            """),
+            {"id": org_id, "progress": patch.construction},
+        )
+    
+    if patch.opening_data is not None:
+        # 更新 data_readiness 的 opening_rate
+        conn.execute(
+            text("""
+                UPDATE data_readiness 
+                SET opening_rate = :rate 
+                WHERE org_id = :id
+            """),
+            {"id": org_id, "rate": f"{patch.opening_data}%"},
+        )
+    
+    if updates:
+        conn.execute(text(f"UPDATE org_unit SET {', '.join(updates)} WHERE id = :id"), params)
+    
+    conn.commit()
+    return {"ok": True, "id": org_id}
 
 
 @router.get("/issues/summary")
