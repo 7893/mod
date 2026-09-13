@@ -30,6 +30,10 @@ class Cursor:
     def fetchall(self):
         return self.cursor.fetchall()
 
+    @property
+    def rowcount(self):
+        return self.cursor.rowcount
+
 
 class Connection:
     def __init__(self, raw):
@@ -40,6 +44,12 @@ class Connection:
 
     def cursor(self):
         return Cursor(self.raw)
+
+    def commit(self):
+        self.raw.commit()
+
+    def rollback(self):
+        self.raw.rollback()
 
 
 @pytest.fixture
@@ -117,6 +127,9 @@ def test_pruning_advances_floor_and_preserves_persistent_totals(database, monkey
     monkeypatch.setattr(outbox_writer, 'MAX_RETAINED_EVENTS', 3)
     outbox_writer.append_outbox(conn, [record(i) for i in range(1, 6)])
     conn.raw.commit()
+    # KI-085 #3: Prune is now deferred; call it explicitly after commit
+    outbox_writer.prune_outbox_deferred(conn)
+    conn.raw.commit()  # Caller commits the prune transaction
     page = reader.read_page(0)
     assert page.floor == 2 and page.head == 5
     assert [r['sequence'] for r in page.records] == [3, 4, 5]
@@ -135,6 +148,9 @@ def test_retention_cutoff_and_pruning_are_rolled_back_together(database):
     assert len(reader.read_page(0).records) == 1
     outbox_writer.append_outbox(conn, [record(2)], now=now)
     conn.raw.commit()
+    # KI-085 #3: Prune is now deferred; call it explicitly after commit
+    outbox_writer.prune_outbox_deferred(conn)
+    conn.raw.commit()  # Caller commits the prune transaction
     assert reader.read_page(0).floor == 1
     assert [r['sequence'] for r in reader.read_page(0).records] == [2]
 

@@ -89,3 +89,39 @@ def test_malformed_and_truncated_outputs_are_not_cached(monkeypatch):
         monkeypatch.setattr(urllib.request, 'urlopen', lambda *a, **kw: response)
         assert adapter.generate_insights({'orgTotal': 2})['status'] == 'unavailable'
         assert adapter.get_status()['cache']['has_cache'] is False
+
+
+def test_prompt_contains_voucher_constraint_and_chinese_labels(monkeypatch):
+    import json
+    import urllib.request
+    from unittest.mock import MagicMock
+    from app.integrations.cloudflare_ai import _SYSTEM_PROMPT, FIELD_NAMES_CN
+
+    assert "优惠券" in _SYSTEM_PROMPT
+    assert "代金券" in _SYSTEM_PROMPT
+    assert "凭证" in _SYSTEM_PROMPT
+    assert FIELD_NAMES_CN["vouchersTotal"] == "累计财务会计凭证总数"
+
+    adapter = _enabled_adapter(monkeypatch)
+    captured_body = {}
+
+    def mock_urlopen(req, *args, **kwargs):
+        nonlocal captured_body
+        captured_body = json.loads(req.data.decode("utf-8"))
+        res = MagicMock()
+        res.__enter__.return_value.read.return_value = json.dumps({
+            "result": {"response": "## 当前概况\n财务凭证正常。\n## 待核实事项\n待核实。\n## 建议检查\n保持监控。"}
+        }).encode("utf-8")
+        return res
+
+    monkeypatch.setattr(urllib.request, "urlopen", mock_urlopen)
+    adapter.generate_insights({"vouchersTotal": 5000000, "vouchersTodayAdded": 120})
+
+    messages = captured_body["messages"]
+    system_msg = next(m for m in messages if m["role"] == "system")
+    user_msg = next(m for m in messages if m["role"] == "user")
+
+    assert "优惠券" in system_msg["content"]
+    assert "累计财务会计凭证总数 (vouchersTotal): 5000000" in user_msg["content"]
+    assert "今日新增财务会计凭证数 (vouchersTodayAdded): 120" in user_msg["content"]
+

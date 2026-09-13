@@ -63,7 +63,12 @@ const fieldClass =
           <input v-model.number="draft.openingData" type="range" min="0" max="100" class="w-full accent-emerald-400 cursor-pointer" />
         </label>
 
-        <p class="text-cockpit-xs text-slate-500 mt-auto">保存后即时同步快照并记录变更</p>
+        <p class="text-cockpit-xs text-slate-500 mt-auto">
+          <!-- KI-085 #12: 明确告知用户这是临时内存调整，非持久化 -->
+          <span class="text-amber-400/80">⚠ 临时调整：</span>
+          保存后仅更新当前会话视图，数据刷新（约60秒）后将恢复为系统真实状态。
+          如需永久变更，请通过后台管理流程操作。
+        </p>
 
         <div class="flex items-center gap-2.5 pt-3 border-t border-white/5">
           <button

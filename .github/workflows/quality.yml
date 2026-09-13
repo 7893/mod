@@ -172,6 +172,10 @@ jobs:
             simulation scripts deploy \
             ubuntu@"$TARGET_HOST":${MOD_PROJECT_ROOT}/backend/releases/$TS/
 
+          rsync -avz -e "ssh $SSH_OPTS" \
+            backend/pyproject.toml backend/uv.lock \
+            ubuntu@"$TARGET_HOST":${MOD_PROJECT_ROOT}/backend/
+
           ssh $SSH_OPTS ubuntu@"$TARGET_HOST" "bash -s $TS" << 'EOF'
             set -e
             TS=$1
@@ -179,8 +183,11 @@ jobs:
             ln -sfn ${MOD_PROJECT_ROOT}/backend/releases/$TS ${MOD_PROJECT_ROOT}/backend/current
             ln -sfn . ${MOD_PROJECT_ROOT}/backend/current/app
 
+            cd ${MOD_PROJECT_ROOT}/backend
+            ([ -x ${HOME}/.cargo/bin/uv ] && ${HOME}/.cargo/bin/uv sync --frozen --all-extras) || true
+
             sudo systemctl reload nginx || sudo systemctl restart nginx
-            sudo systemctl restart mod.service
+            sudo systemctl reload mod.service || sudo systemctl restart mod.service
 
             HEALTH=""
             for i in $(seq 1 10); do

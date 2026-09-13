@@ -453,6 +453,18 @@ KI-060 更新前的本节原文完整保存在
 - **Uvicorn 多 Worker 与零停机平滑热重载**：在 `scripts/project/run_unified.py` 中为 API 统一运行时启用 Uvicorn 原生多进程支持（默认 `--workers 2`，支持 `MOD_API_WORKERS`），并在主守护器中实现 `SIGHUP` 信号监听与安全向下透传；在 `deploy/mod.service` 增加 `ExecReload=/bin/kill -HUP $MAINPID`，并在 `scripts/project/publish.sh` 中优先采用 `systemctl reload`，使部署更新通过滚动重启 Worker 实现零停机平滑过渡，消灭服务重启造成的 3~8 秒 502 Bad Gateway 窗口。
 - 详细复盘与核验记录见 [KI-084](issues/KI-084-生产致命缺陷与高可用短板治理.md)。
 
+## 2026-09-13 核心架构缺陷与数据安全治理（KI-085，部分修复）
+
+- **Outbox 清理逻辑与业务事务解耦（#3）**：将 `backend/app/live_projection/outbox_writer.py` 中的历史事件清理从 `append_outbox` 主事务剥离，新增 `prune_outbox_deferred()` 函数在业务事务提交后异步执行，消除 DELETE 操作对核心写入路径的锁争用。
+- **dual_run_result 索引优化（#5）**：新增 `scripts/project/add_dual_run_result_index.py` 迁移脚本，为 `dual_run_result` 表添加 `(check_date, check_type, result)` 联合索引，消除双轨对账聚合查询的全表扫描。
+- **生命周期状态落盘优化（#7）**：在 `simulation/runtime_service.py` 中移除 `_save_evolution_state` 的 `indent=2` 格式化和同步 `os.fsync()`，文件体积从 ~2.1MB 降至 ~1.4MB，消除每周期数百毫秒的磁盘阻塞。
+- **备份密钥安全警告（#9）**：在 `scripts/project/backup_pipeline.py` 中增加本地密钥文件使用的安全警告日志，提醒生产环境应使用外部密钥管理服务。
+- **AI Prompt 财经术语约束（#10）**：在 `backend/app/integrations/cloudflare_ai.py` 中新增 `FIELD_NAMES_CN` 中英文术语映射，System Prompt 注入"会计凭证严禁翻译为优惠券"约束，杜绝大模型英文直译偏差。
+- **前端调态临时性提示（#12）**：在 `frontend/src/components/ledger/EntityEditDrawer.vue` 中添加明确提示，说明调态操作为临时会话调整，数据刷新后将恢复系统真实状态。
+- **Nginx 静态入口防缓存策略（#13）**：在 `deploy/nginx/mod.conf.example` 中为 HTML 文件添加专项 location 块，强制 `no-cache, no-store, must-revalidate`，杜绝发版后 ChunkLoadError。
+- **发布脚本依赖同步（#14）**：在 `scripts/project/publish.sh` 和 `.github/workflows/quality.yml` 中增加 `pyproject.toml`/`uv.lock` 同步及 `uv sync --frozen` 步骤，确保生产环境 Python 依赖与代码同步。
+- 详细问题清单与核验标准见 [KI-085](issues/KI-085-核心架构缺陷与数据安全治理.md)。
+
 ## 操作边界
 
 2026-09-11 harness 减薄补充：/pre-flight 的注册已移到全局 Pi 扩展，MOD 旧注册块注释保留，
