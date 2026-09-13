@@ -133,7 +133,7 @@ const summaryItems = computed<MetricItem[]>(() => [
   },
 ])
 
-const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEditor()
+const { editing, draft, saving, error: editError, open: openEdit, close: closeEdit, save } = useEntityEditor()
 </script>
 
 <template>
@@ -293,6 +293,6 @@ const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEdit
       </div>
     </CockpitPanel>
 
-    <EntityEditDrawer v-if="editing" v-model:draft="draft" :entity="editing" @close="closeEdit" @save="save" />
+    <EntityEditDrawer v-if="editing" v-model:draft="draft" :entity="editing" :saving="saving" :error="editError" @close="closeEdit" @save="save" />
   </div>
 </template>

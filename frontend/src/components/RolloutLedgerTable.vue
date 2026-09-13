@@ -49,7 +49,7 @@ function resetFilters() {
   query.value = ''
 }
 
-const { editing, draft, open: openEdit, close: closeEdit, save } = useEntityEditor()
+const { editing, draft, saving, error: editError, open: openEdit, close: closeEdit, save } = useEntityEditor()
 
 // 分页器需要双向绑定支持
 function handlePageChange(newPage: number) {
@@ -181,5 +181,5 @@ function handlePageChange(newPage: number) {
     </div>
   </CockpitPanel>
 
-  <EntityEditDrawer v-if="editing" v-model:draft="draft" :entity="editing" @close="closeEdit" @save="save" />
+  <EntityEditDrawer v-if="editing" v-model:draft="draft" :entity="editing" :saving="saving" :error="editError" @close="closeEdit" @save="save" />
 </template>
