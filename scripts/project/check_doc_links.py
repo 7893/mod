@@ -15,6 +15,7 @@ Skips:
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -75,6 +76,17 @@ def check_file(md_path: Path) -> list[tuple[int, str]]:
             resolved = (md_path.parent / target_path).resolve()
             if not resolved.exists():
                 dead.append((lineno, target))
+            elif resolved.is_relative_to(ROOT) and not resolved.is_relative_to(ROOT / "docs" / "history"):
+                try:
+                    rel_str = str(resolved.relative_to(ROOT))
+                    if subprocess.run(
+                        ["git", "check-ignore", "-q", rel_str],
+                        cwd=ROOT,
+                        capture_output=True,
+                    ).returncode == 0:
+                        dead.append((lineno, f"{target} (gitignored)"))
+                except Exception:
+                    pass
     return dead
 
 
