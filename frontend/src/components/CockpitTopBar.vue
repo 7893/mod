@@ -130,9 +130,9 @@ const riskClosureOption = computed(() => ({
       </div>
     </template>
 
-    <div class="grid grid-cols-12 gap-3 h-24 min-h-0 overflow-hidden">
-      <section class="col-span-4 grid grid-cols-5 gap-2 min-w-0 pr-3 border-r border-surface-veil-06">
-        <VChart class="col-span-2 w-full h-full min-h-0" :option="progressRingsOption" autoresize />
+    <div class="grid grid-cols-12 gap-3 h-24 min-h-[96px] max-h-[96px] overflow-hidden">
+      <section class="col-span-4 grid grid-cols-5 gap-2 min-w-0 pr-3 border-r border-surface-veil-06 overflow-hidden">
+        <VChart class="col-span-2 w-full h-full" :option="progressRingsOption" autoresize />
         <div class="col-span-3 grid grid-rows-3 divide-y divide-surface-veil-06 min-w-0">
           <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设完成率</span><b class="font-mono text-sky-400"><AnimatedNumber :value="constructionProgress" :decimals="1" :duration="numDuration(800)" />%</b></div>
           <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">上线率</span><b class="font-mono text-emerald-400">{{ rolloutRate }}%</b></div>
@@ -140,7 +140,7 @@ const riskClosureOption = computed(() => ({
         </div>
       </section>
 
-      <section class="col-span-5 flex flex-col min-w-0 pr-3 border-r border-surface-veil-06">
+      <section class="col-span-5 flex flex-col min-w-0 pr-3 border-r border-surface-veil-06 overflow-hidden">
         <div class="grid grid-cols-3 gap-2 flex-shrink-0">
           <div><span class="block text-cockpit-xs text-slate-500">今日单据</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.docsTodayAdded || 0" :duration="500" /></b></div>
           <div><span class="block text-cockpit-xs text-slate-500">今日凭证</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.vouchersTodayAdded || 0" :duration="500" /></b></div>
@@ -151,7 +151,7 @@ const riskClosureOption = computed(() => ({
 
       <button
         type="button"
-        class="col-span-3 flex items-center min-w-0 rounded-lg px-2 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
+        class="col-span-3 flex items-center min-w-0 rounded-lg px-2 hover:bg-rose-500/10 transition-colors cursor-pointer text-left overflow-hidden"
         title="进入风险中心"
         @click="$emit('openRisk')"
       >

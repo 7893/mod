@@ -23,7 +23,7 @@ function span(n: number) {
 </script>
 
 <template>
-  <div class="grid grid-cols-12 gap-3 h-24 min-h-0 overflow-hidden">
+  <div class="grid grid-cols-12 gap-3 h-24 min-h-[96px] max-h-[96px] overflow-hidden">
     <section class="flex flex-col pr-3 border-r border-surface-veil-06 min-h-0" :style="span(chartSpan)">
       <slot name="chart" />
     </section>
