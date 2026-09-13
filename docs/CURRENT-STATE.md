@@ -428,6 +428,12 @@ KI-060 更新前的本节原文完整保存在
   - `OverviewBand.vue`（B1）：添加 `min-h-[80px] max-h-[80px] overflow-hidden`
 - 通过同时设置 min-h 和 max-h 锁死容器高度，阻断 autoresize 与 scale 的交互循环。
 
+## 2026-09-13 全局滚动条深色主题适配（DONE）
+
+- 为大屏深色风格添加统一的自定义滚动条样式（6px 窄轨道 + 半透明滑块）
+- 颜色 token 定义于 `theme.css`：`--color-scrollbar-thumb` / `--color-scrollbar-thumb-hover`
+- 同时支持 Webkit（Chrome/Edge/Safari）和 Firefox
+
 ## 2026-09-13 CI/CD 安全加固与模拟器重启 ID 缓冲治理（KI-082 与 KI-083，DONE）
 
 - **CI/CD SSH 严格主机校验与部署密钥治理（KI-082）**：
