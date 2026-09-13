@@ -124,3 +124,6 @@ frontend/releases/
 frontend/current
 backend/releases/
 backend/current
+.codegraph/
+graphify-out/
+.graphify*

@@ -30,8 +30,12 @@ Do not preload all docs, all CURRENT-STATE, all skills, or previous KI records.
 The manifest .pi/harness.json is a navigation/check map, not a second copy of standards.
 If the local harness is unavailable, inspect that manifest and read the same references directly.
 Use full standards when the task spans the whole standard or section boundaries are insufficient.
+Code intelligence & graph tools (ADR-0015):
+- CodeGraph (.codegraph/): reach for it BEFORE grep/find. Use MCP `codegraph_explore` or `codegraph explore/impact/callers "<symbol>"` for line-numbered source, call paths, and blast radius.
+- Graphify (graphify-out/): use `graphify query/explain/path` or inspect graph.html / GRAPH_REPORT.md for macro architecture, community clusters, and doc-code-sql topology. Refreshed via .githooks/post-commit.
 
 ## Action-specific requirements
+- Code exploration/refactoring: follow ADR-0015; check impact and affected tests with CodeGraph before editing core symbols.
 - Frontend: skeleton/component/token contracts; existing shared blocks; behavior tests and visual checks for layout changes.
 - Backend/API: development and API compatibility sections; database/security rules if access is needed.
 - Documents: documentation standard/lifecycle sections relevant to editing, KI or history.
