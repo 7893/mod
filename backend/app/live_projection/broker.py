@@ -56,6 +56,8 @@ class LiveProjectionBroker:
         self._available = False
         self._running = True
         self._last_page: OutboxPage | None = None
+        self._inflight: dict[int | None, asyncio.Task[OutboxPage]] = {}
+        self._last_read_time: float = 0.0
 
     @property
     def enabled(self) -> bool:
@@ -68,10 +70,22 @@ class LiveProjectionBroker:
         self._running = False
 
     async def _read(self, after: int | None) -> OutboxPage:
-        page = await asyncio.to_thread(self.reader.read_page, after)
-        self._last_page = page
-        self._available = True
-        return page
+        # Single-flight deduplication: reuse concurrent in-flight read for identical cursor
+        if after in self._inflight:
+            return await self._inflight[after]
+
+        async def _do_read() -> OutboxPage:
+            try:
+                page = await asyncio.to_thread(self.reader.read_page, after)
+                self._last_page = page
+                self._available = True
+                return page
+            finally:
+                self._inflight.pop(after, None)
+
+        task = asyncio.create_task(_do_read())
+        self._inflight[after] = task
+        return await task
 
     def state_payload(self, page: OutboxPage | None = None, *, reset_reason: str | None = None) -> dict:
         page = page or self._last_page

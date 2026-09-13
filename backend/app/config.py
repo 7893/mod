@@ -18,12 +18,17 @@ class Settings:
     db_host: str
     db_port: int
     db_name: str
-    db_name: str
     db_user: str
     db_password: str
     db_pool_size: int
     db_max_overflow: int
     display_timezone: str
+
+    @property
+    def is_readonly_mode(self) -> bool:
+        if os.getenv("MOD_READONLY_MODE", "").lower() in ("1", "true", "yes"):
+            return True
+        return self.db_user == "mod_readonly" or "readonly" in self.db_user.lower()
 
     @property
     def database_url(self) -> str:

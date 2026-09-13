@@ -148,7 +148,13 @@ async function handleDispatch() {
     const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issueId}/dispatch`, {
       method: 'POST',
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res.ok) {
+      if (res.status === 403) {
+        const data = await res.json().catch(() => ({})) as { detail?: string }
+        throw new Error(data.detail || '当前处于演示只读模式，暂不支持在线派单')
+      }
+      throw new Error(`HTTP ${res.status}`)
+    }
     const updated = await res.json() as GovernanceIssue
     if (props.unit?.id !== unitId || issue.value?.id !== issueId) return
     issue.value = updated
@@ -161,9 +167,11 @@ async function handleDispatch() {
       console.warn('Timeline refresh after dispatch failed:', timelineError)
     }
     emit('dispatched', updated)
-  } catch (err) {
+  } catch (err: any) {
     actionError.value = true
-    actionNotice.value = '督办失败，工单未变更，请稍后重试。'
+    actionNotice.value = (err?.message && !err.message.startsWith('HTTP'))
+      ? err.message
+      : '督办失败，工单未变更，请稍后重试。'
     console.warn('Dispatch failed:', err)
   } finally {
     dispatching.value = false
@@ -181,7 +189,13 @@ async function handleEnrich() {
     const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issueId}/enrich`, {
       method: 'POST',
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res.ok) {
+      if (res.status === 403) {
+        const data = await res.json().catch(() => ({})) as { detail?: string }
+        throw new Error(data.detail || '当前处于演示只读模式，暂不支持在线AI研判')
+      }
+      throw new Error(`HTTP ${res.status}`)
+    }
     const updated = await res.json() as GovernanceIssue
     if (props.unit?.id !== unitId || issue.value?.id !== issueId) return
     issue.value = updated
@@ -193,9 +207,11 @@ async function handleEnrich() {
       actionNotice.value = 'AI 研判已完成，但时间线刷新失败，请稍后重新打开。'
       console.warn('Timeline refresh after enrichment failed:', timelineError)
     }
-  } catch (err) {
+  } catch (err: any) {
     actionError.value = true
-    actionNotice.value = 'AI 研判失败，工单未变更，请稍后重试。'
+    actionNotice.value = (err?.message && !err.message.startsWith('HTTP'))
+      ? err.message
+      : 'AI 研判失败，工单未变更，请稍后重试。'
     console.warn('Enrich failed:', err)
   } finally {
     enriching.value = false

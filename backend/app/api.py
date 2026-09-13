@@ -514,10 +514,16 @@ def governance_issue_dispatch(
     issue_id: str,
     conn: Connection | None = Depends(connection),
 ) -> dict:
+    from .config import get_settings
+    if get_settings().is_readonly_mode:
+        raise HTTPException(status_code=403, detail="当前处于只读演示模式，禁止在线派单操作")
     if conn is None:
         raise HTTPException(status_code=503, detail="Database connection unavailable")
     from .services.governance import dispatch_issue
-    updated = dispatch_issue(conn, issue_id)
+    try:
+        updated = dispatch_issue(conn, issue_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     if not updated:
         raise HTTPException(status_code=404, detail="Issue not found")
     return updated
@@ -538,10 +544,16 @@ def governance_issue_enrich(
     issue_id: str,
     conn: Connection | None = Depends(connection),
 ) -> dict:
+    from .config import get_settings
+    if get_settings().is_readonly_mode:
+        raise HTTPException(status_code=403, detail="当前处于只读演示模式，禁止在线AI研判操作")
     if conn is None:
         raise HTTPException(status_code=503, detail="Database connection unavailable")
     from .services.governance import enrich_governance_issue
-    updated = enrich_governance_issue(conn, issue_id)
+    try:
+        updated = enrich_governance_issue(conn, issue_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     if not updated:
         raise HTTPException(status_code=404, detail="Issue not found")
     return updated

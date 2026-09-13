@@ -66,6 +66,7 @@ def main() -> int:
     sim_env["PYTHONDONTWRITEBYTECODE"] = "1"
     sim_env.setdefault("MOD_OUTPUT_DIR", "/home/ubuntu/mod/output")
 
+    api_workers = os.getenv("MOD_API_WORKERS", "2")
     api_cmd = [
         sys.executable,
         "-m",
@@ -76,6 +77,8 @@ def main() -> int:
         "--port",
         "8100",
         "--proxy-headers",
+        "--workers",
+        str(api_workers),
     ]
     sim_cmd = [
         sys.executable,
@@ -99,8 +102,17 @@ def main() -> int:
                 except OSError:
                     pass
 
+    def handle_hup(signum: int, _frame: object) -> None:
+        logger.info("Received SIGHUP, reloading API worker processes gracefully...")
+        if procs["api"] and procs["api"].poll() is None:
+            try:
+                procs["api"].send_signal(signal.SIGHUP)
+            except OSError as err:
+                logger.error("Failed to forward SIGHUP to API process: %s", err)
+
     signal.signal(signal.SIGTERM, handle_signal)
     signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGHUP, handle_hup)
 
     def start_api() -> subprocess.Popen:
         logger.info("Launching MOD API sub-service (port 8100)...")
