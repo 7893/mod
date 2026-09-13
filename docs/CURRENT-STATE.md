@@ -446,6 +446,13 @@ KI-060 更新前的本节原文完整保存在
 - **CI/CD 连接多路复用**：在 `.github/workflows/quality.yml` 中为部署任务配置 OpenSSH `ControlMaster`（`ControlMaster=auto`, `ControlPersist=120s`），并在任务结束时安全清理控制连接，将多次短时高频 SSH 握手收敛为单条长连接多路复用。
 - **CHANGELOG 全量刷新与 v0.9.0 标签发布**：使用锁定的 `git-cliff 2.13.1` 工具链，正式确立并发布项目首个语义化版本标签 `v0.9.0`，将包含六屏大屏、500 万真实凭证、SWR 异步快照及 KI-001~KI-083 全部治理提交系统化归入 `v0.9.0` 章节入册。
 
+## 2026-09-13 生产致命缺陷与高可用短板治理（KI-084，DONE）
+
+- **写接口只读模式拦截与防穿透**：针对生产环境使用 `mod_readonly` 只读数据库账号导致合规监督抽屉在线派单/研判接口崩溃的问题，在 `backend/app/config.py` 与 `backend/app/api.py` 中引入只读模式自动判定并前置返回结构化 HTTP 403 响应，底层服务层捕获 MySQL 1142 异常并转化为 `PermissionError`；前端 `ComplianceInspectDrawer.vue` 拦截 403 提示只读模式通知，避免未捕获的 500 服务异常。
+- **SSE 连接池扩容与单飞读取合并（Single-flight）**：在 `backend/app/live_projection/outbox.py` 中将 Outbox 引擎连接池扩容（`pool_size=4, max_overflow=6, pool_timeout=5`），并在 `backend/app/live_projection/broker.py` 中引入并发游标单飞合并机制（`_inflight`），相同游标的多客户端轮询共用单个底层读任务，消除大屏多开造成的 `QueuePool limit of size 4 overflow 0 reached` 连接池溢出与 502 断流。
+- **Uvicorn 多 Worker 与零停机平滑热重载**：在 `scripts/project/run_unified.py` 中为 API 统一运行时启用 Uvicorn 原生多进程支持（默认 `--workers 2`，支持 `MOD_API_WORKERS`），并在主守护器中实现 `SIGHUP` 信号监听与安全向下透传；在 `deploy/mod.service` 增加 `ExecReload=/bin/kill -HUP $MAINPID`，并在 `scripts/project/publish.sh` 中优先采用 `systemctl reload`，使部署更新通过滚动重启 Worker 实现零停机平滑过渡，消灭服务重启造成的 3~8 秒 502 Bad Gateway 窗口。
+- 详细复盘与核验记录见 [KI-084](issues/KI-084-生产致命缺陷与高可用短板治理.md)。
+
 ## 操作边界
 
 2026-09-11 harness 减薄补充：/pre-flight 的注册已移到全局 Pi 扩展，MOD 旧注册块注释保留，

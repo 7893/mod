@@ -165,3 +165,28 @@ def test_db_recovery_without_new_events_restores_source_state():
         assert state['id'] == cursor_id(reader.stream_id, 1)
         await stream.aclose()
     asyncio.run(exercise())
+
+
+def test_concurrent_reads_coalesce_single_flight():
+    """KI-084: 验证并发读取时，相同游标的底层查询被单飞合并（Single-flight），不重复打库。"""
+    async def exercise():
+        import time
+
+        class SlowReader(MemoryReader):
+            def read_page(self, after, limit=100):
+                time.sleep(0.05)
+                return super().read_page(after, limit)
+
+        reader = SlowReader(count=5)
+        broker = LiveProjectionBroker(reader=reader)
+
+        # 20 个并发客户端同时请求同一个游标
+        tasks = [asyncio.create_task(broker._read(2)) for _ in range(20)]
+        results = await asyncio.gather(*tasks)
+
+        assert len(results) == 20
+        assert all(r.head == 5 for r in results)
+        # 底层实际调用被单飞合并，远小于 20 次
+        assert len(reader.requests) <= 2
+
+    asyncio.run(exercise())

@@ -733,3 +733,25 @@ def test_should_enable_docs_governance(monkeypatch):
     monkeypatch.setattr("app.main.get_settings", lambda: MagicMock(environment="development"))
     assert should_enable_docs() is True
 
+
+def test_governance_readonly_mode_protection(monkeypatch):
+    """KI-084: 在只读模式下，写接口优雅降级并返回 403，不抛未捕获异常。"""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from unittest.mock import MagicMock
+
+    client = TestClient(app)
+    mock_settings = MagicMock()
+    mock_settings.is_readonly_mode = True
+    monkeypatch.setattr("app.config.get_settings", lambda: mock_settings)
+
+    # 1. 督办接口测试
+    res = client.post("/api/governance/issues/ISSUE-001/dispatch")
+    assert res.status_code == 403
+    assert "只读演示模式" in res.json()["detail"]
+
+    # 2. AI 研判接口测试
+    res = client.post("/api/governance/issues/ISSUE-001/enrich")
+    assert res.status_code == 403
+    assert "只读演示模式" in res.json()["detail"]
+

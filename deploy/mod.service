@@ -11,6 +11,7 @@ Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONPATH=${MOD_PROJECT_ROOT}/backend/current
 ExecStart=${MOD_PROJECT_ROOT}/backend/.venv/bin/python ${MOD_PROJECT_ROOT}/backend/current/scripts/project/run_unified.py
+ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=5
 TimeoutStopSec=15

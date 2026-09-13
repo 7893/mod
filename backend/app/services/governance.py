@@ -117,28 +117,33 @@ def dispatch_issue(
     new_status = "IN_PROGRESS" if issue["status"] == "DISCOVERED" else issue["status"]
     assigned_owner = issue["owner"] or "总指挥部特派督导专班·刘波"
 
-    conn.execute(text("""
-        UPDATE governance_issue
-        SET status = :status, owner = :owner, updated_at = :now
-        WHERE id = :issue_id
-    """), {
-        "status": new_status,
-        "owner": assigned_owner,
-        "now": now,
-        "issue_id": issue_id,
-    })
+    try:
+        conn.execute(text("""
+            UPDATE governance_issue
+            SET status = :status, owner = :owner, updated_at = :now
+            WHERE id = :issue_id
+        """), {
+            "status": new_status,
+            "owner": assigned_owner,
+            "now": now,
+            "issue_id": issue_id,
+        })
 
-    conn.execute(text("""
-        INSERT INTO issue_timeline (issue_id, action, actor, detail, occurred_at)
-        VALUES (:issue_id, :action, :actor, :detail, :now)
-    """), {
-        "issue_id": issue_id,
-        "action": action,
-        "actor": actor,
-        "detail": detail,
-        "now": now,
-    })
-    conn.commit()
+        conn.execute(text("""
+            INSERT INTO issue_timeline (issue_id, action, actor, detail, occurred_at)
+            VALUES (:issue_id, :action, :actor, :detail, :now)
+        """), {
+            "issue_id": issue_id,
+            "action": action,
+            "actor": actor,
+            "detail": detail,
+            "now": now,
+        })
+        conn.commit()
+    except Exception as e:
+        if "1142" in str(e) or "denied to user" in str(e).lower():
+            raise PermissionError("当前数据库账号处于只读模式，无写入权限") from e
+        raise
 
     return get_governance_issue(conn, issue_id)
 
@@ -204,27 +209,32 @@ def enrich_governance_issue(conn: Connection, issue_id: str) -> Optional[Dict[st
         f"督办举措：{res.suggested_action}"
     ).strip()
 
-    conn.execute(text("""
-        UPDATE governance_issue
-        SET ai_enriched = 1, description = :desc, updated_at = :now
-        WHERE id = :issue_id
-    """), {
-        "desc": expanded_desc,
-        "now": now,
-        "issue_id": issue_id,
-    })
+    try:
+        conn.execute(text("""
+            UPDATE governance_issue
+            SET ai_enriched = 1, description = :desc, updated_at = :now
+            WHERE id = :issue_id
+        """), {
+            "desc": expanded_desc,
+            "now": now,
+            "issue_id": issue_id,
+        })
 
-    timeline_detail = f"{res.summary}。根因：{res.root_cause}。建议：{res.suggested_action}"
-    conn.execute(text("""
-        INSERT INTO issue_timeline (issue_id, action, actor, detail, occurred_at)
-        VALUES (:issue_id, 'AI深度研判', :actor, :detail, :now)
-    """), {
-        "issue_id": issue_id,
-        "actor": f"AI督察专家（{res.model}）",
-        "detail": timeline_detail,
-        "now": now,
-    })
-    conn.commit()
+        timeline_detail = f"{res.summary}。根因：{res.root_cause}。建议：{res.suggested_action}"
+        conn.execute(text("""
+            INSERT INTO issue_timeline (issue_id, action, actor, detail, occurred_at)
+            VALUES (:issue_id, 'AI深度研判', :actor, :detail, :now)
+        """), {
+            "issue_id": issue_id,
+            "actor": f"AI督察专家（{res.model}）",
+            "detail": timeline_detail,
+            "now": now,
+        })
+        conn.commit()
+    except Exception as e:
+        if "1142" in str(e) or "denied to user" in str(e).lower():
+            raise PermissionError("当前数据库账号处于只读模式，无写入权限") from e
+        raise
 
     return get_governance_issue(conn, issue_id)
 

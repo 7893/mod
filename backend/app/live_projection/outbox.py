@@ -16,7 +16,7 @@ def get_outbox_engine():
     from ..config import get_settings
     return create_engine(
         get_settings().database_url, isolation_level='AUTOCOMMIT', pool_pre_ping=True,
-        pool_size=4, max_overflow=0, pool_timeout=3, pool_recycle=1800,
+        pool_size=4, max_overflow=6, pool_timeout=5, pool_recycle=1800,
         connect_args={'connect_timeout': 3, 'read_timeout': 3, 'write_timeout': 3},
     )
 

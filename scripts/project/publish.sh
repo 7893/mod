@@ -109,8 +109,8 @@ else
     ln -sfn "$FE_RELEASE_DIR" "$FE_CURRENT"
     ln -sfn "$BE_RELEASE_DIR" "$BE_CURRENT"
 
-    echo "[5/8] 远程 reload Nginx + restart mod.service on USA..."
-    ssh "$REMOTE_HOST" "sudo systemctl reload nginx && sudo systemctl restart mod.service"
+    echo "[5/8] 远程 reload Nginx + reload/restart mod.service on USA..."
+    ssh "$REMOTE_HOST" "sudo systemctl reload nginx && (sudo systemctl reload mod.service || sudo systemctl restart mod.service)"
     sleep 4
 fi
 
