@@ -7,7 +7,7 @@ Capabilities:
 2. High-Grade Compression: Streams output through gzip.
 3. Zero-Knowledge Encryption: Client-side AES-256-CBC PBKDF2 encryption (OpenSSL / cryptography fallback).
 4. Off-Machine Cloud Replication: Ships encrypted bundles + SHA-256 to off-site AWS S3.
-5. Dual-Tier Retention: 7-day local disk retention, 30-day remote S3 retention.
+5. Dual-Tier Retention: 3-day local disk retention, 7-day remote S3/R2 retention.
 6. Zero Credential Leakage: Ephemeral cnf files, no credentials in ps aux or stdout.
 """
 
@@ -474,12 +474,12 @@ def execute_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 raise
 
     # Step 5: Prune old backups
-    local_retention = args.retention_local or int(env.get("MOD_BACKUP_LOCAL_RETENTION_DAYS", 7))
+    local_retention = args.retention_local or int(env.get("MOD_BACKUP_LOCAL_RETENTION_DAYS", 3))
     pruned_local = prune_local_backups(backup_dir, local_retention)
 
     pruned_remote = []
     if not args.local_only and s3_bucket:
-        remote_retention = args.retention_remote or int(env.get("MOD_BACKUP_REMOTE_RETENTION_DAYS", 30))
+        remote_retention = args.retention_remote or int(env.get("MOD_BACKUP_REMOTE_RETENTION_DAYS", 7))
         pruned_remote = prune_remote_backups(
             s3_bucket,
             s3_prefix,
@@ -527,8 +527,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--s3-profile", help="AWS CLI profile name (e.g. r2)")
     parser.add_argument("--local-only", action="store_true", help="Skip remote S3/R2 upload")
     parser.add_argument("--strict-remote", action="store_true", help="Fail if remote S3/R2 upload fails")
-    parser.add_argument("--retention-local", type=int, help="Days to retain local backups (default: 7)")
-    parser.add_argument("--retention-remote", type=int, help="Days to retain remote S3/R2 backups (default: 30)")
+    parser.add_argument("--retention-local", type=int, help="Days to retain local backups (default: 3)")
+    parser.add_argument("--retention-remote", type=int, help="Days to retain remote S3/R2 backups (default: 7)")
     parser.add_argument("--min-free-mb", type=int, default=2048, help="Minimum free disk space in MB")
     return parser
 

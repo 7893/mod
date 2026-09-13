@@ -1,7 +1,8 @@
 # MOD 灾难恢复与数据还原操作手册 (Disaster Recovery Runbook)
 
-- 文档版本：v1.0.0
-- 更新日期：2026-09-08
+- 文档版本：v1.1.0
+- 更新日期：2026-09-13
+- 状态：现行
 - 适用范围：生产主机故障、云服务商租户级故障、数据库损坏或勒索攻击下的全量灾难恢复
 - 关联问题：[KI-042 灾难恢复能力不足与异机加密备份缺失](../issues/KI-042-灾难恢复能力不足与异机加密备份缺失.md)、[数据与安全标准](../development/DATA-AND-SECURITY-STANDARD.md)
 
@@ -147,8 +148,8 @@ python3 scripts/project/verify_and_restore.py \
 - 守护定时器：`mod-backup.timer`
 - 触发服务：`mod-backup.service`
 - 定时表达式：`OnCalendar=*-*-* 03:00:00 Asia/Hong_Kong` (Persistent=true)
-- 本地保留策略：保留最近 7 天的每日备份（防止撑爆主机根分区）。
-- 远端 R2 保留策略：保留最近 30 天的每日加密备份；历史基线备份（`historical/`）永久归档。
+- 本地保留策略：保留最近 3 天的每日备份（防止撑爆主机根分区）。
+- 远端 R2 保留策略：保留最近 7 天的每日加密备份；历史基线备份（`historical/`）永久归档。
 
 ---
 

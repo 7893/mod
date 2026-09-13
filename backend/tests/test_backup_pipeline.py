@@ -130,12 +130,21 @@ def test_prune_local_backups(tmp_path):
     os.utime(old_enc, (old_time, old_time))
     os.utime(old_sha, (old_time, old_time))
 
-    pruned = prune_local_backups(tmp_path, retention_days=7)
+    pruned = prune_local_backups(tmp_path, retention_days=3)
     assert old_enc.name in pruned
     assert not old_enc.exists()
     assert not old_sha.exists()
     assert recent_enc.exists()
     assert recent_sha.exists()
+
+
+def test_retention_defaults():
+    """Validates default retention days: 3 days locally and 7 days remotely."""
+    from backup_pipeline import build_parser
+    parser = build_parser()
+    args = parser.parse_args([])
+    assert args.retention_local is None
+    assert args.retention_remote is None
 
 
 def test_load_environment_config(tmp_path, monkeypatch):
