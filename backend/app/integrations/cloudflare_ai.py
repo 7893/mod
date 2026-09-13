@@ -73,15 +73,35 @@ _CF_AI_GATEWAY_ENDPOINT = (
     "/{gateway}/workers-ai/{model}"
 )
 
-# 发给 AI 的系统提示，限定任务范围
+# 发给 AI 的系统提示，限定任务范围与财经术语
 _SYSTEM_PROMPT = (
     "你是财务运营演练看板的摘要助手。输入仅为模拟数据的全国汇总数字，"
     "不包含趋势、区域对比、问题原因或经过验证的未来预测。"
     "只描述提供的指标，不推断增长、改善、延期或因果，不编造区域、单位、人名、单号。"
+    "系统术语约束：在本系统中，'凭证'或'会计凭证'（对应英文 voucher/vouchers）专指企业财务核算记账凭证，绝对严禁理解、表述或翻译为'优惠券'、'代金券'或'消费券'。"
     "建议必须表述为待核实的检查动作，不得声称已定位瓶颈。"
     "仅用三个 Markdown 二级标题：## 当前概况、## 待核实事项、## 建议检查。"
     "每节最多两条短句，总计不超过350个汉字；缺少依据时明确说明数据不足。"
 )
+
+# 聚合指标字段对应的规范中文财经术语映射，消除大模型英文直译偏差
+FIELD_NAMES_CN: dict[str, str] = {
+    "unitsTotal": "监控单位总数",
+    "launched": "已上线单位数",
+    "ready": "具备条件单位数",
+    "prep": "准备中单位数",
+    "dual": "双轨运行单位数",
+    "constructionPct": "建设完成度百分比(%)",
+    "voucherSuccessPct": "财务会计凭证核算入账成功率(%)",
+    "integrationSuccessPct": "业务系统核算集成成功率(%)",
+    "unresolvedIssues": "待处理合规风险事项数",
+    "highRisk": "高风险事项数",
+    "docsTotal": "累计业务单据总数",
+    "vouchersTotal": "累计财务会计凭证总数",
+    "docsTodayAdded": "今日新增业务单据数",
+    "vouchersTodayAdded": "今日新增财务会计凭证数",
+    "regions": "覆盖省份行政区数",
+}
 
 
 # HTTP 超时配置（秒）
@@ -327,11 +347,15 @@ class CloudflareAIAdapter:
 
             _cf_daily_count += 1  # 原子预占真实请求次数，失败也计数
 
-        # ---- 5. 构造用户消息（纯数字键值对，无文本字段）----
+        # ---- 5. 构造用户消息（纯数字键值对，包含中文规范财经术语映射）----
         user_message = "当前项目宏观指标（均为虚构模拟数据）：\n"
         for k, v in sorted(safe_payload.items()):
-            user_message += f"  {k}: {v}\n"
-        user_message += "\n请仅按提供的指标生成摘要，并明确未知事项。"
+            cn_name = FIELD_NAMES_CN.get(k, k)
+            user_message += f"  {cn_name} ({k}): {v}\n"
+        user_message += (
+            "\n请仅按提供的指标生成摘要，严格遵循系统术语约束（会计凭证严禁理解或翻译为优惠券），"
+            "并明确未知事项。"
+        )
 
         # ---- 6. 构造请求 ----
         # 首选 AI Gateway 端点（统一入口 + 缓存/限流/日志）；未配置网关名时回退直连。

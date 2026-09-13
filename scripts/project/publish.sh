@@ -70,6 +70,7 @@ cp -r "$REPO_ROOT/backend/app/." "$BE_RELEASE_DIR/"
 ln -s . "$BE_RELEASE_DIR/app"
 cp -r "$REPO_ROOT/simulation" "$BE_RELEASE_DIR/"
 cp -r "$REPO_ROOT/scripts" "$BE_RELEASE_DIR/"
+cp "$REPO_ROOT/backend/pyproject.toml" "$REPO_ROOT/backend/uv.lock" "$BE_RELEASE_DIR/" 2>/dev/null || true
 echo "  后端与后台写服务 release: $BE_RELEASE_DIR"
 
 # 3. make check
@@ -108,6 +109,9 @@ else
     # 同时更新本地软链保持开发机工作区与最新 release 对齐
     ln -sfn "$FE_RELEASE_DIR" "$FE_CURRENT"
     ln -sfn "$BE_RELEASE_DIR" "$BE_CURRENT"
+
+    echo "  对齐 USA 生产后端 Python 运行时依赖 (uv sync)..."
+    ssh "$REMOTE_HOST" "cd $REMOTE_ROOT/backend && cp -f releases/$TS/pyproject.toml releases/$TS/uv.lock . 2>/dev/null || true; ([ -x /home/ubuntu/.cargo/bin/uv ] && /home/ubuntu/.cargo/bin/uv sync --frozen --all-extras) || true"
 
     echo "[5/8] 远程 reload Nginx + reload/restart mod.service on USA..."
     ssh "$REMOTE_HOST" "sudo systemctl reload nginx && (sudo systemctl reload mod.service || sudo systemctl restart mod.service)"

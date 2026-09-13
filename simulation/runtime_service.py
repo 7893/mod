@@ -37,7 +37,7 @@ from zoneinfo import ZoneInfo
 import pymysql
 
 from app.live_projection.simulation_engine import HongKongDiurnalEngine
-from app.live_projection.outbox_writer import append_outbox
+from app.live_projection.outbox_writer import append_outbox, prune_outbox_deferred
 from .construction_models import validate_construction_event
 from .pool_onboarding import ReservePoolAdmissionPlaybook
 from .construction_writer import ConstructionWriter
@@ -686,6 +686,12 @@ class SimulatorRuntimeService:
             # events than the planned burst, so release only the unused capacity.
             self.consecutive_failures = 0
             self.fuse.release(now_hkt, max(0, reservation_count - events_written), persist=True)
+
+            # KI-085 #3: Execute deferred outbox prune outside the critical transaction path
+            try:
+                prune_outbox_deferred(conn)
+            except Exception as prune_ex:
+                logger.warning("Deferred outbox prune failed (non-fatal): %s", prune_ex)
             if not lifecycle_state_saved:
                 err_msg = "Committed lifecycle events but failed to persist restart state; service halted"
                 self._save_status("ERROR", intensity, now_hkt, err_msg)
@@ -945,9 +951,11 @@ class SimulatorRuntimeService:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-                f.flush()
-                os.fsync(f.fileno())
+                # KI-085 #7: Use compact JSON (no indent) to reduce file size from ~2.1MB to ~1.4MB
+                # and skip synchronous fsync to avoid blocking the main loop on disk I/O.
+                # Data durability is acceptable: worst case loses one cycle's state on crash,
+                # and the next restart will reload from database truth.
+                json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
             tmp_path.replace(path)
             return True
         except Exception as ex:
@@ -986,9 +994,10 @@ class SimulatorRuntimeService:
             }
             tmp_path = target_path.with_name(f".tmp_{target_path.name}")
             with open(tmp_path, "w", encoding="utf-8") as f:
+                # KI-085 #7: Skip synchronous fsync for status heartbeat file.
+                # Status file is small (~500 bytes) and written every cycle;
+                # OS page cache provides sufficient durability for monitoring data.
                 json.dump(status_data, f, ensure_ascii=False, indent=2)
-                f.flush()
-                os.fsync(f.fileno())
 
             tmp_path.replace(target_path)
             with suppress(OSError):

@@ -107,11 +107,24 @@ server {
         try_files $uri =404;
     }
 
+    # HTML 入口文件强缓存防御 (KI-085)：杜绝客户端缓存 index.html 导致的发版 ChunkLoadError
+    location ~* \.html$ {
+        root /home/ubuntu/mod/frontend/current;
+        add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
+    }
+
     # 前端 SPA 页面路由（基于发布软链 current 目录）
     location / {
         root /home/ubuntu/mod/frontend/current;
         try_files $uri $uri/ /index.html;
-        add_header Cache-Control "no-cache" always;
+        add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
         add_header Strict-Transport-Security "max-age=31536000; preload" always;
         add_header X-Content-Type-Options nosniff always;
         add_header X-Frame-Options SAMEORIGIN always;

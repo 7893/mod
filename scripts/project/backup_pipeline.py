@@ -62,9 +62,19 @@ def load_environment_config(env_file: Optional[str] = None) -> Dict[str, str]:
         if k.startswith("MOD_") or k.startswith("AWS_") or k.startswith("R2_") or k.startswith("CF_"):
             env_vars[k] = v
 
-    # Read .backup_key fallback if encryption key is still unset
+    # KI-085 #9: Local key file fallback - SECURITY WARNING
+    # This is a fallback for development/testing only. In production:
+    # 1. Use external key management (AWS KMS, Cloudflare Secrets, HashiCorp Vault)
+    # 2. Store a copy of the key in a separate secure location for disaster recovery
+    # 3. The local .backup_key file should NOT be the sole copy of the encryption key
     key_file = Path("/home/ubuntu/mod/.backup_key")
     if not env_vars.get("MOD_BACKUP_ENCRYPTION_KEY") and key_file.is_file():
+        logger.warning(
+            "SECURITY: Using local fallback key file %s for backup encryption. "
+            "This is acceptable for development but in production, use external key management "
+            "(AWS KMS, Cloudflare Secrets, etc.) and ensure the key is backed up separately.",
+            key_file,
+        )
         try:
             env_vars["MOD_BACKUP_ENCRYPTION_KEY"] = key_file.read_text(encoding="utf-8").strip()
         except Exception as e:
