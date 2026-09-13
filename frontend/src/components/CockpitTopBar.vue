@@ -130,7 +130,7 @@ const riskClosureOption = computed(() => ({
       </div>
     </template>
 
-    <div class="grid grid-cols-12 gap-3 h-24 min-h-0">
+    <div class="grid grid-cols-12 gap-3 h-24 min-h-0 overflow-hidden">
       <section class="col-span-4 grid grid-cols-5 gap-2 min-w-0 pr-3 border-r border-surface-veil-06">
         <VChart class="col-span-2 w-full h-full min-h-0" :option="progressRingsOption" autoresize />
         <div class="col-span-3 grid grid-rows-3 divide-y divide-surface-veil-06 min-w-0">
