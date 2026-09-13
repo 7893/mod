@@ -90,42 +90,41 @@ const provinceRolloutOption = computed(() => ({
     axisPointer: { type: 'shadow' },
     ...chartTooltip,
   },
-  grid: { left: 4, right: 10, top: 4, bottom: 4, containLabel: true },
+  grid: { left: 4, right: 4, top: 8, bottom: 4, containLabel: true },
   xAxis: {
+    type: 'category',
+    data: topProvinces.value.map((v) => v.name),
+    axisLine: { lineStyle: { color: chartColors.border } },
+    axisTick: { show: false },
+    axisLabel: { color: chartColors.textMuted, fontSize: 10, interval: 0 },
+  },
+  yAxis: {
     type: 'value',
     splitLine: { lineStyle: { color: chartColors.border, opacity: 0.4 } },
     axisLabel: { color: chartColors.textMuted, fontSize: 10 },
-  },
-  yAxis: {
-    type: 'category',
-    data: topProvinces.value.map((v) => v.name).reverse(),
-    axisLine: { lineStyle: { color: chartColors.border } },
-    // interval: 0 强制每个省份都出标签。默认策略在容器变矮时会隔项跳过，
-    // 结果画了 6 条却只标出 3 个省名，读者无法把条形对应到省份。
-    axisLabel: { color: chartColors.textMuted, fontSize: 11, interval: 0 },
   },
   series: [
     {
       name: '已上线',
       type: 'bar',
       stack: 'total',
-      barMaxWidth: 14,
-      data: topProvinces.value.map((v) => v.launched).reverse(),
+      barMaxWidth: 24,
+      data: topProvinces.value.map((v) => v.launched),
       itemStyle: { color: chartColors.accent },
     },
     {
       name: '双轨',
       type: 'bar',
       stack: 'total',
-      data: topProvinces.value.map((v) => v.dual).reverse(),
+      data: topProvinces.value.map((v) => v.dual),
       itemStyle: { color: chartColors.warning },
     },
     {
       name: '其他',
       type: 'bar',
       stack: 'total',
-      data: topProvinces.value.map((v) => v.unlaunched).reverse(),
-      itemStyle: { color: chartColors.border },
+      data: topProvinces.value.map((v) => v.unlaunched),
+      itemStyle: { color: chartColors.border, borderRadius: [3, 3, 0, 0] },
     },
   ],
 }))

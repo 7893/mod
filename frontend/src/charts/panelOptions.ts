@@ -190,47 +190,46 @@ export function createProvinceProfileOption(progress?: number | string | null) {
 }
 
 export function createBatchProgressOption(list: BatchProgressItem[]) {
-  const reversed = [...list].reverse()
   return {
     ...calmAnimation,
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => {
-        const item = reversed[params?.[0]?.dataIndex]
+        const item = list[params?.[0]?.dataIndex]
         if (!item) return ''
         return `${item.name}<br/>建设完成度 <b>${item.construction}%</b><br/>上线率 <b>${item.launched}%</b>`
       },
       ...chartTooltip,
     },
-    grid: { left: 6, right: 8, top: 4, bottom: 2, containLabel: true },
+    grid: { left: 4, right: 4, top: 8, bottom: 4, containLabel: true },
     xAxis: {
+      type: 'category',
+      data: list.map((batch) => batch.name),
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: chartInk.border } },
+      axisLabel: { color: chartInk.textMuted, fontSize: 9, interval: 0 },
+    },
+    yAxis: {
       ...valueAxis,
       min: 0,
       max: 100,
       splitNumber: 2,
       axisLabel: { color: chartInk.textMuted, fontSize: 9, formatter: '{value}%' },
     },
-    yAxis: {
-      type: 'category',
-      data: reversed.map((batch) => batch.name),
-      axisTick: { show: false },
-      axisLine: { lineStyle: { color: chartInk.border } },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10, interval: 0 },
-    },
     // 建设完成度（单位进度均值）与上线率（单位数占比）分母不同，不能堆叠在同一根条里，只能并列。
     series: [
       {
-        name: '建设完成度', type: 'bar', barGap: '10%', barMaxWidth: 8,
-        data: reversed.map((batch) => batch.construction),
-        itemStyle: { color: chartPalette.accent, borderRadius: [0, 3, 3, 0] },
+        name: '建设完成度', type: 'bar', barGap: '10%', barMaxWidth: 16,
+        data: list.map((batch) => batch.construction),
+        itemStyle: { color: chartPalette.accent, borderRadius: [3, 3, 0, 0] },
         showBackground: true,
         backgroundStyle: { color: chartInk.borderSoft },
       },
       {
-        name: '上线率', type: 'bar', barMaxWidth: 8,
-        data: reversed.map((batch) => batch.launched),
-        itemStyle: { color: chartPalette.success, borderRadius: [0, 3, 3, 0] },
+        name: '上线率', type: 'bar', barMaxWidth: 16,
+        data: list.map((batch) => batch.launched),
+        itemStyle: { color: chartPalette.success, borderRadius: [3, 3, 0, 0] },
         showBackground: true,
         backgroundStyle: { color: chartInk.borderSoft },
       },
