@@ -309,7 +309,13 @@ class SimulationWriter:
                         (org_cnt, usr_cnt, p_doc, p_vch, p_int, p_succ,
                          p_dline, p_vline, p_link, p_dual, p_snap) = prev
                     else:
-                        org_cnt, usr_cnt, p_doc, p_vch, p_int, p_succ = 2000, 26713, 0, 0, 0, 0
+                        # KI-086 #4: Query actual counts from base tables instead of hardcoded fallback.
+                        # This ensures accurate baseline even on fresh environment initialization.
+                        cursor.execute("SELECT COUNT(*) FROM org_unit")
+                        org_cnt = cursor.fetchone()[0] or 0
+                        cursor.execute("SELECT COUNT(*) FROM sys_user")
+                        usr_cnt = cursor.fetchone()[0] or 0
+                        p_doc, p_vch, p_int, p_succ = 0, 0, 0, 0
                         p_dline, p_vline, p_link, p_dual, p_snap = 0, 0, 0, 0, 0
 
                     cursor.execute(

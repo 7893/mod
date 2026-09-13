@@ -465,6 +465,12 @@ KI-060 更新前的本节原文完整保存在
 - **发布脚本依赖同步（#14）**：在 `scripts/project/publish.sh` 和 `.github/workflows/quality.yml` 中增加 `pyproject.toml`/`uv.lock` 同步及 `uv sync --frozen` 步骤，确保生产环境 Python 依赖与代码同步。
 - 详细问题清单与核验标准见 [KI-085](issues/KI-085-核心架构缺陷与数据安全治理.md)。
 
+## 2026-09-13 中度隐患与数据库性能技术债务治理（KI-086，部分修复）
+
+- **连接池会话变量初始化优化（#3）**：将 `backend/app/db.py` 中每次连接检出时执行的 `SET time_zone` 和 `SET use_secondary_engine` 移至 SQLAlchemy `connect` 事件钩子，仅在物理连接建立时执行一次，消除每个 HTTP 请求 2 次冗余网络往返。
+- **daily_stats 基线降级真实化（#4）**：移除 `simulation/simulation_writer.py` 中的硬编码假数据降级（`2000` 单位、`26713` 用户），改为从 `org_unit` 和 `sys_user` 基础表执行 `COUNT(*)` 查询获取精准事实基线。
+- 详细问题清单见 [KI-086](issues/KI-086-中度隐患与数据库性能技术债务治理.md)。
+
 ## 操作边界
 
 2026-09-11 harness 减薄补充：/pre-flight 的注册已移到全局 Pi 扩展，MOD 旧注册块注释保留，
