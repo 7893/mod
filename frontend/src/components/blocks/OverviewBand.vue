@@ -30,7 +30,7 @@ const valueClasses = {
 </script>
 
 <template>
-  <div class="grid grid-cols-12 gap-3 h-20 min-h-0 items-stretch">
+  <div class="grid grid-cols-12 gap-3 h-20 min-h-[80px] max-h-[80px] overflow-hidden items-stretch">
     <div class="col-span-2 flex flex-col justify-center items-center text-center border-r border-surface-veil-06 px-2 min-w-0">
       <span class="text-cockpit-sm text-slate-400">{{ primary.label }}</span>
       <div class="flex items-baseline justify-center gap-1 mt-1">

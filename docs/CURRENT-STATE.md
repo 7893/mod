@@ -418,11 +418,15 @@ KI-060 更新前的本节原文完整保存在
 - 实施有界保留机制（默认保留上限 150,000 条，30 天前历史自动在后续写入事务内分批前缀清理）；旧 JSONL 归档保全不再追加写入；
 - 线上 API `/api/simulator/status`（`RUNNING / SUCCESS`）与 `/api/live-projection/status`（`source_available: true`, `mode: "committed_simulation"`）均已验证就绪并稳定运行。验收记录见 [KI-081](issues/KI-081-投影事件不入库与JSONL无限增长及双轨一致性根治.md)。
 
-## 2026-09-13 A1 面板全屏缩放布局循环修复（DONE）
+## 2026-09-13 A1/B1 面板全屏缩放布局循环修复（DONE）
 
-- **问题**：在 1920×1080 分辨率全屏模式下，A1 面板（全域建设运行总览）内容会逐渐下沉放大导致显示不完整。
-- **根因**：A1 内容容器使用固定像素高度 `h-24`，在 scale 缩放时 ECharts 的 `autoresize` 检测到容器尺寸变化触发重绘，可能导致布局重算循环。
-- **修复**：为 `CockpitTopBar.vue` 和 `CommandBand.vue` 的 `h-24` 容器添加 `overflow-hidden`，阻断 autoresize 与 scale 的交互循环。
+- **问题**：在 1920×1080 分辨率全屏模式下，A1 面板（全域建设运行总览）和 B1 面板内容会逐渐下沉放大导致显示不完整。
+- **根因**：A1/B1 内容容器使用固定像素高度（`h-24`/`h-20`），但 `min-h-0` 允许收缩，在 scale 缩放时 ECharts 的 `autoresize` 检测到容器尺寸变化触发重绘，导致布局重算循环。
+- **修复**：
+  - `CockpitTopBar.vue`（A1）：添加 `min-h-[96px] max-h-[96px] overflow-hidden`，各 section 也加 `overflow-hidden`
+  - `CommandBand.vue`：添加 `min-h-[96px] max-h-[96px] overflow-hidden`
+  - `OverviewBand.vue`（B1）：添加 `min-h-[80px] max-h-[80px] overflow-hidden`
+- 通过同时设置 min-h 和 max-h 锁死容器高度，阻断 autoresize 与 scale 的交互循环。
 
 ## 2026-09-13 CI/CD 安全加固与模拟器重启 ID 缓冲治理（KI-082 与 KI-083，DONE）
 
