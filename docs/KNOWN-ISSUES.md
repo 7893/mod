@@ -18,6 +18,7 @@
 
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
+| KI-098 | API 后端迁移至 Cloudflare Workers 全家桶 | OPEN | P2 | [详情](issues/KI-098-API后端迁移至CloudflareWorkers全家桶.md) |
 | KI-097 | 自动发布与应急发布重复实现 | OPEN | P2 | [详情](issues/KI-097-自动发布与应急发布重复实现.md) |
 | KI-096 | 通用质量门禁重复自研 | OPEN | P3 | [详情](issues/KI-096-通用质量门禁重复自研.md) |
 | KI-095 | 项目级 R2 备份链路退役 | DONE | P2 | [详情](issues/KI-095-项目级R2备份链路退役.md) |
