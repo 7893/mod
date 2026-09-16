@@ -362,7 +362,7 @@ KI-060 更新前的本节原文完整保存在
   原子限流、配额预留和状态/发布门禁已闭环；新增 MySQL `GET_LOCK` 数据库级领导锁与 STANDBY 备用状态防止双实例并发写入；2026-09-13 代码已部署至 USA 生产节点并通过线上探针验证，已满足验收并关闭为 DONE。
 - [KI-073](issues/KI-073-实时投影与持久化模拟器双轨事件链事实分裂.md)：独立随机投影已移除，SSE 只消费提交后
   日志；实现基于 JSONL 的 `replay_from_id()` 与 `Last-Event-ID` 断线重放机制及日志轮转，已满足验收并关闭为 DONE。
-- [KI-074](issues/KI-074-历史文档未版本化保全与语义治理闸门缺失.md)：23 份受限历史资料已通过 `scripts/project/sanitize_history.py` 自动化生成 `.sanitized.md` 脱敏副本并纳入版本库跟踪；建立 `docs/development/SANITIZATION-RULES.md` 脱敏标准；53 份历史原件与脱敏副本全部纳入 `docs/history/MANIFEST.sha256` 与 `docs/HISTORY-CATALOG.md`；交付灾备备份与本地解密演练工具 `scripts/project/backup_history_to_r2.py` 及回归测试 `scripts/project/tests/test_history_backup_drill.py`；全量灾备演练和完整性测试 100% 通过；已满足验收并关闭为 DONE。
+- [KI-074](issues/KI-074-历史文档未版本化保全与语义治理闸门缺失.md)：23 份受限历史资料已通过 `scripts/project/sanitize_history.py` 自动化生成 `.sanitized.md` 脱敏副本并纳入版本库跟踪；建立 `docs/development/SANITIZATION-RULES.md` 脱敏标准；53 份历史原件与脱敏副本全部纳入 `docs/history/MANIFEST.sha256` 与 `docs/HISTORY-CATALOG.md`；全量完整性测试 100% 通过；已满足验收并关闭为 DONE。（注：原配套的 R2 灾备工具已随 [KI-095](issues/KI-095-项目级R2备份链路退役.md) 退役。）
 - [KI-075](issues/KI-075-前后端审计后遗留死接口静态兜底与命名残留.md)：21 条前端逻辑审计项已全部修复（`c16530e`…`6c0421e`）；
   遗留的无消费者 AI 生成接口、静态冻结的 `insights` 段、无效 `fixKeys`、跨目录 `v2` 命名与生产环境变量残留只登记不修复，待逐项授权。
 - 当前受管工具沙箱内，Python 3.13.15 的异步事件循环等待线程池任务会死锁，最小 `anyio.to_thread`
@@ -481,7 +481,7 @@ KI-060 更新前的本节原文完整保存在
 - **Outbox 清理逻辑与业务事务解耦（#3）**：将 `backend/app/live_projection/outbox_writer.py` 中的历史事件清理从 `append_outbox` 主事务剥离，新增 `prune_outbox_deferred()` 函数在业务事务提交后异步执行，消除 DELETE 操作对核心写入路径的锁争用。
 - **dual_run_result 索引优化（#5）**：新增 `scripts/project/add_dual_run_result_index.py` 迁移脚本，为 `dual_run_result` 表添加 `(check_date, check_type, result)` 联合索引，消除双轨对账聚合查询的全表扫描。
 - **生命周期状态落盘优化（#7）**：在 `simulation/runtime_service.py` 中移除 `_save_evolution_state` 的 `indent=2` 格式化和同步 `os.fsync()`，文件体积从 ~2.1MB 降至 ~1.4MB，消除每周期数百毫秒的磁盘阻塞。
-- **备份密钥安全警告（#9）**：在 `scripts/project/backup_pipeline.py` 中增加本地密钥文件使用的安全警告日志，提醒生产环境应使用外部密钥管理服务。
+- **备份密钥安全警告（#9）**：（已随 [KI-095](issues/KI-095-项目级R2备份链路退役.md) 退役，项目级 R2 备份链路不再维护。）
 - **AI Prompt 财经术语约束（#10）**：在 `backend/app/integrations/cloudflare_ai.py` 中新增 `FIELD_NAMES_CN` 中英文术语映射，System Prompt 注入"会计凭证严禁翻译为优惠券"约束，杜绝大模型英文直译偏差。
 - **前端调态临时性提示（#12）**：在 `frontend/src/components/ledger/EntityEditDrawer.vue` 中添加明确提示，说明调态操作为临时会话调整，数据刷新后将恢复系统真实状态。
 - **Nginx 静态入口防缓存策略（#13）**：在 `deploy/nginx/mod.conf.example` 中为 HTML 文件添加专项 location 块，强制 `no-cache, no-store, must-revalidate`，杜绝发版后 ChunkLoadError。
