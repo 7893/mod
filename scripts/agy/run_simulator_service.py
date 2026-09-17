@@ -133,7 +133,7 @@ def main() -> int:
     parser.add_argument("--once", action="store_true", help="Run a single simulation cycle tick and exit")
     parser.add_argument("--clear-fail-closed", action="store_true", help="Clear persistent fail-closed flag and exit")
     parser.add_argument("--max-per-minute", type=int, default=20, help="Hard rate limit fuse cap per minute")
-    parser.add_argument("--max-per-day", type=int, default=5000, help="Hard rate limit fuse cap per day")
+    parser.add_argument("--max-per-day", type=int, default=10000, help="Hard rate limit fuse cap per day")
 
     args = parser.parse_args()
     load_environment()

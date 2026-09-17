@@ -5,7 +5,7 @@ Integrates:
 1. HongKongDiurnalEngine: 24h diurnal curve, weekend damping, month-end spikes, Poisson bursts.
 2. Dual Rate Limiting:
    - Soft: Diurnal intensity & Poisson burst intervals.
-   - Hard Fuse: Max events per minute (<= 20) and per day (<= 5000), pauses and logs warnings if reached.
+   - Hard Fuse: Max events per minute (<= 20) and per day (<= 10000), pauses and logs warnings if reached.
 3. Fast Movie + Slow Movie Coordination:
    - Fast Movie: Expense reimbursement footprints (SimulationWriter + daily_stats cascade).
    - Slow Movie: Construction mainline milestones & B-mode advancer (ConstructionWriter).
@@ -60,7 +60,7 @@ class SimulatorRuntimeConfig:
     """Configuration for simulation runtime service."""
 
     max_events_per_minute: int = 20
-    max_events_per_day: int = 5000
+    max_events_per_day: int = 10000
     consecutive_failure_threshold: int = 3
     fail_closed_flag_path: Path = field(default_factory=lambda: Path("output/simulator_fail_closed.flag"))
     fuse_state_path: Path = field(default_factory=lambda: Path("output/simulator_fuse_state.json"))
@@ -140,7 +140,7 @@ class RateLimitFuse:
     def __init__(
         self,
         max_per_minute: int = 20,
-        max_per_day: int = 5000,
+        max_per_day: int = 10000,
         state_file_path: Optional[Path] = None,
     ):
         self.max_per_minute = max_per_minute
