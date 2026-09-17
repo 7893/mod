@@ -16,7 +16,7 @@ export function createRiskOverviewOption(items: RiskOverviewItem[]) {
     yAxis: {
       type: 'category', data: items.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 9 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
     },
     series: [{
       type: 'bar', barWidth: 11, showBackground: true,
@@ -24,7 +24,7 @@ export function createRiskOverviewOption(items: RiskOverviewItem[]) {
       data: items.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
-        fontFamily: 'monospace', fontSize: 9, formatter: '{c} 家',
+        fontFamily: 'monospace', fontSize: 10, formatter: '{c} 家',
       },
     }],
   }

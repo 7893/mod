@@ -41,7 +41,7 @@ export const chartSeriesColors = [
   chartPalette.neutral,
 ] as const
 
-const axisLabel = { color: chartInk.textMuted, fontSize: 11 }
+const axisLabel = { color: chartInk.textMuted, fontSize: 12 }
 
 /** 统一 tooltip：深底、细边、无花哨阴影，全局 confine 限制在图表容器内防越界遮挡 (KI-065)。 */
 export const chartTooltip = {
@@ -50,7 +50,7 @@ export const chartTooltip = {
   borderColor: chartInk.border,
   borderWidth: 1,
   padding: [8, 12] as [number, number],
-  textStyle: { color: chartInk.textPrimary, fontSize: 12 },
+  textStyle: { color: chartInk.textPrimary, fontSize: 13 },
 }
 
 /** 类目轴统一样式。 */
