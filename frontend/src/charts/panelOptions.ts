@@ -90,7 +90,7 @@ export function createOverviewCompositionOption(parts: CompositionPart[], total:
         position: 'inside',
         color: chartInk.textPrimary,
         fontFamily: 'monospace',
-        fontSize: 11,
+        fontSize: 13,
         formatter: `${part.percentage}%`,
       },
     })),
@@ -107,9 +107,9 @@ export function createRolloutCompositionOption(list: RolloutSeriesItem[]) {
       data: list.map((batch) => batch.name),
       axisTick: { show: false },
       axisLine: { lineStyle: { color: chartInk.border } },
-      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 13 },
     },
-    yAxis: { ...valueAxis, axisLabel: { color: chartInk.textMuted, fontSize: 11 } },
+    yAxis: { ...valueAxis, axisLabel: { color: chartInk.textMuted, fontSize: 13 } },
     series: [
       {
         name: '已上线', type: 'bar', stack: 'units', barMaxWidth: 36,
@@ -208,14 +208,14 @@ export function createBatchProgressOption(list: BatchProgressItem[]) {
       data: list.map((batch) => batch.name),
       axisTick: { show: false },
       axisLine: { lineStyle: { color: chartInk.border } },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10, interval: 0 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 12, interval: 0 },
     },
     yAxis: {
       ...valueAxis,
       min: 0,
       max: 100,
       splitNumber: 2,
-      axisLabel: { color: chartInk.textMuted, fontSize: 10, formatter: '{value}%' },
+      axisLabel: { color: chartInk.textMuted, fontSize: 12, formatter: '{value}%' },
     },
     // 建设完成度（单位进度均值）与上线率（单位数占比）分母不同，不能堆叠在同一根条里，只能并列。
     series: [
@@ -259,7 +259,7 @@ export function createOperationsQualityOption(list: QualityRateItem[]) {
       data: reversed.map((item) => item.name),
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 13 },
     },
     series: [{
       type: 'bar',
@@ -278,7 +278,7 @@ export function createOperationsQualityOption(list: QualityRateItem[]) {
         position: 'right',
         color: chartInk.textPrimary,
         fontFamily: 'monospace',
-        fontSize: 11,
+        fontSize: 13,
         formatter: (params: any) => {
           const item = reversed[params?.dataIndex]
           return item?.value === null ? '—' : `${item?.value}%`
@@ -312,7 +312,7 @@ export function createOperationalGuardOption(list: OperationalGuardItem[]) {
     yAxis: {
       type: 'category', data: reversed.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 12 },
     },
     series: [{
       type: 'bar', barWidth: 8, showBackground: true,
@@ -323,7 +323,7 @@ export function createOperationalGuardOption(list: OperationalGuardItem[]) {
       })),
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
-        fontFamily: 'monospace', fontSize: 10,
+        fontFamily: 'monospace', fontSize: 12,
         formatter: (params: any) => {
           const item = reversed[params?.dataIndex]
           return formatCount(item?.value)
@@ -341,14 +341,14 @@ export function createBatchComplianceOption(list: ComplianceSeriesItem[]) {
     xAxis: {
       ...categoryAxis,
       data: list.map((batch) => batch.name),
-      axisLabel: { ...categoryAxis.axisLabel, fontSize: 11 },
+      axisLabel: { ...categoryAxis.axisLabel, fontSize: 13 },
     },
     yAxis: [
       {
         ...valueAxis, min: 0, max: 100,
-        axisLabel: { color: chartInk.textMuted, fontSize: 11, formatter: '{value}%' },
+        axisLabel: { color: chartInk.textMuted, fontSize: 13, formatter: '{value}%' },
       },
-      { ...valueAxis, splitLine: { show: false }, axisLabel: { color: chartInk.textMuted, fontSize: 11 } },
+      { ...valueAxis, splitLine: { show: false }, axisLabel: { color: chartInk.textMuted, fontSize: 13 } },
     ],
     series: [
       {
