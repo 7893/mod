@@ -51,7 +51,7 @@ export function createLaunchGateOption(items: GateStageItem[]) {
     yAxis: {
       type: 'category', data: reversed.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
     },
     series: [
       {
@@ -70,7 +70,7 @@ export function createLaunchGateOption(items: GateStageItem[]) {
         itemStyle: { color: chartPalette.neutral, borderRadius: [0, 3, 3, 0] },
         label: {
           show: true, position: 'right', color: chartInk.textPrimary,
-          fontFamily: 'monospace', fontSize: 9,
+          fontFamily: 'monospace', fontSize: 10,
           formatter: (params: any) => `${reversed[params.dataIndex]?.progress ?? 0}%`,
         },
       },
@@ -125,17 +125,17 @@ export function createTaskStageMatrixOption(list: StageSeriesItem[]) {
     xAxis: {
       type: 'category', data: list.map((stage) => stage.name),
       axisLine: { lineStyle: { color: chartInk.border } }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 9, interval: 0 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10, interval: 0 },
     },
     yAxis: {
       type: 'category', data: statuses.map((status) => status.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
     },
     series: [{
       type: 'heatmap', data: matrix,
       label: {
-        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 9,
+        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 10,
         formatter: (params: any) => `${params.data.percentage}%\n${formatCount(params.value?.[2] ?? 0)}`,
       },
       itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 3, borderRadius: 4 },
@@ -163,7 +163,7 @@ export function createTaskStageRadarOption(list: StageSeriesItem[]) {
     radar: {
       center: ['50%', '53%'], radius: '65%', splitNumber: 3,
       indicator: list.map((stage) => ({ name: stage.name, max: 100 })),
-      axisName: { color: chartInk.textMuted, fontSize: 8 },
+      axisName: { color: chartInk.textMuted, fontSize: 9 },
       axisLine: { lineStyle: { color: chartInk.border } },
       splitLine: { lineStyle: { color: chartInk.border } },
       splitArea: { areaStyle: { color: [chartInk.borderSoft, 'transparent'] } },
@@ -204,14 +204,14 @@ export function createTrainingConversionOption(items: TrainingTypeItem[]) {
       data: items.map((item) => shortTrainingType(item.type)),
       axisLine: { lineStyle: { color: chartInk.border } },
       axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 9, interval: 0 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10, interval: 0 },
     },
     yAxis: {
       ...valueAxis,
       splitNumber: 3,
       axisLabel: {
         color: chartInk.textMuted,
-        fontSize: 9,
+        fontSize: 10,
         formatter: (value: number) => value >= 10_000 ? `${Math.round(value / 1000)}k` : value,
       },
     },
@@ -239,7 +239,7 @@ export function createTrainingMixOption(items: TrainingTypeItem[]) {
       minAngle: 4,
       avoidLabelOverlap: true,
       itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 2 },
-      label: { color: chartInk.textMuted, fontSize: 9, formatter: '{b}\n{d}%' },
+      label: { color: chartInk.textMuted, fontSize: 10, formatter: '{b}\n{d}%' },
       labelLine: { length: 6, length2: 4, lineStyle: { color: chartInk.border } },
       data: items.map((item, index) => ({
         name: shortTrainingType(item.type),
@@ -270,7 +270,7 @@ export function createTrainingFunnelOption(summary?: TrainingSummaryItem) {
       data: list.map((item) => item.name),
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
     },
     series: [{
       type: 'bar',
@@ -286,7 +286,7 @@ export function createTrainingFunnelOption(summary?: TrainingSummaryItem) {
         position: 'right',
         color: chartInk.textPrimary,
         fontFamily: 'monospace',
-        fontSize: 10,
+        fontSize: 11,
         formatter: (params: any) => formatCount(params.value),
       },
     }],

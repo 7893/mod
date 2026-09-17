@@ -46,17 +46,17 @@ export function createRolloutTrendMatrixOption(points: RolloutTrendPoint[]) {
     xAxis: {
       type: 'category', data: dates,
       axisLine: { lineStyle: { color: chartInk.border } }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
     },
     yAxis: {
       type: 'category', data: batches.map((batch) => batch.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
     },
     series: [{
       type: 'heatmap', data: matrix,
       label: {
-        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 9,
+        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 10,
         formatter: (params: any) => `${params.value?.[2] ?? 0}%`,
       },
       itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 2, borderRadius: 3 },
@@ -81,7 +81,7 @@ export function createRolloutCommandOption(summary: RolloutCommandSummary) {
     yAxis: {
       type: 'category', data: states.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 9 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
     },
     series: [
       {
@@ -91,7 +91,7 @@ export function createRolloutCommandOption(summary: RolloutCommandSummary) {
         progress: { show: true, roundCap: true, width: 9, itemStyle: { color: chartPalette.success } },
         axisLine: { lineStyle: { width: 9, color: [[1, chartInk.borderSoft]] } },
         axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false },
-        title: { show: true, offsetCenter: [0, '42%'], color: chartInk.textMuted, fontSize: 9 },
+        title: { show: true, offsetCenter: [0, '42%'], color: chartInk.textMuted, fontSize: 10 },
         detail: {
           offsetCenter: [0, '-6%'], color: chartInk.textPrimary,
           fontFamily: 'monospace', fontSize: 17, formatter: '{value}%',
@@ -104,7 +104,7 @@ export function createRolloutCommandOption(summary: RolloutCommandSummary) {
         data: states.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
         label: {
           show: true, position: 'right', color: chartInk.textPrimary,
-          fontFamily: 'monospace', fontSize: 9,
+          fontFamily: 'monospace', fontSize: 10,
           formatter: (params: any) => formatCount(params.value),
         },
       },
