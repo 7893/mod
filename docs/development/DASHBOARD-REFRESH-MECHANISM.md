@@ -1,9 +1,12 @@
 # MOD V2 动态刷新与无刷新轮询机制说明
 
+更新日期：2026-09-17
+状态：现行
+适用范围：MOD 领导驾驶舱前端与只读 API
+
 - **版本**：2.0
 - **基线日期**：2026-08-30
 - **维护角色**：Google Antigravity / agy
-- **适用系统**：MOD 领导驾驶舱前端与只读 API
 
 ---
 
@@ -21,7 +24,7 @@
 ```text
 [浏览器大屏前端 (Pinia Store)]
        │
-       ├─ (1) 页面初始化: 加载本地内置 v2-sim-snapshot.json 确保首屏 0 延迟秒开
+       ├─ (1) 页面初始化: 加载本地内置 fallback-snapshot.json 确保首屏 0 延迟秒开
        │
        ├─ (2) 触发定时器: 每 60,000 ms (60s) 调用 GET /api/v2/dashboard/snapshot (silent=true)
        │       │

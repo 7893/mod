@@ -1,6 +1,7 @@
 # USA 项目目录整理记录
 
 执行日期：2026-09-02
+更新日期：2026-09-17
 状态：已完成的历史运维记录
 适用范围：2026-09-02 USA 目录收敛与风险修复
 
@@ -18,8 +19,8 @@
 - `tools-staging` → `archive/staging/`
 - 旧版根层生成器 → `archive/legacy-v1/generator/`
 - 旧建库与账号工具 → `archive/legacy-v1/database/`
-- 前端生成 JS、tsbuildinfo、旧截图 → `archive/workbench/frontend/`
-- 旧路径 Nginx 与重复部署配置 → `archive/legacy-deploy/`
+- 前端生成 JS、tsbuildinfo、旧截图当时移入本地工作台；该工作台于 2026-09-17 经授权删除
+- 旧路径 Nginx 与重复部署配置当时移入本地归档；该归档于 2026-09-17 经授权删除
 
 所有项目资产均采用同文件系统内移动归档，没有删除。同步前备份位于
 `archive/backups/20260902-maintenance/`。
@@ -35,5 +36,5 @@
 
 - 系统级重复服务已停止并禁用，只保留用户级 `mod-api.service`。
 - 用户级服务重启后日志确认模拟器未启用，8100 仅有一个 Uvicorn 进程监听。
-- 远端 5,063,531,245 字节历史归档已校验迁回 JPA 的 `archive/usa-history/`。
+- 远端 5,063,531,245 字节历史归档当时已校验迁回 JPA；其剩余本地副本于 2026-09-17 经授权删除。
 - USA 项目目录收敛为 `USA-DEPLOYMENT-LAYOUT.md` 规定的纯部署结构。

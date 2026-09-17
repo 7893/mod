@@ -1,11 +1,11 @@
 # MOD 当前状态
 
-更新日期：2026-09-13
+更新日期：2026-09-17
 状态：现行事实入口
 适用范围：当前运行、数据、功能、质量、安全状态与操作边界
 
-本文是项目当前事实入口。历史多 Agent 协作状态机（调度器、agent 定义、任务与交接文件）已于
-2026-09-04 归档至 `archive/legacy-collaboration/`，只作历史记录保留，不再驱动开发流程。
+本文是项目当前事实入口。历史多 Agent 协作状态机（调度器、agent 定义、任务与交接文件）退出运行后，
+已于 2026-09-17 经授权删除；其演进事实由 Git 和冻结历史文档保留，不再驱动开发流程。
 
 ## 现行架构
 
@@ -80,15 +80,17 @@
   - **测试更新**：`RolloutLedgerTable.test.ts` mock 改为同时拦截 `/api/dashboard/snapshot` 与 `/api/organizations`，模拟服务端分页响应。
 - 数据库为托管 MySQL HeatWave（库 `mod`，Always Free 规格），连接主机、端口与凭据
   仅存于运行主机的本地环境文件，不写入版本库或文档。原运行环境的旧数据库实例已删除。
-- 运行主机使用系统级 systemd 服务 `mod-api.service` 运行项目内 FastAPI 虚拟环境，监听
-  `127.0.0.1:8100`，开机自启（enabled）。
+- 运行主机使用系统级 `mod.service` 统一托管 FastAPI 与模拟器子进程；FastAPI 监听
+  `127.0.0.1:8100`，服务开机自启（enabled）。
 - TLS 证书由 Google Trust Services 签发（acme.sh + Google Public CA EAB），acme.sh cron
   自动续期并重载 Nginx。
 - MOD 不使用 Docker、DataEase、NocoDB 或 Cloudflare Worker 作为现行运行组件。
-- `archive/legacy-cloudflare-worker/` 是未接入现行链路的历史实验原型，不部署。
+- 未接入现行链路的早期 Cloudflare Worker 原型，以及 DataEase/NocoDB Compose 实验配置，
+  已于 2026-09-17 经授权从本地归档删除。
 - 后端包含可选的 Cloudflare Workers AI REST 适配器，代码默认关闭（`MOD_CF_AI_ENABLED` 未设置时不启用）；
   当前生产实测状态为 `UNCONFIGURED`（未配置凭据，`/api/insights/status` 返回“未配置适配器”），
-  即该适配器暂未实际提供文案摘要能力；接入需显式配置 `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN`；它不依赖上述历史 Worker。
+  即该适配器暂未实际提供文案摘要能力；接入需显式配置 `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN`；
+  它不依赖已经删除的历史 Worker 原型。
 - Cloudflare AI Gateway `mod-gateway` 已建立并配置为本项目 LLM 调用的统一入口（成本闸门）：
   缓存 TTL 3600 秒（相同请求命中缓存不消耗模型 token，实测 MISS→HIT 生效）、限流 100 次 / 60 秒（sliding）、
   日志开启。端点形如 `https://gateway.ai.cloudflare.com/v1/<account_id>/mod-gateway/workers-ai/<model>`；
@@ -113,7 +115,7 @@
   - 孤儿凭证清理：倒序批次删除 11,144 张无关联单据凭证及 10,556 笔关联集成记录，凭证总数收敛为 1,469,547，0 孤儿、0 断键；
   - 主数据（人员）分层重整与引用闭环：`sys_user` 按体量分层扩充至 26,713 人（大单位 30~48 人、中等 14~24 人、小单位 3~5 人，均值 13.4 人/单位）；角色分化为 2,000 财务总监、2,000 项目经理、6,350 经办人、16,363 普通用户，清除所有 `\r`；修复 12,351 笔单据占位符经办人，单据经办人 100% 命中本单位名录；连带重算 4,730 场培训数据与准备度指标；`daily_stats` 实时同步对齐。
 - `artifacts/v2-sim-data/` 是冻结基线，不得修改或重复导入。
-- `artifacts/v2-sim-data-inc/` 是增量数据资产，数据库写入和再次导入仍需单独确认。
+- 本地 `artifacts/v2-sim-data-inc/` 增量 CSV 已退役清理；现行运行只读取 MySQL，数据库为当前事实源，不再保留该批文件的本地精确重放能力。
 
 ## 功能状态
 
@@ -143,16 +145,16 @@
   数据库快照仍是累计数字唯一事实源，前端会话脉搏不再与快照相加。当前只支持同机单 API 进程，尚无共享
   outbox、跨实例消费者位点或完整重连续播保证，具体边界见 `development/LIVE-PROJECTION.md`。
 - 拟真引擎第一步（技术验证载体）已落地（`backend/app/simulation/`）：实现费用报销剧本（`ExpensePlaybook`）多表完整足迹生成与安全写库器（`SimulationWriter`），单事务原子落库 6 张表（`business_document`、`business_document_line`、`accounting_voucher`、`accounting_voucher_line`、`document_voucher_link`、`integration_result`）并级联同步 `daily_stats`；以存量治理成果为硬约束（时间线接续存量最新日期只向前生长、经办人 100% 命中本单位名录、仅限已上线单位门禁、只增不删、零 schema 变更、运行审计留痕）；开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭（`false`）；已通过 100 笔小试落库实测，KI-017 零回归。
-- 拟真引擎第二步（建设管控主线 + B模式生命周期推进器）已落地并已实测写库（`backend/app/simulation/` 与 `archive/legacy-scripts/agy/run_step2_batch_write.py`）：
+- 拟真引擎第二步（建设管控主线 + B模式生命周期推进器）已落地并已实测写库（`backend/app/simulation/`）：
   - 核心模块：实现 7 类建设管控剧本生成器（入池、数据准备、培训认证、接口联调、双轨核对、跃迁评审、批次推进，`construction_playbooks.py`）、6 阶段生命周期状态机推进器（`lifecycle_advancer.py`，严格执行“只进不退、持续达标 N 天才跃迁、跃迁评审留痕快照”三条铁律）、快慢电影演进协调器与矛盾咬合机制（`evolution_coordinator.py`，~4% 自然涌现困难户与决策支撑风险视角 100% 咬合自洽）、建设安全事务写库器（`construction_writer.py`）；
-  - 严格分批写库落地：经主控授权，使用独立可控批量写库脚本（`archive/legacy-scripts/agy/run_step2_batch_write.py`）执行 2026-09-05 建设主线业务足迹真实落库。写前自动对 7 张受影响表生成全量快照备份（`scripts/agy/output/backups/construction_backup_20260905_131434.json`，43.37 MB），按 2,000 行/批分 3 批逐批 commit（单事务单批次），实时打印进度与 ID 区间，累计安全写入 4,178 行；
+  - 严格分批写库落地：经主控授权，2026-09-05 使用独立的一次性批量写库程序执行建设主线业务足迹真实落库，按 2,000 行/批分 3 批逐批 commit（单事务单批次），累计安全写入 4,178 行；该程序及当时的本地快照均已在 2026-09-17 清理；
   - 当前数据规模：`org_unit` 2,000 家（未启动 760、准备中 238、已具备双轨条件 49、双轨运行中 205、已上线 282、稳定运行 466）；`construction_task` 62,104 行（新增 2,194 行）；`rollout_status_snapshot` 144,870 行（新增 20 行带专家决议留痕快照）；`training` 5,520 行（新增 476 行）；`dual_run_result` 30,288 行（新增 1,230 行）；`data_readiness` 2,000 行（238 行同步更新）；
-  - 验收脚本隔离与零回归：验收脚本（`archive/legacy-scripts/agy/verify_step2_dry_run.py`）严格保持纯只读，与写库入口彻底分离，杜绝验收重复写库。写后 8 条硬闸门全量复测 100% PASS，KI-017 零回归。
-- 拟真引擎第三步（常驻后台服务 · 持续实时增长）已落地（`backend/app/simulation/runtime_service.py`、`deploy/mod-simulator.service`、`scripts/agy/run_simulator_service.py`）：
+  - 验收隔离与零回归：当时的验收程序严格保持纯只读，与写库入口分离；写后 8 条硬闸门全量复测 100% PASS，KI-017 零回归。一次性验收程序已于 2026-09-17 清理。
+- 拟真引擎第三步（常驻后台服务 · 持续实时增长）已落地（`simulation/runtime_service.py`、`scripts/agy/run_simulator_service.py`）：
   - 核心架构：将作息大脑 `HongKongDiurnalEngine`（24h 曲线、周末抑制、月末峰值、泊松突发）与已验证写库执行器装配为常驻后台服务 `SimulatorRuntimeService`，时钟严格对齐当前香港真实时间（`sim_time = current HKT`，不加速、不追赶、不倒插历史）；
   - 双重限流与硬保险丝：柔性作息强度与泊松间隔调度 + 滑动硬上限保险丝（每分钟 ≤ 20 笔、每天 ≤ 10000 笔可配，超限自动安全暂停并记审计日志）；
   - 周期后自检与自动容灾：每周期单事务写后自动执行确定性自检（单据与行金额求和一致、借贷平衡、时间严格递增、经办人命中本单位）；单批次自检失败立即回滚重试；连续失败达到阈值（3 次）自动触发持久化 `output/simulator_fail_closed.flag` 物理阻断写库，重启保持阻断，拒绝静默污染；
-  - 服务化与运维管理：提供独立 systemd 配置文件（`deploy/mod-simulator.service`，与 `mod-api.service` 解耦）和 CLI 运维管理工具（`scripts/agy/run_simulator_service.py`），支持 `--status`、`--dry-run`、`--once`、`--clear-fail-closed`；每周期落盘结构化健康心跳（`output/simulator_status.json`）；安全开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭；短窗口实测与 8 闸门复测全绿。
+  - 服务化与运维管理：模拟器现由统一 `mod.service` 中的 `run_unified.py` 子进程托管；CLI 运维入口 `scripts/agy/run_simulator_service.py` 支持 `--status`、`--dry-run`、`--once`、`--clear-fail-closed`；每周期落盘结构化健康心跳（`output/simulator_status.json`）；安全开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭；短窗口实测与 8 闸门复测全绿。
   - 上线状态（2026-09-05，主控授权）：服务已系统级安装并 `enable --now`，`MOD_SIMULATION_ENGINE_ENABLED=true` 开启真实写库，常驻运行中；开机自启、崩溃自愈、运行主机重启自动继续；库按实时香港时钟自然增长、KI-017 全表零回归；主控每日巡检。
 - V1 回退代码仍保留，但不作为后续功能目标。
 - HeatWave AutoML 已完成特征工程重构、真实重训与独立切分验证达标（KI-034 第一期落地）：
@@ -262,8 +264,8 @@
   展示；D7 核验卡去掉无语义的进度轨与胶囊标签；F3 分布图去掉面板内底卡并隐藏与柱标重叠的坐标刻度。
   已在 1920×1080 无头渲染核对，无控制台错误。待发布并需人工视觉验收。
 - 本地后端 KI-027 补遗：`PageV2→Page`、`build_dashboard_snapshot_v2→build_dashboard_snapshot`，docstring/错误消息中
-  残留的 `/api/v2/`、`V2`、`USA` 字样清除，删除无引用死 schema `RefreshMeta`/`Overview`；因 `scripts/kiro/run_daily_briefing.py`
-  （生产简报定时任务）仍按旧名导入且目录归 Kiro，`dashboard.py` 暂留一行兼容别名，待 Kiro 迁移后删除。待发布。
+  残留的 `/api/v2/`、`V2`、`USA` 字样清除，删除无引用死 schema `RefreshMeta`/`Overview`；生产简报入口已直接调用
+  `build_dashboard_snapshot`，旧兼容别名及失效说明已清理。待发布。
 - 本地删除旧「五层模型」模拟器死代码：`backend/app/business_simulator.py`、`backend/app/simulator_config.py`、
   `simulation/models.py` 及其专属测试 `test_business_simulator.py`（约 1,400 行）。三者未被 `main.py`、任何 systemd
   服务或 `simulation/runtime_service.py` 引用，仅被自身测试引用；环境变量 `MOD_SIMULATOR_ENABLED`/`MOD_DB_WRITE_URL`
@@ -344,9 +346,12 @@
 - 本地 Git hooks 已强制执行凭据扫描、`make check` 和提交信息格式；GitHub Actions workflow 已在仓库
   落地，远端启用后在拉取请求和推送中复用同一闸门，不包含部署或生产访问。
 - 本目录已开始采用 Git 管理；大体积 CSV、原始参考材料、构建产物和本地密钥不纳入版本库。
-- 本地代码智能与架构拓扑图谱基线落地（ADR-0015，2026-09-13）：
-  - CodeGraph：本地索引（`.codegraph/`）完成 226 个核心文件、3,094 个语法节点和 8,199 条依赖边抽取，支持毫秒级符号探查、调用链追溯与修改影响面（Blast Radius）计算；
-  - Graphify：多模态拓扑（`graphify-out/`）完成 2,464 个节点、5,064 条边和 164 个业务社区识别，生成交互式架构大屏（`graph.html`）与体检报告（`GRAPH_REPORT.md`）；并通过 `.githooks/post-commit` 实现提交后完全后台异步静默刷新。
+- 2026-09-17 完成退役资产集中清理：移除项目级 R2 备份链路及本地备份、旧部署与实验原型、
+  一次性生成/迁移/修复脚本、自研协作状态机、重复工作台、旧发布生成物和原始 Office 参考资料；
+  `archive/` 仅保留说明与两个受 Git 文档治理保护的历史 issue 模板，`references/` 仅保留驾驶舱需求导出工具。
+- 本地代码智能与架构拓扑图谱已刷新（ADR-0015，2026-09-17）：
+  - CodeGraph：本地索引（`.codegraph/`）覆盖 215 个代码文件、2,923 个语法节点和 7,657 条依赖边，状态为 up to date；
+  - Graphify：多模态拓扑（`graphify-out/`）包含约 4,350 个节点、约 7,580 条边和约 350 个社区，已重建交互式 `graph.html` 与 `GRAPH_REPORT.md`；健康检查无缺失端点、悬空边或折叠边，保留 37 个来源自身关系形成的 self-loop。`.githooks/post-commit` 继续提供提交后的代码增量刷新。
 
 KI-060 更新前的本节原文完整保存在
 [2026-09-08 本地质量基线更新前快照](history/2026-09-08-本地质量基线更新前快照.md)。
@@ -423,7 +428,7 @@ KI-060 更新前的本节原文完整保存在
 本节修正前文基于 JSONL 的当前代码描述，历史记录保留。
 - 生产 MySQL（`mod`）已完成 `sim_event_outbox_state` 与 `sim_event_outbox` 表结构初始化，模拟器快业务路径已由事务性 Outbox 全面接管（`sim_event_outbox` 与业务单据/凭证在同一 DB-API 事务中原子提交/回滚），彻底杜绝无落库事件的虚假推送；
 - API 服务（`LiveProjectionBroker`）已切换至基于持久游标（`outbox:<stream_id>:<sequence>`）的数据库分页读取模式，每个连接独立维护游标，支持客户端断点续传与重连去重，游标越界/失效时显式返回 reset 指令触发前端刷新权威快照；
-- 实施有界保留机制（默认保留上限 150,000 条，30 天前历史自动在后续写入事务内分批前缀清理）；旧 JSONL 归档保全不再追加写入；
+- 实施有界保留机制（默认保留上限 150,000 条，30 天前历史自动在后续写入事务内分批前缀清理）；退役的本地 JSONL、锁文件及 `CommittedEventJournal` 实现已清理；
 - 线上 API `/api/simulator/status`（`RUNNING / SUCCESS`）与 `/api/live-projection/status`（`source_available: true`, `mode: "committed_simulation"`）均已验证就绪并稳定运行。验收记录见 [KI-081](issues/KI-081-投影事件不入库与JSONL无限增长及双轨一致性根治.md)。
 
 ## 2026-09-13 A1/B1 面板全屏缩放布局循环修复（DONE）

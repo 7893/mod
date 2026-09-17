@@ -7,7 +7,6 @@ import json
 import pytest
 
 from app.live_projection.broker import LiveProjectionBroker, cursor_id, event_payload
-from app.live_projection.journal import CommittedEventJournal
 from app.live_projection.models import ActivityProfile
 from app.live_projection.outbox import OutboxPage
 
@@ -135,20 +134,6 @@ def test_db_outage_preserves_resume_position_and_recovers(monkeypatch):
         assert data(await anext(stream))['sequence'] == 2
         await stream.aclose()
     asyncio.run(exercise())
-
-
-def test_legacy_journal_remains_readable_for_archive(tmp_path):
-    journal = CommittedEventJournal(tmp_path / 'committed.jsonl')
-    records = [_record(i) for i in range(1, 6)]
-    journal.append(records)
-    offset, read = journal.read_from(0)
-    assert offset == journal.path.stat().st_size
-    assert read == records
-    assert list(journal.replay_from_id('document-3')) == records[3:]
-    assert list(journal.replay_from_id('unknown')) == []
-    assert not journal.rotate_if_needed(max_size_mb=100)
-    assert journal.rotate_if_needed(max_size_mb=0)
-    assert journal.path.with_suffix('.jsonl.old').exists()
 
 
 def test_db_recovery_without_new_events_restores_source_state():

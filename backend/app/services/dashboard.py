@@ -690,7 +690,3 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
     except Exception as e:
         print(f"Warning: DB query failed ({e}), using fallback snapshot.")
         return load_fallback_snapshot()
-
-
-# 兼容别名：scripts/kiro/run_daily_briefing.py（生产 mod-daily-briefing.service）仍按旧名导入，
-# 该目录归 Kiro 所有；待其改用 build_dashboard_snapshot 后删除本行。

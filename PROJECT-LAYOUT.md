@@ -1,6 +1,6 @@
 # MOD 项目目录说明
 
-更新日期：2026-09-05
+更新日期：2026-09-17
 状态：现行
 适用范围：项目源码工作区与生产运行主机的组织边界
 
@@ -23,17 +23,13 @@
 │       └── styles/         # 基础、组件、页面和响应式样式
 ├── deploy/                 # systemd 与 Nginx 部署配置
 ├── scripts/                # 按 CLI 所有者隔离的脚本
-├── database/               # 只读验收工具（历史批量导入/生成脚本已退役至 archive）
+├── database/               # 只读验收工具（历史批量导入/生成脚本已退役）
 ├── tools/                  # 经维护的领域工具
 ├── artifacts/              # 本地数据资产，不进入部署目录
-├── references/             # 原始参考材料
+├── references/             # 驾驶舱需求导出过程与源文件
 ├── docs/                   # 当前状态、开发规范、运维和证据
 └── archive/
-    ├── legacy-cloudflare-worker/ # 未部署的历史实验
-    ├── legacy-components/
-    ├── legacy-deploy/
-    ├── usa-history/        # 从旧运行环境迁回的历史资产，本地忽略
-    └── workbench/          # 本地忽略的临时工作台
+    └── legacy-issue-templates/ # 受文档治理保护的历史模板
 ```
 
 完整接手流程见 `CONTRIBUTING.md`；目录边界和大文件规则见

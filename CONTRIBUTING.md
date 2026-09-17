@@ -1,6 +1,6 @@
 # MOD 项目协作指南
 
-更新日期：2026-09-06
+更新日期：2026-09-17
 状态：现行
 适用范围：在 `/home/ubuntu/mod` 工作的人类开发者与所有编码 Agent
 
@@ -19,8 +19,8 @@
    （改前端读 `FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md`，碰数据库读 `DATA-AND-SECURITY-STANDARD.md`，
    任何改动读 `TESTING-STANDARD.md`）。按需读对应的，不必全读。
 
-文档有冲突时，以 `AGENTS.md` 的权威顺序为准。旧的多 Agent 协作状态机已归档至
-`archive/legacy-collaboration/`，不得作为活跃工作流使用。
+文档有冲突时，以 `AGENTS.md` 的权威顺序为准。旧的多 Agent 协作状态机已于
+2026-09-17 经授权删除，不得恢复为活跃工作流。
 
 ## 标准工作流
 
