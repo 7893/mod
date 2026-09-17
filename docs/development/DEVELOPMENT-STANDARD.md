@@ -18,7 +18,7 @@
   覆盖 `backend/app`、`backend/tests` 与顶层 `simulation/`。
 - 路由层只负责参数、依赖注入、状态码和响应编排；SQL 聚合与业务规则进入服务层。
 - 外部平台访问进入 `backend/app/integrations/`，必须有超时、失败降级、数据边界和凭据隔离。
-- 拟真引擎是顶层独立包 `simulation/`（ADR-0009），由 `mod-simulator.service` 独立运行，API 进程不得导入它；写库门禁
+- 拟真引擎是顶层独立包 `simulation/`（ADR-0009），由统一 `mod.service` 中的独立子进程运行，API 应用代码不得导入它；写库门禁
   `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭，不得绕过。旧「五层模型」`business_simulator.py`/`simulator_config.py` 已删除。
 - 捕获异常时保留可诊断信息，但不得把密码、Token、连接串、个人信息或原始业务明细写入日志。禁止 `except: pass`
   静默吞错（Ruff `S110`/`SIM105` 闸门）：降级路径至少 `logger.warning` 记录异常类名；纯清理型忽略（关连接、取消任务）

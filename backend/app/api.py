@@ -11,7 +11,7 @@ from sqlalchemy.engine import Connection
 
 from .db import connection, get_engine
 from .heatwave_watchdog import get_heatwave_status
-from .ml_adapter import HeatWaveMLAdapter, CloudflareAIAdapter
+from .integrations import CloudflareAIAdapter, HeatWaveMLAdapter
 from .schemas import Page, EntityPatch
 from .services.dashboard import (
     build_dashboard_snapshot,
@@ -523,7 +523,7 @@ async def simulator_status() -> dict:
     获取独立常驻拟真引擎运行状态与健康心跳（只读）。
 
     安全说明：
-    - 读取独立常驻进程（mod-simulator.service）输出的结构化心跳文件。
+    - 读取统一 mod.service 中模拟器子进程输出的结构化心跳文件。
     - 不导入 simulation 包，不导入 business_simulator，不创建任何写库连接或引擎。
     - 不执行任何子进程或外部命令。
     - 字段白名单过滤，不泄露系统绝对路径或凭据。

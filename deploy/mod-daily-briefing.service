@@ -1,6 +1,6 @@
 [Unit]
 Description=MOD Daily Command Briefing Generation Service (LLM via mod-gateway)
-After=network-online.target mod-api.service
+After=network-online.target
 Wants=network-online.target
 
 [Service]

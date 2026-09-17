@@ -1,6 +1,6 @@
 [Unit]
 Description=MOD HeatWave AutoML Daily Retraining and Verification Service
-After=network-online.target mod-api.service
+After=network-online.target
 Wants=network-online.target
 
 [Service]
