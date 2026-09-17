@@ -120,7 +120,7 @@ Worker 均已退出当前运行架构。
 - [operations/README.md](operations/README.md)：运维文档状态与执行边界。
 - [MOD-USA-手工配置与验收清单.txt](operations/MOD-USA-手工配置与验收清单.txt)：历史 DataEase/NocoDB 手工清单，已停用，禁止执行。
 - [USA-DIRECTORY-MAINTENANCE-20260902.md](operations/USA-DIRECTORY-MAINTENANCE-20260902.md)：USA 目录整理、防索引与遗留运行风险记录。
-- [USA-DEPLOYMENT-LAYOUT.md](operations/USA-DEPLOYMENT-LAYOUT.md)：迁移前部署目录规则，已失效，仅用于历史追溯。
+- [USA-DEPLOYMENT-LAYOUT.md](operations/USA-DEPLOYMENT-LAYOUT.md)：USA 纯生产机的现行 release、软链与服务目录规则。
 - [HARNESS-REFACTOR-20260911.md](operations/HARNESS-REFACTOR-20260911.md)：记录本地 Harness 脚手架代码剥离与历史包袱归档。
 - [NATIVE-CLIENT-CONFIG-20260911.md](operations/NATIVE-CLIENT-CONFIG-20260911.md)：记录本机各原生 AI Agent 客户端对 local-harness 的强制纪律接入。
 - [DISASTER-RECOVERY-RUNBOOK.md](runbooks/DISASTER-RECOVERY-RUNBOOK.md)：灾难恢复与数据还原标准操作手册。
@@ -132,7 +132,8 @@ Worker 均已退出当前运行架构。
 
 新增的脱敏历史治理快照：[2026-09-08 CHANGELOG 机制治理前快照](history/2026-09-08-CHANGELOG机制治理前快照.md)、
 [2026-09-08 本地质量基线更新前快照](history/2026-09-08-本地质量基线更新前快照.md)、
-2026-09-09 KI-070~074 治理前现状切片（本地存档，含敏感信息，不纳入版本库）。
+2026-09-09 KI-070~074 治理前现状切片（本地存档，含敏感信息，不纳入版本库），以及
+[2026-09-17 约束与文档收敛前现状切片](history/2026-09-17-CONSTRAINT-DOCUMENT-CONVERGENCE-SNAPSHOT.md)。
 
 - [KI-080 · AI 输出可信度与能力边界失真](issues/KI-080-AI-OUTPUT-TRUST.md)：本地修复与验收记录。
 

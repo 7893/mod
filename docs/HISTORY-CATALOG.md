@@ -1,8 +1,8 @@
 # MOD 历史资料目录
 
-更新日期：2026-09-12
+更新日期：2026-09-17
 状态：现行目录
-适用范围：`docs/history/` 冻结资料的稳定编号、可见性、完整性和备份状态
+适用范围：`docs/history/` 冻结资料的稳定编号、可见性、完整性和实际保全状态
 
 本目录只登记元数据，不复制受限原文。正文完整性以 `history/MANIFEST.sha256` 为准；“本机受限”表示
 原件因可能含历史基础设施标识而不进入公开仓库。任何原件都不得删除或用脱敏稿覆盖。
@@ -39,6 +39,7 @@
 | H-028 | `2026-09-09-KI070-074治理前现状切片.md` | 仓库可见 / 已脱敏 | Git 历史 + SHA-256 |
 | H-029 | `2026-09-11-FRONTEND-STANDARDS.md` | 仓库可见 / 已脱敏 | Git 历史 + SHA-256 |
 | H-030 | `2026-09-11-HARNESS-ENTRYPOINTS.md` | 仓库可见 / 已脱敏 | Git 历史 + SHA-256 |
+| H-031 | `2026-09-17-CONSTRAINT-DOCUMENT-CONVERGENCE-SNAPSHOT.md` | 仓库可见 / 已审阅 | Git 历史 + SHA-256 |
 
 ## 恢复规则
 
@@ -46,4 +47,5 @@
 - （已退役）历史恢复演练命令 `python3 scripts/project/backup_history_to_r2.py --drill` 仅保留为历史记录，不应执行。
 - 恢复后运行 `python3 scripts/project/check_history_integrity.py`，所有文件哈希一致才算原件恢复成功。
 - 所有受限资料已生成可追溯稳定 ID 的脱敏副本（`.sanitized.md`），受 Git 跟踪并纳入 `MANIFEST.sha256` 防护。
+- 项目当前不为本机受限原件提供异机副本；`MANIFEST.sha256` 只校验完整性，不提供灾难恢复能力。
 - 新增历史件时分配下一个稳定 ID，同步本目录、完整性清单和 `docs/INDEX.md`。

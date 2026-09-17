@@ -44,7 +44,7 @@
   查询中加入日期边界过滤；模拟器日配额熔断看门狗已重置恢复平稳运行（`RUNNING / SUCCESS`）。
 - **作息节律（拟真引擎）**：核心工作时间 8:30-11:30 与 13:30-17:00，午休回落，提交时刻随机（非整点打卡）；
   早到/加班/周末/节假日加班为偶发且随机，不成固定规律；财务周期性高强度（月末结账、季度末、报税期）
-  加班概率显著升高。逻辑见 `simulation/models.py`（时间系数）与 `simulation/expense_playbook.py`
+  加班概率显著升高。逻辑见 `backend/app/live_projection/simulation_engine.py`（时间系数）与 `simulation/expense_playbook.py`
   （`_sample_worktime`）。
 - HeatWave 列存对核心大表加速仍有效，容量健康（扩充后列存占用在 16GB 集群内）。
 - **大屏面板真实性修正（KI-057）**：六屏面板全面复查后消除若干编造/硬编码兜底——C4 移除编造的
@@ -133,7 +133,7 @@
   PerplexityBot/Google-Extended/Baiduspider 等 AI 与搜索爬虫）、HTML `<meta robots/googlebot/bingbot noindex,nofollow,noarchive,nosnippet,noimageindex>`、
   HTTP 响应头 `X-Robots-Tag` 同值；并在 Nginx 层按 `User-Agent` **硬拦截** AI/检索爬虫直接返回 403（不返回任何内容），
   正常访客不受影响。robots/meta 为君子协定，Nginx UA 拦截为强制层。
-- V2 六屏驾驶舱、只读 `/api/v2`、34 省地图和无刷新轮询已经实现。
+- 六屏驾驶舱、只读 `/api`、34 省地图和无刷新轮询已经实现。
 - 大屏中央主标题与浏览器 `<title>` 统一为「业务系统建设推广大屏演示」（`App.vue` 顶栏 `header-main-title` 与 `frontend/index.html`）。
 - 前端路由采用 hash 模式（`createWebHashHistory`），URL 形如 `https://<域名>/#/a`；刷新任意屏不依赖
   服务器 fallback、永不 404。菜单从左到右严格 A→B→C→D→E→F（/d=业务运营 OperationsView、/f=风险预警 InsightsView），
@@ -141,11 +141,11 @@
 - 浏览器全屏模式保留顶部六屏导航、在线状态、时钟、刷新与退出全屏控制；内容画布继续按导航下方
   `command-main` 的真实尺寸等比缩放，并采用水平居中、顶部锚定；宽高比不一致产生的余量留在底部，
   不再隐藏菜单、按整块物理屏幕高度覆盖导航空间或在标题栏下留出大块空白。
-- 驾驶舱实时投影只尾随常驻模拟器事务提交后追加的本机持久日志，通过 SSE 播报单据、凭证和集成事件；
-  数据库快照仍是累计数字唯一事实源，前端会话脉搏不再与快照相加。当前只支持同机单 API 进程，尚无共享
-  outbox、跨实例消费者位点或完整重连续播保证，具体边界见 `development/LIVE-PROJECTION.md`。
-- 拟真引擎第一步（技术验证载体）已落地（`backend/app/simulation/`）：实现费用报销剧本（`ExpensePlaybook`）多表完整足迹生成与安全写库器（`SimulationWriter`），单事务原子落库 6 张表（`business_document`、`business_document_line`、`accounting_voucher`、`accounting_voucher_line`、`document_voucher_link`、`integration_result`）并级联同步 `daily_stats`；以存量治理成果为硬约束（时间线接续存量最新日期只向前生长、经办人 100% 命中本单位名录、仅限已上线单位门禁、只增不删、零 schema 变更、运行审计留痕）；开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭（`false`）；已通过 100 笔小试落库实测，KI-017 零回归。
-- 拟真引擎第二步（建设管控主线 + B模式生命周期推进器）已落地并已实测写库（`backend/app/simulation/`）：
+- 驾驶舱实时投影从 MySQL 事务性 `sim_event_outbox` 只读续播；业务数据与事件在同一事务提交，
+  多个 API 实例各自读取同一持久序列，保留范围内支持 `Last-Event-ID` 续播与缺口重置。数据库快照仍是
+  累计数字唯一事实源，前端会话脉搏不与快照相加，具体边界见 `development/LIVE-PROJECTION.md`。
+- 拟真引擎第一步（技术验证载体）已收敛至顶层 `simulation/`：实现费用报销剧本（`ExpensePlaybook`）多表完整足迹生成与安全写库器（`SimulationWriter`），单事务原子落库 6 张表（`business_document`、`business_document_line`、`accounting_voucher`、`accounting_voucher_line`、`document_voucher_link`、`integration_result`）并级联同步 `daily_stats`；以存量治理成果为硬约束（时间线接续存量最新日期只向前生长、经办人 100% 命中本单位名录、仅限已上线单位门禁、只增不删、零 schema 变更、运行审计留痕）；开关 `MOD_SIMULATION_ENGINE_ENABLED` 默认关闭（`false`），生产由受控环境显式开启；已通过 100 笔小试落库实测，KI-017 零回归。
+- 拟真引擎第二步（建设管控主线 + B模式生命周期推进器）已落地并已实测写库（`simulation/`）：
   - 核心模块：实现 7 类建设管控剧本生成器（入池、数据准备、培训认证、接口联调、双轨核对、跃迁评审、批次推进，`construction_playbooks.py`）、6 阶段生命周期状态机推进器（`lifecycle_advancer.py`，严格执行“只进不退、持续达标 N 天才跃迁、跃迁评审留痕快照”三条铁律）、快慢电影演进协调器与矛盾咬合机制（`evolution_coordinator.py`，~4% 自然涌现困难户与决策支撑风险视角 100% 咬合自洽）、建设安全事务写库器（`construction_writer.py`）；
   - 严格分批写库落地：经主控授权，2026-09-05 使用独立的一次性批量写库程序执行建设主线业务足迹真实落库，按 2,000 行/批分 3 批逐批 commit（单事务单批次），累计安全写入 4,178 行；该程序及当时的本地快照均已在 2026-09-17 清理；
   - 当前数据规模：`org_unit` 2,000 家（未启动 760、准备中 238、已具备双轨条件 49、双轨运行中 205、已上线 282、稳定运行 466）；`construction_task` 62,104 行（新增 2,194 行）；`rollout_status_snapshot` 144,870 行（新增 20 行带专家决议留痕快照）；`training` 5,520 行（新增 476 行）；`dual_run_result` 30,288 行（新增 1,230 行）；`data_readiness` 2,000 行（238 行同步更新）；
@@ -293,16 +293,15 @@
   并删除（用户级服务形态由 `docs/operations/USA-DEPLOYMENT-LAYOUT.md` 记录后核对发现）；旧
   部署目录已删除；旧 Nginx 站点配置及对应 TLS 证书与续期配置已删除；旧环境 `8100` 端口无监听。
   旧环境上其他无关项目未受影响。
-- 正式服务已在当前运行主机重启并采用默认关闭门禁，日志确认业务模拟器未启用，不再创建写库连接。
-- 当前运行主机的 `/home/ubuntu/mod` 现为源码工作区与生产运行的唯一位置；代码、工具、文档、
-  数据与历史资产均以该主机为唯一事实源。
+- JPA `/home/ubuntu/mod` 是源码、Git、文档和测试的事实源；USA `/home/ubuntu/mod` 只接收通过门禁的
+  release 并运行统一 `mod.service`。两台主机通过 GitHub Actions 默认流水线或经授权的 `publish.sh` 发布链路衔接。
 
 ## 本地质量基线
 
 - 2026-09-07 记录的旧质量基线为前端 84 项 Vitest、后端 139 项 pytest；该数字作为历史增长节点保留，不再代表当前总数。
-- 前端：Vue 3、TypeScript、Vite；当前 23 个测试文件、112 项 Vitest 单测、类型检查与生产构建通过。
-- 后端：FastAPI、SQLAlchemy；当前 230 项 pytest 测试通过（新增 KI-065 对称走势快照测试，全量离线测试 100% 通过）；KI-060 已将 Starlette `TestClient` 的开发依赖
-  从已弃用的 `httpx` 回退路径迁移至精确锁定的 `httpx2==2.12.0`，并将对应弃用警告设为测试失败。
+- 前端：Vue 3、TypeScript、Vite；2026-09-17 验证 29 个测试文件、148 项 Vitest 单测、类型检查与生产构建通过。
+- 后端：FastAPI、SQLAlchemy；2026-09-17 验证 253 项 pytest 测试通过；KI-060 已将 Starlette `TestClient`
+  的开发依赖从已弃用的 `httpx` 回退路径迁移至精确锁定的 `httpx2==2.12.0`，并将对应弃用警告设为测试失败。
 - 大屏图表细节优化（KI-065，DONE）：
   - 全屏 Tooltip 越界治理：`charts/theme.ts` 的 `chartTooltip` 基线统一加入 `confine: true`，`RolloutView.vue` 与 `ChinaMap.vue` 补齐该约束，确保全屏 28 处图表在面板边缘悬浮时不溢出面板容器、不被相邻卡片遮挡。
   - A4 时间轴居中：`backend/app/services/dashboard.py` 优化走势快照窗口构建算法，剔除增量试点噪声（`HAVING COUNT(*) > 100`），构建以今日（09-09）为中心的 7 节点对称时间窗（3 过去 + 今日居中 + 3 未来），`OverviewTrendChart.vue` 配套增加对称截窗逻辑，今日刻度稳定落在横轴中间。
@@ -343,14 +342,16 @@
 - Ruff 检查已清零并纳入 `make check`。
 - 文档治理闸门已纳入 `make check` 与 CI：阻断已跟踪文档删除、冻结正文减损、KI 状态分裂、必需元数据缺失与现行索引漏项；核心行为变更未同步本文时直接失败，不再仅输出警告。
 - CHANGELOG 从 `.git-cliff-baseline` 记录的真实公开就绪提交起计，使用锁定的 git-cliff 2.13.1 生成；质量闸门校验基线可达性、配置与生成标记，`v*` tag/人工触发工作流只上传变更日志产物，无仓库写权限。
-- 本地 Git hooks 已强制执行凭据扫描、`make check` 和提交信息格式；GitHub Actions workflow 已在仓库
-  落地，远端启用后在拉取请求和推送中复用同一闸门，不包含部署或生产访问。
+- 本地 Git hooks 已强制执行凭据扫描、`make check` 和提交信息格式；GitHub Actions workflow 在拉取请求和
+  推送中复用质量闸门，push 至 `main` 或人工触发时在闸门通过且部署 Secrets 可用的前提下发布至 USA。
 - 本目录已开始采用 Git 管理；大体积 CSV、原始参考材料、构建产物和本地密钥不纳入版本库。
 - 2026-09-17 完成退役资产集中清理：移除项目级 R2 备份链路及本地备份、旧部署与实验原型、
   一次性生成/迁移/修复脚本、自研协作状态机、重复工作台、旧发布生成物和原始 Office 参考资料；
   `archive/` 仅保留说明与两个受 Git 文档治理保护的历史 issue 模板，`references/` 仅保留驾驶舱需求导出工具。
+- 2026-09-17 只读核验 OCI 当前 MySQL.Free 备份策略：自动增量备份已启用，保留期为 1 天，PITR 关闭；
+  项目不再维护 R2 或其他第二套数据库备份，因此恢复能力仅以 OCI 当时仍可用的 `ACTIVE` 备份为准。
 - 本地代码智能与架构拓扑图谱已刷新（ADR-0015，2026-09-17）：
-  - CodeGraph：本地索引（`.codegraph/`）覆盖 215 个代码文件、2,923 个语法节点和 7,657 条依赖边，状态为 up to date；
+  - CodeGraph：本地索引（`.codegraph/`）覆盖 215 个代码文件、2,923 个语法节点和 7,674 条依赖边，状态为 up to date；
   - Graphify：多模态拓扑（`graphify-out/`）包含约 4,350 个节点、约 7,580 条边和约 350 个社区，已重建交互式 `graph.html` 与 `GRAPH_REPORT.md`；健康检查无缺失端点、悬空边或折叠边，保留 37 个来源自身关系形成的 self-loop。`.githooks/post-commit` 继续提供提交后的代码增量刷新。
 
 KI-060 更新前的本节原文完整保存在

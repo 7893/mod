@@ -4,7 +4,8 @@
 状态：现行
 适用范围：在 `/home/ubuntu/mod` 工作的人类开发者与所有编码 Agent
 
-本仓库维护在主运行主机上，同机承载生产运行，不存在独立的纯部署主机。
+本仓库维护在 JPA 开发机；USA 是不初始化 Git 的独立纯生产主机。代码通过 GitHub Actions 默认流水线
+或经显式授权的 `scripts/project/publish.sh` 发布为隔离 release。
 
 ## 接手前必读（按顺序）
 

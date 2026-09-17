@@ -26,7 +26,7 @@
        │
        ├─ (1) 页面初始化: 加载本地内置 fallback-snapshot.json 确保首屏 0 延迟秒开
        │
-       ├─ (2) 触发定时器: 每 60,000 ms (60s) 调用 GET /api/v2/dashboard/snapshot (silent=true)
+       ├─ (2) 触发定时器: 每 60,000 ms (60s) 调用 GET /api/dashboard/snapshot (silent=true)
        │       │
        │       ├── [HTTP 200 成功] ──> 更新 snapshot.value 与 entities.value
        │       │                       更新 lastLoadedAt = new Date()
@@ -43,27 +43,30 @@
 
 ## 三、接口设计与轻量元数据
 
-### 1. 主快照接口：`GET /api/v2/dashboard/snapshot`
+### 1. 主快照接口：`GET /api/dashboard/snapshot`
 - **缓存控制**：`Cache-Control: no-store`（避免浏览器 HTTP 层旧缓存），由后端应用层维护线程安全的 TTL（60s）缓存。
-- **字段转换**：前端内置 `fixKeys` 递归函数，自动将服务端 snake_case 转换为前端标准的 camelCase。
+- **字段契约**：后端快照直接返回 camelCase；前端按 `ProjectSnapshot` 类型消费，不再维护递归键名转换层。
 
-### 2. 轻量刷新元数据接口：`GET /api/v2/dashboard/refresh-meta`
+### 2. 轻量刷新元数据接口：`GET /api/dashboard/refresh-meta`
 - 返回轻量级 JSON，用于微前端或低频监测：
 ```json
 {
-  "data_version": "v2.0-frozen",
-  "as_of_date": "2026-08-30",
-  "last_updated_at": "2026-08-30T16:00:00",
-  "total_rows": 1685923,
+  "data_version": "live",
+  "as_of_date": "YYYY-MM-DD",
+  "last_updated_at": "ISO-8601 timestamp",
+  "total_rows": 0,
   "status": "ok",
-  "seed": 42
+  "seed": null
 }
 ```
+
+`data_version` 只取 `live` 或 `frozen`；`status` 只取 `ok`、`stale` 或 `fallback`。数值和日期均由当前
+快照元数据派生，上例只展示结构，不是生产固定值。
 
 ---
 
 ## 四、界面展示元素
 
-1. **顶栏数据截至日期**：展示 `数据截至 2026-08-30`，明确当前宏观指标的数据业务口径基准。
-2. **上次刷新时间**：展示 `更新于 HH:mm:ss`，直观呈现最近一次与服务端通信成功的时间点。
-3. **非阻塞错误提示**：当连接发生异常时，顶栏下方弹出淡橙色提示条 `【快照保持模式】数据刷新受阻，当前维持上一有效快照`，并提供 `重试连接` 按钮。
+1. **顶栏来源状态**：按 `meta.source` 和请求状态显示“实时数据”“降级快照”或“刷新受阻”。
+2. **业务与生成时点**：悬浮信息展示 `meta.asOfDate` 和 `meta.generatedAt`；右侧时钟独立按展示时区运行。
+3. **非阻塞错误提示**：当连接发生异常时，顶栏下方弹出淡橙色提示条，说明数据刷新受阻并正在维持上一有效快照，同时提供 `重试连接` 按钮。

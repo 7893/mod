@@ -27,3 +27,14 @@
 ## 后果
 - ADR-0006 标记为被本决策取代；更新 `docs/CURRENT-STATE.md` 与 `docs/operations/USA-DEPLOYMENT-LAYOUT.md`。
 - 生产部署严格通过 JPA 运行 `scripts/project/publish.sh` 远程自动化发布，发布脚本在远端原子切换软链并在异常时毫秒级自动回滚。
+
+## 2026-09-17 现行实现补充
+
+本 ADR 的开发/生产分离决策仍然有效；其中服务拆分和定时器数量已被后续实现取代：
+
+- FastAPI 与模拟器由统一系统级 `mod.service` 托管，不再使用独立的 `mod-api.service`、`mod-simulator.service`。
+- USA 当前只保留每日简报、HeatWave 看门狗、模型重训 3 个 MOD 定时器；项目级备份 timer 已按 ADR-0016 退役。
+- 默认发布渠道已演进为 GitHub Actions 在 push 至 `main` 后通过质量闸门再发布；
+  `scripts/project/publish.sh` 保留为需要显式授权的 JPA 直连备用渠道。
+
+核验依据：`deploy/`、`.github/workflows/quality.yml` 与 2026-09-17 USA systemd 只读状态。
