@@ -79,6 +79,89 @@ def validate_contracts(root: Path = ROOT) -> list[str]:
         if source not in heatwave or source not in risk_table:
             errors.append(f"model explanation provenance drift: `{source}` is not end-to-end")
 
+    # Deployment topology and recovery boundaries are repeated across several living
+    # documents. Keep the small set of dangerous, previously observed contradictions
+    # mechanically aligned with the implementation.
+    workflow = _read(root, ".github/workflows/quality.yml")
+    current_state = _read(root, "docs/CURRENT-STATE.md")
+    enforcement = _read(root, "ENFORCEMENT.md")
+    contributing = _read(root, "CONTRIBUTING.md")
+    secrets = _read(root, "docs/development/SECRETS-AND-CONFIG.md")
+    cli_policy = _read(root, "docs/development/CLI-SCRIPT-POLICY.md")
+    ml_boundary = _read(root, "docs/development/ML-AI-DATA-BOUNDARY.md")
+    collaboration = _read(root, "docs/development/GOVERNANCE-AND-COLLABORATION.md")
+    project_layout = _read(root, "PROJECT-LAYOUT.md")
+    data_security = _read(root, "docs/development/DATA-AND-SECURITY-STANDARD.md")
+    project_organization = _read(root, "docs/development/PROJECT-ORGANIZATION.md")
+    browser_rendering = _read(root, "docs/development/CLOUDFLARE-BROWSER-RENDERING.md")
+    testing_standard = _read(root, "docs/development/TESTING-STANDARD.md")
+    refresh_doc = _read(root, "docs/development/DASHBOARD-REFRESH-MECHANISM.md")
+    simulation_doc = _read(root, "docs/development/BUSINESS-SIMULATION-ENGINE.md")
+    disaster_recovery = _read(root, "docs/runbooks/DISASTER-RECOVERY-RUNBOOK.md")
+    deployment_layout = _read(root, "docs/operations/USA-DEPLOYMENT-LAYOUT.md")
+
+    if "  deploy:" not in workflow or "needs: check" not in workflow:
+        errors.append("CI/CD drift: quality workflow must deploy only after checks")
+    if "不包含部署或生产访问" in current_state:
+        errors.append("CI/CD documentation drift: CURRENT-STATE denies the deploy job")
+    if "生产与工作区分离" not in enforcement:
+        errors.append("deployment topology drift: ENFORCEMENT lacks JPA/USA separation")
+
+    stale_topology_phrases = {
+        "docs/development/SECRETS-AND-CONFIG.md": (secrets, "无跨主机自动部署"),
+        "docs/development/CLI-SCRIPT-POLICY.md": (cli_policy, "无独立部署主机"),
+        "docs/development/GOVERNANCE-AND-COLLABORATION.md": (collaboration, "同机生产"),
+        "PROJECT-LAYOUT.md": (project_layout, "同一主机同时承载生产"),
+        "docs/development/DATA-AND-SECURITY-STANDARD.md": (data_security, "ADR-0006"),
+        "docs/development/PROJECT-ORGANIZATION.md": (project_organization, "ADR-0006"),
+        "docs/development/CLOUDFLARE-BROWSER-RENDERING.md": (browser_rendering, "ADR-0006"),
+        "CONTRIBUTING.md": (contributing, "同机承载生产"),
+        "docs/development/TESTING-STANDARD.md": (testing_standard, "系统级 `mod-api`"),
+    }
+    for relative, (text, forbidden) in stale_topology_phrases.items():
+        if forbidden in text:
+            errors.append(f"deployment topology documentation drift: {relative} contains `{forbidden}`")
+
+    for forbidden in ("只读 `/api/v2`", "本机持久日志", "逻辑见 `simulation/models.py`", "backend/app/simulation/"):
+        if forbidden in current_state:
+            errors.append(f"CURRENT-STATE implementation drift: contains `{forbidden}`")
+    if "sim_event_outbox" not in current_state:
+        errors.append("CURRENT-STATE implementation drift: transactional outbox is not documented")
+    for expected in ("2026-09-17 修正", "现行业务库名为 `mod`", "现行生产位于 USA"):
+        if expected not in ml_boundary:
+            errors.append(f"ML/AI boundary documentation drift: missing `{expected}`")
+    for forbidden in ("backend/app/simulation/", "mod_s_v2", "独立 systemd 服务"):
+        if forbidden in simulation_doc:
+            errors.append(f"simulation documentation drift: contains `{forbidden}`")
+
+    if "/api/v2/" in refresh_doc or "fixKeys" in refresh_doc:
+        errors.append("dashboard refresh documentation drift: legacy API prefix or key converter restored")
+    for expected in ("/api/dashboard/snapshot", "/api/dashboard/refresh-meta", "meta.source"):
+        if expected not in refresh_doc:
+            errors.append(f"dashboard refresh documentation drift: missing `{expected}`")
+
+    expected_timers = {
+        "mod-daily-briefing.timer",
+        "mod-heatwave-watchdog.timer",
+        "mod-ml-retrain.timer",
+    }
+    actual_timers = {path.name for path in (root / "deploy").glob("mod-*.timer")}
+    if actual_timers != expected_timers:
+        errors.append(
+            "deployment timer drift: expected "
+            f"{sorted(expected_timers)}, found {sorted(actual_timers)}"
+        )
+    for retired in ("mod-api.service", "mod-simulator.service", "mod-backup.service", "mod-backup.timer"):
+        if (root / "deploy" / retired).exists():
+            errors.append(f"retired deployment unit restored: deploy/{retired}")
+    for expected in ("mod.service", *sorted(expected_timers), "/api/health"):
+        if expected not in deployment_layout:
+            errors.append(f"deployment layout drift: missing `{expected}`")
+
+    for expected in ("保留 1 天", "PITR 关闭", "没有第二套数据库副本"):
+        if expected not in disaster_recovery:
+            errors.append(f"recovery boundary drift: runbook missing `{expected}`")
+
     return errors
 
 

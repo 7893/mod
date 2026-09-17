@@ -1,9 +1,9 @@
 # Cloudflare 无头浏览器（Browser Rendering）使用指南与边界手册
 
-更新日期：2026-09-07  
-状态：现行参考手册  
-适用范围：Cloudflare 托管无头浏览器（Browser Rendering / Browser Run）在本项目中的架构定位、Workers 绑定、Puppeteer 编排、Quick Actions 简易接口、费用限制与避坑边界  
-维护角色：agy 维护，主控（kiro）审阅  
+更新日期：2026-09-17
+状态：现行参考手册
+适用范围：Cloudflare 托管无头浏览器（Browser Rendering / Browser Run）在本项目中的架构定位、Workers 绑定、Puppeteer 编排、Quick Actions 简易接口、费用限制与避坑边界
+维护角色：agy 维护，主控（kiro）审阅
 
 ---
 
@@ -14,7 +14,7 @@
 - **关联项目资产**：
   - 仓库中的 [`workers/mod-browser/`](../../workers/mod-browser/)：已配置并跑通的无头浏览器微服务，包含 `wrangler.jsonc`（声明 `browser: { binding: "BROWSER" }`）与 `src/index.ts`（基于 Quick Action 的高分辨率大屏截图接口）。
 - **与主系统运行架构的边界关系**：
-  - 遵循 `docs/decisions/0006-生产与工作区合并到单一运行主机.md` 与 `docs/CURRENT-STATE.md`，主系统驾驶舱与 FastAPI 后端保持单机自治；
+  - 遵循 ADR-0012 与 `docs/CURRENT-STATE.md`：源码和测试位于 JPA，主系统驾驶舱与 FastAPI 后端作为同一 release 发布并运行于 USA；
   - Cloudflare 无头浏览器作为**边缘辅助微服务**，用于提供**大屏自动化巡检快照、每日简报视觉出图、页面渲染归档**等异步支持，**主干大屏与数据接口绝不强依赖该服务的存活**。
 
 ---

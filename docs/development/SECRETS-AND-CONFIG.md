@@ -1,6 +1,6 @@
 # 密钥与配置管理规范
 
-更新日期：2026-09-04
+更新日期：2026-09-17
 状态：现行
 适用范围：运行时配置、CI/CD 密钥、以及公开发布前的敏感信息管理
 
@@ -21,10 +21,12 @@
 
 ## 二、CI/CD 密钥：GitHub Secrets
 
-- CI（GitHub Actions）做质量检查（凭据扫描、提交校验、`make check`），不需要任何 Secret。
-- 无跨主机自动部署：生产与源码工作区同机（见 ADR-0006），前端 `dist` 由运行主机本地构建、本机 Nginx
-  直接提供，不存在把部署凭据托管给 CI 的环节。此前的跨主机前端 CD（`deploy.yml` 及其 Secrets）已废止删除。
-- CI 不持有任何生产访问凭据；数据库、服务、Nginx 变更一律在运行主机本地、经显式授权执行。
+- GitHub Actions 的 `check` job 只做凭据扫描、提交校验和 `make check`，不需要生产 Secret。
+- push 至 `main` 或人工触发时，`deploy` job 仅在质量闸门通过后运行；它通过仓库 Secrets
+  `USA_HOST`、`USA_SSH_KEY` 与可选的 `USA_HOST_KEY` 连接 USA 生产机，执行原子 release 发布。
+- JPA 开发机与 USA 生产机按 ADR-0012 分离。GitHub Actions 是默认发布渠道，
+  `scripts/project/publish.sh` 是需要同等显式授权的直连备用渠道。
+- CI 部署凭据只存在于 GitHub Secrets；数据库凭据和运行时 `.env.systemd` 不进入 GitHub。
 
 ## 三、公开发布前的敏感信息净化
 
@@ -39,13 +41,13 @@
    要么新建仓库以净化后的当前状态为起点、不导入旧历史；
    要么以 `git filter-repo` 重写历史（高风险，见 [KI-014](../issues/KI-014-公开仓库前净化工程.md)）。
 
-归档区（`archive/`）内的历史脚本可能含明文值：公开前需将其排除出公开范围，或一并脱敏；
+归档区不享有扫描豁免或安全例外；若以后放入历史脚本，公开前必须排除或脱敏，
 不得默认“归档了就安全”。
 
 ## 四、扫描与强制
 
 - 提交经 pre-commit 与 CI 的凭据扫描（`scripts/project/scan_secrets.py`）拦截明文凭据；
-  `archive/` 前缀豁免扫描，故公开前须对归档内容单独确认。
+  未受 Git 跟踪的本地材料不在暂存区扫描范围内，公开前仍须单独确认。
 - 扫描是“从今往后”的动作点闸门，不检查历史；历史净化依赖第三节。
 - 判断边界：脱敏是否彻底、哪些属“本就公开”的信息，属人/AI 判断范畴，须在公开前人工复核。
 

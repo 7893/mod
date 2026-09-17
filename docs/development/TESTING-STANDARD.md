@@ -1,6 +1,6 @@
 # 测试与验证规范
 
-更新日期：2026-09-11
+更新日期：2026-09-17
 状态：现行
 适用范围：所有维护代码、配置、文档和部署变更
 
@@ -65,8 +65,9 @@ git status --short
 
 ## 生产验收
 
-部署后至少确认：系统级 `mod-api` 服务正常、无重复监听、`/api/health` 及当前哈希静态资源状态正确，
-`robots.txt` 禁止抓取、HTML/API/资源响应包含严格 `X-Robots-Tag`，日志无凭据泄露或连续异常。
+部署后至少确认：系统级统一 `mod.service` 正常、模拟器状态新鲜、无重复监听、`/api/health`、
+`/api/simulator/status`、`/api/dashboard/snapshot` 及当前哈希静态资源状态正确，`robots.txt` 禁止抓取、
+HTML/API/资源响应包含严格 `X-Robots-Tag`，日志无凭据泄露或连续异常。
 生产发布另需授权，不由前端测试触发。
 
 ## 固定场景浏览器回归
