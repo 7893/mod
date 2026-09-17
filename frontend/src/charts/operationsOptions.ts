@@ -42,7 +42,7 @@ function createHorizontalVolumeOption(items: OutcomeItem[]) {
     yAxis: {
       type: 'category', data: safeItems.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 13 },
     },
     series: [{
       type: 'bar', barWidth: 12, showBackground: true,
@@ -50,7 +50,7 @@ function createHorizontalVolumeOption(items: OutcomeItem[]) {
       data: safeItems.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 4 } })),
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
-        fontFamily: 'monospace', fontSize: 11,
+        fontFamily: 'monospace', fontSize: 13,
         formatter: (params: any) => formatCount(params.value),
       },
     }],
@@ -71,7 +71,7 @@ export function createOperationsOverviewOption(counts: OperationsOverviewCounts)
     yAxis: {
       type: 'category', data: items.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 12 },
     },
     series: [{
       type: 'bar', barWidth: 11, showBackground: true,
@@ -79,7 +79,7 @@ export function createOperationsOverviewOption(counts: OperationsOverviewCounts)
       data: items.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
-        fontFamily: 'monospace', fontSize: 10,
+        fontFamily: 'monospace', fontSize: 12,
         formatter: (params: any) => formatCount(params.value),
       },
     }],
@@ -103,11 +103,11 @@ export function createOperationsTrendOption(points: OperationsTrendPoint[]) {
     xAxis: {
       type: 'category', data: points.map((point) => point.date),
       axisLine: { lineStyle: { color: chartInk.border } }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 10 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 12 },
     },
     yAxis: [
-      { type: 'value', splitNumber: 3, axisLabel: { color: chartInk.textMuted, fontSize: 10 }, splitLine: { lineStyle: { color: chartInk.borderSoft } } },
-      { type: 'value', min: 0, max: 100, axisLabel: { color: chartInk.textMuted, fontSize: 10, formatter: '{value}%' }, splitLine: { show: false } },
+      { type: 'value', splitNumber: 3, axisLabel: { color: chartInk.textMuted, fontSize: 12 }, splitLine: { lineStyle: { color: chartInk.borderSoft } } },
+      { type: 'value', min: 0, max: 100, axisLabel: { color: chartInk.textMuted, fontSize: 12, formatter: '{value}%' }, splitLine: { show: false } },
     ],
     series: [
       { name: '单据日增', type: 'bar', barMaxWidth: 16, data: points.map((point) => point.documents), itemStyle: { color: chartPalette.accent, borderRadius: [3, 3, 0, 0] } },
@@ -135,7 +135,7 @@ export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
     yAxis: {
       type: 'category', data: reversed.map((item) => item.rule),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 13 },
     },
     series: [{
       type: 'bar', barWidth: 14, showBackground: true,
@@ -152,7 +152,7 @@ export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
       }),
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
-        fontFamily: 'monospace', fontSize: 11,
+        fontFamily: 'monospace', fontSize: 13,
         formatter: (params: any) => {
           const item = reversed[params.dataIndex]
           return formatCount(item?.total)
@@ -207,7 +207,7 @@ export function createVoucherQualityOption(
       data: volumes.map((item) => item.name),
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 13 },
     },
     series: [
       {
@@ -228,13 +228,13 @@ export function createVoucherQualityOption(
         axisTick: { show: false },
         splitLine: { show: false },
         axisLabel: { show: false },
-        title: { show: true, offsetCenter: [0, '36%'], color: chartInk.textMuted, fontSize: 11 },
+        title: { show: true, offsetCenter: [0, '36%'], color: chartInk.textMuted, fontSize: 13 },
         detail: {
           valueAnimation: true,
           offsetCenter: [0, '-6%'],
           color: chartInk.textPrimary,
           fontFamily: 'monospace',
-          fontSize: 17,
+          fontSize: 19,
           formatter: hasRate ? '{value}%' : '—',
         },
         data: [{ value: safeRate, name: '生成成功率' }],
@@ -253,7 +253,7 @@ export function createVoucherQualityOption(
           position: 'right',
           color: chartInk.textPrimary,
           fontFamily: 'monospace',
-          fontSize: 11,
+          fontSize: 13,
           formatter: (params: any) => formatCount(params.value),
         },
       },

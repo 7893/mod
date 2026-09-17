@@ -54,10 +54,10 @@
   --color-scrollbar-thumb-hover: rgb(255 255 255 / 0.25);
 
   /* 仪表字号阶梯（等宽/紧凑信息密度） */
-  --text-cockpit-xs: 11px;
-  --text-cockpit-sm: 12px;
-  --text-cockpit-md: 14px;
-  --text-cockpit-lg: 16px;
-  --text-cockpit-metric: 18px;   /* 关键指标数字 */
-  --text-cockpit-kpi: 24px;      /* 单面板唯一主 KPI */
+  --text-cockpit-xs: 13px;
+  --text-cockpit-sm: 14px;
+  --text-cockpit-md: 16px;
+  --text-cockpit-lg: 18px;
+  --text-cockpit-metric: 20px;   /* 关键指标数字 */
+  --text-cockpit-kpi: 26px;      /* 单面板唯一主 KPI */
 }

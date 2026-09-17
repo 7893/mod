@@ -112,8 +112,8 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
     `grid-cols-construction`（B 屏 12 列）与 `grid-rows-construction`（上下 1.1fr/0.9fr）。
   - 表面色：`bg-surface-base`（大屏底色）、`bg-surface-panel`、`border-surface-hairline`、
     `bg-surface-veil-06`、`bg-surface-veil-03`。
-  - 字号：`text-cockpit-xs`(10)、`text-cockpit-sm`(11)、`text-cockpit-md`(13)、`text-cockpit-metric`(18)、
-    `text-cockpit-kpi`(24，仅用于单面板唯一主指标)。
+  - 字号：`text-cockpit-xs`(13)、`text-cockpit-sm`(14)、`text-cockpit-md`(16)、`text-cockpit-lg`(18)、`text-cockpit-metric`(20)、
+    `text-cockpit-kpi`(26，仅用于单面板唯一主指标)。
   - 信号灯语义色沿用 Tailwind 内置 sky/rose/amber/emerald，仅在有信号价值处使用。
 - 优先使用 Tailwind 原子类表达布局与样式；不得为可用 Token 表达的样式手写新的一次性 CSS 规则。
 - 手写 CSS 仅保留 Token 定义、第三方组件必要覆盖、以及无法用原子类表达的少量复杂选择器；
