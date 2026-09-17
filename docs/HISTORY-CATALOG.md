@@ -42,8 +42,8 @@
 
 ## 恢复规则
 
-- 本机受限原件的自动化异机备份与本地恢复演练工具为 `scripts/project/backup_history_to_r2.py`。
-- 恢复演练验证命令：`python3 scripts/project/backup_history_to_r2.py --drill`。
+- （已退役，KI-095 / ADR-0016，2026-09-16）本机受限原件的自动化异机备份与本地恢复演练工具曾为 `scripts/project/backup_history_to_r2.py`；该工具已删除，不再提供项目级 R2 灾备。
+- （已退役）历史恢复演练命令 `python3 scripts/project/backup_history_to_r2.py --drill` 仅保留为历史记录，不应执行。
 - 恢复后运行 `python3 scripts/project/check_history_integrity.py`，所有文件哈希一致才算原件恢复成功。
 - 所有受限资料已生成可追溯稳定 ID 的脱敏副本（`.sanitized.md`），受 Git 跟踪并纳入 `MANIFEST.sha256` 防护。
 - 新增历史件时分配下一个稳定 ID，同步本目录、完整性清单和 `docs/INDEX.md`。
