@@ -96,12 +96,12 @@ const provinceRolloutOption = computed(() => ({
     data: topProvinces.value.map((v) => v.name),
     axisLine: { lineStyle: { color: chartColors.border } },
     axisTick: { show: false },
-    axisLabel: { color: chartColors.textMuted, fontSize: 10, interval: 0 },
+    axisLabel: { color: chartColors.textMuted, fontSize: 12, interval: 0 },
   },
   yAxis: {
     type: 'value',
     splitLine: { lineStyle: { color: chartColors.border, opacity: 0.4 } },
-    axisLabel: { color: chartColors.textMuted, fontSize: 10 },
+    axisLabel: { color: chartColors.textMuted, fontSize: 12 },
   },
   series: [
     {

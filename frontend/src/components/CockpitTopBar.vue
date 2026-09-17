@@ -79,19 +79,19 @@ const operationsVolumeOption = computed(() => {
   return {
     ...calmAnimation,
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip },
-    grid: { left: 58, right: 72, top: 3, bottom: 3 },
+    grid: { left: 62, right: 76, top: 2, bottom: 2 },
     xAxis: { type: 'value', show: false },
     yAxis: {
       type: 'category', data: items.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 9 },
+      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
     },
     series: [{
-      type: 'bar', barWidth: 10, showBackground: true,
+      type: 'bar', barWidth: 8, showBackground: true,
       backgroundStyle: { color: chartInk.borderSoft, borderRadius: 3 },
       data: items.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
       label: {
-        show: true, position: 'right', color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 9,
+        show: true, position: 'right', color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 11,
         formatter: (params: any) => formatCount(params.value),
       },
     }],

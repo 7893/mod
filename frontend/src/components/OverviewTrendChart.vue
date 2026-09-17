@@ -52,13 +52,13 @@ const trendOption = computed(() => {
       ...categoryAxis,
       data: list.map((v) => v.date),
       boundaryGap: false,
-      axisLabel: { color: chartInk.textDim, fontSize: 10, fontFamily: 'monospace' },
+      axisLabel: { color: chartInk.textDim, fontSize: 12, fontFamily: 'monospace' },
     },
     yAxis: {
       ...valueAxis,
       min: 0,
       splitNumber: 3,
-      axisLabel: { color: chartInk.textDim, fontSize: 10, fontFamily: 'monospace' },
+      axisLabel: { color: chartInk.textDim, fontSize: 12, fontFamily: 'monospace' },
       splitLine: { lineStyle: { color: chartInk.borderSoft, type: 'dashed' } },
     },
     series: [

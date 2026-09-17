@@ -125,7 +125,7 @@ const riskDistChartOption = computed(() => {
       data: list.map((i) => i.type),
       axisLabel: {
         color: chartInk.textMuted,
-        fontSize: 11,
+        fontSize: 13,
       },
       axisTick: { show: false },
       axisLine: {
@@ -151,7 +151,7 @@ const riskDistChartOption = computed(() => {
           position: 'right',
           color: chartInk.textPrimary,
           fontFamily: 'monospace',
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: 'bold',
           formatter: '{c} 家',
         },

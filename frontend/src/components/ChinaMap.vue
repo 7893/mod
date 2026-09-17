@@ -251,7 +251,7 @@ const option = computed(() => ({
         borderWidth: 1,
         borderRadius: 4,
         padding: [4, 8],
-        fontSize: 11,
+        fontSize: 13,
         fontWeight: 'bold',
       },
       zlevel: 10,
