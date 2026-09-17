@@ -232,7 +232,8 @@
   `responsive-breakpoints.css` 及其中约 120 条无引用规则已删除，地图与投影指示器样式内聚到各自组件。
   Token 单一来源收敛为 `theme.css` 的 `@theme`：`:root` 下的 `--c-*`/`--text-*`/`--space-*`/`--radius-*`
   旧变量体系已全部删除，文字与信号色改用 Tailwind 内置 slate/sky/emerald/amber/rose，字号只保留
-  `cockpit-*` 固定阶梯；图表色统一取自 `charts/theme.ts`（新增 `mapRamp`、`chartInk.textDim/onAccent`），
+  `cockpit-*` 固定阶梯（xs 11px / sm 12px / md 14px / lg 16px）；图表坐标轴标签 12px、tooltip 13px、
+  小号标注 10-11px。图表色统一取自 `charts/theme.ts`（新增 `mapRamp`、`chartInk.textDim/onAccent`），
   地图实时光圈与浮条由调色板外的荧光青改为 sky-400。未被引用的 `AnimatedProgress.vue`、`MarkdownLite.vue`
   已删除。新增 `scripts/project/lint_frontend_styles.py` 闸门（样式文件集、色值位置、旧变量、媒体查询位置、
   死选择器、`@reference`）纳入 `make check` 与 CI。待发布并需人工视觉验收。
