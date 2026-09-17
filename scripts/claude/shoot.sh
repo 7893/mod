@@ -3,7 +3,7 @@
 # 视口尺寸取「浏览器实际可视区域」，因为驾驶舱是 height:100dvh 铺满视口。
 set -u
 source ~/.env
-T="$CF_DNS_TOKEN"; ACC="${CLOUDFLARE_ACCOUNT_ID:?set CLOUDFLARE_ACCOUNT_ID in ~/.env}"
+T="${CLOUDFLARE_API_TOKEN:?set CLOUDFLARE_API_TOKEN in ~/.env}"; ACC="${CLOUDFLARE_ACCOUNT_ID:?set CLOUDFLARE_ACCOUNT_ID in ~/.env}"
 API="https://api.cloudflare.com/client/v4/accounts/$ACC/browser-rendering/screenshot"
 BASE="${MOD_PUBLIC_BASE_URL:?set MOD_PUBLIC_BASE_URL in ~/.env}"
 
