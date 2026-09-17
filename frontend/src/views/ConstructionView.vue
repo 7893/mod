@@ -165,7 +165,7 @@ const readinessPieOption = computed(() => ({
     orient: 'vertical',
     right: 10,
     top: 'center',
-    textStyle: { color: chartColors.textMuted, fontSize: 11 },
+    textStyle: { color: chartColors.textMuted, fontSize: 13 },
     itemWidth: 10,
     itemHeight: 10,
   },

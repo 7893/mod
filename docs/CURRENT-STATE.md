@@ -495,6 +495,11 @@ KI-060 更新前的本节原文完整保存在
 - **daily_stats 基线降级真实化（#4）**：移除 `simulation/simulation_writer.py` 中的硬编码假数据降级（`2000` 单位、`26713` 用户），改为从 `org_unit` 和 `sys_user` 基础表执行 `COUNT(*)` 查询获取精准事实基线。
 - 详细问题清单见 [KI-086](issues/KI-086-中度隐患与数据库性能技术债务治理.md)。
 
+## 2026-09-17 全局与组件内嵌图表字号体系优化
+
+- **全局字体梯队放大（+2px）**：全局 CSS 变量体系（`theme.css`）与基础图表主题（`charts/*.ts`）全面上浮 2px（`xs: 13px, sm: 14px, md: 16px, lg: 18px, metric: 20px, kpi: 26px`）。
+- **组件及视图内嵌图表微小字号补齐**：补齐 `CockpitTopBar.vue`（A1 面板业务单据/会计凭证/接口集成字号与数值由 9px 提升至 11px，微调 `grid` 边距防遮挡）、`ModelContractCard.vue`、`OverviewTrendChart.vue`、`ChinaMap.vue` 以及各业务视图（Construction、Insights、Issues、Rollout）中散落硬编码的微小字号（9~11px 统一定向提升 2px 至 11~13px），彻底消除 10px 及以下微小字号，保障大屏全域视觉清晰可读。
+
 ## 操作边界
 
 2026-09-11 harness 减薄补充：/pre-flight 的注册已移到全局 Pi 扩展，MOD 旧注册块注释保留，
