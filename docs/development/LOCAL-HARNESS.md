@@ -10,7 +10,7 @@
 旧注册块整段逐行注释保留。下文“保留 pre-flight 兼容入口”是此前阶段记录，现已被本条取代。
 没有加载全局扩展时不提供该命令；业务专用工具与项目测试门禁保留。
 
-公共实现位于本机 `/home/ubuntu/local-harness/`，全局 Pi 设置只加载公共 `extension.ts`。
+公共实现位于本机 `~/.local/share/harness/`，提供全局命令 `harness`，全局 Pi 设置只加载公共 `extension.ts`。
 MOD 的 `.pi/extensions/mod-harness.ts` 由项目目录自动发现，保留查库、模拟器状态和 pre-flight 兼容入口。
 项目 `.pi/settings.json` 不再重复声明扩展路径，旧 JSON 保存在公共包的 `archive/2026-09-11/`。
 公共工具不包含 MOD 数据库或生产地址，其他未接入项目只读识别，不执行候选脚本。
@@ -33,12 +33,12 @@ Skill 继续作为导航使用，详细规则仍以现行标准为唯一来源�
 下列终端 CLI 和 make 命令不继承 Pi 会话状态，不能当作会话模式的替代入口。
 
 ```bash
-node /home/ubuntu/local-harness/cli.mjs context --scope frontend
-node /home/ubuntu/local-harness/cli.mjs read --scope frontend --ref 3
-node /home/ubuntu/local-harness/cli.mjs check --scope frontend
-node /home/ubuntu/local-harness/cli.mjs check --scope frontend --run
+harness context --scope frontend
+harness read --scope frontend --ref 3
+harness check --scope frontend
+harness check --scope frontend --run
 make pre-flight
-node /home/ubuntu/local-harness/cli.mjs check --full --run
+harness check --full --run
 ```
 
 `check` 默认只计划；没有 scope 时按所有未提交变更选择领域，显式 scope 会报告排除的领域。

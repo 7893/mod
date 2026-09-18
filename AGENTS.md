@@ -21,7 +21,7 @@ Do not load that historical snapshot at task startup.
 ## Load only what the task needs
 Start with the current task, these rules, and the CURRENT-STATE "操作边界" section.
 Get a domain index with:
-    node /home/ubuntu/local-harness/cli.mjs context --scope frontend
+    harness context --scope frontend
 Scopes: frontend, backend, data, docs, tooling. Pi also exposes local_harness and /harness.
 For a mapped KI, prefer task --target KI-076 --intent investigate: target references/checks stay independent of unrelated diffs.
 Investigation is plan-only; repair/accept checks require explicit execution. Automated checks never close a KI.

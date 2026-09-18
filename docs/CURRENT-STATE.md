@@ -15,7 +15,7 @@
 ```
 
 - 2026-09-11 恢复 USA 生产部署机与 JPA 专属开发机职责分离架构（ADR-0012）：
-  - **JPA（开发工作区机）**：承载源码、Git 仓库、全套开发与测试工具链（`pytest`、`vitest`、`local-harness`）及本地 Osaka MySQL 开发测试库，负责通过 `publish.sh` 门禁执行远程构建发布。
+  - **JPA（开发工作区机）**：承载源码、Git 仓库、全套开发与测试工具链（`pytest`、`vitest`、`harness`）及本地 Osaka MySQL 开发测试库，负责通过 `publish.sh` 门禁执行远程构建发布。
   - **USA（纯生产部署机）**：承载生产运行环境，核心服务经轻量守护器统一归并为单一 `mod.service`（由 `scripts/project/run_unified.py` 同时拉起与托管 FastAPI 8100 端口与 `mod-simulator` 仿真引擎，支持一键热重载与崩溃自愈）与 MODO `modo.service`（统一托管 8000 端口与 `modo-ingest` 节点打卡），同子网局域网连接 US MySQL HeatWave（`10.0.1.25`，< 0.2ms 极速延迟），API 隔离使用 `mod_readonly` 账号。
 - 访客入口经 **AWS CloudFront** 前置（隐藏源站，见下条"源站隐藏架构"）；DNS 托管在 **Google Cloud DNS**，
   站点主机名以指向 CloudFront 分发的 CNAME 记录对外解析，DNS 层查不到源站真实 IP。同时 `usa.8n8m.cfd/mod` 支持无缝跳转访问。具体域名、分发 ID、
@@ -517,6 +517,10 @@ KI-060 更新前的本节原文完整保存在
 2026-09-11 本机 harness 接入：公共包位于 `/home/ubuntu/local-harness/`，全局 Pi 加载公共扩展，
 MOD 专属工具只由项目自动发现。当前入口改为按领域读取，旧入口完整保全；检查按计划运行并返回摘要与日志位置。
 说明与限制见[本地 Harness](development/LOCAL-HARNESS.md)。该项仅变更本地开发工具，未发布生产。
+
+2026-09-19 本机 harness 体系规范化迁移：公共包由 `/home/ubuntu/local-harness/` 迁移至 `~/.local/share/harness/`，
+遵循 Linux XDG 规范；提供系统全局命令 `harness`；项目 `scripts/project/pre_flight.sh`、`AGENTS.md` 及相关接入文档升级为直接调用全局 `harness`，
+保留本地脚本容灾回退。该项仅优化开发环境基础设施与 CLI 规范，未变更生产运行逻辑。
 
 任务范围补充：公共 harness 支持 investigate/repair/accept 及目标 KI 映射；KI-076 与 KI-079 已完成验收与关闭。
 
