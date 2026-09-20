@@ -68,12 +68,11 @@ describe('primary overview charts', () => {
   })
 
   it('uses the supplied risk inputs in the comparison bars without an overlapping center label', () => {
-    const items = [
-      { name: '甲', value: 3, color: '#111111' },
-      { name: '乙', value: 5, color: '#222222' },
-      { name: '丙', value: 2, color: '#333333' },
-    ]
-    const option = createRiskOverviewOption(items)
+    const option = createRiskOverviewOption({
+      dualDifference: 3,
+      constructionLag: 5,
+      preparationStuck: 2,
+    })
 
     expect(option.series[0].data.map((item) => item.value)).toEqual([3, 5, 2])
     expect('title' in option).toBe(false)

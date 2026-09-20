@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { GaugeChart } from 'echarts/charts'
 import { Cpu, Sparkles } from 'lucide-vue-next'
-import { calmAnimation, chartInk, chartPalette } from '../charts/theme.ts'
-import { CHART_FONT } from '../charts/tokens.ts'
+import { createModelQualityOption } from '../charts/insightsOptions.ts'
+import ChartCanvas from './charts/ChartCanvas.vue'
 
 use([CanvasRenderer, GaugeChart])
 
@@ -25,48 +24,10 @@ const props = defineProps<{
   ready: boolean
 }>()
 
-const qualityPercent = computed(() => {
-  if (props.model.quality == null) return 0
-  return Math.max(0, Math.min(100, props.model.quality * 100))
-})
-
-const qualityLabel = computed(() => {
-  if (props.model.quality == null) return '—'
-  return props.model.target.includes('daily')
-    ? `R² ${props.model.quality.toFixed(4)}`
-    : `Acc ${(props.model.quality * 100).toFixed(1)}%`
-})
-
-const qualityOption = computed(() => ({
-  ...calmAnimation,
-  series: [{
-    type: 'gauge',
-    startAngle: 90,
-    endAngle: -270,
-    radius: '84%',
-    center: ['50%', '50%'],
-    silent: true,
-    pointer: { show: false },
-    progress: {
-      show: props.model.quality != null,
-      roundCap: true,
-      width: 8,
-      itemStyle: { color: props.ready ? chartPalette.success : chartPalette.warning },
-    },
-    axisLine: { lineStyle: { width: 8, color: [[1, chartInk.border]] } },
-    axisTick: { show: false },
-    splitLine: { show: false },
-    axisLabel: { show: false },
-    title: { show: true, offsetCenter: [0, '35%'], color: chartInk.textMuted, fontSize: CHART_FONT.micro },
-    detail: {
-      offsetCenter: [0, '-6%'],
-      color: chartInk.textPrimary,
-      fontFamily: 'monospace',
-      fontSize: CHART_FONT.subMetric,
-      formatter: qualityLabel.value,
-    },
-    data: [{ value: qualityPercent.value, name: '测试集拟合' }],
-  }],
+const qualityOption = computed(() => createModelQualityOption({
+  quality: props.model.quality ?? null,
+  target: props.model.target,
+  ready: props.ready,
 }))
 </script>
 
@@ -75,11 +36,10 @@ const qualityOption = computed(() => ({
     class="grid grid-cols-12 gap-3 h-full min-h-0 p-2 rounded-xl bg-surface-veil-03 border border-surface-veil-06"
     :title="model.description"
   >
-    <VChart
+    <ChartCanvas
       :key="`${model.type ?? model.name}-${ready}-${model.quality ?? 'empty'}`"
-      class="col-span-3 w-full h-full min-h-0"
+      class="col-span-3"
       :option="qualityOption"
-      autoresize
     />
 
     <div class="col-span-9 flex flex-col justify-center min-w-0 gap-2">
