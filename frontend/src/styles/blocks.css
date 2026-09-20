@@ -407,6 +407,172 @@
 }
 
 .status-row.is-interactive { cursor: pointer; transition: background var(--default-transition-duration) var(--ease-out); }
+
+/* 中国地图特殊可视化物料：HUD、图例和 ECharts tooltip 的展示规则。 */
+.map-tip {
+  min-width: 180px;
+  padding: --spacing(3) --spacing(4);
+  background: color-mix(in srgb, var(--color-slate-900) 95%, transparent);
+  border: 1px solid var(--color-surface-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+}
+
+.map-tip b {
+  display: block;
+  margin-bottom: --spacing(1);
+  color: var(--color-slate-50);
+  font-size: var(--text-cockpit-lg);
+}
+
+.map-tip span {
+  display: block;
+  margin-bottom: --spacing(1);
+  color: var(--color-slate-400);
+  font-size: var(--text-cockpit-md);
+}
+
+.map-tip i {
+  display: block;
+  color: var(--color-slate-500);
+  font-size: var(--text-cockpit-sm);
+  font-style: normal;
+}
+
+.china-map-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.china-map {
+  width: 100%;
+  height: 100%;
+}
+
+.map-live-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 16px;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--color-surface-base) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-sky-400) 70%, transparent);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 60%);
+  transform: translateX(-50%);
+  backdrop-filter: blur(8px);
+}
+
+.map-live-banner:hover {
+  border-color: var(--color-sky-400);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 70%);
+}
+
+.map-live-banner__beacon {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--color-sky-400);
+  border-radius: 50%;
+  animation: map-banner-beacon-ping 1.4s infinite;
+}
+
+@keyframes map-banner-beacon-ping {
+  0% { transform: scale(0.85); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.5; }
+  100% { transform: scale(0.85); opacity: 1; }
+}
+
+.map-live-banner__tag {
+  padding: 1px 6px;
+  color: var(--color-sky-400);
+  font-size: var(--text-cockpit-xs);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: color-mix(in srgb, var(--color-sky-400) 20%, transparent);
+  border-radius: 3px;
+}
+
+.map-live-banner__province {
+  color: var(--color-sky-400);
+  font-size: var(--text-cockpit-sm);
+  font-weight: 700;
+}
+
+.map-live-banner__unit {
+  color: var(--color-white);
+  font-size: var(--text-cockpit-sm);
+  font-weight: 600;
+}
+
+.map-live-banner__description {
+  color: var(--color-emerald-400);
+  font-size: var(--text-cockpit-sm);
+  font-weight: 600;
+}
+
+.map-banner-transition-active {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.map-banner-transition-enter-from {
+  opacity: 0;
+  transform: translate(-50%, -18px) scale(0.92);
+}
+
+.map-banner-transition-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -12px) scale(0.96);
+}
+
+.map-legend {
+  position: absolute;
+  bottom: --spacing(2);
+  left: --spacing(3);
+  z-index: 5;
+  display: flex;
+  gap: --spacing(2);
+  align-items: center;
+  padding: 5px --spacing(3);
+  pointer-events: none;
+  background: color-mix(in srgb, var(--color-surface-base) 72%, transparent);
+  border: 1px solid var(--color-surface-veil-03);
+  border-radius: 999px;
+}
+
+.map-legend__caption {
+  color: var(--color-slate-500);
+  font-size: var(--text-cockpit-xs);
+  white-space: nowrap;
+}
+
+.map-legend__bound {
+  color: var(--color-slate-600);
+  font-family: var(--font-mono);
+  font-size: var(--text-cockpit-xs);
+  white-space: nowrap;
+}
+
+.map-legend__stops {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.map-legend__stops i {
+  display: block;
+  width: 20px;
+  height: 6px;
+  border-radius: 1px;
+}
 .status-row.is-interactive:hover { background: var(--color-surface-hover); }
 
 .status-row__icon { flex-shrink: 0; color: var(--color-sky-400); }
