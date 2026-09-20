@@ -18,8 +18,8 @@
   --grid-template-rows-cockpit-right: minmax(0, 0.8fr) minmax(0, 1.2fr); /* A6 当日变化 + A7 行动队列 */
   --grid-template-columns-construction: repeat(12, minmax(0, 1fr));
   --grid-template-rows-construction: minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 0.55fr); /* B2-B5 分析 + B6 常驻台账预览 */
-  --grid-template-rows-rollout-body: minmax(0, 1.25fr) minmax(0, 0.75fr); /* C3-C5 分析区 + C6 台账 */
-  --grid-template-columns-rollout-analysis: repeat(12, minmax(0, 1fr)); /* C3 主区 8 列，C4/C5 辅区 4 列 */
+  --grid-template-rows-rollout-body: minmax(0, 1.1fr) minmax(0, 0.9fr); /* C2/C4/C5 分析区 + C6 台账 */
+  --grid-template-columns-rollout-analysis: repeat(12, minmax(0, 1fr)); /* C2 主区 8 列，C4/C5 辅区 4 列 */
   --grid-template-rows-rollout-analysis: minmax(0, 1.2fr) minmax(0, 0.8fr); /* C4 排行略高，C5 环图摘要更紧凑 */
   --grid-template-columns-operations: repeat(2, minmax(0, 1fr));
   --grid-template-rows-operations: minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.1fr);
