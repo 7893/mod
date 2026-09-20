@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
-import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, GaugeChart, LineChart, PieChart } from 'echarts/charts'
@@ -8,6 +7,7 @@ import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/compon
 import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
 import ChartBlock from '../components/blocks/ChartBlock.vue'
+import ChartCanvas from '../components/charts/ChartCanvas.vue'
 import CommandBand from '../components/blocks/CommandBand.vue'
 import StatList from '../components/blocks/StatList.vue'
 import type { StatRow } from '../components/blocks/types.ts'
@@ -18,21 +18,14 @@ import { usePagedList } from '../composables/usePagedList.ts'
 import ComplianceInspectDrawer, { type ComplianceIssueUnit } from '../components/ComplianceInspectDrawer.vue'
 import LiveActivityTicker, { type GovernanceActivity } from '../components/LiveActivityTicker.vue'
 import KioskSpotlightTour from '../components/KioskSpotlightTour.vue'
-import {
-  calmAnimation,
-  categoryAxis,
-  chartInk,
-  chartPalette,
-  chartSeriesColors,
-  chartTooltip,
-  compactGrid,
-  valueAxis,
-} from '../charts/theme.ts'
-import { CHART_FONT } from '../charts/tokens.ts'
 import { formatCount as format } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import { createBatchComplianceOption } from '../charts/panelOptions.ts'
-import { createComplianceOverviewOption } from '../charts/complianceOptions.ts'
+import {
+  createComplianceOverviewOption,
+  createComplianceRiskOption,
+  createComplianceTagOption,
+} from '../charts/complianceOptions.ts'
 import { BATCH_ORDER } from '../utils/entityOptions.ts'
 import { COMPLIANCE_TAGS, deriveComplianceUnits } from '../utils/riskRules.ts'
 
@@ -97,16 +90,9 @@ const highRiskCount = computed(() => complianceUnits.value.filter((u) => u.level
 const mediumRiskCount = computed(() => complianceUnits.value.filter((u) => u.level === '中').length)
 
 const tagDimensionCounts = computed(() => {
-  const colors: Record<(typeof COMPLIANCE_TAGS)[number], string> = {
-    超期挂账: chartSeriesColors[3],
-    超预算迹象: chartSeriesColors[4],
-    票据异常: chartSeriesColors[2],
-    准备期卡顿: chartSeriesColors[1],
-  }
   return COMPLIANCE_TAGS.map((label) => ({
     label,
     count: complianceUnits.value.filter((u) => u.tags.includes(label)).length,
-    color: colors[label],
   }))
 })
 
@@ -122,28 +108,12 @@ const dominantComplianceTags = computed<StatRow[]>(() => [...tagDimensionCounts.
   .slice(0, 3)
   .map((item) => ({ id: item.label, label: item.label, value: item.count })))
 
-const tagBarOption = computed(() => ({
-  ...calmAnimation,
-  tooltip: { trigger: 'axis', ...chartTooltip },
-  grid: { ...compactGrid, bottom: 18 },
-  xAxis: { ...categoryAxis, data: tagDimensionCounts.value.map((t) => t.label), axisLabel: { ...categoryAxis.axisLabel, interval: 0, fontSize: CHART_FONT.axis } },
-  yAxis: valueAxis,
-  series: [{ name: '涉及单位数', type: 'bar', data: tagDimensionCounts.value.map((t) => ({ value: t.count, itemStyle: { color: t.color } })), barWidth: '42%', barMaxWidth: 48, itemStyle: { borderRadius: [3, 3, 0, 0] } }],
-}))
+const tagBarOption = computed(() => createComplianceTagOption(tagDimensionCounts.value))
 
-const riskPieOption = computed(() => ({
-  ...calmAnimation,
-  tooltip: { trigger: 'item', ...chartTooltip },
-  legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { color: chartInk.textMuted, fontSize: CHART_FONT.caption }, itemWidth: 10, itemHeight: 10 },
-  series: [{
-    name: '合规水位构成', type: 'pie', radius: ['45%', '70%'], center: ['35%', '50%'],
-    data: [
-      { value: compliantCount.value, name: `合规达标 (${format(compliantCount.value)})`, itemStyle: { color: chartPalette.success } },
-      { value: mediumRiskCount.value, name: `中度瑕疵 (${format(mediumRiskCount.value)})`, itemStyle: { color: chartPalette.warning } },
-      { value: highRiskCount.value, name: `高风险隐患 (${format(highRiskCount.value)})`, itemStyle: { color: chartPalette.danger } },
-    ],
-    label: { show: false },
-  }],
+const riskPieOption = computed(() => createComplianceRiskOption({
+  compliant: compliantCount.value,
+  medium: mediumRiskCount.value,
+  high: highRiskCount.value,
 }))
 
 const batchComplianceStats = computed(() =>
@@ -186,7 +156,7 @@ const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePag
     >
       <CommandBand>
         <template #chart>
-          <VChart class="w-full h-full min-h-0" :option="complianceOverviewOption" autoresize />
+          <ChartCanvas :option="complianceOverviewOption" />
         </template>
         <template #aside>
           <div class="flex flex-col justify-center h-full px-5">
@@ -204,12 +174,12 @@ const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePag
     <!-- 中部：E2 风险维度分布 + E3 水位构成 (弹性优先，Guardrail 扩大为 min-h-[200px] max-h-[300px]，E-2) -->
     <div class="grid grid-cols-issues-top gap-2.5 min-h-[200px] max-h-[300px] flex-1">
       <CockpitPanel title="单位级合规风险标签分布" zone="E2" subtitle="挂账 / 预算 / 票据 三类真实指标维度">
-        <VChart class="w-full h-full min-h-0" :option="tagBarOption" autoresize />
+        <ChartCanvas :option="tagBarOption" />
       </CockpitPanel>
 
       <CockpitPanel title="合规评级构成" zone="E3" subtitle="达标与监督梯队分布比例">
         <ChartBlock footnote="按当前快照单位指标计算，不预设合规率区间">
-          <VChart :option="riskPieOption" autoresize />
+          <ChartCanvas :option="riskPieOption" />
         </ChartBlock>
       </CockpitPanel>
     </div>
@@ -222,7 +192,7 @@ const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePag
           { label: '高风险', tone: 'danger' },
         ]" />
       </template>
-      <VChart class="w-full h-full min-h-0" :option="batchComplianceOption" autoresize />
+      <ChartCanvas :option="batchComplianceOption" />
     </CockpitPanel>
 
     <!-- 底部：E5 重点监督单位台账与下钻 -->
