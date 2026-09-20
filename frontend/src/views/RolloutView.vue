@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, GaugeChart, HeatmapChart, PieChart } from 'echarts/charts'
@@ -8,15 +7,17 @@ import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, Visua
 import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
 import CommandBand from '../components/blocks/CommandBand.vue'
-import EmptyNote from '../components/blocks/EmptyNote.vue'
 import StatList from '../components/blocks/StatList.vue'
+import ChartCanvas from '../components/charts/ChartCanvas.vue'
 import type { MetricItem, StatRow } from '../components/blocks/types.ts'
 import RolloutLedgerTable from '../components/RolloutLedgerTable.vue'
-import { calmAnimation, chartInk, chartPalette, chartTooltip } from '../charts/theme.ts'
 import { buildCoverageComposition, buildRolloutComposition } from '../charts/panelData.ts'
 import { createCoverageOption, createRolloutCompositionOption } from '../charts/panelOptions.ts'
-import { createRolloutCommandOption, createRolloutTrendMatrixOption } from '../charts/rolloutOptions.ts'
-import { CHART_FONT } from '../charts/tokens.ts'
+import {
+  createProvinceRolloutOption,
+  createRolloutCommandOption,
+  createRolloutTrendMatrixOption,
+} from '../charts/rolloutOptions.ts'
 import { formatCount as format } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 
@@ -31,16 +32,6 @@ const rolloutCommandOption = computed(() => createRolloutCommandOption({
   launched: store.snapshot.overview.launched ?? 0,
   dual: store.snapshot.overview.dual ?? 0,
 }))
-
-// 色值统一取自 charts/theme.ts，避免图表区与页面外壳出现两套蓝绿黄
-const chartColors = {
-  accent: chartPalette.accent,
-  warning: chartPalette.warning,
-  success: chartPalette.success,
-  bg: chartInk.bgTooltip,
-  border: chartInk.border,
-  textMuted: chartInk.textMuted,
-}
 
 const rolloutComposition = computed(() => buildRolloutComposition(batches.value))
 
@@ -84,51 +75,7 @@ const contactFacts = computed<StatRow[]>(() => [
   { label: '待补齐缺口', value: format(contactCoverage.value?.gap), tone: 'warning' },
 ])
 
-const provinceRolloutOption = computed(() => ({
-  ...calmAnimation,
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: { type: 'shadow' },
-    ...chartTooltip,
-  },
-  grid: { left: 4, right: 4, top: 8, bottom: 4, containLabel: true },
-  xAxis: {
-    type: 'category',
-    data: topProvinces.value.map((v) => v.name),
-    axisLine: { lineStyle: { color: chartColors.border } },
-    axisTick: { show: false },
-    axisLabel: { color: chartColors.textMuted, fontSize: CHART_FONT.axis, interval: 0 },
-  },
-  yAxis: {
-    type: 'value',
-    splitLine: { lineStyle: { color: chartColors.border, opacity: 0.4 } },
-    axisLabel: { color: chartColors.textMuted, fontSize: CHART_FONT.axis },
-  },
-  series: [
-    {
-      name: '已上线',
-      type: 'bar',
-      stack: 'total',
-      barMaxWidth: 24,
-      data: topProvinces.value.map((v) => v.launched),
-      itemStyle: { color: chartColors.accent },
-    },
-    {
-      name: '双轨',
-      type: 'bar',
-      stack: 'total',
-      data: topProvinces.value.map((v) => v.dual),
-      itemStyle: { color: chartColors.warning },
-    },
-    {
-      name: '其他',
-      type: 'bar',
-      stack: 'total',
-      data: topProvinces.value.map((v) => v.unlaunched),
-      itemStyle: { color: chartColors.border, borderRadius: [3, 3, 0, 0] },
-    },
-  ],
-}))
+const provinceRolloutOption = computed(() => createProvinceRolloutOption(topProvinces.value))
 </script>
 
 <template>
@@ -142,7 +89,7 @@ const provinceRolloutOption = computed(() => ({
     >
       <CommandBand :facts="commandFacts" :fact-columns="2" align="center">
         <template #chart>
-          <VChart class="w-full h-full min-h-0" :option="rolloutCommandOption" autoresize />
+          <ChartCanvas :option="rolloutCommandOption" />
         </template>
       </CommandBand>
     </CockpitPanel>
@@ -161,15 +108,18 @@ const provinceRolloutOption = computed(() => ({
           { label: '待推进', tone: 'neutral' },
         ]" />
       </template>
-      <VChart class="w-full h-full min-h-0" :option="batchCompositionOption" autoresize />
+      <ChartCanvas :option="batchCompositionOption" />
     </CockpitPanel>
 
     <div class="grid grid-rows-rollout-body gap-2.5 flex-1 min-h-0">
       <!-- C3 为主分析画布；C4/C5 作为右侧上下辅助区，不再与 C3 等权占面 -->
       <div class="grid grid-cols-rollout-analysis grid-rows-rollout-analysis gap-2.5 min-h-0">
         <CockpitPanel title="批次上线爬坡矩阵" zone="C3" subtitle="历史快照中的批次上线率与双轨率" class="col-span-8 row-span-2">
-          <VChart v-if="rolloutTrend.length" class="w-full h-full min-h-0" :option="rolloutTrendOption" autoresize />
-          <EmptyNote v-else>暂无批次历史快照</EmptyNote>
+          <ChartCanvas
+            :option="rolloutTrendOption"
+            :empty="rolloutTrend.length === 0"
+            empty-text="暂无批次历史快照"
+          />
         </CockpitPanel>
 
         <CockpitPanel title="省域上线分布" zone="C4" subtitle="上线率前六" class="col-span-4 min-h-0">
@@ -180,12 +130,12 @@ const provinceRolloutOption = computed(() => ({
               { label: '其他', tone: 'neutral' },
             ]" />
           </template>
-          <VChart class="w-full h-full min-h-0" :option="provinceRolloutOption" autoresize />
+          <ChartCanvas :option="provinceRolloutOption" />
         </CockpitPanel>
 
         <CockpitPanel title="项目联系人" zone="C5" subtitle="组织覆盖与专员" class="col-span-4 min-h-0">
           <div class="grid grid-cols-5 h-full min-h-0 gap-2 items-center">
-            <VChart class="col-span-2 w-full h-full min-h-0" :option="contactCoverageOption" autoresize />
+            <ChartCanvas class="col-span-2" :option="contactCoverageOption" />
             <StatList class="col-span-3 self-stretch" :rows="contactFacts" flat density="dense" />
           </div>
         </CockpitPanel>

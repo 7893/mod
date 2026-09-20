@@ -1,3 +1,4 @@
+import type { EChartsOption } from 'echarts'
 import { formatCount } from '../formatters/metrics'
 import {
   calmAnimation,
@@ -126,7 +127,7 @@ export function createRolloutCompositionOption(list: RolloutSeriesItem[]) {
         itemStyle: { color: chartPalette.neutral, borderRadius: [3, 3, 0, 0] },
       },
     ],
-  }
+  } satisfies EChartsOption
 }
 
 export function createCoverageOption(coverage: CoverageSeriesItem | null) {
@@ -155,7 +156,7 @@ export function createCoverageOption(coverage: CoverageSeriesItem | null) {
           ]
         : [{ value: 1, name: '暂无数据', itemStyle: { color: chartInk.borderSoft } }],
     }],
-  }
+  } satisfies EChartsOption
 }
 
 export function createProvinceProfileOption(progress?: number | string | null) {
