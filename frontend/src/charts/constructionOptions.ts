@@ -153,42 +153,6 @@ export function createTaskStageMatrixOption(list: StageSeriesItem[]) {
   } satisfies EChartsOption
 }
 
-export function createTaskStageRadarOption(list: StageSeriesItem[]) {
-  return {
-    ...calmAnimation,
-    tooltip: {
-      trigger: 'item',
-      ...chartTooltip,
-      formatter: (params: any) => {
-        const values = Array.isArray(params?.value) ? params.value : []
-        const lines = list.map((stage, idx) => {
-          const val = values[idx] ?? stage.progress
-          return `${stage.name} 完成率 <b>${val}%</b>`
-        })
-        const title = params?.seriesName || params?.name || '阶段完成率'
-        return `<b>${title}</b><br/>${lines.join('<br/>')}`
-      },
-    },
-    radar: {
-      center: ['50%', '53%'], radius: '65%', splitNumber: 3,
-      indicator: list.map((stage) => ({ name: stage.name, max: 100 })),
-      axisName: { color: chartInk.textMuted, fontSize: CHART_FONT.micro },
-      axisLine: { lineStyle: { color: chartInk.border } },
-      splitLine: { lineStyle: { color: chartInk.border } },
-      splitArea: { areaStyle: { color: [chartInk.borderSoft, 'transparent'] } },
-    },
-    series: [{
-      name: '阶段完成率', type: 'radar', symbolSize: 4,
-      data: [{
-        value: list.map((stage) => stage.progress), name: '完成率',
-        lineStyle: { color: chartPalette.accent, width: 2 },
-        itemStyle: { color: chartPalette.success },
-        areaStyle: { color: chartPalette.accent, opacity: 0.2 },
-      }],
-    }],
-  } satisfies EChartsOption
-}
-
 const shortTrainingType = (value: string) => value
   .replace('培训', '')
   .replace('与', ' / ')

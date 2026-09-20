@@ -137,11 +137,10 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
 </script>
 
 <template>
-  <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="B-LEDGER">
+  <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="B6-DETAIL">
     <!-- 概览与下钻导航 -->
     <CockpitPanel
       title="数据准备台账与单位状态"
-      zone="B6"
       :subtitle="`${formatCount(store.entities.length)} 家单位建设完成度、期初数据状态与审计留痕`"
       class="flex-shrink-0"
     >
@@ -161,7 +160,6 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
     <!-- 台账主表 -->
     <CockpitPanel
       title="单位建设与期初数据台账"
-      zone="B7"
       :subtitle="isFiltered ? `筛选出 ${filtered.length} 家 / 共 ${store.entities.length} 家纳管单位` : `全量纳管单位建设完成度、期初数据与推进状态维护（共 ${store.entities.length} 家）`"
       class="flex-1 min-h-0"
     >
@@ -279,7 +277,7 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
     </CockpitPanel>
 
     <!-- 最近操作记录 -->
-    <CockpitPanel title="最近操作记录" zone="B8" subtitle="台账变更审计留痕" class="flex-shrink-0">
+    <CockpitPanel title="最近操作记录" subtitle="台账变更审计留痕" class="flex-shrink-0">
       <template #actions><History :size="16" class="text-slate-400" /></template>
       <div class="flex flex-col gap-1.5 divide-y divide-surface-veil-06">
         <div v-for="audit in store.audits.slice(0, 5)" :key="audit.id" class="flex items-center gap-3 py-1 text-cockpit-xs text-slate-300 flex-wrap">

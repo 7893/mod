@@ -23,14 +23,13 @@ describe('ConstructionLedger', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders B6, B7, B8 zones and filter options with counts', async () => {
+  it('renders the B6 detail surface and filter options with counts', async () => {
     const wrapper = mount(ConstructionLedger)
     await flushPromises()
 
-    // Panel zones B6, B7, B8
-    expect(wrapper.find('[data-zone="B6"]').exists()).toBe(true)
-    expect(wrapper.find('[data-zone="B7"]').exists()).toBe(true)
-    expect(wrapper.find('[data-zone="B8"]').exists()).toBe(true)
+    expect(wrapper.find('[data-zone="B6-DETAIL"]').exists()).toBe(true)
+    expect(wrapper.find('[data-zone="B7"]').exists()).toBe(false)
+    expect(wrapper.find('[data-zone="B8"]').exists()).toBe(false)
 
     // Select options with counts: batch (0), province (1), lifecycle (2), readiness (3)
     const selects = wrapper.findAll('select')
