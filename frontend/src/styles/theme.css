@@ -14,9 +14,8 @@
 @theme {
   /* 骨架契约：驾驶舱固定分区，受保护结构，改比例即结构变更 */
   --grid-template-columns-cockpit: 390px 1fr 370px;   /* 三栏：左固定 中弹性 右固定 */
-  --grid-template-rows-dashboard-left: minmax(0, 1.2fr) minmax(0, 0.8fr); /* A2/A3 分析区 + A4 趋势区 */
-  --grid-template-rows-dashboard-stack: minmax(0, 0.85fr) minmax(0, 1.15fr); /* A2 指标 + A3 批次 */
-  --grid-template-rows-cockpit-right: 1fr 1.3fr;      /* 右列：运营指标 + 扩大风险预警 (A-3) */
+  --grid-template-rows-dashboard-left: minmax(0, 0.8fr) minmax(0, 1.2fr); /* A2 省域摘要 + A4 趋势 */
+  --grid-template-rows-cockpit-right: minmax(0, 0.8fr) minmax(0, 1.2fr); /* A6 当日变化 + A7 行动队列 */
   --grid-template-columns-construction: repeat(12, minmax(0, 1fr));
   --grid-template-rows-construction: minmax(0, 1.1fr) minmax(0, 0.9fr); /* B2/B3 主分析稍大，B4/B5 辅助区稍小 */
   --grid-template-rows-rollout-body: minmax(0, 1.25fr) minmax(0, 0.75fr); /* C3-C5 分析区 + C6 台账 */

@@ -4,8 +4,6 @@ import { createRiskOverviewOption } from '../insightsOptions.ts'
 import {
   createDualRunOutcomeOption,
   createIntegrationOutcomeOption,
-  createOperationsFlowOption,
-  createOperationsOverviewOption,
 } from '../operationsOptions.ts'
 import { createProvinceProfileOption } from '../panelOptions.ts'
 import { createRolloutCommandOption } from '../rolloutOptions.ts'
@@ -16,29 +14,6 @@ describe('primary overview charts', () => {
 
     expect(option.series[0].data[0].value).toBe(40)
     expect(option.series[1].data.map((item) => item.value)).toEqual([90, 30, 80])
-  })
-
-  it('keeps operation volumes in their named order', () => {
-    const option = createOperationsOverviewOption({
-      businessDocument: 300,
-      accountingVoucher: 200,
-      integrationResult: 100,
-    })
-
-    expect(option.yAxis.data).toEqual(['接口集成', '会计凭证', '业务单据'])
-    expect(option.series[0].data.map((item) => item.value)).toEqual([100, 200, 300])
-  })
-
-  it('adds dual-run volume without duplicating labels outside the chart', () => {
-    const option = createOperationsFlowOption({
-      businessDocument: 400,
-      accountingVoucher: 300,
-      integrationResult: 200,
-      dualRunResult: 100,
-    })
-
-    expect(option.yAxis.data).toEqual(['双轨核对', '接口集成', '会计凭证', '业务单据'])
-    expect(option.series[0].data.map((item) => item.value)).toEqual([100, 200, 300, 400])
   })
 
   it('keeps integration and dual-run outcomes in compact two-row charts', () => {

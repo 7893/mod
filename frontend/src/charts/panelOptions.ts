@@ -43,12 +43,6 @@ interface QualityRateItem {
   tone: 'accent' | 'success'
 }
 
-interface OperationalGuardItem {
-  name: string
-  value: number | null
-  tone: 'danger' | 'warning' | 'accent'
-}
-
 interface CompositionPart {
   label: string
   value: number
@@ -286,52 +280,6 @@ export function createOperationsQualityOption(list: QualityRateItem[]) {
         formatter: (params: any) => {
           const item = reversed[params?.dataIndex]
           return item?.value === null ? '—' : `${item?.value}%`
-        },
-      },
-    }],
-  } satisfies EChartsOption
-}
-
-export function createOperationalGuardOption(list: OperationalGuardItem[]) {
-  const colors = {
-    danger: chartPalette.danger,
-    warning: chartPalette.warning,
-    accent: chartPalette.accent,
-  }
-  const reversed = [...list].reverse()
-  const max = Math.max(1, ...reversed.map((item) => item.value ?? 0))
-  return {
-    ...calmAnimation,
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any) => {
-        const points = Array.isArray(params) ? params : [params]
-        const item = reversed[points[0]?.dataIndex]
-        return item ? `${item.name}<br/><b>${formatCount(item.value)}</b> 项` : ''
-      },
-      ...chartTooltip,
-    },
-    grid: { left: 4, right: 38, top: 2, bottom: 2, containLabel: true },
-    xAxis: { type: 'value', max, show: false },
-    yAxis: {
-      type: 'category', data: reversed.map((item) => item.name),
-      axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.axis },
-    },
-    series: [{
-      type: 'bar', barWidth: 8, showBackground: true,
-      backgroundStyle: { color: chartInk.borderSoft, borderRadius: 4 },
-      data: reversed.map((item) => ({
-        value: item.value ?? 0,
-        itemStyle: { color: colors[item.tone], borderRadius: 4 },
-      })),
-      label: {
-        show: true, position: 'right', color: chartInk.textPrimary,
-        fontFamily: 'monospace', fontSize: CHART_FONT.axis,
-        formatter: (params: any) => {
-          const item = reversed[params?.dataIndex]
-          return formatCount(item?.value)
         },
       },
     }],

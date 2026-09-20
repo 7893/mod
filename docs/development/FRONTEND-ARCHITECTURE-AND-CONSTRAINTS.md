@@ -1,6 +1,6 @@
 # 前端整体规划与约束规范
 
-更新日期：2026-09-17
+更新日期：2026-09-21
 状态：现行
 适用范围：`frontend/` 下所有页面、组件、样式与状态；约束人类与 AI 的前端改动
 
@@ -30,7 +30,7 @@
 
 ## 1. 六屏架构
 
-沿用六屏与稳定 Zone 编号（结构定义见上述历史六屏规范），路由与职责概览：
+沿用六屏路由与职责，Zone 作为面板坐标按当前信息架构维护：
 
 | 屏 | 路由 | 名称 | 职责 |
 |---|---|---|---|
@@ -41,13 +41,15 @@
 | E | `/#/e` | 合规监督 | 实时广播、工单抽屉与同源事件巡航 |
 | F | `/#/f` | 风险预警 | 模型状态、决策简报与项目侧 AI 配额，不承诺云账单为零 |
 
-Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得替代业务标题；
-编号本身不绑定任何一套具体 CSS 实现。
+Zone 编号是产品坐标，用于沟通定位，不得替代业务标题，也不绑定具体 CSS 实现。经明确的信息架构
+变更可合并或退役低价值 Zone；编号不要求连续，更不得为了凑满历史数量而保留重复面板。
 
 ## 2. 信息架构原则
 
 - 每屏是“若干块（Panel）”的组合，不是自由画布。先确定分区，再填内容。
 - 首屏（A）承担态势总览与下钻入口；B–F 各自聚焦一个业务域，互不重复堆叠指标。
+- 一个主面板只回答一个决策问题；同一事实只设一个专业事实页，总览只保留摘要和导航。
+- 所有主面板在设计画布内默认可见，不得用页签或条件分支整页替换另一组主面板；台账明细使用分页、抽屉或局部滚动。
 - 缺失数据显示为 `—` 或明确的“未提供”，不得用冻结基线数值或伪造结果填充。
 - 一切金额、剧情、比对文案若来自模拟投影，必须与数据库真实数值解耦并标注为演示动态。
 
@@ -113,7 +115,7 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
   所有数字而制造一一对应的“伪 Token”。
 - SFC 内如需手写引用 Token 的 `<style>`，块首必须 `@reference "../styles.css";`。
 - 已定义的 Token（模板直接引用其工具类，禁止再写等价任意值）：
-  - 骨架：`grid-cols-cockpit`（三栏 390px/1fr/370px）、`grid-rows-dashboard-left` 与 `grid-rows-dashboard-stack`；
+  - 骨架：`grid-cols-cockpit`（三栏 390px/1fr/370px）、`grid-rows-dashboard-left` 与 `grid-rows-cockpit-right`；
     `grid-cols-construction`（B 屏 12 列）与 `grid-rows-construction`（上下 1.1fr/0.9fr）。
   - 表面色：`bg-surface-base`（大屏底色）、`bg-surface-panel`、`border-surface-hairline`、
     `bg-surface-veil-06`、`bg-surface-veil-03`。
@@ -168,10 +170,9 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
 - 2026-09-09 完成全局样式收口：删除 `foundation/components/utilities/page-hierarchy/dashboard-topbar/responsive-breakpoints` 六个文件及约 120 条无引用规则，全局 CSS 由 1897 行降至约 880 行；删除 `:root` 旧变量层，Token 唯一来源为 `theme.css`。
 - 2026-09-09 完成台账层去重：`ConstructionLedger`/`RolloutLedgerTable`/`AtRiskUnitTable` 的筛选、分页、计数、调态抽屉收敛到 `components/ledger/` 与 `usePagedList`/`useEntityEditor`/`entityOptions`，三组件合计由 1234 行降至约 790 行；`AtRiskUnitTable` 顺带补齐总页数收缩时的最小页钳位。
 - 数字与日期时间展示统一走 `formatters/metrics.ts`（`formatCount`/`formatPercent`/`formatDateTime`）：视图、组件、图表 tooltip 与 store 中不得再直接调用 `toLocaleString`/`Intl.*`，空值一律显示 `—`。
-- A1、B1、C1、D1、E1、F1、A2、A3、B2、B4、B5、C2、C5、D4、D6、D7、E4、F3、F4、F5 已完成面板密度图表化：拥挤的横排卡收敛为比较图，空旷数字面板补充构成、进度或质量图，长篇简报转为分组摘要卡，重复信息由图表交互或悬停提示承载。
-- 六屏主面板采用统一的“领域主图 + 少量精确事实”语言，但不强制同构：A1 为双进度环、运营规模谱和风险闭环，B2 为阶段状态矩阵与八轴轮廓，C1 为上线仪表与推进漏斗，D1 为业务规模谱与结构效率，E1 为合规仪表与监督梯队，F1 为风险比较条与模型质量门禁。面板区号、标题和小说明保持单行；主面板内容以分隔线组织，不再套同级边框框体。图表派生数据集中在 `charts/`，视觉统一复用 `charts/theme.ts`。
-- 同屏去重契约已扩展到 A8/B4/C3/D3/D7：A8 只做聚合运营异常、联系人只留 C5；B4 只做上线门禁与培训转化；C3 只做批次历史爬坡、C2 只做当前构成；D3 只做日吞吐趋势、D1/D2 分别保留累计规模与链路阶段；D7 在全量合规时比较真实核验覆盖规模，不再用四根相同 100% 柱填充空间。时间序列或异常字段缺失时必须显示明确空态。
-- 信息密度必须驱动具名骨架比例：A 屏左栏由 `dashboard-left` / `dashboard-stack` 固定 A2、A3、A4 的面积分工，B 屏上排 B2/B3 大于下排 B4/B5；C3 作为主分析画布占左侧 8 列并跨两行，C4/C5 作为辅助区在右侧 4 列上下叠放。比例只允许在 `theme.css` 的具名 Token 中维护。异步简报等首屏内容必须预留稳定槽位，数据到达不得推动主体布局；单行简报内容整体居中。
+- KI-102 正在进行第二轮信息架构治理。A 屏已收敛为 A1 五域导航、A2 省域摘要、A4 跨域趋势、A5 地图、A6 今日变化、A7 行动队列；退役独立 A3/A8，批次与运营专业事实分别回到 B/C 与 D。D 屏已把 D1/D2 合并为唯一端到端业务链路，D3–D7 分别保留日吞吐、凭证、集成、双轨与质量职责。
+- B/C/E/F 暂保留第一轮面板结构，下一阶段依次去除 B2 雷达重复与总览/台账互斥、C 屏批次与排名重复、E 屏合规构成重复、F 屏风险与模型质量重复。时间序列或异常字段缺失时必须显示明确空态。
+- 信息密度必须驱动具名骨架比例：A 屏左栏由 `dashboard-left` 固定 A2/A4 面积分工，右栏由 `cockpit-right` 固定 A6/A7 面积分工；B 屏上排 B2/B3 大于下排 B4/B5；C3 作为主分析画布占左侧 8 列并跨两行，C4/C5 作为辅助区在右侧 4 列上下叠放。比例只允许在 `theme.css` 的具名 Token 中维护。异步简报等首屏内容必须预留稳定槽位，数据到达不得推动主体布局；单行简报内容整体居中。
 - 笛卡尔图表的分类图例统一放入 `CockpitPanel` 标题行的 `actions` 插槽，不得侵占绘图区顶部或从右侧切割坐标系；窄面板使用 `PanelLegend compact` 只显示颜色块，原生悬停提示与无障碍文本提供完整含义。只有 B5 等环图适合保持“图形在左、图例或精确读数在右”的横向组织。
 - E/F 屏合规治理与 AI 算力护栏闭环（GI-003/GI-004）：E 屏顶端集成 `LiveActivityTicker.vue`，毫秒级轮播专班一线处置流水，赋予大屏环境生命体征；E 屏台账支持下钻唤起 `ComplianceInspectDrawer.vue`（六态 Stepper、专班责任人、一键督办上帝之手与 AI 深度研判）；空闲 45 秒由 `KioskSpotlightTour.vue` 自动唤醒展厅聚光灯巡航 HUD 浮窗，交互瞬时淡出；F 屏操作区嵌入 `AiQuotaCapsule.vue`，透视 Cloudflare AI 每日 3,000 Neurons 安全额度与熔断状态，坚守 $0.00 零费用硬防护。详见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](GOVERNANCE-SIMULATION-SYNTHESIS.md)。
 
