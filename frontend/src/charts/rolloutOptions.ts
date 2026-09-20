@@ -18,13 +18,6 @@ export interface RolloutTrendPoint {
   dualPct: number
 }
 
-export interface ProvinceRolloutItem {
-  name: string
-  launched: number
-  dual: number
-  unlaunched: number
-}
-
 export function createRolloutTrendMatrixOption(points: RolloutTrendPoint[]) {
   const dates = [...new Set(points.map((point) => point.date))]
   const batches = [...new Map(
@@ -116,54 +109,6 @@ export function createRolloutCommandOption(summary: RolloutCommandSummary) {
           fontFamily: 'monospace', fontSize: CHART_FONT.axis,
           formatter: (params: any) => formatCount(params.value),
         },
-      },
-    ],
-  } satisfies EChartsOption
-}
-
-export function createProvinceRolloutOption(items: ProvinceRolloutItem[]) {
-  return {
-    ...calmAnimation,
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      ...chartTooltip,
-    },
-    grid: { left: 4, right: 4, top: 8, bottom: 4, containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: items.map((item) => item.name),
-      axisLine: { lineStyle: { color: chartInk.border } },
-      axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.axis, interval: 0 },
-    },
-    yAxis: {
-      type: 'value',
-      splitLine: { lineStyle: { color: chartInk.border, opacity: 0.4 } },
-      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.axis },
-    },
-    series: [
-      {
-        name: '已上线',
-        type: 'bar',
-        stack: 'total',
-        barMaxWidth: 24,
-        data: items.map((item) => item.launched),
-        itemStyle: { color: chartPalette.accent },
-      },
-      {
-        name: '双轨',
-        type: 'bar',
-        stack: 'total',
-        data: items.map((item) => item.dual),
-        itemStyle: { color: chartPalette.warning },
-      },
-      {
-        name: '其他',
-        type: 'bar',
-        stack: 'total',
-        data: items.map((item) => item.unlaunched),
-        itemStyle: { color: chartInk.border, borderRadius: [3, 3, 0, 0] },
       },
     ],
   } satisfies EChartsOption

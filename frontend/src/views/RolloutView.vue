@@ -5,17 +5,15 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, GaugeChart, HeatmapChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, VisualMapComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
-import PanelLegend from '../components/PanelLegend.vue'
 import CommandBand from '../components/blocks/CommandBand.vue'
 import EmptyNote from '../components/blocks/EmptyNote.vue'
 import StatList from '../components/blocks/StatList.vue'
 import ChartCanvas from '../components/charts/ChartCanvas.vue'
 import type { MetricItem, StatRow } from '../components/blocks/types.ts'
 import RolloutLedgerTable from '../components/RolloutLedgerTable.vue'
-import { buildCoverageComposition, buildRolloutComposition } from '../charts/panelData.ts'
-import { createCoverageOption, createRolloutCompositionOption } from '../charts/panelOptions.ts'
+import { buildCoverageComposition } from '../charts/panelData.ts'
+import { createCoverageOption } from '../charts/panelOptions.ts'
 import {
-  createProvinceRolloutOption,
   createRolloutCommandOption,
   createRolloutTrendMatrixOption,
 } from '../charts/rolloutOptions.ts'
@@ -33,10 +31,6 @@ const rolloutCommandOption = computed(() => createRolloutCommandOption({
   launched: store.snapshot.overview.launched ?? 0,
   dual: store.snapshot.overview.dual ?? 0,
 }))
-
-const rolloutComposition = computed(() => buildRolloutComposition(batches.value))
-
-const batchCompositionOption = computed(() => createRolloutCompositionOption(rolloutComposition.value))
 
 const contactCoverage = computed(() => buildCoverageComposition(
   store.snapshot.overview.orgTotal,
@@ -59,7 +53,37 @@ const provinceRolloutRanking = computed(() => {
     .sort((a, b) => b.unlaunched - a.unlaunched || a.launchedPct - b.launchedPct || a.name.localeCompare(b.name, 'zh-CN'))
 })
 
-const backlogProvinces = computed(() => provinceRolloutRanking.value.slice(0, 6))
+const backlogProvinces = computed(() => provinceRolloutRanking.value.slice(0, 3))
+
+const currentBatchRows = computed<StatRow[]>(() => [...batches.value]
+  .map((batch) => ({ ...batch, pending: Math.max(0, batch.total - batch.launched - batch.dual) }))
+  .sort((left, right) => right.pending - left.pending || left.batchId - right.batchId)
+  .slice(0, 5)
+  .map((batch) => ({
+    id: batch.batchId,
+    label: batch.name,
+    sub: `总 ${format(batch.total)} · 待推进 ${format(batch.pending)}`,
+    value: format(batch.launched),
+    unit: '家上线',
+    progress: batch.launchedPct,
+    progressAlt: batch.total > 0 ? Math.round((batch.dual * 1000) / batch.total) / 10 : 0,
+    progressLabel: '上线率',
+    progressAltLabel: '双轨率',
+    tone: batch.launchedPct < 50 ? 'warning' : 'success',
+  })))
+
+const provinceBacklogRows = computed<StatRow[]>(() => {
+  const max = Math.max(1, ...backlogProvinces.value.map((province) => province.unlaunched))
+  return backlogProvinces.value.map((province) => ({
+    id: province.name,
+    label: province.name,
+    sub: `上线率 ${province.launchedPct}%`,
+    value: province.unlaunched,
+    unit: '家待推进',
+    progress: (province.unlaunched * 100) / max,
+    tone: 'warning',
+  }))
+})
 
 const coveredProvinceCount = computed(() => new Set(store.provinceSummary.map((p) => p.name)).size)
 
@@ -76,7 +100,6 @@ const contactFacts = computed<StatRow[]>(() => [
   { label: '待补齐缺口', value: format(contactCoverage.value?.gap), tone: 'warning' },
 ])
 
-const provinceRolloutOption = computed(() => createProvinceRolloutOption(backlogProvinces.value))
 </script>
 
 <template>
@@ -98,18 +121,11 @@ const provinceRolloutOption = computed(() => createProvinceRolloutOption(backlog
     <div class="grid grid-rows-rollout-body gap-2.5 flex-1 min-h-0">
       <!-- C2 同屏表达批次当前态与历史态；C4/C5 只展示缺口与例外 -->
       <div class="grid grid-cols-rollout-analysis grid-rows-rollout-analysis gap-2.5 min-h-0">
-        <CockpitPanel title="批次推进全景" zone="C2" subtitle="左看当前构成，右看历史爬坡" class="col-span-8 row-span-2">
-          <template #actions>
-            <PanelLegend compact :items="[
-              { label: '已上线', tone: 'success' },
-              { label: '双轨', tone: 'warning' },
-              { label: '待推进', tone: 'neutral' },
-            ]" />
-          </template>
+        <CockpitPanel title="批次推进全景" zone="C2" subtitle="左看当前缺口，右看历史爬坡" class="col-span-8 row-span-2">
           <div class="grid grid-cols-12 gap-3 h-full min-h-0">
             <section class="col-span-5 flex flex-col min-h-0 pr-3 border-r border-surface-veil-06">
-              <span class="text-cockpit-xs text-slate-500 flex-shrink-0">当前批次状态构成</span>
-              <ChartCanvas class="flex-1" :option="batchCompositionOption" />
+              <span class="text-cockpit-xs text-slate-500 flex-shrink-0">当前待推进最多五批</span>
+              <StatList class="flex-1" :rows="currentBatchRows" flat density="dense" />
             </section>
             <section class="col-span-7 flex flex-col min-h-0">
               <span class="text-cockpit-xs text-slate-500 flex-shrink-0">历史上线率与双轨率</span>
@@ -123,15 +139,8 @@ const provinceRolloutOption = computed(() => createProvinceRolloutOption(backlog
           </div>
         </CockpitPanel>
 
-        <CockpitPanel title="省域推进缺口" zone="C4" subtitle="待推进单位最多六省" class="col-span-4 min-h-0">
-          <template #actions>
-            <PanelLegend compact :items="[
-              { label: '已上线', tone: 'accent' },
-              { label: '双轨', tone: 'warning' },
-              { label: '其他', tone: 'neutral' },
-            ]" />
-          </template>
-          <ChartCanvas :option="provinceRolloutOption" />
+        <CockpitPanel title="省域推进缺口" zone="C4" subtitle="待推进单位最多三省" class="col-span-4 min-h-0">
+          <StatList :rows="provinceBacklogRows" ranked density="dense" />
         </CockpitPanel>
 
         <CockpitPanel title="联系人覆盖例外" zone="C5" subtitle="只在存在缺口时展示分布" class="col-span-4 min-h-0">

@@ -11,13 +11,6 @@ import {
 import { CHART_FONT } from './tokens'
 import { parsePercentage, type CompositionTone } from './panelData'
 
-interface RolloutSeriesItem {
-  name: string
-  launched: number
-  dual: number
-  pending: number
-}
-
 interface CoverageSeriesItem {
   covered: number
   gap: number
@@ -90,37 +83,6 @@ export function createOverviewCompositionOption(parts: CompositionPart[], total:
         formatter: `${part.percentage}%`,
       },
     })),
-  } satisfies EChartsOption
-}
-
-export function createRolloutCompositionOption(list: RolloutSeriesItem[]) {
-  return {
-    ...calmAnimation,
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip },
-    grid: { left: 8, right: 12, top: 6, bottom: 6, containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: list.map((batch) => batch.name),
-      axisTick: { show: false },
-      axisLine: { lineStyle: { color: chartInk.border } },
-      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.caption },
-    },
-    yAxis: { ...valueAxis, axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.caption } },
-    series: [
-      {
-        name: '已上线', type: 'bar', stack: 'units', barMaxWidth: 36,
-        data: list.map((batch) => batch.launched), itemStyle: { color: chartPalette.success },
-      },
-      {
-        name: '双轨', type: 'bar', stack: 'units',
-        data: list.map((batch) => batch.dual), itemStyle: { color: chartPalette.warning },
-      },
-      {
-        name: '待推进', type: 'bar', stack: 'units',
-        data: list.map((batch) => batch.pending),
-        itemStyle: { color: chartPalette.neutral, borderRadius: [3, 3, 0, 0] },
-      },
-    ],
   } satisfies EChartsOption
 }
 
