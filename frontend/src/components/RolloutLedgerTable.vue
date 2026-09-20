@@ -32,6 +32,7 @@ const {
   page,
   totalPages,
   loading,
+  error: loadError,
   goToPage,
   refresh,
 } = useOrganizations({
@@ -49,7 +50,13 @@ function resetFilters() {
   query.value = ''
 }
 
-const { editing, draft, saving, error: editError, open: openEdit, close: closeEdit, save } = useEntityEditor()
+const { editing, draft, saving, error: editError, open: openEdit, close: closeEdit, save } = useEntityEditor({
+  onSaved(id, patch) {
+    const row = paginatedEntities.value.find((item) => item.id === id)
+    if (row) Object.assign(row, patch, { updatedAt: '刚刚' })
+    void refresh()
+  },
+})
 
 // 分页器需要双向绑定支持
 function handlePageChange(newPage: number) {
@@ -68,6 +75,15 @@ function handlePageChange(newPage: number) {
     <template #actions>
       <div class="flex items-center gap-2">
         <Loader2 v-if="loading" :size="14" class="animate-spin text-slate-400" />
+        <button
+          v-if="loadError && !loading"
+          type="button"
+          class="text-cockpit-xs text-rose-400 hover:text-rose-300 cursor-pointer"
+          :title="loadError.message"
+          @click="refresh"
+        >
+          刷新失败 · 重试
+        </button>
         <SearchInput v-model="query" placeholder="搜索单位/联系人/批次/省份" />
         <FilterSelect v-model="selectedBatch" :options="batchOptions" />
         <FilterSelect v-model="selectedProvince" :options="provinces" />

@@ -34,6 +34,17 @@ export const test = base.extend({
       }
       let data: unknown
       if (url.pathname === '/api/dashboard/snapshot') data = { ...snapshot, meta: { ...snapshot.meta, source: 'live', asOfDate: '2026-09-11', generatedAt: '2026-09-11 10:00:00' } }
+      else if (url.pathname === '/api/organizations') {
+        const page = Number(url.searchParams.get('page') ?? 1)
+        const pageSize = Number(url.searchParams.get('page_size') ?? 20)
+        const start = (page - 1) * pageSize
+        data = {
+          items: snapshot.entities.slice(start, start + pageSize),
+          total: snapshot.entities.length,
+          page,
+          page_size: pageSize,
+        }
+      }
       else if (url.pathname === '/api/insights/briefing') data = { status: 'no_briefing' }
       else if (url.pathname === '/api/insights/status') data = { automlStatus: 'NOT_EVALUATED', hw_ml: { status: 'unavailable' }, cf_ai: { status: 'disabled' } }
       else if (url.pathname === '/api/governance/recent-activities') data = [activity]
