@@ -28,6 +28,7 @@ import {
   chartPalette,
   chartTooltip,
 } from '../charts/theme.ts'
+import { CHART_FONT } from '../charts/tokens.ts'
 import { buildOverviewComposition, buildTaskStageSeries } from '../charts/panelData.ts'
 import {
   createTaskStageMatrixOption,
@@ -165,7 +166,7 @@ const readinessPieOption = computed(() => ({
     orient: 'vertical',
     right: 10,
     top: 'center',
-    textStyle: { color: chartColors.textMuted, fontSize: 13 },
+    textStyle: { color: chartColors.textMuted, fontSize: CHART_FONT.caption },
     itemWidth: 10,
     itemHeight: 10,
   },

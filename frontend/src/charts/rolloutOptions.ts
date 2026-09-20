@@ -1,5 +1,6 @@
 import { formatCount } from '../formatters/metrics'
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from './theme'
+import { CHART_FONT } from './tokens'
 
 export interface RolloutCommandSummary {
   total: number
@@ -46,17 +47,17 @@ export function createRolloutTrendMatrixOption(points: RolloutTrendPoint[]) {
     xAxis: {
       type: 'category', data: dates,
       axisLine: { lineStyle: { color: chartInk.border } }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 13 },
+      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.caption },
     },
     yAxis: {
       type: 'category', data: batches.map((batch) => batch.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 13 },
+      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.caption },
     },
     series: [{
       type: 'heatmap', data: matrix,
       label: {
-        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 12,
+        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: CHART_FONT.axis,
         formatter: (params: any) => `${params.value?.[2] ?? 0}%`,
       },
       itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 2, borderRadius: 3 },
@@ -81,7 +82,7 @@ export function createRolloutCommandOption(summary: RolloutCommandSummary) {
     yAxis: {
       type: 'category', data: states.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 12 },
+      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.axis },
     },
     series: [
       {
@@ -91,10 +92,10 @@ export function createRolloutCommandOption(summary: RolloutCommandSummary) {
         progress: { show: true, roundCap: true, width: 9, itemStyle: { color: chartPalette.success } },
         axisLine: { lineStyle: { width: 9, color: [[1, chartInk.borderSoft]] } },
         axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false },
-        title: { show: true, offsetCenter: [0, '42%'], color: chartInk.textMuted, fontSize: 12 },
+        title: { show: true, offsetCenter: [0, '42%'], color: chartInk.textMuted, fontSize: CHART_FONT.axis },
         detail: {
           offsetCenter: [0, '-6%'], color: chartInk.textPrimary,
-          fontFamily: 'monospace', fontSize: 19, formatter: '{value}%',
+          fontFamily: 'monospace', fontSize: CHART_FONT.metric, formatter: '{value}%',
         },
         data: [{ value: rate, name: '总体上线率' }],
       },
@@ -104,7 +105,7 @@ export function createRolloutCommandOption(summary: RolloutCommandSummary) {
         data: states.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
         label: {
           show: true, position: 'right', color: chartInk.textPrimary,
-          fontFamily: 'monospace', fontSize: 12,
+          fontFamily: 'monospace', fontSize: CHART_FONT.axis,
           formatter: (params: any) => formatCount(params.value),
         },
       },

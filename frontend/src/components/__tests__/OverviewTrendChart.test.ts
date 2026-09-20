@@ -69,4 +69,11 @@ describe('OverviewTrendChart', () => {
     // Today is centered at index 3
     expect(option.xAxis.data[3]).toBe(today)
   })
+
+  it('shows the shared empty state instead of an empty coordinate system', () => {
+    const wrapper = mount(OverviewTrendChart, { props: { data: [] } })
+
+    expect(wrapper.text()).toContain('暂无趋势数据')
+    expect(wrapper.findComponent(VChart).exists()).toBe(false)
+  })
 })

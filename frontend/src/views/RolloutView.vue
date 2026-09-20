@@ -16,6 +16,7 @@ import { calmAnimation, chartInk, chartPalette, chartTooltip } from '../charts/t
 import { buildCoverageComposition, buildRolloutComposition } from '../charts/panelData.ts'
 import { createCoverageOption, createRolloutCompositionOption } from '../charts/panelOptions.ts'
 import { createRolloutCommandOption, createRolloutTrendMatrixOption } from '../charts/rolloutOptions.ts'
+import { CHART_FONT } from '../charts/tokens.ts'
 import { formatCount as format } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 
@@ -96,12 +97,12 @@ const provinceRolloutOption = computed(() => ({
     data: topProvinces.value.map((v) => v.name),
     axisLine: { lineStyle: { color: chartColors.border } },
     axisTick: { show: false },
-    axisLabel: { color: chartColors.textMuted, fontSize: 12, interval: 0 },
+    axisLabel: { color: chartColors.textMuted, fontSize: CHART_FONT.axis, interval: 0 },
   },
   yAxis: {
     type: 'value',
     splitLine: { lineStyle: { color: chartColors.border, opacity: 0.4 } },
-    axisLabel: { color: chartColors.textMuted, fontSize: 12 },
+    axisLabel: { color: chartColors.textMuted, fontSize: CHART_FONT.axis },
   },
   series: [
     {

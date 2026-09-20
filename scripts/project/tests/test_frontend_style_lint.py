@@ -60,6 +60,7 @@ class FrontendStyleLintTests(unittest.TestCase):
                         "<style scoped>\n.live-rule { color: var(--color-sky-400); }\n</style>\n"
                     ),
                     "charts/x.ts": "export const c = '#38bdf8'\n",
+                    "charts/y.ts": "export const option = { fontSize: 12 }\n",
                 },
             )
             (root / "frontend" / "src" / "styles" / "legacy.css").write_text("", encoding="utf-8")
@@ -71,6 +72,7 @@ class FrontendStyleLintTests(unittest.TestCase):
             self.assertIn("unreferenced selector '.dead-rule'", problems)
             self.assertIn("App.vue: <style> uses tokens without @reference", problems)
             self.assertIn("charts/x.ts:1: colour literal outside charts/theme.ts", problems)
+            self.assertIn("charts/y.ts:1: chart fontSize literal", problems)
 
     def test_line_numbers_survive_comment_stripping(self) -> None:
         with TemporaryDirectory() as directory:
