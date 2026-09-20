@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 
-defineProps<{ label: string }>()
+withDefaults(defineProps<{
+  label: string
+  size?: 'sm' | 'wide'
+}>(), { size: 'sm' })
 const emit = defineEmits<{ (e: 'close'): void }>()
 const panel = ref<HTMLElement | null>(null)
 let previousFocus: HTMLElement | null = null
@@ -40,7 +43,17 @@ onUnmounted(() => { if (previousFocus?.isConnected) previousFocus.focus() })
 <template>
   <Teleport to="body">
     <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center" @click.self="emit('close')" @keydown="onKey">
-      <aside ref="panel" role="dialog" aria-modal="true" :aria-label="label" tabindex="-1" class="w-[420px] max-w-[90vw] max-h-[85vh] bg-slate-900 border border-white/10 rounded-xl p-5 flex flex-col gap-4 shadow-2xl overflow-y-auto">
+      <aside
+        ref="panel"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="label"
+        tabindex="-1"
+        class="bg-slate-900 border border-white/10 rounded-xl flex flex-col gap-4 shadow-2xl"
+        :class="size === 'wide'
+          ? 'w-11/12 h-5/6 max-w-none max-h-none p-3 overflow-hidden'
+          : 'w-[420px] max-w-[90vw] max-h-[85vh] p-5 overflow-y-auto'"
+      >
         <slot />
       </aside>
     </div>

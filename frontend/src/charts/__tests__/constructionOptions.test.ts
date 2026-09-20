@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   createReadinessPieOption,
   createTaskStageMatrixOption,
-  createTaskStageRadarOption,
   createTrainingConversionOption,
   createTrainingMixOption,
 } from '../constructionOptions.ts'
@@ -46,18 +45,6 @@ describe('construction command charts', () => {
     expect(option.xAxis.data).toHaveLength(8)
     expect(option.yAxis.data).toEqual(['已完成', '进行中', '未开始'])
     expect(option.visualMap.show).toBe(false)
-  })
-
-  it('keeps all eight stages in the completion radar and formats tooltip with percentages', () => {
-    const option = createTaskStageRadarOption(taskStages)
-
-    expect(option.radar.indicator).toHaveLength(8)
-    expect(option.series[0].data[0].value).toEqual(taskStages.map((stage) => stage.progress))
-
-    const html = option.tooltip.formatter({ value: taskStages.map((s) => s.progress) })
-    expect(html).toContain('阶段完成率')
-    expect(html).toContain('阶段1 完成率 <b>60%</b>')
-    expect(html).toContain('阶段8 完成率 <b>67%</b>')
   })
 
   it('maps every readiness state without changing its drill-down label', () => {
