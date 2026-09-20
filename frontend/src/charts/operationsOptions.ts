@@ -1,3 +1,4 @@
+import type { EChartsOption } from 'echarts'
 import { formatCount } from '../formatters/metrics'
 import { parsePercentage } from './panelData'
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from './theme'
@@ -55,7 +56,7 @@ function createHorizontalVolumeOption(items: OutcomeItem[]) {
         formatter: (params: any) => formatCount(params.value),
       },
     }],
-  }
+  } satisfies EChartsOption
 }
 
 export function createOperationsOverviewOption(counts: OperationsOverviewCounts) {
@@ -84,7 +85,7 @@ export function createOperationsOverviewOption(counts: OperationsOverviewCounts)
         formatter: (params: any) => formatCount(params.value),
       },
     }],
-  }
+  } satisfies EChartsOption
 }
 
 export function createOperationsFlowOption(counts: OperationsOverviewCounts) {
@@ -115,7 +116,7 @@ export function createOperationsTrendOption(points: OperationsTrendPoint[]) {
       { name: '凭证日增', type: 'bar', barMaxWidth: 16, data: points.map((point) => point.vouchers), itemStyle: { color: chartPalette.success, borderRadius: [3, 3, 0, 0] } },
       { name: '集成成功率', type: 'line', yAxisIndex: 1, data: points.map((point) => point.integrationSuccessPct), connectNulls: false, symbolSize: 5, lineStyle: { color: chartPalette.warning, width: 2 }, itemStyle: { color: chartPalette.warning } },
     ],
-  }
+  } satisfies EChartsOption
 }
 
 export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
@@ -125,7 +126,7 @@ export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
     ...calmAnimation,
     tooltip: {
       trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip,
-      formatter: (params: any[]) => {
+      formatter: (params: any) => {
         const item = reversed[params?.[0]?.dataIndex]
         if (!item) return ''
         return `${item.rule}<br/>核验规模 <b>${formatCount(item.total)} ${item.unit}</b><br/>检出异常 <b>${formatCount(item.errors)}</b> · 合规率 ${item.rate == null ? '—' : `${item.rate}%`}<br/><span style="color:${chartInk.textMuted}">柱长为对数尺度，仅比较数量级</span>`
@@ -160,7 +161,7 @@ export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
         },
       },
     }],
-  }
+  } satisfies EChartsOption
 }
 
 export function createIntegrationOutcomeOption(success?: number | null, failed?: number | null) {
@@ -196,7 +197,7 @@ export function createVoucherQualityOption(
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       ...chartTooltip,
-      formatter: (params: any[]) => {
+      formatter: (params: any) => {
         const item = volumes[params?.[0]?.dataIndex]
         return item ? `${item.name}<br/><b>${formatCount(item.value)}</b>` : ''
       },
@@ -259,5 +260,5 @@ export function createVoucherQualityOption(
         },
       },
     ],
-  }
+  } satisfies EChartsOption
 }
