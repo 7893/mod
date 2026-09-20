@@ -11,12 +11,12 @@ import {
   ShieldAlert,
   Sparkles,
 } from 'lucide-vue-next'
-import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
+import ChartCanvas from '../components/charts/ChartCanvas.vue'
 import BriefingList from '../components/blocks/BriefingList.vue'
 import CommandBand from '../components/blocks/CommandBand.vue'
 import EmptyNote from '../components/blocks/EmptyNote.vue'
@@ -31,18 +31,10 @@ import { describeExperimentalModel } from '../utils/modelEvaluation.ts'
 import { useProjectStore } from '../stores/project.ts'
 import { useInsightsStatus } from '../composables/useInsightsStatus.ts'
 import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
-import {
-  chartPalette,
-  chartInk,
-  chartTooltip,
-  valueAxis,
-  calmAnimation,
-} from '../charts/theme.ts'
-import { CHART_FONT } from '../charts/tokens.ts'
 import { buildRiskDimensionBreakdown } from '../utils/qualityMetrics.ts'
 import { deriveAtRiskUnits, indexPredictions } from '../utils/riskRules.ts'
 import { parseBriefingSections } from '../utils/briefing.ts'
-import { createRiskOverviewOption } from '../charts/insightsOptions.ts'
+import { createRiskDimensionOption, createRiskOverviewOption } from '../charts/insightsOptions.ts'
 
 use([CanvasRenderer, BarChart, PieChart, GridComponent, TitleComponent, TooltipComponent])
 
@@ -72,99 +64,10 @@ const prepStuckCount = computed(() => atRiskUnits.value.filter((u) => u.riskType
 const riskDimensions = computed(() => buildRiskDimensionBreakdown(atRiskUnits.value, store.snapshot.businessRules))
 const highRiskCount = computed(() => atRiskUnits.value.filter((u) => u.riskLevel === '高危').length)
 
-const riskDistChartOption = computed(() => {
-  const list = [...riskDimensions.value].reverse()
-  const total = atRiskUnits.value.length
-
-  return {
-    ...calmAnimation,
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      ...chartTooltip,
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params
-        const raw = list[p?.dataIndex]
-        if (!raw) return ''
-        const pct = total > 0 ? ((raw.count / total) * 100).toFixed(1) : '0.0'
-        const batchKeys = Object.keys(raw.batchDistribution)
-        const batchDetails = batchKeys.length
-          ? batchKeys.map((k) => `${k} (${raw.batchDistribution[k]}家)`).join('、')
-          : '暂无集中批次'
-
-        return `
-          <div style="font-size: 12px; line-height: 1.6;">
-            <div style="font-weight: 600; color: ${chartInk.textPrimary}; margin-bottom: 4px;">${raw.type} · 高危 ${raw.highCount} / 关注 ${raw.count - raw.highCount}</div>
-            <div style="color: ${chartInk.textMuted};">预警规模: <b style="color: ${chartInk.textPrimary}; font-family: monospace;">${raw.count} 家</b> (${pct}%)</div>
-            <div style="color: ${chartInk.textMuted};">集中批次: <span style="color: ${chartInk.textPrimary};">${batchDetails}</span></div>
-            <div style="color: ${chartInk.textMuted}; margin-top: 4px; border-top: 1px dashed ${chartInk.borderSoft}; padding-top: 4px;">门禁规则: ${raw.gate}</div>
-          </div>
-        `
-      },
-    },
-    grid: {
-      top: 10,
-      bottom: 4,
-      left: 80,
-      right: 60,
-      containLabel: true,
-    },
-    xAxis: {
-      ...valueAxis,
-      minInterval: 1,
-      // 数值已标注在柱右侧，坐标轴刻度只会在窄宽度下互相重叠。
-      axisLabel: { show: false },
-      splitLine: {
-        lineStyle: {
-          color: chartInk.borderSoft,
-          type: 'dashed',
-        },
-      },
-    },
-    yAxis: {
-      type: 'category',
-      data: list.map((i) => i.type),
-      axisLabel: {
-        color: chartInk.textMuted,
-        fontSize: CHART_FONT.caption,
-      },
-      axisTick: { show: false },
-      axisLine: {
-        lineStyle: { color: chartInk.border },
-      },
-    },
-    series: [
-      {
-        name: '单位数量',
-        type: 'bar',
-        barWidth: 12,
-        data: list.map((item) => ({
-          value: item.count,
-          itemStyle: {
-            borderRadius: [0, 4, 4, 0],
-            color: item.tone === 'danger'
-              ? chartPalette.danger
-              : (item.tone === 'warning' ? chartPalette.warning : chartPalette.accent),
-          },
-        })),
-        label: {
-          show: true,
-          position: 'right',
-          color: chartInk.textPrimary,
-          fontFamily: 'monospace',
-          fontSize: CHART_FONT.caption,
-          fontWeight: 'bold',
-          formatter: '{c} 家',
-        },
-        showBackground: true,
-        backgroundStyle: {
-          color: chartInk.borderSoft,
-          borderRadius: [0, 4, 4, 0],
-        },
-      },
-    ],
-  }
-})
+const riskDistChartOption = computed(() => createRiskDimensionOption(
+  riskDimensions.value,
+  atRiskUnits.value.length,
+))
 
 // KI-080: fit scores describe synthetic-label experiments, not validated future outcomes.
 const insights = computed(() => {
@@ -180,11 +83,11 @@ const insights = computed(() => {
   }
 })
 
-const riskOverviewOption = computed(() => createRiskOverviewOption([
-  { name: '双轨差异', value: dualDiffCount.value, color: chartPalette.danger },
-  { name: '建设迟滞', value: constLagCount.value, color: chartPalette.warning },
-  { name: '准备卡顿', value: prepStuckCount.value, color: chartPalette.accent },
-]))
+const riskOverviewOption = computed(() => createRiskOverviewOption({
+  dualDifference: dualDiffCount.value,
+  constructionLag: constLagCount.value,
+  preparationStuck: prepStuckCount.value,
+}))
 
 const riskUnitTotal = computed(() => dualDiffCount.value + constLagCount.value + prepStuckCount.value)
 
@@ -229,7 +132,7 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
         <template #chart>
           <div class="grid grid-cols-12 h-full min-h-0">
             <MetricGrid class="col-span-3 border-r border-surface-veil-06 pr-2" :items="riskHeadline" flat fill align="center" />
-            <VChart class="col-span-9 w-full h-full min-h-0" :option="riskOverviewOption" autoresize />
+            <ChartCanvas class="col-span-9" :option="riskOverviewOption" />
           </div>
         </template>
         <template #aside>
@@ -294,7 +197,7 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
               <span class="font-mono text-cockpit-xs text-slate-400">共 {{ atRiskUnits.length }} 家预警</span>
             </div>
             <div class="flex-1 min-h-0 w-full">
-              <VChart class="w-full h-full min-h-0" :option="riskDistChartOption" autoresize />
+              <ChartCanvas :option="riskDistChartOption" />
             </div>
             <div class="flex items-center justify-between pt-1 border-t border-surface-veil-06 text-cockpit-xs text-slate-500">
               <span>门禁：凭证率 &lt; {{ store.snapshot.businessRules.lifecycle.dualRunConsistencyRateMin }}% / 进度 &lt; {{ store.snapshot.businessRules.risk.constructionLagRate }}%</span>
