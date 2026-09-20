@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ArrowRight, Check, FileCheck2, Scale, ServerCog, Workflow } from 'lucide-vue-next'
-import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, GaugeChart, LineChart } from 'echarts/charts'
@@ -13,6 +12,7 @@ import ChartFacts from '../components/blocks/ChartFacts.vue'
 import EmptyNote from '../components/blocks/EmptyNote.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
 import StatList from '../components/blocks/StatList.vue'
+import ChartCanvas from '../components/charts/ChartCanvas.vue'
 import type { BlockTone, MetricItem, StatRow } from '../components/blocks/types.ts'
 import { formatCount, formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
@@ -201,7 +201,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
             <span class="font-medium text-slate-300">主链路累计规模谱</span>
             <span class="text-slate-500">单据 / 凭证 / 集成</span>
           </div>
-          <VChart class="w-full flex-1 min-h-0" :option="operationsOverviewOption" autoresize />
+          <ChartCanvas class="flex-1" :option="operationsOverviewOption" />
         </template>
       </CommandBand>
     </CockpitPanel>
@@ -238,14 +238,17 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
             { label: '集成成功率', tone: 'warning' },
           ]" />
         </template>
-        <VChart v-if="operationsTrend.length" class="w-full h-full min-h-0" :option="operationsTrendOption" autoresize />
-        <EmptyNote v-else>暂无连续日吞吐数据</EmptyNote>
+        <ChartCanvas
+          :option="operationsTrendOption"
+          :empty="operationsTrend.length === 0"
+          empty-text="暂无连续日吞吐数据"
+        />
       </CockpitPanel>
 
       <!-- D4: 凭证生成质效 -->
       <CockpitPanel title="凭证生成质效" zone="D4" subtitle="成功率、生成规模与凭证结构">
         <ChartFacts>
-          <template #chart><VChart class="w-full h-full min-h-0" :option="voucherQualityOption" autoresize /></template>
+          <template #chart><ChartCanvas :option="voucherQualityOption" /></template>
           <template #facts><MetricGrid :items="voucherFacts" flat fill /></template>
         </ChartFacts>
       </CockpitPanel>
@@ -257,7 +260,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
             <MetricGrid :items="integrationHeadline" flat size="lg" align="center" />
             <MetricGrid :items="integrationFacts" flat size="xs" :columns="2" align="center" />
           </template>
-          <template #chart><VChart class="w-full h-full min-h-0" :option="integrationOutcomeOption" autoresize /></template>
+          <template #chart><ChartCanvas :option="integrationOutcomeOption" /></template>
         </ChartFacts>
       </CockpitPanel>
 
@@ -269,7 +272,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
             <!-- 三大对账维度穿透 (KI-053) -->
             <StatList v-if="dualRunBreakdownRows.length" :rows="dualRunBreakdownRows" flat density="dense" class="pt-2 border-t border-surface-veil-06 px-2" />
           </template>
-          <template #chart><VChart class="w-full h-full min-h-0" :option="dualRunOutcomeOption" autoresize /></template>
+          <template #chart><ChartCanvas :option="dualRunOutcomeOption" /></template>
         </ChartFacts>
         <EmptyNote v-else>当前快照未提供双轨明细</EmptyNote>
       </CockpitPanel>
@@ -288,7 +291,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
               </div>
               <span class="font-mono text-slate-500">对数尺度 · 标签为真实数量</span>
             </div>
-            <VChart class="w-full flex-1 min-h-0" :option="qualityVolumeOption" autoresize />
+            <ChartCanvas class="flex-1" :option="qualityVolumeOption" />
           </div>
         </div>
       </CockpitPanel>

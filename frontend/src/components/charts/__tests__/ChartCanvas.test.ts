@@ -17,9 +17,13 @@ import ChartCanvas from '../ChartCanvas.vue'
 describe('ChartCanvas', () => {
   it('renders an option and forwards semantic chart clicks', async () => {
     const option = { series: [{ type: 'pie', data: [1] }] } satisfies EChartsOption
-    const wrapper = mount(ChartCanvas, { props: { option } })
+    const wrapper = mount(ChartCanvas, {
+      props: { option },
+      attrs: { class: 'flex-1' },
+    })
 
     expect(wrapper.findComponent(VChart).props('option')).toEqual(option)
+    expect(wrapper.find('.v-chart-mock').classes()).toContain('flex-1')
     await wrapper.find('.v-chart-mock').trigger('click')
     expect(wrapper.emitted('chartClick')).toEqual([[{ name: '已导入' }]])
   })

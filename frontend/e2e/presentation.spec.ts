@@ -4,8 +4,8 @@ for (const screen of ['a', 'b', 'c', 'd', 'e', 'f', 'components']) {
   test(`${screen}: frozen scene and panel boundaries`, async ({ page }) => {
     await page.goto(`/#/${screen}`)
     await expect(page.locator('.link-state')).toHaveText('实时数据')
-    await page.clock.runFor(1800)
     await expect(page.locator('[data-zone]').first()).toBeVisible()
+    await page.clock.runFor(1800)
     const clipped = await page.locator('[data-zone]').evaluateAll(nodes => nodes.filter(node => {
       const r = node.getBoundingClientRect()
       return r.width > 0 && (r.left < -1 || r.right > innerWidth + 1 || r.bottom > innerHeight + 1)
