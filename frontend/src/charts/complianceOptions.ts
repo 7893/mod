@@ -1,4 +1,5 @@
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from './theme'
+import { CHART_FONT } from './tokens'
 
 export interface ComplianceOverviewData {
   rate: number | null
@@ -22,7 +23,7 @@ export function createComplianceOverviewOption(data: ComplianceOverviewData) {
     yAxis: {
       type: 'category', data: levels.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 12 },
+      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.axis },
     },
     series: [
       {
@@ -32,10 +33,10 @@ export function createComplianceOverviewOption(data: ComplianceOverviewData) {
         progress: { show: data.rate != null, roundCap: true, width: 9, itemStyle: { color: chartPalette.success } },
         axisLine: { lineStyle: { width: 9, color: [[1, chartInk.borderSoft]] } },
         axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false },
-        title: { show: true, offsetCenter: [0, '42%'], color: chartInk.textMuted, fontSize: 12 },
+        title: { show: true, offsetCenter: [0, '42%'], color: chartInk.textMuted, fontSize: CHART_FONT.axis },
         detail: {
           offsetCenter: [0, '-6%'], color: chartInk.textPrimary,
-          fontFamily: 'monospace', fontSize: 19,
+          fontFamily: 'monospace', fontSize: CHART_FONT.metric,
           formatter: data.rate == null ? '—' : '{value}%',
         },
         data: [{ value: rate, name: '全网合规率' }],
@@ -46,7 +47,7 @@ export function createComplianceOverviewOption(data: ComplianceOverviewData) {
         data: levels.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
         label: {
           show: true, position: 'right', color: chartInk.textPrimary,
-          fontFamily: 'monospace', fontSize: 12, formatter: '{c} 家',
+          fontFamily: 'monospace', fontSize: CHART_FONT.axis, formatter: '{c} 家',
         },
       },
     ],

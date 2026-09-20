@@ -6,6 +6,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { GaugeChart } from 'echarts/charts'
 import { Cpu, Sparkles } from 'lucide-vue-next'
 import { calmAnimation, chartInk, chartPalette } from '../charts/theme.ts'
+import { CHART_FONT } from '../charts/tokens.ts'
 
 use([CanvasRenderer, GaugeChart])
 
@@ -56,12 +57,12 @@ const qualityOption = computed(() => ({
     axisTick: { show: false },
     splitLine: { show: false },
     axisLabel: { show: false },
-    title: { show: true, offsetCenter: [0, '35%'], color: chartInk.textMuted, fontSize: 11 },
+    title: { show: true, offsetCenter: [0, '35%'], color: chartInk.textMuted, fontSize: CHART_FONT.micro },
     detail: {
       offsetCenter: [0, '-6%'],
       color: chartInk.textPrimary,
       fontFamily: 'monospace',
-      fontSize: 16,
+      fontSize: CHART_FONT.subMetric,
       formatter: qualityLabel.value,
     },
     data: [{ value: qualityPercent.value, name: '测试集拟合' }],

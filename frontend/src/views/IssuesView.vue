@@ -28,6 +28,7 @@ import {
   compactGrid,
   valueAxis,
 } from '../charts/theme.ts'
+import { CHART_FONT } from '../charts/tokens.ts'
 import { formatCount as format } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import { createBatchComplianceOption } from '../charts/panelOptions.ts'
@@ -125,7 +126,7 @@ const tagBarOption = computed(() => ({
   ...calmAnimation,
   tooltip: { trigger: 'axis', ...chartTooltip },
   grid: { ...compactGrid, bottom: 18 },
-  xAxis: { ...categoryAxis, data: tagDimensionCounts.value.map((t) => t.label), axisLabel: { ...categoryAxis.axisLabel, interval: 0, fontSize: 12 } },
+  xAxis: { ...categoryAxis, data: tagDimensionCounts.value.map((t) => t.label), axisLabel: { ...categoryAxis.axisLabel, interval: 0, fontSize: CHART_FONT.axis } },
   yAxis: valueAxis,
   series: [{ name: '涉及单位数', type: 'bar', data: tagDimensionCounts.value.map((t) => ({ value: t.count, itemStyle: { color: t.color } })), barWidth: '42%', barMaxWidth: 48, itemStyle: { borderRadius: [3, 3, 0, 0] } }],
 }))
@@ -133,7 +134,7 @@ const tagBarOption = computed(() => ({
 const riskPieOption = computed(() => ({
   ...calmAnimation,
   tooltip: { trigger: 'item', ...chartTooltip },
-  legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { color: chartInk.textMuted, fontSize: 13 }, itemWidth: 10, itemHeight: 10 },
+  legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { color: chartInk.textMuted, fontSize: CHART_FONT.caption }, itemWidth: 10, itemHeight: 10 },
   series: [{
     name: '合规水位构成', type: 'pie', radius: ['45%', '70%'], center: ['35%', '50%'],
     data: [

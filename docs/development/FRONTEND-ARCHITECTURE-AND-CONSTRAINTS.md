@@ -104,8 +104,10 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
   手写 CSS 中引用形式为 `var(--color-sky-400)`，透明度用 `color-mix(in srgb, var(--color-…) N%, transparent)`。
 - 间距用 Tailwind 刻度（模板 `gap-3`，手写 CSS `--spacing(3)`），圆角用 `var(--radius-sm|md|lg)`，
   动效用 `var(--ease-out)` 与 `var(--default-transition-duration)`；不得再定义 `--space-*`、`--radius-*`、`--duration-*`。
-- 图表（ECharts option）内的颜色只能取自 `charts/theme.ts` 的 `chartPalette`/`chartInk`/`mapRamp`，
-  不得在组件内写色值字面量。
+- 图表（ECharts option）内的颜色只能取自 `charts/theme.ts` 的 `chartPalette`/`chartInk`/`mapRamp`；
+  Canvas 无法可靠消费 CSS 变量，图表字号统一取自 `charts/tokens.ts` 的 `CHART_FONT`，不得在
+  option 中写字号数字字面量。几何数值只有在跨图表形成稳定语义时才提升为 Token，禁止为了消灭
+  所有数字而制造一一对应的“伪 Token”。
 - SFC 内如需手写引用 Token 的 `<style>`，块首必须 `@reference "../styles.css";`。
 - 已定义的 Token（模板直接引用其工具类，禁止再写等价任意值）：
   - 骨架：`grid-cols-cockpit`（三栏 390px/1fr/370px）、`grid-rows-dashboard-left` 与 `grid-rows-dashboard-stack`；
@@ -120,6 +122,9 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
   发现与契约重复或已失效的 CSS 应删除，而非叠加。
 - 严禁新增 `bg-[#xxxxxx]`、`text-[13px]` 这类脱离 Token 的任意值；确需新值，先在 `theme.css`
   沉淀为 Token 再引用。
+- Vue 组件不得新增内联 ECharts option；图表业务映射放入 `charts/*Options.ts` 纯函数，组件只注册
+  所需 ECharts 模块并传入数据。统一的加载、错误、空态和 `autoresize` 由
+  `components/charts/ChartCanvas.vue` 承担；地图等特殊交互仍可使用专用组件，不强制塞入万能图表物料。
 - **Arbitrary Value 允许与禁止边界（[KI-018](../issues/KI-018-前端契约任意值lint.md) / [KI-022](../issues/KI-022-前端迁移收尾小修.md) 闭环）**：
   - **严格禁止（Strictly Forbidden）**：禁止在字号（如 `text-[10px]`）、颜色（如 `bg-[#...]`、`border-[...]`）、基础内外边距（如 `p-[12px]`）等已有系统化 Token 维度使用 arbitrary value。
   - **受控允许（Layout Guardrails）**：在大屏图表（ECharts/SVG）、折线走势或复杂弹性栅格中，为防止极端缩放下图表塌陷而设立的物理高度上下界（如 `min-h-[220px]`、`max-h-[350px]`），作为 Layout Guardrails 受控允许；通用宽度或网格列宽能沉淀为 Token（如 `--grid-template-columns-ops-volume`、`min-w-44`）的应优先沉淀。

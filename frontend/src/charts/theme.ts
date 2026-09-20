@@ -1,3 +1,5 @@
+import { CHART_FONT } from './tokens'
+
 /**
  * 图表主题：与 styles/theme.css 的设计令牌保持同一套色值。
  *
@@ -41,7 +43,7 @@ export const chartSeriesColors = [
   chartPalette.neutral,
 ] as const
 
-const axisLabel = { color: chartInk.textMuted, fontSize: 14 }
+const axisLabel = { color: chartInk.textMuted, fontSize: CHART_FONT.body }
 
 /** 统一 tooltip：深底、细边、无花哨阴影，全局 confine 限制在图表容器内防越界遮挡 (KI-065)。 */
 export const chartTooltip = {
@@ -50,7 +52,7 @@ export const chartTooltip = {
   borderColor: chartInk.border,
   borderWidth: 1,
   padding: [8, 12] as [number, number],
-  textStyle: { color: chartInk.textPrimary, fontSize: 15 },
+  textStyle: { color: chartInk.textPrimary, fontSize: CHART_FONT.tooltip },
 }
 
 /** 类目轴统一样式。 */

@@ -38,6 +38,7 @@ import {
   valueAxis,
   calmAnimation,
 } from '../charts/theme.ts'
+import { CHART_FONT } from '../charts/tokens.ts'
 import { buildRiskDimensionBreakdown } from '../utils/qualityMetrics.ts'
 import { deriveAtRiskUnits, indexPredictions } from '../utils/riskRules.ts'
 import { parseBriefingSections } from '../utils/briefing.ts'
@@ -125,7 +126,7 @@ const riskDistChartOption = computed(() => {
       data: list.map((i) => i.type),
       axisLabel: {
         color: chartInk.textMuted,
-        fontSize: 13,
+        fontSize: CHART_FONT.caption,
       },
       axisTick: { show: false },
       axisLine: {
@@ -151,7 +152,7 @@ const riskDistChartOption = computed(() => {
           position: 'right',
           color: chartInk.textPrimary,
           fontFamily: 'monospace',
-          fontSize: 13,
+          fontSize: CHART_FONT.caption,
           fontWeight: 'bold',
           formatter: '{c} 家',
         },

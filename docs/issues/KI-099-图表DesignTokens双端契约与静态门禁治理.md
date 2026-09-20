@@ -14,19 +14,26 @@
 ## 目标与方案
 
 1. **建立图表专用 Design Tokens 契约**：
-   在 `frontend/src/charts/tokens.ts` 中建立类型安全的只读 Token 常量系统，涵盖字号阶梯（micro/caption/body/axis/subMetric/kpi）、栅格间距（grid margins）、柱宽线宽（barWidth/lineWidth）以及圆角半径，与 `theme.css` 实现语义对齐。
+   在 `frontend/src/charts/tokens.ts` 中建立类型安全的只读字号 Token（micro/axis/caption/body/tooltip/subMetric/metric/kpi），与 `theme.css` 的 DOM 字号语义对齐。栅格、柱宽、线宽和圆角只有在多个图表中形成稳定语义后再提升为 Token；单图特有几何仍属于 option，避免制造与裸数字一一对应的伪抽象。
 2. **新增图表静态治理门禁**：
-   新增 `scripts/project/lint_chart_tokens.py`，静态扫描所有前端代码，严禁出现裸数字字号（如 `fontSize: \d+`），强制引用 `CHART_FONT` 等 Token 常量。
+   扩展既有 `scripts/project/lint_frontend_styles.py`，静态扫描所有前端代码，严禁出现裸数字字号（如 `fontSize: \d+`），强制引用 `CHART_FONT`。复用现有检查器可避免新增重复 CLI、CI 步骤和维护入口。
 3. **纳入门禁流水线**：
-   将图表 Token 检查器接入 `Makefile`（`make check`）、Git `pre-commit` 钩子及 GitHub Actions CI 流程。
+   既有样式检查器已经接入 `Makefile`、Git `pre-commit` 与 GitHub Actions，规则随同生效。
 
 ## 修复范围与验收
 
-- [ ] 新建 `frontend/src/charts/tokens.ts`，导出标准字号、内边距与几何尺寸 Token。
-- [ ] 重构 `frontend/src/charts/*.ts` 与既有内嵌图表，全量替换裸数字字面量为 Token 引用。
-- [ ] 编写 `scripts/project/lint_chart_tokens.py` 并配套自动化单元测试。
-- [ ] 在 `make check` 与 pre-commit 增加该检查项，确保零误报且阻断非法硬编码提交。
-- [ ] 更新 `docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md`，固化图表 Token 契约。
+- [x] 新建 `frontend/src/charts/tokens.ts`，导出标准语义字号 Token。
+- [x] 重构 `frontend/src/charts/*.ts` 与既有内嵌图表，全量替换裸数字字号为 Token 引用。
+- [x] 扩展既有 `lint_frontend_styles.py` 并补充自动化单元测试，不新增重复检查器。
+- [x] 复用 `make check`、pre-commit 与 CI 中已有的样式检查步骤阻断非法硬编码。
+- [x] 更新 `docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md`，固化图表 Token 契约。
+- [ ] 完成全量检查与固定场景视觉回归后再关闭本 KI。
+
+## 2026-09-20 实施校正
+
+原方案要求一次性把所有图表几何数字都 Token 化，会形成大量仅被引用一次、与原数字一一对应的常量，
+反而增加跳转和命名成本。本次按“稳定重复才抽象”的原则缩小 Token 边界，并把门禁并入既有检查器；
+这项校正不降低字号治理强度，同时减少了脚本、流水线配置和长期维护面。
 
 ## 边界
 

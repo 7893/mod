@@ -9,6 +9,7 @@ Enforces docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md:
 - Media queries and clamp() live only in shell.css (outside the scaled canvas).
 - Every class selector in global CSS is referenced by a .vue/.ts file.
 - Colour literals in .vue/.ts (styles or ECharts options) live only in charts/theme.ts.
+- ECharts fontSize values use charts/tokens.ts semantic tokens, never numeric literals.
 - SFC <style> blocks that use tokens must start with @reference.
 """
 
@@ -28,6 +29,7 @@ CLASS_IN_SELECTOR = re.compile(r"\.([a-zA-Z_][\w-]*)")
 DYNAMIC_CLASS_PREFIXES = ("is-", "metric-grid--", "stat-list--", "status-list--", "chart-facts--")
 COMMENT = re.compile(r"/\*.*?\*/", re.S)
 STYLE_BLOCK = re.compile(r"<style\b[^>]*>(.*?)</style>", re.S)
+CHART_FONT_LITERAL = re.compile(r"\bfontSize\s*:\s*(?:\d+(?:\.\d+)?|['\"]\d+(?:\.\d+)?(?:px)?['\"])")
 
 
 def strip_comments(css: str) -> str:
@@ -118,6 +120,8 @@ def lint(repo_root: Path) -> list[str]:
                 problems.append(f"{rel}:{idx}: colour literal outside charts/theme.ts")
             if LEGACY_VAR.search(line):
                 problems.append(f"{rel}:{idx}: legacy token variable")
+            if CHART_FONT_LITERAL.search(line):
+                problems.append(f"{rel}:{idx}: chart fontSize literal; use CHART_FONT from charts/tokens.ts")
         if path.suffix == ".vue":
             for block in STYLE_BLOCK.findall(text):
                 body = strip_comments(block)

@@ -505,6 +505,7 @@ KI-060 更新前的本节原文完整保存在
 
 - **全局字体梯队放大（+2px）**：全局 CSS 变量体系（`theme.css`）与基础图表主题（`charts/*.ts`）全面上浮 2px（`xs: 13px, sm: 14px, md: 16px, lg: 18px, metric: 20px, kpi: 26px`）。
 - **组件及视图内嵌图表微小字号补齐**：补齐 `CockpitTopBar.vue`（A1 面板业务单据/会计凭证/接口集成字号与数值由 9px 提升至 11px，微调 `grid` 边距防遮挡）、`ModelContractCard.vue`、`OverviewTrendChart.vue`、`ChinaMap.vue` 以及各业务视图（Construction、Insights、Issues、Rollout）中散落硬编码的微小字号（9~11px 统一定向提升 2px 至 11~13px），彻底消除 10px 及以下微小字号，保障大屏全域视觉清晰可读。
+- **2026-09-20 Token 与物料化治理（本地重构，未部署）**：ECharts 字号已收敛到 `charts/tokens.ts` 的 `CHART_FONT`，既有样式检查器阻断新增裸 `fontSize`；A4 趋势图的时间窗与 option 已移入纯函数，组件改用统一 `ChartCanvas` 承担空态与 autoresize。KI-099/100 保持 OPEN，待全量检查、固定场景视觉回归及后续面板渐进迁移。
 
 ## 操作边界
 

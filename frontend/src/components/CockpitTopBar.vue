@@ -10,6 +10,7 @@ import AnimatedNumber from './AnimatedNumber.vue'
 import CockpitPanel from './CockpitPanel.vue'
 import LiveProjectionIndicator from './LiveProjectionIndicator.vue'
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from '../charts/theme.ts'
+import { CHART_FONT } from '../charts/tokens.ts'
 import { formatCount } from '../formatters/metrics.ts'
 import type { LiveProjectionCounts, LiveProjectionEvent } from '../composables/useLiveProjection.ts'
 import type { ProjectSnapshot } from '../stores/project.ts'
@@ -84,14 +85,14 @@ const operationsVolumeOption = computed(() => {
     yAxis: {
       type: 'category', data: items.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 11 },
+      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.micro },
     },
     series: [{
       type: 'bar', barWidth: 8, showBackground: true,
       backgroundStyle: { color: chartInk.borderSoft, borderRadius: 3 },
       data: items.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
       label: {
-        show: true, position: 'right', color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: 11,
+        show: true, position: 'right', color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: CHART_FONT.micro,
         formatter: (params: any) => formatCount(params.value),
       },
     }],

@@ -1,4 +1,5 @@
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from './theme'
+import { CHART_FONT } from './tokens'
 
 export interface RiskOverviewItem {
   name: string
@@ -16,7 +17,7 @@ export function createRiskOverviewOption(items: RiskOverviewItem[]) {
     yAxis: {
       type: 'category', data: items.map((item) => item.name),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: 12 },
+      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.axis },
     },
     series: [{
       type: 'bar', barWidth: 11, showBackground: true,
@@ -24,7 +25,7 @@ export function createRiskOverviewOption(items: RiskOverviewItem[]) {
       data: items.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
-        fontFamily: 'monospace', fontSize: 12, formatter: '{c} 家',
+        fontFamily: 'monospace', fontSize: CHART_FONT.axis, formatter: '{c} 家',
       },
     }],
   }

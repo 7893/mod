@@ -8,6 +8,7 @@ import { TooltipComponent, GeoComponent } from 'echarts/components'
 import * as echarts from 'echarts/core'
 import chinaGeoJson from 'china-geojson/src/geojson/china.json'
 import { chartInk, chartPalette, mapRamp } from '../charts/theme'
+import { CHART_FONT } from '../charts/tokens'
 import type { LiveProjectionEvent } from '../composables/useLiveProjection'
 
 use([CanvasRenderer, MapChart, ScatterChart, EffectScatterChart, TooltipComponent, GeoComponent])
@@ -251,7 +252,7 @@ const option = computed(() => ({
         borderWidth: 1,
         borderRadius: 4,
         padding: [4, 8],
-        fontSize: 13,
+        fontSize: CHART_FONT.caption,
         fontWeight: 'bold',
       },
       zlevel: 10,
