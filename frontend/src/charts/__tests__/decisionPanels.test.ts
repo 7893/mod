@@ -3,23 +3,26 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createLaunchGateOption } from '../constructionOptions'
 import { createOperationsTrendOption, createQualityAuditVolumeOption } from '../operationsOptions'
-import { createCoverageOption, createOperationalGuardOption } from '../panelOptions'
+import { createCoverageOption } from '../panelOptions'
 import { createRolloutTrendMatrixOption } from '../rolloutOptions'
 import { chartTooltip } from '../theme'
 
 describe('decision panel options', () => {
-  it('keeps the five stable zones while replacing their low-value titles', () => {
+  it('keeps each decision fact in one visible panel', () => {
     const sources = {
       dashboard: readFileSync(resolve(process.cwd(), 'src/views/DashboardView.vue'), 'utf8'),
+      topBar: readFileSync(resolve(process.cwd(), 'src/components/CockpitTopBar.vue'), 'utf8'),
       construction: readFileSync(resolve(process.cwd(), 'src/views/ConstructionView.vue'), 'utf8'),
       rollout: readFileSync(resolve(process.cwd(), 'src/views/RolloutView.vue'), 'utf8'),
       operations: readFileSync(resolve(process.cwd(), 'src/views/OperationsView.vue'), 'utf8'),
       theme: readFileSync(resolve(process.cwd(), 'src/styles/theme.css'), 'utf8'),
     }
 
-    expect(sources.dashboard).toContain('title="运营红线哨位"')
-    expect(sources.dashboard).toContain('zone="A8"')
-    expect(sources.dashboard).not.toContain('title="项目联系人覆盖"')
+    expect(sources.dashboard).toContain('title="跨域行动队列"')
+    expect(sources.dashboard).not.toContain('zone="A3"')
+    expect(sources.dashboard).not.toContain('zone="A8"')
+    expect(sources.topBar).toContain('title="五域指挥入口"')
+    expect(sources.topBar).not.toContain('ChartCanvas')
     expect(sources.construction).toContain('title="上线门禁攻坚"')
     expect(sources.construction).toContain('zone="B4"')
     expect(sources.rollout).toContain('title="批次上线爬坡矩阵"')
@@ -27,8 +30,8 @@ describe('decision panel options', () => {
     expect(sources.operations).toContain('title="近 7 日业务吞吐"')
     expect(sources.operations).toContain('zone="D3"')
     expect(sources.operations).toContain('zone="D7"')
-    expect(sources.operations).not.toContain('title="链路规模对比"')
-    expect(sources.dashboard).toContain('grid-rows-dashboard-stack')
+    expect(sources.operations).toContain('title="端到端业务链路"')
+    expect(sources.operations).not.toContain('zone="D2"')
     expect(sources.dashboard).toContain(':disabled="!briefingSummary"')
     expect(sources.dashboard).not.toContain('v-if="briefingSummary"')
     expect(sources.construction).toContain('grid-rows-construction')
@@ -37,18 +40,6 @@ describe('decision panel options', () => {
     expect(sources.rollout).not.toContain('ChartBlock :stats="c4Stats"')
     expect(sources.theme).toContain('--grid-template-rows-construction: minmax(0, 1.1fr) minmax(0, 0.9fr)')
     expect(sources.theme).toContain('--grid-template-rows-rollout-body: minmax(0, 1.25fr) minmax(0, 0.75fr)')
-  })
-
-  it('builds the A8 guard chart without converting missing data into a visible count', () => {
-    const option = createOperationalGuardOption([
-      { name: '接口失败', value: 8, tone: 'danger' },
-      { name: '双轨差异', value: null, tone: 'warning' },
-      { name: '金标异常', value: 0, tone: 'accent' },
-    ])
-
-    expect(option.yAxis.data).toEqual(['金标异常', '双轨差异', '接口失败'])
-    const formatter = option.series[0].label.formatter as (params: { dataIndex: number }) => string
-    expect(formatter({ dataIndex: 1 })).toBe('—')
   })
 
   it('builds the B4 launch gates as a three-state composition', () => {

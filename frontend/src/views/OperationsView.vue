@@ -7,7 +7,6 @@ import { BarChart, GaugeChart, LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
-import CommandBand from '../components/blocks/CommandBand.vue'
 import ChartFacts from '../components/blocks/ChartFacts.vue'
 import EmptyNote from '../components/blocks/EmptyNote.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
@@ -24,7 +23,6 @@ import {
 import {
   createDualRunOutcomeOption,
   createIntegrationOutcomeOption,
-  createOperationsOverviewOption,
   createOperationsTrendOption,
   createQualityAuditVolumeOption,
   createVoucherQualityOption,
@@ -47,7 +45,6 @@ const flowSteps = computed(() => [
 ])
 
 const integrationTotal = computed(() => ops.value.integrationResult || 0)
-const operationsOverviewOption = computed(() => createOperationsOverviewOption(ops.value))
 const operationsTrend = computed(() => store.snapshot.operationsTrend ?? [])
 const operationsTrendOption = computed(() => createOperationsTrendOption(operationsTrend.value))
 const documentLineRatio = computed(() => (
@@ -188,42 +185,32 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
 
 <template>
   <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="D">
-    <!-- D1: 业务规模谱与结构效率，替代四张等权数字卡 -->
+    <!-- D1: 累计链路的唯一事实面板，合并原 D1 规模谱与 D2 流程条 -->
     <CockpitPanel
-      title="业务运行规模总盘"
+      title="端到端业务链路"
       zone="D1"
-      :subtitle="`主链路规模与数据结构效率 · 截至 ${store.snapshot.overview.docsAddedAsOfDate || store.snapshot.meta.asOfDate}`"
+      :subtitle="`累计规模、链路阶段与结构效率 · 截至 ${store.snapshot.overview.docsAddedAsOfDate || store.snapshot.meta.asOfDate}`"
       class="flex-shrink-0"
     >
-      <CommandBand :chart-span="8" :facts="scaleFacts" align="center">
-        <template #chart>
-          <div class="flex items-center justify-between text-cockpit-xs flex-shrink-0 px-1">
-            <span class="font-medium text-slate-300">主链路累计规模谱</span>
-            <span class="text-slate-500">单据 / 凭证 / 集成</span>
-          </div>
-          <ChartCanvas class="flex-1" :option="operationsOverviewOption" />
-        </template>
-      </CommandBand>
-    </CockpitPanel>
-
-    <!-- D2: 全链路流程条 -->
-    <CockpitPanel title="业务全链路贯通推进" zone="D2" subtitle="业务单据至凭证集成 6 阶段流水线">
-      <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 overflow-x-auto min-w-0">
-        <template v-for="(step, idx) in flowSteps" :key="step.label">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <div
-              class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-              :class="step.status === 'done' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-sky-500/15 text-sky-400'"
-            >
-              <component :is="step.icon" :size="14" />
+      <div class="flex flex-col gap-2 min-h-0">
+        <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-w-0">
+          <template v-for="(step, idx) in flowSteps" :key="step.label">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div
+                class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                :class="step.status === 'done' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-sky-500/15 text-sky-400'"
+              >
+                <component :is="step.icon" :size="14" />
+              </div>
+              <div class="min-w-0">
+                <b class="block text-cockpit-sm font-semibold text-slate-200 truncate">{{ step.label }}</b>
+                <span class="block font-mono text-cockpit-xs text-slate-400">{{ step.value }}</span>
+              </div>
             </div>
-            <div class="min-w-0">
-              <b class="block text-cockpit-sm font-semibold text-slate-200 truncate">{{ step.label }}</b>
-              <span class="block font-mono text-cockpit-xs text-slate-400">{{ step.value }}</span>
-            </div>
-          </div>
-          <ArrowRight v-if="idx < flowSteps.length - 1" :size="14" class="text-slate-600 flex-shrink-0" />
-        </template>
+            <ArrowRight v-if="idx < flowSteps.length - 1" :size="14" class="text-slate-600 flex-shrink-0" />
+          </template>
+        </div>
+        <MetricGrid :items="scaleFacts" :columns="3" flat size="xs" />
       </div>
     </CockpitPanel>
 
