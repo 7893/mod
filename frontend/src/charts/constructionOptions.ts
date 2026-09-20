@@ -1,3 +1,4 @@
+import type { EChartsOption } from 'echarts'
 import { formatCount } from '../formatters/metrics'
 import {
   calmAnimation,
@@ -32,6 +33,13 @@ interface TrainingSummaryItem {
   totalCert: number
 }
 
+interface ReadinessSummaryItem {
+  imported?: number | null
+  verified?: number | null
+  collecting?: number | null
+  notCollected?: number | null
+}
+
 export type GateStageItem = StageSeriesItem
 
 export function createLaunchGateOption(items: GateStageItem[]) {
@@ -40,7 +48,7 @@ export function createLaunchGateOption(items: GateStageItem[]) {
     ...calmAnimation,
     tooltip: {
       trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip,
-      formatter: (params: any[]) => {
+      formatter: (params: any) => {
         const item = reversed[params?.[0]?.dataIndex]
         return item
           ? `${item.name}<br/>完成 <b>${formatCount(item.completed)}</b> · 进行中 ${formatCount(item.inProgress)} · 待启动 ${formatCount(item.notStarted)}<br/>总体完成率 <b>${item.progress}%</b>`
@@ -76,7 +84,7 @@ export function createLaunchGateOption(items: GateStageItem[]) {
         },
       },
     ],
-  }
+  } satisfies EChartsOption
 }
 
 const percent = (value: number, total: number) => (
@@ -142,7 +150,7 @@ export function createTaskStageMatrixOption(list: StageSeriesItem[]) {
       itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 3, borderRadius: 4 },
       emphasis: { itemStyle: { borderColor: chartInk.textPrimary, borderWidth: 1 } },
     }],
-  }
+  } satisfies EChartsOption
 }
 
 export function createTaskStageRadarOption(list: StageSeriesItem[]) {
@@ -178,7 +186,7 @@ export function createTaskStageRadarOption(list: StageSeriesItem[]) {
         areaStyle: { color: chartPalette.accent, opacity: 0.2 },
       }],
     }],
-  }
+  } satisfies EChartsOption
 }
 
 const shortTrainingType = (value: string) => value
@@ -192,7 +200,7 @@ export function createTrainingConversionOption(items: TrainingTypeItem[]) {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       ...chartTooltip,
-      formatter: (params: any[]) => {
+      formatter: (params: any) => {
         const item = items[params?.[0]?.dataIndex]
         if (!item) return ''
         const rate = item.actual > 0 ? percent(item.passed, item.actual) : 0
@@ -213,7 +221,7 @@ export function createTrainingConversionOption(items: TrainingTypeItem[]) {
       axisLabel: {
         color: chartInk.textMuted,
         fontSize: CHART_FONT.axis,
-        formatter: (value: number) => value >= 10_000 ? `${Math.round(value / 1000)}k` : value,
+        formatter: (value: number) => value >= 10_000 ? `${Math.round(value / 1000)}k` : String(value),
       },
     },
     series: [
@@ -222,7 +230,7 @@ export function createTrainingConversionOption(items: TrainingTypeItem[]) {
       { name: '通过', type: 'bar', barMaxWidth: 18, data: items.map((item) => item.passed), itemStyle: { color: chartPalette.success, borderRadius: [3, 3, 0, 0] } },
       { name: '认证', type: 'bar', barMaxWidth: 18, data: items.map((item) => item.cert), itemStyle: { color: chartPalette.warning, borderRadius: [3, 3, 0, 0] } },
     ],
-  }
+  } satisfies EChartsOption
 }
 
 export function createTrainingMixOption(items: TrainingTypeItem[]) {
@@ -250,7 +258,7 @@ export function createTrainingMixOption(items: TrainingTypeItem[]) {
         },
       })),
     }],
-  }
+  } satisfies EChartsOption
 }
 
 export function createTrainingFunnelOption(summary?: TrainingSummaryItem) {
@@ -291,5 +299,36 @@ export function createTrainingFunnelOption(summary?: TrainingSummaryItem) {
         formatter: (params: any) => formatCount(params.value),
       },
     }],
-  }
+  } satisfies EChartsOption
+}
+
+export function createReadinessPieOption(summary?: ReadinessSummaryItem) {
+  return {
+    ...calmAnimation,
+    tooltip: {
+      trigger: 'item',
+      ...chartTooltip,
+    },
+    legend: {
+      orient: 'vertical',
+      right: 10,
+      top: 'center',
+      textStyle: { color: chartInk.textMuted, fontSize: CHART_FONT.caption },
+      itemWidth: 10,
+      itemHeight: 10,
+    },
+    series: [{
+      name: '数据准备度',
+      type: 'pie',
+      radius: ['45%', '70%'],
+      center: ['35%', '50%'],
+      data: [
+        { value: summary?.imported ?? 0, name: '已导入', itemStyle: { color: chartPalette.accent } },
+        { value: summary?.verified ?? 0, name: '已校验', itemStyle: { color: chartPalette.success } },
+        { value: summary?.collecting ?? 0, name: '收集中', itemStyle: { color: chartPalette.warning } },
+        { value: summary?.notCollected ?? 0, name: '未收集', itemStyle: { color: chartPalette.neutral } },
+      ],
+      label: { show: false },
+    }],
+  } satisfies EChartsOption
 }
