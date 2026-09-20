@@ -1,7 +1,6 @@
-import { computed, ref, watch, type MaybeRefOrGetter, toValue } from 'vue'
+import { computed, onScopeDispose, ref, watch, type MaybeRefOrGetter, toValue } from 'vue'
+import { requestJson } from '../api/http.ts'
 import type { EntityRow } from '../stores/project.ts'
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 
 export interface FetchEntitiesParams {
   page?: number
@@ -31,11 +30,17 @@ export function useOrganizations(params: {
   const total = ref(0)
   const loading = ref(false)
   const error = ref<Error | null>(null)
+  let activeRequest: AbortController | null = null
+  let requestSequence = 0
   
   const pageSize = computed(() => toValue(params.pageSize) ?? 20)
   const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
   
   async function fetchPage(p: number = page.value) {
+    activeRequest?.abort()
+    const request = new AbortController()
+    activeRequest = request
+    const sequence = ++requestSequence
     loading.value = true
     error.value = null
     
@@ -68,19 +73,19 @@ export function useOrganizations(params: {
     }
     
     try {
-      const resp = await fetch(`${API_BASE}/api/organizations?${queryParams}`)
-      if (!resp.ok) {
-        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`)
-      }
-      const data: PageResponse = await resp.json()
+      const data = await requestJson<PageResponse>(`organizations?${queryParams}`, {
+        signal: request.signal,
+      })
+      if (sequence !== requestSequence) return
       items.value = data.items
       total.value = data.total
       page.value = data.page
     } catch (e) {
+      if (request.signal.aborted || sequence !== requestSequence) return
       error.value = e instanceof Error ? e : new Error(String(e))
       console.error('[useOrganizations] fetch failed:', e)
     } finally {
-      loading.value = false
+      if (sequence === requestSequence) loading.value = false
     }
   }
   
@@ -98,6 +103,8 @@ export function useOrganizations(params: {
     },
     { immediate: true }
   )
+
+  onScopeDispose(() => activeRequest?.abort())
   
   // 翻页
   function goToPage(p: number) {
@@ -108,7 +115,7 @@ export function useOrganizations(params: {
   }
   
   function refresh() {
-    fetchPage(page.value)
+    return fetchPage(page.value)
   }
   
   return {

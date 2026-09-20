@@ -1,10 +1,13 @@
 import { ref } from 'vue'
+import { requestJson } from '../api/http.ts'
 import { useProjectStore, type EntityRow, type RolloutStatus } from '../stores/project.ts'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+interface EntityEditorOptions {
+  onSaved?: (id: number, patch: Partial<EntityRow>) => void
+}
 
 /** 台账行「调态」对话框的编辑状态与保存动作。 */
-export function useEntityEditor() {
+export function useEntityEditor(options: EntityEditorOptions = {}) {
   const store = useProjectStore()
   const editing = ref<EntityRow | null>(null)
   const draft = ref<Partial<EntityRow>>({})
@@ -51,25 +54,21 @@ export function useEntityEditor() {
     }
     
     try {
-      const resp = await fetch(`${API_BASE}/api/organizations/${editing.value.id}`, {
+      const id = editing.value.id
+      await requestJson<{ ok: true; id: number }>(`organizations/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
       })
-      
-      if (!resp.ok) {
-        const data = await resp.json().catch(() => ({}))
-        throw new Error(data.detail || `HTTP ${resp.status}`)
-      }
-      
-      // 更新本地状态（乐观更新）
-      store.updateEntity(editing.value.id, {
+
+      const localPatch: Partial<EntityRow> = {
         status: draft.value.status as RolloutStatus,
         construction: Number(draft.value.construction),
         openingData: Number(draft.value.openingData),
         owner: String(draft.value.owner),
-      })
-      
+      }
+      store.updateEntity(id, localPatch)
+      options.onSaved?.(id, localPatch)
       editing.value = null
     } catch (e) {
       error.value = e instanceof Error ? e.message : '保存失败'

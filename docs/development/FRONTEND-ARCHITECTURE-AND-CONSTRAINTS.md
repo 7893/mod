@@ -94,6 +94,9 @@ Zone 编号（A1–F5）是稳定的产品坐标，用于沟通定位，不得�
   `EntityEditDrawer`）与 `composables/usePagedList.ts`（分页状态机）、`composables/useEntityEditor.ts`
   （调态抽屉）、`utils/entityOptions.ts`（省份/批次/状态顺序表、带计数选项、关键字匹配），
   不得在组件内重写筛选、分页、计数或抽屉逻辑。
+- 新增或修改的 HTTP JSON 请求统一经过 `api/http.ts`，由其处理应用子路径、可选独立 API Origin
+  与错误正文；组件不得自行拼接 `/api`。可被新筛选或页面卸载取代的请求必须支持 AbortSignal，
+  且只有最新请求可以写入响应状态。存量直连请求按面板渐进迁移，不要求一次性重写六屏。
 
 ## 契约三 · Token 契约（Style）
 

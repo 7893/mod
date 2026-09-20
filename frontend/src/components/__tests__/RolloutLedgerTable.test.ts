@@ -9,7 +9,19 @@ import snapshotData from '../../data/fallback-snapshot.json'
 const mockEntities = (snapshotData as { entities?: unknown[] }).entities ?? []
 
 function mockOrganizationsApi(filter?: (e: unknown[]) => unknown[]) {
-  return vi.fn().mockImplementation((url: string) => {
+  const source = (filter ? filter(mockEntities) : mockEntities) as Array<Record<string, unknown>>
+  const entities = source.map((entity) => ({ ...entity })) as Array<{
+    id: number
+    name: string
+    owner: string
+    province: string
+    batch: string
+    batchId?: number
+    status: string
+    construction: number
+    openingData: number
+  }>
+  return vi.fn().mockImplementation((url: string, init?: RequestInit) => {
     // 处理 /api/dashboard/snapshot (store refresh)
     if (url.includes('/api/dashboard/snapshot')) {
       return Promise.resolve({
@@ -19,6 +31,18 @@ function mockOrganizationsApi(filter?: (e: unknown[]) => unknown[]) {
     }
     // 处理 /api/organizations 分页 API
     if (url.includes('/api/organizations')) {
+      if (init?.method === 'PATCH') {
+        const id = Number(url.split('/').pop())
+        const patch = JSON.parse(String(init.body)) as Record<string, unknown>
+        const entity = entities.find((item) => item.id === id)
+        if (entity) {
+          if (patch.owner !== undefined) entity.owner = String(patch.owner)
+          if (patch.status !== undefined) entity.status = String(patch.status)
+          if (patch.construction !== undefined) entity.construction = Number(patch.construction)
+          if (patch.opening_data !== undefined) entity.openingData = Number(patch.opening_data)
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ ok: true, id }) })
+      }
       const urlObj = new URL(url, 'http://localhost')
       const page = Number(urlObj.searchParams.get('page') ?? 1)
       const pageSize = Number(urlObj.searchParams.get('page_size') ?? 20)
@@ -26,7 +50,7 @@ function mockOrganizationsApi(filter?: (e: unknown[]) => unknown[]) {
       const region = urlObj.searchParams.get('region')
       const batch = urlObj.searchParams.get('batch')
 
-      let filtered = [...mockEntities] as Array<{ name: string; owner: string; province: string; batch: string; batchId?: number }>
+      let filtered = [...entities]
       if (keyword) {
         const kw = keyword.toLowerCase()
         filtered = filtered.filter(
@@ -173,5 +197,41 @@ describe('RolloutLedgerTable', () => {
 
     expect(wrapper.text()).not.toContain('无匹配单位记录')
     expect(wrapper.findAll('tbody tr').length).toBeGreaterThan(0)
+  })
+
+  it('keeps the paginated row synchronized after an edit', async () => {
+    const wrapper = mount(RolloutLedgerTable)
+    await flushPromises()
+
+    const firstEdit = wrapper.findAll('button').find((button) => button.text().includes('调态'))
+    await firstEdit?.trigger('click')
+
+    const drawer = wrapper.get('[role="dialog"]')
+    const ownerInput = drawer.find('input:not([type="range"])')
+    await ownerInput.setValue('新项目联系人')
+    await drawer.get('form').trigger('submit')
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('新项目联系人')
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/organizations/'),
+      expect.objectContaining({ method: 'PATCH' }),
+    )
+  })
+
+  it('surfaces a page-load error with a retry action', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ detail: '台账服务暂不可用' }),
+    })
+
+    const wrapper = mount(RolloutLedgerTable)
+    await flushPromises()
+
+    const retry = wrapper.findAll('button').find((button) => button.text().includes('刷新失败'))
+    expect(retry).toBeDefined()
+    expect(retry?.attributes('title')).toBe('台账服务暂不可用')
   })
 })
