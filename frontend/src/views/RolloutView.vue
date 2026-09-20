@@ -7,6 +7,7 @@ import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, Visua
 import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
 import CommandBand from '../components/blocks/CommandBand.vue'
+import EmptyNote from '../components/blocks/EmptyNote.vue'
 import StatList from '../components/blocks/StatList.vue'
 import ChartCanvas from '../components/charts/ChartCanvas.vue'
 import type { MetricItem, StatRow } from '../components/blocks/types.ts'
@@ -55,18 +56,18 @@ const provinceRolloutRanking = computed(() => {
       launchedPct: p.total > 0 ? Math.round((p.launched * 100) / p.total) : 0,
       unlaunched: Math.max(0, p.total - p.launched - p.dual),
     }))
-    .sort((a, b) => b.launchedPct - a.launchedPct || b.launched - a.launched || a.name.localeCompare(b.name, 'zh-CN'))
+    .sort((a, b) => b.unlaunched - a.unlaunched || a.launchedPct - b.launchedPct || a.name.localeCompare(b.name, 'zh-CN'))
 })
 
-const topProvinces = computed(() => provinceRolloutRanking.value.slice(0, 6))
+const backlogProvinces = computed(() => provinceRolloutRanking.value.slice(0, 6))
 
 const coveredProvinceCount = computed(() => new Set(store.provinceSummary.map((p) => p.name)).size)
 
 const commandFacts = computed<MetricItem[]>(() => [
   { label: '纳管单位', value: format(store.snapshot.overview.orgTotal) },
-  { label: '推广批次', value: batches.value.length, unit: '批', tone: 'accent' },
-  { label: '覆盖省份', value: coveredProvinceCount.value, unit: '省' },
-  { label: '联系人', value: format(store.snapshot.overview.contactsTotal), tone: 'success' },
+  { label: '已上线', value: format(store.snapshot.overview.launched), unit: '家', tone: 'success' },
+  { label: '双轨运行', value: format(store.snapshot.overview.dual), unit: '家', tone: 'warning' },
+  { label: '推广范围', value: `${batches.value.length} 批 / ${coveredProvinceCount.value} 省`, tone: 'accent' },
 ])
 
 const contactFacts = computed<StatRow[]>(() => [
@@ -75,7 +76,7 @@ const contactFacts = computed<StatRow[]>(() => [
   { label: '待补齐缺口', value: format(contactCoverage.value?.gap), tone: 'warning' },
 ])
 
-const provinceRolloutOption = computed(() => createProvinceRolloutOption(topProvinces.value))
+const provinceRolloutOption = computed(() => createProvinceRolloutOption(backlogProvinces.value))
 </script>
 
 <template>
@@ -94,35 +95,35 @@ const provinceRolloutOption = computed(() => createProvinceRolloutOption(topProv
       </CommandBand>
     </CockpitPanel>
 
-    <!-- C2: 横向比较各批次单位当前所处推广状态 -->
-    <CockpitPanel
-      title="各批次单位推进状态"
-      zone="C2"
-      subtitle="比较每批已上线、双轨运行与待推进单位构成"
-      class="h-44 flex-shrink-0"
-    >
-      <template #actions>
-        <PanelLegend :items="[
-          { label: '已上线', tone: 'success' },
-          { label: '双轨', tone: 'warning' },
-          { label: '待推进', tone: 'neutral' },
-        ]" />
-      </template>
-      <ChartCanvas :option="batchCompositionOption" />
-    </CockpitPanel>
-
     <div class="grid grid-rows-rollout-body gap-2.5 flex-1 min-h-0">
-      <!-- C3 为主分析画布；C4/C5 作为右侧上下辅助区，不再与 C3 等权占面 -->
+      <!-- C2 同屏表达批次当前态与历史态；C4/C5 只展示缺口与例外 -->
       <div class="grid grid-cols-rollout-analysis grid-rows-rollout-analysis gap-2.5 min-h-0">
-        <CockpitPanel title="批次上线爬坡矩阵" zone="C3" subtitle="历史快照中的批次上线率与双轨率" class="col-span-8 row-span-2">
-          <ChartCanvas
-            :option="rolloutTrendOption"
-            :empty="rolloutTrend.length === 0"
-            empty-text="暂无批次历史快照"
-          />
+        <CockpitPanel title="批次推进全景" zone="C2" subtitle="左看当前构成，右看历史爬坡" class="col-span-8 row-span-2">
+          <template #actions>
+            <PanelLegend compact :items="[
+              { label: '已上线', tone: 'success' },
+              { label: '双轨', tone: 'warning' },
+              { label: '待推进', tone: 'neutral' },
+            ]" />
+          </template>
+          <div class="grid grid-cols-12 gap-3 h-full min-h-0">
+            <section class="col-span-5 flex flex-col min-h-0 pr-3 border-r border-surface-veil-06">
+              <span class="text-cockpit-xs text-slate-500 flex-shrink-0">当前批次状态构成</span>
+              <ChartCanvas class="flex-1" :option="batchCompositionOption" />
+            </section>
+            <section class="col-span-7 flex flex-col min-h-0">
+              <span class="text-cockpit-xs text-slate-500 flex-shrink-0">历史上线率与双轨率</span>
+              <ChartCanvas
+                class="flex-1"
+                :option="rolloutTrendOption"
+                :empty="rolloutTrend.length === 0"
+                empty-text="暂无批次历史快照"
+              />
+            </section>
+          </div>
         </CockpitPanel>
 
-        <CockpitPanel title="省域上线分布" zone="C4" subtitle="上线率前六" class="col-span-4 min-h-0">
+        <CockpitPanel title="省域推进缺口" zone="C4" subtitle="待推进单位最多六省" class="col-span-4 min-h-0">
           <template #actions>
             <PanelLegend compact :items="[
               { label: '已上线', tone: 'accent' },
@@ -133,11 +134,12 @@ const provinceRolloutOption = computed(() => createProvinceRolloutOption(topProv
           <ChartCanvas :option="provinceRolloutOption" />
         </CockpitPanel>
 
-        <CockpitPanel title="项目联系人" zone="C5" subtitle="组织覆盖与专员" class="col-span-4 min-h-0">
-          <div class="grid grid-cols-5 h-full min-h-0 gap-2 items-center">
+        <CockpitPanel title="联系人覆盖例外" zone="C5" subtitle="只在存在缺口时展示分布" class="col-span-4 min-h-0">
+          <div v-if="contactCoverage && contactCoverage.gap > 0" class="grid grid-cols-5 h-full min-h-0 gap-2 items-center">
             <ChartCanvas class="col-span-2" :option="contactCoverageOption" />
             <StatList class="col-span-3 self-stretch" :rows="contactFacts" flat density="dense" />
           </div>
+          <EmptyNote v-else>{{ contactCoverage ? `全部 ${format(contactCoverage.covered)} 家单位已完成联系人覆盖` : '暂无联系人覆盖数据' }}</EmptyNote>
         </CockpitPanel>
       </div>
 

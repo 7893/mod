@@ -29,8 +29,10 @@ describe('decision panel options', () => {
     expect(sources.construction).toContain('zone="B6"')
     expect(sources.construction).not.toContain('activeTab')
     expect(sources.construction).not.toContain('createTaskStageRadarOption')
-    expect(sources.rollout).toContain('title="批次上线爬坡矩阵"')
-    expect(sources.rollout).toContain('zone="C3"')
+    expect(sources.rollout).toContain('title="批次推进全景"')
+    expect(sources.rollout).toContain('zone="C2"')
+    expect(sources.rollout).not.toContain('zone="C3"')
+    expect(sources.rollout).toContain('title="省域推进缺口"')
     expect(sources.operations).toContain('title="近 7 日业务吞吐"')
     expect(sources.operations).toContain('zone="D3"')
     expect(sources.operations).toContain('zone="D7"')
@@ -43,7 +45,7 @@ describe('decision panel options', () => {
     expect(sources.rollout).toContain('class="col-span-8 row-span-2"')
     expect(sources.rollout).not.toContain('ChartBlock :stats="c4Stats"')
     expect(sources.theme).toContain('--grid-template-rows-construction: minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 0.55fr)')
-    expect(sources.theme).toContain('--grid-template-rows-rollout-body: minmax(0, 1.25fr) minmax(0, 0.75fr)')
+    expect(sources.theme).toContain('--grid-template-rows-rollout-body: minmax(0, 1.1fr) minmax(0, 0.9fr)')
   })
 
   it('builds the B4 launch gates as a three-state composition', () => {
