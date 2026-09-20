@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import { ChevronRight } from 'lucide-vue-next'
 import AnimatedNumber from './AnimatedNumber.vue'
+import ChartCanvas from './charts/ChartCanvas.vue'
 import CockpitPanel from './CockpitPanel.vue'
 import LiveProjectionIndicator from './LiveProjectionIndicator.vue'
-import { calmAnimation, chartInk, chartPalette, chartTooltip } from '../charts/theme.ts'
-import { CHART_FONT } from '../charts/tokens.ts'
+import {
+  createOperationsVolumeOption,
+  createProgressRingsOption,
+  createRiskClosureOption,
+} from '../charts/cockpitTopBarOptions.ts'
 import { formatCount } from '../formatters/metrics.ts'
 import type { LiveProjectionCounts, LiveProjectionEvent } from '../composables/useLiveProjection.ts'
 import type { ProjectSnapshot } from '../stores/project.ts'
@@ -48,73 +51,22 @@ const rolloutRate = computed(() => {
   return total > 0 ? Math.round((launched * 1000) / total) / 10 : 0
 })
 
-const progressRingsOption = computed(() => ({
-  ...calmAnimation,
-  tooltip: { trigger: 'item', ...chartTooltip, formatter: '{b}<br/><b>{c}%</b>' },
-  series: [
-    {
-      name: '建设进度', type: 'pie', radius: ['70%', '88%'], center: ['50%', '50%'],
-      silent: false, label: { show: false }, emphasis: { scale: false },
-      data: [
-        { value: constructionProgress.value, name: '建设完成', itemStyle: { color: chartPalette.accent } },
-        { value: 100 - constructionProgress.value, name: '建设待完成', itemStyle: { color: chartInk.borderSoft } },
-      ],
-    },
-    {
-      name: '推广上线', type: 'pie', radius: ['43%', '59%'], center: ['50%', '50%'],
-      silent: false, label: { show: false }, emphasis: { scale: false },
-      data: [
-        { value: rolloutRate.value, name: '已上线', itemStyle: { color: chartPalette.success } },
-        { value: 100 - rolloutRate.value, name: '待上线', itemStyle: { color: chartInk.borderSoft } },
-      ],
-    },
-  ],
+const progressRingsOption = computed(() => createProgressRingsOption({
+  constructionProgress: constructionProgress.value,
+  rolloutRate: rolloutRate.value,
 }))
 
-const operationsVolumeOption = computed(() => {
-  const items = [
-    { name: '业务单据', value: safeNumber(props.live.docsTotal || props.overview.docsTotal), color: chartPalette.accent },
-    { name: '会计凭证', value: safeNumber(props.live.vouchersTotal || props.overview.vouchersTotal), color: chartPalette.success },
-    { name: '接口集成', value: safeNumber(props.operations?.integrationResult), color: chartPalette.warning },
-  ].reverse()
-  return {
-    ...calmAnimation,
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...chartTooltip },
-    grid: { left: 62, right: 76, top: 2, bottom: 2 },
-    xAxis: { type: 'value', show: false },
-    yAxis: {
-      type: 'category', data: items.map((item) => item.name),
-      axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: chartInk.textMuted, fontSize: CHART_FONT.micro },
-    },
-    series: [{
-      type: 'bar', barWidth: 8, showBackground: true,
-      backgroundStyle: { color: chartInk.borderSoft, borderRadius: 3 },
-      data: items.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 3 } })),
-      label: {
-        show: true, position: 'right', color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: CHART_FONT.micro,
-        formatter: (params: any) => formatCount(params.value),
-      },
-    }],
-  }
-})
+const operationsVolumeOption = computed(() => createOperationsVolumeOption({
+  documents: safeNumber(props.live.docsTotal || props.overview.docsTotal),
+  vouchers: safeNumber(props.live.vouchersTotal || props.overview.vouchersTotal),
+  integrations: safeNumber(props.operations?.integrationResult),
+}))
 
 const closeRate = computed(() => Math.max(0, Math.min(100, safeNumber(props.issuesSummary?.closeRate))))
 
-const riskClosureOption = computed(() => ({
-  ...calmAnimation,
-  tooltip: { trigger: 'item', ...chartTooltip },
-  series: [{
-    name: '问题闭环',
-    type: 'pie',
-    radius: ['60%', '80%'],
-    center: ['50%', '50%'],
-    label: { show: false },
-    data: [
-      { value: safeNumber(props.issuesSummary?.totalResolved), name: '已闭环', itemStyle: { color: chartPalette.success } },
-      { value: safeNumber(props.issuesSummary?.totalUnresolved), name: '未解决', itemStyle: { color: chartPalette.danger } },
-    ],
-  }],
+const riskClosureOption = computed(() => createRiskClosureOption({
+  resolved: safeNumber(props.issuesSummary?.totalResolved),
+  unresolved: safeNumber(props.issuesSummary?.totalUnresolved),
 }))
 </script>
 
@@ -133,7 +85,7 @@ const riskClosureOption = computed(() => ({
 
     <div class="grid grid-cols-12 gap-3 h-24 min-h-[96px] max-h-[96px] overflow-hidden">
       <section class="col-span-4 grid grid-cols-5 gap-2 min-w-0 pr-3 border-r border-surface-veil-06 overflow-hidden">
-        <VChart class="col-span-2 w-full h-full" :option="progressRingsOption" autoresize />
+        <ChartCanvas class="col-span-2" :option="progressRingsOption" />
         <div class="col-span-3 grid grid-rows-3 divide-y divide-surface-veil-06 min-w-0">
           <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">建设完成率</span><b class="font-mono text-sky-400"><AnimatedNumber :value="constructionProgress" :decimals="1" :duration="numDuration(800)" />%</b></div>
           <div class="flex items-center justify-between gap-2 text-cockpit-xs"><span class="text-slate-500">上线率</span><b class="font-mono text-emerald-400">{{ rolloutRate }}%</b></div>
@@ -147,7 +99,7 @@ const riskClosureOption = computed(() => ({
           <div><span class="block text-cockpit-xs text-slate-500">今日凭证</span><b class="font-mono text-cockpit-md text-emerald-400">+<AnimatedNumber :value="live.vouchersTodayAdded || 0" :duration="500" /></b></div>
           <div><span class="block text-cockpit-xs text-slate-500" title="演示投影会话累计实时集成推送数">实时集成脉搏</span><b class="font-mono text-cockpit-md text-sky-400">+<AnimatedNumber :value="cumulative.integrations || 0" :duration="500" /></b></div>
         </div>
-        <VChart class="w-full flex-1 min-h-0" :option="operationsVolumeOption" autoresize />
+        <ChartCanvas class="flex-1" :option="operationsVolumeOption" />
       </section>
 
       <button
@@ -157,7 +109,7 @@ const riskClosureOption = computed(() => ({
         @click="$emit('openRisk')"
       >
         <div class="h-full w-20 flex-shrink-0">
-          <VChart :option="riskClosureOption" autoresize class="h-full w-full" />
+          <ChartCanvas :option="riskClosureOption" />
         </div>
         <div class="flex-1 min-w-0 grid grid-cols-3 gap-2">
           <div class="min-w-0"><span class="block text-cockpit-xs text-slate-500 truncate">闭环率</span><b class="font-mono text-cockpit-lg text-emerald-400">{{ closeRate }}%</b></div>
