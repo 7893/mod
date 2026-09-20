@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formatCount as format } from '../formatters/metrics.ts'
-import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, HeatmapChart, PieChart, RadarChart } from 'echarts/charts'
@@ -21,16 +20,11 @@ import PanelLegend from '../components/PanelLegend.vue'
 import ConstructionLedger from '../components/ConstructionLedger.vue'
 import OverviewBand from '../components/blocks/OverviewBand.vue'
 import StatList from '../components/blocks/StatList.vue'
+import ChartCanvas from '../components/charts/ChartCanvas.vue'
 import type { StatRow } from '../components/blocks/types.ts'
-import {
-  calmAnimation,
-  chartInk,
-  chartPalette,
-  chartTooltip,
-} from '../charts/theme.ts'
-import { CHART_FONT } from '../charts/tokens.ts'
 import { buildOverviewComposition, buildTaskStageSeries } from '../charts/panelData.ts'
 import {
+  createReadinessPieOption,
   createTaskStageMatrixOption,
   createTaskStageRadarOption,
   createTrainingFunnelOption,
@@ -139,15 +133,6 @@ const rankRows = computed<StatRow[]>(() =>
   })),
 )
 
-// 色值统一取自 charts/theme.ts
-const chartColors = {
-  accent: chartPalette.accent,
-  success: chartPalette.success,
-  warning: chartPalette.warning,
-  muted: chartPalette.neutral,
-  textMuted: chartInk.textMuted,
-}
-
 const stageMatrixOption = computed(() => createTaskStageMatrixOption(buildTaskStageSeries(taskStages.value)))
 const stageRadarOption = computed(() => createTaskStageRadarOption(buildTaskStageSeries(taskStages.value)))
 const launchGateStages = computed(() => buildTaskStageSeries(taskStages.value).filter((stage) => (
@@ -156,34 +141,7 @@ const launchGateStages = computed(() => buildTaskStageSeries(taskStages.value).f
 const launchGateOption = computed(() => createLaunchGateOption(launchGateStages.value))
 const trainingFunnelOption = computed(() => createTrainingFunnelOption(trainingSummary.value))
 
-const readinessPieOption = computed(() => ({
-  ...calmAnimation,
-  tooltip: {
-    trigger: 'item',
-    ...chartTooltip,
-  },
-  legend: {
-    orient: 'vertical',
-    right: 10,
-    top: 'center',
-    textStyle: { color: chartColors.textMuted, fontSize: CHART_FONT.caption },
-    itemWidth: 10,
-    itemHeight: 10,
-  },
-  series: [{
-    name: '数据准备度',
-    type: 'pie',
-    radius: ['45%', '70%'],
-    center: ['35%', '50%'],
-    data: [
-      { value: readinessSummary.value?.imported ?? 0, name: '已导入', itemStyle: { color: chartColors.accent } },
-      { value: readinessSummary.value?.verified ?? 0, name: '已校验', itemStyle: { color: chartColors.success } },
-      { value: readinessSummary.value?.collecting ?? 0, name: '收集中', itemStyle: { color: chartColors.warning } },
-      { value: readinessSummary.value?.notCollected ?? 0, name: '未收集', itemStyle: { color: chartColors.muted } },
-    ],
-    label: { show: false },
-  }],
-}))
+const readinessPieOption = computed(() => createReadinessPieOption(readinessSummary.value))
 </script>
 
 <template>
@@ -214,14 +172,14 @@ const readinessPieOption = computed(() => ({
               <span class="font-medium text-slate-300">阶段 × 状态任务矩阵</span>
               <span class="font-mono text-slate-500">8 阶段 · 24 数据格</span>
             </div>
-            <VChart class="w-full flex-1 min-h-0" :option="stageMatrixOption" autoresize />
+            <ChartCanvas class="flex-1" :option="stageMatrixOption" />
           </section>
           <section class="col-span-3 flex flex-col min-h-0">
             <div class="flex items-center justify-between pb-1 text-cockpit-xs">
               <span class="font-medium text-slate-300">阶段均衡轮廓</span>
               <span class="font-mono text-sky-400">{{ constructionSummary?.avgProgress ?? '—' }}%</span>
             </div>
-            <VChart class="w-full flex-1 min-h-0" :option="stageRadarOption" autoresize />
+            <ChartCanvas class="flex-1" :option="stageRadarOption" />
           </section>
         </div>
       </CockpitPanel>
@@ -246,16 +204,24 @@ const readinessPieOption = computed(() => ({
               <span class="font-medium text-slate-300">四道关键上线门禁</span>
               <span class="font-mono text-slate-500">完成 / 推进 / 待启动</span>
             </div>
-            <VChart v-if="launchGateStages.length" class="w-full flex-1 min-h-0" :option="launchGateOption" autoresize />
-            <div v-else class="flex flex-1 items-center justify-center text-cockpit-xs text-slate-500">暂无关键门禁任务数据</div>
+            <ChartCanvas
+              class="flex-1"
+              :option="launchGateOption"
+              :empty="launchGateStages.length === 0"
+              empty-text="暂无关键门禁任务数据"
+            />
           </section>
           <section class="col-span-4 flex flex-col min-h-0">
             <div class="flex items-center justify-between pb-1 text-cockpit-xs">
               <span class="font-medium text-slate-300">参培认证漏斗</span>
               <span class="font-mono text-emerald-400">通过 {{ format(trainingSummary?.totalPassed) }} 人</span>
             </div>
-            <VChart v-if="trainingSummary" class="w-full flex-1 min-h-0" :option="trainingFunnelOption" autoresize />
-            <div v-else class="flex flex-1 items-center justify-center text-cockpit-xs text-slate-500">暂无培训转化数据</div>
+            <ChartCanvas
+              class="flex-1"
+              :option="trainingFunnelOption"
+              :empty="!trainingSummary"
+              empty-text="暂无培训转化数据"
+            />
           </section>
         </div>
       </CockpitPanel>
@@ -273,7 +239,11 @@ const readinessPieOption = computed(() => ({
           </button>
         </template>
         <div class="flex h-full min-h-0 flex-col gap-2">
-          <VChart class="min-h-0 flex-1 cursor-pointer" :option="readinessPieOption" autoresize @click="handleReadinessClick" />
+          <ChartCanvas
+            class="flex-1 cursor-pointer"
+            :option="readinessPieOption"
+            @chart-click="handleReadinessClick"
+          />
           <p class="text-center text-cockpit-xs text-slate-500 flex-shrink-0">点击扇区，按数据准备状态进入单位台账</p>
         </div>
       </CockpitPanel>

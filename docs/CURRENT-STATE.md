@@ -505,7 +505,7 @@ KI-060 更新前的本节原文完整保存在
 
 - **全局字体梯队放大（+2px）**：全局 CSS 变量体系（`theme.css`）与基础图表主题（`charts/*.ts`）全面上浮 2px（`xs: 13px, sm: 14px, md: 16px, lg: 18px, metric: 20px, kpi: 26px`）。
 - **组件及视图内嵌图表微小字号补齐**：补齐 `CockpitTopBar.vue`（A1 面板业务单据/会计凭证/接口集成字号与数值由 9px 提升至 11px，微调 `grid` 边距防遮挡）、`ModelContractCard.vue`、`OverviewTrendChart.vue`、`ChinaMap.vue` 以及各业务视图（Construction、Insights、Issues、Rollout）中散落硬编码的微小字号（9~11px 统一定向提升 2px 至 11~13px），彻底消除 10px 及以下微小字号，保障大屏全域视觉清晰可读。
-- **2026-09-20 Token 与物料化治理（本地重构，未部署）**：ECharts 字号已收敛到 `charts/tokens.ts` 的 `CHART_FONT`，既有样式检查器阻断新增裸 `fontSize`；A4 趋势图与 A1 顶栏三组 option 已移入纯函数，组件统一使用 `ChartCanvas` 承担空态与 autoresize。KI-099/100 保持 OPEN，待其余面板渐进迁移。
+- **2026-09-20 Token 与物料化治理（本地重构，未部署）**：ECharts 字号已收敛到 `charts/tokens.ts` 的 `CHART_FONT`，既有样式检查器阻断新增裸 `fontSize`；A4 趋势图、A1 顶栏与 B 屏图表已完成 option 纯函数化和 `ChartCanvas` 迁移，统一画布补齐加载、错误、空态、autoresize 与语义点击透传。KI-099/100 保持 OPEN，待 C~F 屏及特殊图表渐进迁移。
 - **2026-09-20 C6 请求一致性治理（本地重构，未部署）**：新增统一 JSON API 客户端；组织分页筛选支持取消旧请求和最新响应保护，调态成功后当前分页行立即同步并后台刷新；视觉测试补齐 `/api/organizations` 隔离夹具。KI-092 的后端路由事实已校正，但鉴权、真实身份与服务端审计仍未闭环。
 
 ## 操作边界

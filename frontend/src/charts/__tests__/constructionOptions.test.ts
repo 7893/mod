@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createReadinessPieOption,
   createTaskStageMatrixOption,
   createTaskStageRadarOption,
   createTrainingConversionOption,
@@ -57,5 +58,26 @@ describe('construction command charts', () => {
     expect(html).toContain('阶段完成率')
     expect(html).toContain('阶段1 完成率 <b>60%</b>')
     expect(html).toContain('阶段8 完成率 <b>67%</b>')
+  })
+
+  it('maps every readiness state without changing its drill-down label', () => {
+    const option = createReadinessPieOption({
+      imported: 12,
+      verified: 9,
+      collecting: 4,
+      notCollected: 2,
+    })
+
+    expect(option.series[0].data.map((item) => item.name)).toEqual([
+      '已导入', '已校验', '收集中', '未收集',
+    ])
+    expect(option.series[0].data.map((item) => item.value)).toEqual([12, 9, 4, 2])
+    expect(option.tooltip.confine).toBe(true)
+  })
+
+  it('keeps missing readiness data honest as zero-valued segments', () => {
+    const option = createReadinessPieOption()
+
+    expect(option.series[0].data.map((item) => item.value)).toEqual([0, 0, 0, 0])
   })
 })
