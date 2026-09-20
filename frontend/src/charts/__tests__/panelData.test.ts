@@ -4,7 +4,6 @@ import {
   buildBatchProgressSeries,
   buildCoverageComposition,
   buildOverviewComposition,
-  buildRolloutComposition,
   buildTaskStageSeries,
   parsePercentage,
 } from '../panelData'
@@ -15,16 +14,6 @@ describe('charts/panelData', () => {
       { name: '接口联调', total: 10, completed: 6, inProgress: 3, notStarted: 1, avgProgress: 72.345 },
     ])).toEqual([
       { name: '接口联调', completed: 6, inProgress: 3, notStarted: 1, progress: 72.345 },
-    ])
-  })
-
-  it('derives pending rollout units without producing negative values', () => {
-    expect(buildRolloutComposition([
-      { name: '第一批', total: 100, launched: 70, dual: 20 },
-      { name: '第二批', total: 10, launched: 12, dual: 1 },
-    ])).toEqual([
-      { name: '第一批', launched: 70, dual: 20, pending: 10 },
-      { name: '第二批', launched: 12, dual: 1, pending: 0 },
     ])
   })
 

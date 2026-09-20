@@ -20,7 +20,7 @@ describe('decision panel options', () => {
       theme: readFileSync(resolve(process.cwd(), 'src/styles/theme.css'), 'utf8'),
     }
 
-    expect(sources.dashboard).toContain('title="跨域行动队列"')
+    expect(sources.dashboard).toContain('title="跨域行动"')
     expect(sources.dashboard).not.toContain('zone="A3"')
     expect(sources.dashboard).not.toContain('zone="A8"')
     expect(sources.topBar).toContain('title="五域指挥入口"')

@@ -7,13 +7,6 @@ export interface TaskStageDatum {
   avgProgress: number
 }
 
-export interface RolloutBatchDatum {
-  name: string
-  total: number
-  launched: number
-  dual: number
-}
-
 export type CompositionTone = 'accent' | 'success' | 'warning' | 'danger' | 'neutral'
 
 export interface CompositionPartInput {
@@ -58,15 +51,6 @@ export function buildTaskStageSeries(stages: TaskStageDatum[]) {
     inProgress: Math.max(0, stage.inProgress),
     notStarted: Math.max(0, stage.notStarted),
     progress: Math.max(0, Math.min(100, stage.avgProgress)),
-  }))
-}
-
-export function buildRolloutComposition(batches: RolloutBatchDatum[]) {
-  return batches.map((batch) => ({
-    name: batch.name,
-    launched: Math.max(0, batch.launched),
-    dual: Math.max(0, batch.dual),
-    pending: Math.max(0, batch.total - batch.launched - batch.dual),
   }))
 }
 

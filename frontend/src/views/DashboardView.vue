@@ -180,7 +180,7 @@ const openAction = (row: StatusRow) => {
     <main class="flex-1 grid grid-cols-cockpit gap-2.5 min-h-0">
       <aside class="grid grid-rows-dashboard-left gap-2.5 min-h-0">
         <CockpitPanel
-          title="当前省域摘要"
+          title="省域摘要"
           zone="A2"
           :subtitle="selectedProvince === '全国' ? '全国总体 · 点击地图切换省域' : `${selectedProvince} · 纳入 ${selectedProvinceData.total} 家`"
         >
@@ -205,7 +205,7 @@ const openAction = (row: StatusRow) => {
         </CockpitPanel>
 
         <CockpitPanel
-          title="上线与双轨走势"
+          title="上线双轨走势"
           zone="A4"
           :subtitle="`7 个进度节点 · 累计上线 ${store.snapshot.overview.launched ?? 0} 家`"
         >
@@ -219,7 +219,7 @@ const openAction = (row: StatusRow) => {
         </CockpitPanel>
       </aside>
 
-      <section class="min-h-0 rounded-xl bg-slate-900/60 border border-white/10 backdrop-blur-md overflow-hidden p-3 flex flex-col gap-2">
+      <section data-zone="A5" class="min-h-0 rounded-xl bg-slate-900/60 border border-white/10 backdrop-blur-md overflow-hidden p-3 flex flex-col gap-2">
         <div class="flex items-center justify-between gap-3 flex-shrink-0">
           <div class="flex items-center gap-2 min-w-0">
             <span class="font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 tracking-wide">A5</span>
@@ -249,10 +249,10 @@ const openAction = (row: StatusRow) => {
         </CockpitPanel>
 
         <CockpitPanel
-          title="跨域行动队列"
+          title="跨域行动"
           zone="A7"
           tone="risk"
-          :subtitle="`${actionRows.length} 项异常与风险待处置`"
+          :subtitle="`${actionRows.length} 项待处置`"
         >
           <template #actions>
             <button class="text-cockpit-sm text-rose-300 hover:text-rose-200 flex items-center gap-1 cursor-pointer" @click="router.push('/f')">

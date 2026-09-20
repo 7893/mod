@@ -131,7 +131,7 @@ const ledgerPreviewRows = computed(() => [...store.entities]
     const readiness = (readinessPriority[left.readinessStatus || ''] ?? -1) - (readinessPriority[right.readinessStatus || ''] ?? -1)
     return readiness || left.construction - right.construction
   })
-  .slice(0, 4))
+  .slice(0, 3))
 </script>
 
 <template>
