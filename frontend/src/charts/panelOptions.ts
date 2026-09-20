@@ -96,7 +96,7 @@ export function createOverviewCompositionOption(parts: CompositionPart[], total:
         formatter: `${part.percentage}%`,
       },
     })),
-  }
+  } satisfies EChartsOption
 }
 
 export function createRolloutCompositionOption(list: RolloutSeriesItem[]) {
@@ -188,7 +188,7 @@ export function createProvinceProfileOption(progress?: number | string | null) {
       detail: { show: false },
       data: [{ value: safeProgress, name: '建设完成率' }],
     }],
-  }
+  } satisfies EChartsOption
 }
 
 export function createBatchProgressOption(list: BatchProgressItem[]) {
@@ -197,8 +197,9 @@ export function createBatchProgressOption(list: BatchProgressItem[]) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      formatter: (params: any[]) => {
-        const item = list[params?.[0]?.dataIndex]
+      formatter: (params: any) => {
+        const points = Array.isArray(params) ? params : [params]
+        const item = list[points[0]?.dataIndex]
         if (!item) return ''
         return `${item.name}<br/>建设完成度 <b>${item.construction}%</b><br/>上线率 <b>${item.launched}%</b>`
       },
@@ -236,7 +237,7 @@ export function createBatchProgressOption(list: BatchProgressItem[]) {
         backgroundStyle: { color: chartInk.borderSoft },
       },
     ],
-  }
+  } satisfies EChartsOption
 }
 
 export function createOperationsQualityOption(list: QualityRateItem[]) {
@@ -246,8 +247,9 @@ export function createOperationsQualityOption(list: QualityRateItem[]) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      formatter: (params: any[]) => {
-        const item = reversed[params?.[0]?.dataIndex]
+      formatter: (params: any) => {
+        const points = Array.isArray(params) ? params : [params]
+        const item = reversed[points[0]?.dataIndex]
         if (!item) return ''
         const value = item.value === null ? '—' : `${item.value}%`
         return `${item.name}<br/><b>${value}</b> · ${item.detail}`
@@ -287,7 +289,7 @@ export function createOperationsQualityOption(list: QualityRateItem[]) {
         },
       },
     }],
-  }
+  } satisfies EChartsOption
 }
 
 export function createOperationalGuardOption(list: OperationalGuardItem[]) {
@@ -303,8 +305,9 @@ export function createOperationalGuardOption(list: OperationalGuardItem[]) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      formatter: (params: any[]) => {
-        const item = reversed[params?.[0]?.dataIndex]
+      formatter: (params: any) => {
+        const points = Array.isArray(params) ? params : [params]
+        const item = reversed[points[0]?.dataIndex]
         return item ? `${item.name}<br/><b>${formatCount(item.value)}</b> 项` : ''
       },
       ...chartTooltip,
@@ -332,7 +335,7 @@ export function createOperationalGuardOption(list: OperationalGuardItem[]) {
         },
       },
     }],
-  }
+  } satisfies EChartsOption
 }
 
 export function createBatchComplianceOption(list: ComplianceSeriesItem[]) {

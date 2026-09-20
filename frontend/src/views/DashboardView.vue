@@ -2,7 +2,6 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { formatCount } from '../formatters/metrics.ts'
-import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, GaugeChart } from 'echarts/charts'
@@ -14,6 +13,7 @@ import {
 import ChinaMap from '../components/ChinaMap.vue'
 import CockpitTopBar from '../components/CockpitTopBar.vue'
 import CockpitPanel from '../components/CockpitPanel.vue'
+import ChartCanvas from '../components/charts/ChartCanvas.vue'
 import PanelLegend from '../components/PanelLegend.vue'
 import OverviewTrendChart from '../components/OverviewTrendChart.vue'
 import StatusList from '../components/blocks/StatusList.vue'
@@ -214,7 +214,7 @@ const chooseProvince = (name: string) => {
             </template>
             <div class="grid grid-cols-5 items-center gap-2 h-full min-h-0">
               <div class="col-span-2 h-full min-w-0 border-r border-surface-veil-06 pr-2">
-                <VChart :option="provinceProfileOption" autoresize class="h-full w-full min-w-0" />
+                <ChartCanvas class="min-w-0" :option="provinceProfileOption" />
               </div>
               <div class="col-span-3 grid grid-rows-4 h-full divide-y divide-white/5 min-w-0">
                 <div class="flex items-center justify-between text-cockpit-sm"><span class="text-slate-400">建设完成率</span><b class="font-mono text-sky-400">{{ selectedProvinceData.progress }}%</b></div>
@@ -238,7 +238,7 @@ const chooseProvince = (name: string) => {
                 { label: '上线率', tone: 'success' },
               ]" />
             </template>
-            <VChart :option="batchProgressOption" autoresize class="w-full h-full min-h-0" />
+            <ChartCanvas :option="batchProgressOption" />
           </CockpitPanel>
         </div>
 
@@ -296,7 +296,7 @@ const chooseProvince = (name: string) => {
                 </div>
                 <span class="text-cockpit-xs text-slate-500 mt-1">并行核对中</span>
               </div>
-              <VChart :option="operationsQualityOption" autoresize class="col-span-2 w-full h-full min-w-0 pl-2" />
+              <ChartCanvas class="col-span-2 min-w-0 pl-2" :option="operationsQualityOption" />
             </div>
           </CockpitPanel>
 
@@ -321,7 +321,7 @@ const chooseProvince = (name: string) => {
                   {{ operationalGuardTotal == null ? '数据未完整' : (operationalGuardTotal === 0 ? '三道门禁通过' : '需要核查') }}
                 </span>
               </div>
-              <VChart class="col-span-3 w-full h-full min-h-0 pl-2" :option="operationalGuardOption" autoresize />
+              <ChartCanvas class="col-span-3 pl-2" :option="operationalGuardOption" />
             </div>
           </CockpitPanel>
         </div>
