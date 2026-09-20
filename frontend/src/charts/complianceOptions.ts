@@ -1,4 +1,15 @@
-import { calmAnimation, chartInk, chartPalette, chartTooltip } from './theme'
+import type { EChartsOption } from 'echarts'
+import { formatCount } from '../formatters/metrics'
+import {
+  calmAnimation,
+  categoryAxis,
+  chartInk,
+  chartPalette,
+  chartSeriesColors,
+  chartTooltip,
+  compactGrid,
+  valueAxis,
+} from './theme'
 import { CHART_FONT } from './tokens'
 
 export interface ComplianceOverviewData {
@@ -6,6 +17,24 @@ export interface ComplianceOverviewData {
   supervised: number
   high: number
   medium: number
+}
+
+export interface ComplianceTagCount {
+  label: string
+  count: number
+}
+
+export interface ComplianceRiskComposition {
+  compliant: number
+  medium: number
+  high: number
+}
+
+const complianceTagColors: Record<string, string> = {
+  超期挂账: chartSeriesColors[3],
+  超预算迹象: chartSeriesColors[4],
+  票据异常: chartSeriesColors[2],
+  准备期卡顿: chartSeriesColors[1],
 }
 
 export function createComplianceOverviewOption(data: ComplianceOverviewData) {
@@ -51,5 +80,57 @@ export function createComplianceOverviewOption(data: ComplianceOverviewData) {
         },
       },
     ],
-  }
+  } satisfies EChartsOption
+}
+
+export function createComplianceTagOption(items: ComplianceTagCount[]) {
+  return {
+    ...calmAnimation,
+    tooltip: { trigger: 'axis', ...chartTooltip },
+    grid: { ...compactGrid, bottom: 18 },
+    xAxis: {
+      ...categoryAxis,
+      data: items.map((item) => item.label),
+      axisLabel: { ...categoryAxis.axisLabel, interval: 0, fontSize: CHART_FONT.axis },
+    },
+    yAxis: valueAxis,
+    series: [{
+      name: '涉及单位数',
+      type: 'bar',
+      data: items.map((item) => ({
+        value: item.count,
+        itemStyle: { color: complianceTagColors[item.label] ?? chartPalette.neutral },
+      })),
+      barWidth: '42%',
+      barMaxWidth: 48,
+      itemStyle: { borderRadius: [3, 3, 0, 0] },
+    }],
+  } satisfies EChartsOption
+}
+
+export function createComplianceRiskOption(data: ComplianceRiskComposition) {
+  return {
+    ...calmAnimation,
+    tooltip: { trigger: 'item', ...chartTooltip },
+    legend: {
+      orient: 'vertical',
+      right: 10,
+      top: 'center',
+      textStyle: { color: chartInk.textMuted, fontSize: CHART_FONT.caption },
+      itemWidth: 10,
+      itemHeight: 10,
+    },
+    series: [{
+      name: '合规水位构成',
+      type: 'pie',
+      radius: ['45%', '70%'],
+      center: ['35%', '50%'],
+      data: [
+        { value: data.compliant, name: `合规达标 (${formatCount(data.compliant)})`, itemStyle: { color: chartPalette.success } },
+        { value: data.medium, name: `中度瑕疵 (${formatCount(data.medium)})`, itemStyle: { color: chartPalette.warning } },
+        { value: data.high, name: `高风险隐患 (${formatCount(data.high)})`, itemStyle: { color: chartPalette.danger } },
+      ],
+      label: { show: false },
+    }],
+  } satisfies EChartsOption
 }

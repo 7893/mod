@@ -366,5 +366,5 @@ export function createBatchComplianceOption(list: ComplianceSeriesItem[]) {
         itemStyle: { color: chartPalette.success },
       },
     ],
-  }
+  } satisfies EChartsOption
 }
