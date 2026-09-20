@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { chartPalette, chartSeriesColors } from '../theme.ts'
+import { chartSeriesColors } from '../theme.ts'
 import { CHART_FONT } from '../tokens.ts'
-import { createComplianceRiskOption, createComplianceTagOption } from '../complianceOptions.ts'
+import { createComplianceTagOption } from '../complianceOptions.ts'
 
 describe('compliance chart options', () => {
   it('keeps compliance tag order, values, and semantic colors together', () => {
@@ -19,17 +19,6 @@ describe('compliance chart options', () => {
       { value: 3, itemStyle: { color: chartSeriesColors[4] } },
       { value: 2, itemStyle: { color: chartSeriesColors[2] } },
       { value: 1, itemStyle: { color: chartSeriesColors[1] } },
-    ])
-    expect(option.tooltip.confine).toBe(true)
-  })
-
-  it('formats risk composition labels from supplied counts', () => {
-    const option = createComplianceRiskOption({ compliant: 1000, medium: 12, high: 3 })
-
-    expect(option.series[0].data).toEqual([
-      { value: 1000, name: '合规达标 (1,000)', itemStyle: { color: chartPalette.success } },
-      { value: 12, name: '中度瑕疵 (12)', itemStyle: { color: chartPalette.warning } },
-      { value: 3, name: '高风险隐患 (3)', itemStyle: { color: chartPalette.danger } },
     ])
     expect(option.tooltip.confine).toBe(true)
   })

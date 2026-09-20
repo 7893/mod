@@ -15,6 +15,8 @@ describe('decision panel options', () => {
       construction: readFileSync(resolve(process.cwd(), 'src/views/ConstructionView.vue'), 'utf8'),
       rollout: readFileSync(resolve(process.cwd(), 'src/views/RolloutView.vue'), 'utf8'),
       operations: readFileSync(resolve(process.cwd(), 'src/views/OperationsView.vue'), 'utf8'),
+      issues: readFileSync(resolve(process.cwd(), 'src/views/IssuesView.vue'), 'utf8'),
+      insights: readFileSync(resolve(process.cwd(), 'src/views/InsightsView.vue'), 'utf8'),
       theme: readFileSync(resolve(process.cwd(), 'src/styles/theme.css'), 'utf8'),
     }
 
@@ -38,6 +40,10 @@ describe('decision panel options', () => {
     expect(sources.operations).toContain('zone="D7"')
     expect(sources.operations).toContain('title="端到端业务链路"')
     expect(sources.operations).not.toContain('zone="D2"')
+    expect(sources.issues).toContain('title="近期工单流转"')
+    expect(sources.issues).not.toContain('title="合规评级构成"')
+    expect(sources.insights).toContain('title="风险决策摘要"')
+    expect(sources.insights).not.toContain('createRiskOverviewOption')
     expect(sources.dashboard).toContain(':disabled="!briefingSummary"')
     expect(sources.dashboard).not.toContain('v-if="briefingSummary"')
     expect(sources.construction).toContain('grid-rows-construction')
