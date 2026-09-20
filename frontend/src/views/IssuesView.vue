@@ -2,15 +2,14 @@
 import { computed, onUnmounted, ref } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, GaugeChart, LineChart, PieChart } from 'echarts/charts'
+import { BarChart, LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import CockpitPanel from '../components/CockpitPanel.vue'
 import PanelLegend from '../components/PanelLegend.vue'
-import ChartBlock from '../components/blocks/ChartBlock.vue'
 import ChartCanvas from '../components/charts/ChartCanvas.vue'
-import CommandBand from '../components/blocks/CommandBand.vue'
-import StatList from '../components/blocks/StatList.vue'
-import type { StatRow } from '../components/blocks/types.ts'
+import EmptyNote from '../components/blocks/EmptyNote.vue'
+import MetricGrid from '../components/blocks/MetricGrid.vue'
+import type { BlockTone, MetricItem } from '../components/blocks/types.ts'
 import FilterSelect from '../components/ledger/FilterSelect.vue'
 import LedgerPager from '../components/ledger/LedgerPager.vue'
 import SearchInput from '../components/ledger/SearchInput.vue'
@@ -22,8 +21,6 @@ import { formatCount as format } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import { createBatchComplianceOption } from '../charts/panelOptions.ts'
 import {
-  createComplianceOverviewOption,
-  createComplianceRiskOption,
   createComplianceTagOption,
 } from '../charts/complianceOptions.ts'
 import { BATCH_ORDER } from '../utils/entityOptions.ts'
@@ -31,7 +28,7 @@ import { COMPLIANCE_TAGS, deriveComplianceUnits } from '../utils/riskRules.ts'
 
 const TAG_FILTER_OPTIONS = ['全部标签', ...COMPLIANCE_TAGS] as const
 
-use([CanvasRenderer, BarChart, GaugeChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
+use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
 const store = useProjectStore()
 
@@ -96,25 +93,44 @@ const tagDimensionCounts = computed(() => {
   }))
 })
 
-const complianceOverviewOption = computed(() => createComplianceOverviewOption({
-  rate: complianceRate.value == null ? null : Number(complianceRate.value),
-  supervised: complianceUnits.value.length,
-  high: highRiskCount.value,
-  medium: mediumRiskCount.value,
-}))
-
-const dominantComplianceTags = computed<StatRow[]>(() => [...tagDimensionCounts.value]
-  .sort((a, b) => b.count - a.count)
-  .slice(0, 3)
-  .map((item) => ({ id: item.label, label: item.label, value: item.count })))
-
 const tagBarOption = computed(() => createComplianceTagOption(tagDimensionCounts.value))
 
-const riskPieOption = computed(() => createComplianceRiskOption({
-  compliant: compliantCount.value,
-  medium: mediumRiskCount.value,
-  high: highRiskCount.value,
-}))
+const commandItems = computed<MetricItem[]>(() => [
+  {
+    label: '全网合规水位',
+    value: complianceRate.value == null ? '—' : `${complianceRate.value}%`,
+    tone: 'success',
+    progress: complianceRate.value == null ? undefined : Number(complianceRate.value),
+  },
+  { label: '重点监督', value: format(complianceUnits.value.length), unit: '家', tone: 'accent' },
+  { label: '高风险', value: format(highRiskCount.value), unit: '家', tone: 'danger' },
+  { label: '中度瑕疵', value: format(mediumRiskCount.value), unit: '家', tone: 'warning' },
+])
+
+const WORKFLOW_STAGES: Array<{ status: string; label: string; hint: string; tone: BlockTone }> = [
+  { status: 'DISCOVERED', label: '发现', hint: '待分派', tone: 'danger' },
+  { status: 'ASSIGNED', label: '指派', hint: '责任到人', tone: 'warning' },
+  { status: 'IN_PROGRESS', label: '攻坚', hint: '处置中', tone: 'accent' },
+  { status: 'VERIFYING', label: '核验', hint: '等待确认', tone: 'warning' },
+  { status: 'RESOLVED', label: '销项', hint: '已解决', tone: 'success' },
+  { status: 'CLOSED', label: '归档', hint: '流程闭环', tone: 'success' },
+]
+
+const recentIssueStatuses = computed(() => {
+  const statuses = new Map<string, string>()
+  for (const activity of activities.value) {
+    if (!statuses.has(activity.issueId)) statuses.set(activity.issueId, activity.status)
+  }
+  return [...statuses.values()]
+})
+
+const workflowFacts = computed<MetricItem[]>(() => WORKFLOW_STAGES.map((stage) => ({
+  label: stage.label,
+  value: recentIssueStatuses.value.filter((status) => status === stage.status).length,
+  unit: '单',
+  hint: stage.hint,
+  tone: stage.tone,
+})))
 
 const batchComplianceStats = computed(() =>
   BATCH_ORDER.map((name, idx) => {
@@ -147,40 +163,29 @@ const { page, totalPages: totalTablePages, items: paginatedTableUnits } = usePag
 
 <template>
   <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="E">
-    <!-- E1: 合规仪表、风险分层与主要风险维度 -->
+    <!-- E1: 领导层合规摘要，不重复 E2 标签分布与 E3 流程 -->
     <CockpitPanel
       title="合规监督指挥盘"
       zone="E1"
-      :subtitle="`全网 ${format(totalUnits)} 家单位 · 合规水位、监督梯队与主要风险同屏`"
+      :subtitle="`全网 ${format(totalUnits)} 家单位 · 核心水位与监督规模`"
       class="flex-shrink-0"
     >
-      <CommandBand>
-        <template #chart>
-          <ChartCanvas :option="complianceOverviewOption" />
-        </template>
-        <template #aside>
-          <div class="flex flex-col justify-center h-full px-5">
-            <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs"><span class="font-medium text-slate-300">主要风险维度</span><span class="text-slate-500">TOP 3</span></div>
-            <StatList :rows="dominantComplianceTags" flat density="dense" />
-          </div>
-        </template>
-      </CommandBand>
+      <MetricGrid :items="commandItems" :columns="4" flat fill size="lg" align="center" />
     </CockpitPanel>
 
     <!-- GI #4 治理自愈动态广播流 -->
     <LiveActivityTicker class="flex-shrink-0" @activities="activities = $event" />
     <p v-if="inspectionNotice" role="status" class="text-cockpit-sm text-amber-400">{{ inspectionNotice }}</p>
 
-    <!-- 中部：E2 风险维度分布 + E3 水位构成 (弹性优先，Guardrail 扩大为 min-h-[200px] max-h-[300px]，E-2) -->
+    <!-- 中部：E2 风险原因 + E3 工单流转，职责互不重复 -->
     <div class="grid grid-cols-issues-top gap-2.5 min-h-[200px] max-h-[300px] flex-1">
       <CockpitPanel title="单位级合规风险标签分布" zone="E2" subtitle="挂账 / 预算 / 票据 三类真实指标维度">
         <ChartCanvas :option="tagBarOption" />
       </CockpitPanel>
 
-      <CockpitPanel title="合规评级构成" zone="E3" subtitle="达标与监督梯队分布比例">
-        <ChartBlock footnote="按当前快照单位指标计算，不预设合规率区间">
-          <ChartCanvas :option="riskPieOption" />
-        </ChartBlock>
+      <CockpitPanel title="近期工单流转" zone="E3" subtitle="最近治理活动涉及工单的当前阶段">
+        <MetricGrid v-if="activities.length" :items="workflowFacts" :columns="3" flat fill size="sm" align="center" />
+        <EmptyNote v-else>暂无可用治理活动，流程统计不做推测</EmptyNote>
       </CockpitPanel>
     </div>
 

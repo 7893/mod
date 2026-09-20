@@ -18,7 +18,6 @@ import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/compone
 import CockpitPanel from '../components/CockpitPanel.vue'
 import ChartCanvas from '../components/charts/ChartCanvas.vue'
 import BriefingList from '../components/blocks/BriefingList.vue'
-import CommandBand from '../components/blocks/CommandBand.vue'
 import EmptyNote from '../components/blocks/EmptyNote.vue'
 import MetricGrid from '../components/blocks/MetricGrid.vue'
 import NoteBanner from '../components/blocks/NoteBanner.vue'
@@ -34,7 +33,7 @@ import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
 import { buildRiskDimensionBreakdown } from '../utils/qualityMetrics.ts'
 import { deriveAtRiskUnits, indexPredictions } from '../utils/riskRules.ts'
 import { parseBriefingSections } from '../utils/briefing.ts'
-import { createRiskDimensionOption, createRiskOverviewOption } from '../charts/insightsOptions.ts'
+import { createRiskDimensionOption } from '../charts/insightsOptions.ts'
 
 use([CanvasRenderer, BarChart, PieChart, GridComponent, TitleComponent, TooltipComponent])
 
@@ -56,10 +55,6 @@ const predictionsMap = computed(() => indexPredictions(insightsStatus.value?.pre
 const atRiskUnits = computed<AtRiskUnit[]>(() =>
   deriveAtRiskUnits(store.entities, store.snapshot.businessRules, predictionsMap.value),
 )
-
-const dualDiffCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '双轨核对差异').length)
-const constLagCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '建设严重滞后').length)
-const prepStuckCount = computed(() => atRiskUnits.value.filter((u) => u.riskType === '准备期卡顿').length)
 
 const riskDimensions = computed(() => buildRiskDimensionBreakdown(atRiskUnits.value, store.snapshot.businessRules))
 const highRiskCount = computed(() => atRiskUnits.value.filter((u) => u.riskLevel === '高危').length)
@@ -83,31 +78,6 @@ const insights = computed(() => {
   }
 })
 
-const riskOverviewOption = computed(() => createRiskOverviewOption({
-  dualDifference: dualDiffCount.value,
-  constructionLag: constLagCount.value,
-  preparationStuck: prepStuckCount.value,
-}))
-
-const riskUnitTotal = computed(() => dualDiffCount.value + constLagCount.value + prepStuckCount.value)
-
-const modelQualityRows = computed(() => insights.value.targetModels.map((model) => {
-  const quality = model.quality == null ? null : model.quality
-  const progressQuality = quality == null ? 0 : Math.max(0, Math.min(1, quality))
-  const regression = model.type === 'REGRESSION'
-  return {
-    label: regression ? '单量标签拟合' : '风险标签拟合',
-    value: quality == null ? '—' : (regression ? `R² ${quality.toFixed(4)}` : `Acc ${(quality * 100).toFixed(1)}%`),
-    progress: progressQuality * 100,
-  }
-}))
-
-const evaluatedModelCount = computed(() => insights.value.targetModels.filter((model) => model.quality != null).length)
-
-const riskHeadline = computed<MetricItem[]>(() => [
-  { label: '风险单位', value: riskUnitTotal.value, tone: 'danger', hint: '三类风险合计' },
-])
-
 const ALERT_TONE: Record<string, BlockTone> = { SUCCESS: 'success', WARNING: 'warning' }
 const ALERT_ICON: Record<string, typeof Info> = { SUCCESS: CheckCircle2, WARNING: AlertCircle }
 const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map((alert) => ({
@@ -117,40 +87,38 @@ const alertRows = computed<StatusRow[]>(() => insights.value.ruleBasedAlerts.map
   tone: ALERT_TONE[alert.level] ?? 'accent',
   icon: ALERT_ICON[alert.level] ?? Info,
 })))
+
+const primaryRiskDimension = computed(() => {
+  const sorted = [...riskDimensions.value].sort((left, right) => right.count - left.count)
+  return sorted[0]?.count ? sorted[0] : null
+})
+
+const decisionItems = computed<MetricItem[]>(() => {
+  const primary = primaryRiskDimension.value
+  return [
+    {
+      label: '首要瓶颈',
+      value: primary?.type ?? '暂无集中风险',
+      tone: primary?.tone ?? 'success',
+      hint: primary?.gate ?? '当前规则未识别集中风险',
+    },
+    { label: '影响单位', value: primary?.count ?? 0, unit: '家', tone: primary?.tone ?? 'success' },
+    { label: '其中高危', value: primary?.highCount ?? 0, unit: '家', tone: primary?.highCount ? 'danger' : 'success' },
+    { label: '规则告警', value: alertRows.value.length, unit: '项', tone: alertRows.value.length ? 'warning' : 'success' },
+  ]
+})
 </script>
 
 <template>
   <div class="flex flex-col gap-2.5 h-full min-h-0 w-full" data-zone="F">
-    <!-- F1: 风险构成与模型质量门禁，替代四张等权指标卡 -->
+    <!-- F1: 只给出当前决策优先级，风险分布与模型质量分别留在 F3/F4 -->
     <CockpitPanel
-      title="风险研判指挥盘"
+      title="风险决策摘要"
       zone="F1"
-      subtitle="规则风险构成与合成标签拟合分同屏"
+      subtitle="首要瓶颈与行动优先级 · 不重复风险分布和模型评分"
       class="flex-shrink-0"
     >
-      <CommandBand :chart-span="7">
-        <template #chart>
-          <div class="grid grid-cols-12 h-full min-h-0">
-            <MetricGrid class="col-span-3 border-r border-surface-veil-06 pr-2" :items="riskHeadline" flat fill align="center" />
-            <ChartCanvas class="col-span-9" :option="riskOverviewOption" />
-          </div>
-        </template>
-        <template #aside>
-          <div class="flex items-center justify-between pb-1 border-b border-surface-veil-06 text-cockpit-xs">
-            <span class="font-medium text-slate-300">AutoML 实验评估</span>
-            <b class="font-mono text-amber-400">{{ evaluatedModelCount }}/{{ insights.targetModels.length }} 已评估 · 非未来预测</b>
-          </div>
-          <div class="grid grid-rows-2 gap-1.5 flex-1 min-h-0 pt-1.5">
-            <div v-for="model in modelQualityRows" :key="model.label" class="grid grid-cols-12 items-center gap-2 min-w-0">
-              <span class="col-span-4 text-cockpit-xs text-slate-400 truncate">{{ model.label }}</span>
-              <div class="col-span-5 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                <div class="h-full rounded-full bg-sky-400" :style="{ width: `${model.progress}%` }" />
-              </div>
-              <b class="col-span-3 font-mono text-cockpit-xs text-slate-200 text-right whitespace-nowrap">{{ model.value }}</b>
-            </div>
-          </div>
-        </template>
-      </CommandBand>
+      <MetricGrid :items="decisionItems" :columns="4" flat fill size="lg" align="center" />
     </CockpitPanel>
 
     <!-- 主网格：F2-F5 (2x2 结构) -->

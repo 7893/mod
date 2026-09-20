@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { createComplianceOverviewOption } from '../complianceOptions.ts'
-import { createRiskOverviewOption } from '../insightsOptions.ts'
 import {
   createDualRunOutcomeOption,
   createIntegrationOutcomeOption,
@@ -33,23 +31,4 @@ describe('primary overview charts', () => {
     expect(gauge.detail.show).toBe(false)
   })
 
-  it('shows an honest empty compliance gauge when the rate is absent', () => {
-    const option = createComplianceOverviewOption({ rate: null, supervised: 10, high: 2, medium: 8 })
-    const gauge = option.series[0]
-
-    expect(gauge.progress?.show).toBe(false)
-    expect(gauge.detail?.formatter).toBe('—')
-    expect(option.series[1].data.map((item) => item.value)).toEqual([10, 8, 2])
-  })
-
-  it('uses the supplied risk inputs in the comparison bars without an overlapping center label', () => {
-    const option = createRiskOverviewOption({
-      dualDifference: 3,
-      constructionLag: 5,
-      preparationStuck: 2,
-    })
-
-    expect(option.series[0].data.map((item) => item.value)).toEqual([3, 5, 2])
-    expect('title' in option).toBe(false)
-  })
 })
