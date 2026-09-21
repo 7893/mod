@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowRight, Check, FileCheck2, Scale, ServerCog, Workflow } from 'lucide-vue-next'
+import { Check, FileCheck2, Scale, ServerCog, Workflow } from 'lucide-vue-next'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, GaugeChart, LineChart } from 'echarts/charts'
@@ -175,8 +175,8 @@ const qualityAuditItems = computed<MetricItem[]>(() => qualityAuditList.value.ma
   unit: item.unit,
   tone: auditTone(item.status),
   meta: [
-    { label: '合规率', value: item.rate != null ? `${item.rate}%` : '—' },
-    { label: '异常', value: item.errors != null ? item.errors : '—' },
+    { label: '合规率', value: item.rate != null ? `${item.rate}%` : '未核验' },
+    { label: '异常', value: item.errors != null ? item.errors : '未核验' },
   ],
 })))
 
@@ -193,24 +193,21 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       class="flex-shrink-0"
     >
       <div class="flex flex-col gap-2 min-h-0">
-        <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-w-0">
-          <template v-for="(step, idx) in flowSteps" :key="step.label">
-            <div class="flex items-center gap-2.5 min-w-0">
+        <div class="grid grid-cols-6 divide-x divide-surface-veil-06 p-2.5 rounded-xl bg-surface-veil-03 border border-surface-veil-06 min-w-0">
+          <div v-for="step in flowSteps" :key="step.label" class="flex flex-col items-center justify-center gap-1 min-w-0 px-2 text-center">
+            <div class="flex items-center justify-center gap-2 min-w-0 w-full">
               <div
                 class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
                 :class="step.status === 'done' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-sky-500/15 text-sky-400'"
               >
                 <component :is="step.icon" :size="14" />
               </div>
-              <div class="min-w-0">
-                <b class="block text-cockpit-sm font-semibold text-slate-200 truncate">{{ step.label }}</b>
-                <span class="block font-mono text-cockpit-xs text-slate-400">{{ step.value }}</span>
-              </div>
+              <b class="text-cockpit-sm font-semibold text-slate-200 truncate">{{ step.label }}</b>
             </div>
-            <ArrowRight v-if="idx < flowSteps.length - 1" :size="14" class="text-slate-600 flex-shrink-0" />
-          </template>
+            <span class="font-mono text-cockpit-md text-slate-300 whitespace-nowrap">{{ step.value }}</span>
+          </div>
         </div>
-        <MetricGrid :items="scaleFacts" :columns="3" flat size="xs" />
+        <MetricGrid :items="scaleFacts" :columns="3" flat size="sm" align="center" />
       </div>
     </CockpitPanel>
 
@@ -265,12 +262,12 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       </CockpitPanel>
 
       <!-- D7: 数据质量金标准核验 -->
-      <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="核心业务约束与金标准稽核规则 · 未离线稽核项如实标注，不虚报 0 异常" class="col-span-2">
+      <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="覆盖规模与稽核状态 · 未核验项明确标注" class="col-span-2">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <MetricGrid class="col-span-7 pr-3 border-r border-surface-veil-06" :items="qualityAuditItems" :columns="2" fill size="sm" align="center" />
+          <MetricGrid class="col-span-5 pr-3 border-r border-surface-veil-06" :items="qualityAuditItems" :columns="2" fill size="sm" align="center" />
 
           <!-- 右侧：覆盖规模图表 -->
-          <div class="col-span-5 flex flex-1 min-h-0 flex-col pl-1">
+          <div class="col-span-7 flex flex-1 min-h-0 flex-col pl-1">
             <div class="flex items-center justify-between px-1 text-cockpit-xs flex-shrink-0">
               <div class="flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-sky-400" />

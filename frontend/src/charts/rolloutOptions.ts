@@ -58,7 +58,7 @@ export function createRolloutTrendMatrixOption(points: RolloutTrendPoint[]) {
     series: [{
       type: 'heatmap', data: matrix,
       label: {
-        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: CHART_FONT.axis,
+        show: true, color: chartInk.textPrimary, fontFamily: 'monospace', fontSize: CHART_FONT.body,
         formatter: (params: any) => `${params.value?.[2] ?? 0}%`,
       },
       itemStyle: { borderColor: chartInk.bgTooltip, borderWidth: 2, borderRadius: 3 },

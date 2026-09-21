@@ -45,7 +45,7 @@ function createHorizontalVolumeOption(items: OutcomeItem[]) {
       data: safeItems.map((item) => ({ value: item.value, itemStyle: { color: item.color, borderRadius: 4 } })),
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
-        fontFamily: 'monospace', fontSize: CHART_FONT.caption,
+        fontFamily: 'monospace', fontSize: CHART_FONT.body,
         formatter: (params: any) => formatCount(params.value),
       },
     }],
@@ -109,7 +109,7 @@ export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
       }),
       label: {
         show: true, position: 'right', color: chartInk.textPrimary,
-        fontFamily: 'monospace', fontSize: CHART_FONT.caption,
+        fontFamily: 'monospace', fontSize: CHART_FONT.body,
         formatter: (params: any) => {
           const item = reversed[params.dataIndex]
           return formatCount(item?.total)
