@@ -7,21 +7,9 @@ from typing import Any, Sequence
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from .heatwave_tables import TARGET_MOD_TABLES
+
 logger = logging.getLogger("heatwave_watchdog")
-
-# 9 张需要加载入 HeatWave 内存列存集群的 MOD 核心业务与核算大表
-TARGET_MOD_TABLES: list[str] = [
-    "business_document_line",
-    "accounting_voucher_line",
-    "business_document",
-    "accounting_voucher",
-    "integration_result",
-    "rollout_status_snapshot",
-    "construction_task",
-    "dual_run_result",
-    "org_unit",
-]
-
 
 def get_heatwave_status(conn: Connection) -> dict[str, Any]:
     """

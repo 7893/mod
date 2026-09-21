@@ -96,11 +96,13 @@
     - **fallback 数据契约对齐**：补齐前后端 fallback 快照（`v2-sim-snapshot.json`）的 `rolloutTrend`、`operationsTrend` 及 `operations` 双轨明细字段（`dualRunConsistent`、`dualRunInconsistent`、`dualRunConsistencyPct`、`integrationSuccess`、`integrationFailed`），消除降级时 C3、D3、D6 面板假性空白。
     - **健康探针与发布门禁收紧**：`/api/health` 增加 `snapshot` 元数据（含 `source`、`status`、`last_refreshed_at`、`last_refresh_duration_ms`、`last_error`、`is_stale`、`consecutive_failures`）；`/api/dashboard/refresh-meta` 严格根据 `_snapshot_source` 真实返回 `data_version`（`live` 或 `frozen`）与 `status`（`ok` 或 `fallback`），禁止仅凭 DB 连接存在谎报 `live`；`publish.sh` 增加 C3/D3/D6 字段完整性发布门禁。
   - **前端零转圈策略（`stores/project.ts`）**：store 初始即用内置兜底快照（`data/fallback-snapshot.json`）预填 `snapshot`/`entities`，`loading` 初值为 `false`；`refresh()` 仅在「完全没有任何可展示数据」时才置 `loading`。因兜底数据恒存在，首屏与轮询刷新（含后端快照冷启动 >1s 的极端情形）都走静默替换，顶栏刷新指示与各屏内容区均不出现转圈/白屏。轮询刷新沿用 `silent=true`。六个屏幕（A~F）共享同一 store 快照渲染，切屏不重新请求、无独立整屏加载态；F 屏「每日简报」「风险解释」为局部按需小加载态，不影响整屏。
-- **单位台账后端分页（P1，2026-09-14）**：
-  - **架构改造**：原 `/api/organizations` 端点从 `dashboard_snapshot()` 取全量 3,202 条实体后在 Python 内存过滤分页，改为直接查库分页。新增 `query_entities_paginated()` 函数（`dashboard_sections.py`）支持 `page`、`page_size`、`region`、`status`、`batch`、`keyword` 参数，SQL 层 `WHERE` + `LIMIT/OFFSET` 真正分页。
-  - **前端重构**：`RolloutLedgerTable.vue` 从同步读取 `store.entities` 客户端分页改为调用新 composable `useOrganizations.ts` 异步服务端分页。筛选条件变化自动重置到第 1 页并发起 API 请求；加载态显示旋转指示器；空态与重置按钮保持不变。筛选选项计数仍从 `store.entities` 派生（后续可优化为独立 aggregation 接口）。
-  - **降级路径**：当数据库不可用时（`conn is None`），API 自动降级为从 fallback snapshot 内存过滤，保持与原逻辑一致的兜底能力。
-  - **测试更新**：`RolloutLedgerTable.test.ts` mock 改为同时拦截 `/api/dashboard/snapshot` 与 `/api/organizations`，模拟服务端分页响应。
+- **单位台账统一投影（2026-09-21，本地实现待发布）**：
+  - `build_entities()` 产生的全景快照是单位台账唯一原始投影；前端 C5 与 B 屏完整台账均从 `store.entities`
+    读取，共用 `useEntityLedger.ts` 的筛选与分页内核，不再为 C5 发起第二次单位列表请求。
+  - 已删除 `useOrganizations.ts` 和后端 `query_entities_paginated()` 五表重算路径。`GET /api/organizations`
+    仅作兼容接口，在同一快照投影上筛选、分页，不执行额外 SQL；调态仍经 `PATCH /api/organizations/{id}`
+    写入并由 store 局部同步，后续快照刷新进行权威对齐。
+  - 原 2026-09-14 的 C5 独立服务端分页路线已被本决策取代；原有降级能力不变，仍由全景快照统一切换 live/fallback。
 - 数据库为托管 MySQL HeatWave（库 `mod`，Always Free 规格），连接主机、端口与凭据
   仅存于运行主机的本地环境文件，不写入版本库或文档。原运行环境的旧数据库实例已删除。
 - 运行主机使用系统级 `mod.service` 统一托管 FastAPI 与模拟器子进程；FastAPI 监听
@@ -538,7 +540,7 @@ KI-060 更新前的本节原文完整保存在
 - **全局字体梯队放大（+2px）**：全局 CSS 变量体系（`theme.css`）与基础图表主题（`charts/*.ts`）全面上浮 2px（`xs: 13px, sm: 14px, md: 16px, lg: 18px, metric: 20px, kpi: 26px`）。
 - **组件及视图内嵌图表微小字号补齐**：补齐 `CockpitTopBar.vue`（A1 面板业务单据/会计凭证/接口集成字号与数值由 9px 提升至 11px，微调 `grid` 边距防遮挡）、`ModelContractCard.vue`、`OverviewTrendChart.vue`、`ChinaMap.vue` 以及各业务视图（Construction、Insights、Issues、Rollout）中散落硬编码的微小字号（9~11px 统一定向提升 2px 至 11~13px），彻底消除 10px 及以下微小字号，保障大屏全域视觉清晰可读。
 - **2026-09-20 Token 与物料化治理（已部署，人工视觉验收待完成）**：ECharts 字号已收敛到 `charts/tokens.ts` 的 `CHART_FONT`，既有样式检查器阻断新增裸 `fontSize`；A~F 六屏图表已完成 option 纯函数化和 `ChartCanvas` 迁移，中国地图保留专用交互外壳，统一画布补齐加载、错误、空态、autoresize 与语义点击透传。KI-099/100 为 IN-PROGRESS，分别等待固定场景人工视觉验收，以及最后一个 `CompositionBar` 直接渲染入口收口。
-- **2026-09-20 C6 请求一致性治理（已部署）**：新增统一 JSON API 客户端；组织分页筛选支持取消旧请求和最新响应保护，调态成功后当前分页行立即同步并后台刷新；视觉测试补齐 `/api/organizations` 隔离夹具。KI-092 的后端路由事实已校正，但鉴权、真实身份与服务端审计仍未闭环。
+- **2026-09-20 C6 请求一致性治理（历史上线形态，读路径已被 2026-09-21 统一投影取代）**：当时为独立组织分页请求补了取消与最新响应保护；现行 C5 已不发起该列表请求。调态编辑仍使用统一 JSON API 客户端；KI-092 的鉴权、真实身份与服务端审计仍未闭环。
 - **2026-09-21 六屏信息架构治理（代码阶段已部署，人工验收进行中）**：登记 KI-102，允许合并没有独立决策价值的历史 Zone；A1 已改为五域导航摘要，A3/A8 收敛进省域摘要与行动队列，D1/D2 合为唯一端到端业务链路；B 屏删除同源雷达和总览/台账整页互斥，B6 台账预览常驻，完整台账进入宽抽屉；C 屏合并批次当前/历史面板，省域与联系人切到缺口视角；E1/E3 不再重复合规构成，F1 不再复制 F3 风险分布和 F4 模型评分。首轮代码随 `0e56932` 部署；1920×1080 / 1366×768 两档主画布几何可见性检查 14/14 通过。人工视觉验收仍待进行，确认前不更新既有截图基线。
 - **2026-09-21 A 屏标题与实时数字微调（已部署，人工视觉验收待完成）**：现行架构已退役 A3，第二块左栏面板编号为 A4；A2/A4 改为短标题常显、完整说明在整条标题栏悬停展示。A6 数字矩阵已居中并接入共用缓动数字；SSE 已提交事件只叠加晚于当前权威快照的单据/凭证增量，快照时间追上后自动撤销临时叠加，避免实时感缺失或重复计数。提交 `9493f48` 的质量门、生产部署、API 健康探针与快照契约探针均已通过。
 - **2026-09-21 A1/A2/A6 指标职责去重（已部署）**：A6 独占今日单据、今日凭证与实时投影增量；A2 默认展示全国建设完成率、纳入单位、已上线和双轨运行，地图选省后原位切换为该省同口径汇总；A1 业务运行入口不再重复今日单据数字，只保留端到端业务语义和专业屏入口。提交 `dc55ef2` 的质量门与生产 Deploy 已成功。
@@ -567,6 +569,7 @@ KI-060 更新前的本节原文完整保存在
   经公网后默认/批次/省份/关键字场景多次超过 1s，尚不能宣称端到端全部载入均满足 `<1s`。
   当前根因是 20 行分页仍重复执行联系人窗口计算与 `dual_run_result` 全量分组，同时主快照已携带全量单位又由
   C5 二次请求。HeatWave 免费层已命中不等于单核 GROUP BY 自动低于 1s；后续应优先消除重复载入并把分组结果预聚合。
+- **2026-09-21 C5 性能路径收口（本地实现）**：上述复核促成了单位台账读路径统一；C5 不再追加五表查询，因此它的读取时间由已加载的全景快照决定，不再存在一套独立的 C5 计算时延。HeatWave 目标表已在代码中收口到 `backend/app/heatwave_tables.py`，并按快照热依赖从 9 张表扩为 12 张（新增 `sys_user`、`data_readiness`、`daily_stats`）。生产环境当前仍是 9 张就绪，本轮未执行 HeatWave DDL/补载且未部署；后续必须在独立数据库授权下补载、验证 12/12 健康后再发布这份目标配置。
 
 ## 操作边界
 

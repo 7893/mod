@@ -1,22 +1,37 @@
 # KI-090 · HeatWave 加载清单与热点查询来源错位
 
-- 状态：OPEN
+- 状态：IN-PROGRESS
 - 优先级：P2
-- 更新日期：2026-09-16
+- 更新日期：2026-09-21
 - 适用范围：HeatWave RAPID 表加载、全景快照查询、内存配额
 - 来源：[KI-085 第 4 项](KI-085-核心架构缺陷与数据安全治理.md)
 
 ## 问题
 
-[`scripts/project/heatwave_manager.py`](../../scripts/project/heatwave_manager.py) 与 [`backend/app/heatwave_watchdog.py`](../../backend/app/heatwave_watchdog.py) 的加载清单包含 `construction_task` 等表，但不含 `daily_stats`。与此同时，[`backend/app/services/dashboard.py`](../../backend/app/services/dashboard.py) 的总览、运营和趋势查询持续读取 `daily_stats`。
+[`scripts/project/heatwave_manager.py`](../../scripts/project/heatwave_manager.py) 与 [`backend/app/heatwave_watchdog.py`](../../backend/app/heatwave_watchdog.py)
+原先各自维护 9 表清单，遗漏了单位投影/快照热依赖 `sys_user`、`data_readiness`和 `daily_stats`。
+这使健康检查的“全部就绪”与实际分析依赖不一致，也让多表计划因关联表未全部进入 RAPID 而保留 InnoDB 路径。
 
-代码层已确认加载清单与热点查询来源不一致；是否造成生产性能损失仍需以只读执行计划、查询频率和 HeatWave 内存占用核实，不能直接凭文档执行 DDL。
+生产性能、表规模与内存证据已于 2026-09-21 通过只读核查取得；这些证据只支持配置与代码决策，不自动授权生产 DDL。
+
+## 2026-09-21 证据与代码处理
+
+- 生产只读核查显示旧目标清单 9/9 就绪，`sys_user`、`data_readiness`、`daily_stats`
+  未装载；HeatWave 节点约使用 4.605 GiB / 16.106 GiB。
+- 原 C5 五表查询的计数阶段约 0.1332s、数据阶段约 0.2564s，整体约 0.3901s；执行计划没有
+  RAPID，且在返回 20 行前会物化 `construction_task`、`sys_user`、`dual_run_result` 等集合。
+- 表规模与内存余量证明三张表具备进入目标清单的基本条件：`sys_user` 约 41,242 行，
+  `data_readiness` 约 2,020 行，`daily_stats` 约 1,148 行。它们虽小，但作为 join/聚合依赖会影响整条分析路径是否可下推。
+- C5 独立五表重算已从代码中删除，改为复用全景快照的单位投影。HeatWave 目标表已收口到
+  `backend/app/heatwave_tables.py`，应用看门狗与运维脚本共用同一份 12 表目标配置。
+- 本轮没有执行生产 DDL 或补载。生产仍为 9 表就绪，因此不得单独部署新目标配置；否则看门狗会把
+  缺失表视为故障并尝试自动补载。
 
 ## 完成定义
 
-- [ ] 取得热点查询、执行计划、表规模和 RAPID 内存占用证据；
-- [ ] 按证据确定保留、移除和新增的表清单；
-- [ ] 运维脚本与看门狗共用同一份目标表配置；
+- [x] 取得热点查询、执行计划、表规模和 RAPID 内存占用证据；
+- [x] 按证据确定保留、移除和新增的表清单；
+- [x] 运维脚本与看门狗共用同一份目标表配置；
 - [ ] 经独立数据库授权完成变更和回退演练；
 - [ ] 快照性能、HeatWave 健康检查和全量质量门禁通过。
 

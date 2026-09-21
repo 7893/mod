@@ -42,6 +42,7 @@
 - [ADR-0018](decisions/0018-通用质量门禁优先采用成熟工具.md)：通用质量能力优先使用成熟工具，自研检查只保留 MOD 特有契约。
 - [ADR-0020](decisions/0020-新业务采用分阶段审批制证链路.md)：新业务单据采用分阶段审批、制证与真实时间口径。
 - [ADR-0021](decisions/0021-AI简报与实时指标按时点分层.md)：00:30 AI 日报使用上一完整自然日，实时日内指标保持独立。
+- [ADR-0022](decisions/0022-单位台账统一投影与HeatWave依赖治理.md)：单位台账只读一份快照投影，HeatWave 目标清单只维护一份。
 - [Harness 入口迁移前原文](history/2026-09-11-HARNESS-ENTRYPOINTS.md)：旧入口完整保全。
 
 - [development/README.md](development/README.md)：现行开发规范导航。

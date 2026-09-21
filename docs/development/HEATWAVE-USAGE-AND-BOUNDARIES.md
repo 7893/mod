@@ -1,6 +1,6 @@
 # MySQL HeatWave 集群使用指南与能力边界手册
 
-更新日期：2026-09-07  
+更新日期：2026-09-21
 状态：现行参考手册  
 适用范围：Oracle MySQL HeatWave（RAPID 引擎）在本项目中的使用方法、OLAP 加速机制、数据生命周期管理、系统表巡检与硬限制边界  
 维护角色：agy 维护，主控（kiro）审阅  
@@ -111,6 +111,17 @@ ALTER TABLE mod.business_document SECONDARY_ENGINE = NULL;
 1. **先卸载**：`ALTER TABLE <table_name> SECONDARY_UNLOAD;`
 2. **执行结构变更**：`ALTER TABLE <table_name> ADD COLUMN new_col INT ...;`
 3. **重新加载**：`ALTER TABLE <table_name> SECONDARY_LOAD;`
+
+### 2.4 MOD 目标表的唯一配置与迁移状态
+
+- 应用健康检查、后台看门狗与运维管理脚本共用 `backend/app/heatwave_tables.py` 的
+  `TARGET_MOD_TABLES`，不得再分别维护白名单。
+- 2026-09-21 代码目标为 12 张：原 9 张业务与事实表，加上单位投影/快照热依赖
+  `sys_user`、`data_readiness`、`daily_stats`。小表也会决定整个 join 是否具备 RAPID 下推条件，
+  不能只按表体积判断是否加载。
+- 截至同日的只读核查，生产仍是旧清单 9/9 就绪；本轮只更改代码与文档，没有执行
+  `SECONDARY_ENGINE`/`SECONDARY_LOAD`。因为看门狗会对缺失目标表自动补载，该代码发布必须与独立数据库
+  授权、补载窗口和 12/12 健康验证作为同一个受控操作，不得仅发布代码后任由定时器意外触发 DDL。
 
 ---
 

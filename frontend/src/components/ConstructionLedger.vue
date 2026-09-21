@@ -9,7 +9,7 @@ import FilterSelect from './ledger/FilterSelect.vue'
 import LedgerPager from './ledger/LedgerPager.vue'
 import SearchInput from './ledger/SearchInput.vue'
 import { useEntityEditor } from '../composables/useEntityEditor.ts'
-import { usePagedList } from '../composables/usePagedList.ts'
+import { useEntityLedger } from '../composables/useEntityLedger.ts'
 import { formatCount, formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import {
@@ -19,8 +19,6 @@ import {
   READINESS_ORDER,
   STATUS_ORDER,
   countedOptions,
-  matchesEntityQuery,
-  matchesOption,
 } from '../utils/entityOptions.ts'
 
 const props = defineProps<{
@@ -47,16 +45,14 @@ watch(() => props.initialReadinessFilter, (val) => {
   if (val) selectedReadiness.value = val
 })
 
-const filtered = computed(() =>
-  store.entities.filter(
-    (row) =>
-      matchesOption(province.value, row.province) &&
-      matchesOption(selectedBatch.value, row.batch) &&
-      matchesOption(selectedStatus.value, row.status) &&
-      matchesOption(selectedReadiness.value, row.readinessStatus) &&
-      matchesEntityQuery(row, query.value),
-  ),
-)
+const { page, totalPages, items: paginated, filtered } = useEntityLedger({
+  pageSize: 25,
+  province,
+  batch: selectedBatch,
+  status: selectedStatus,
+  readiness: selectedReadiness,
+  query,
+})
 
 const provinces = computed(() =>
   countedOptions(store.entities, (row) => row.province, { order: NATIONAL_PROVINCE_ORDER, allLabel: '全部省份' }),
@@ -76,11 +72,6 @@ const readinessOptions = computed(() =>
     allSuffix: '家有数据',
   }),
 )
-
-const { page, totalPages, items: paginated } = usePagedList(() => filtered.value, {
-  pageSize: 25,
-  resetOn: [province, selectedBatch, selectedStatus, selectedReadiness, query],
-})
 
 const isFiltered = computed(
   () =>

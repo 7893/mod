@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { RotateCcw, Loader2 } from 'lucide-vue-next'
+import { RotateCcw } from 'lucide-vue-next'
 import CockpitPanel from './CockpitPanel.vue'
 import EntityEditDrawer from './ledger/EntityEditDrawer.vue'
 import FilterSelect from './ledger/FilterSelect.vue'
 import LedgerPager from './ledger/LedgerPager.vue'
 import SearchInput from './ledger/SearchInput.vue'
 import { useEntityEditor } from '../composables/useEntityEditor.ts'
-import { useOrganizations } from '../composables/useOrganizations.ts'
+import { useEntityLedger } from '../composables/useEntityLedger.ts'
 import { formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
 import { ALL, BATCH_ORDER, NATIONAL_PROVINCE_ORDER, countedOptions } from '../utils/entityOptions.ts'
@@ -25,21 +25,17 @@ const batchOptions = computed(() =>
   countedOptions(store.entities, (row) => row.batch, { order: BATCH_ORDER, allLabel: '全部批次' }),
 )
 
-// 服务端分页
+// 单位台账统一读取全局快照投影；与 B6 共用筛选和分页内核。
 const {
   items: paginatedEntities,
   total,
   page,
   totalPages,
-  loading,
-  error: loadError,
-  goToPage,
-  refresh,
-} = useOrganizations({
+} = useEntityLedger({
   pageSize: 20,
-  region: selectedProvince,
+  province: selectedProvince,
   batch: selectedBatch,
-  keyword: query,
+  query,
 })
 
 const isFiltered = computed(() => selectedBatch.value !== ALL || selectedProvince.value !== ALL || !!query.value)
@@ -50,18 +46,7 @@ function resetFilters() {
   query.value = ''
 }
 
-const { editing, draft, saving, error: editError, open: openEdit, close: closeEdit, save } = useEntityEditor({
-  onSaved(id, patch) {
-    const row = paginatedEntities.value.find((item) => item.id === id)
-    if (row) Object.assign(row, patch, { updatedAt: '刚刚' })
-    void refresh()
-  },
-})
-
-// 分页器需要双向绑定支持
-function handlePageChange(newPage: number) {
-  goToPage(newPage)
-}
+const { editing, draft, saving, error: editError, open: openEdit, close: closeEdit, save } = useEntityEditor()
 </script>
 
 <template>
@@ -74,16 +59,6 @@ function handlePageChange(newPage: number) {
   >
     <template #actions>
       <div class="flex items-center gap-2">
-        <Loader2 v-if="loading" :size="14" class="animate-spin text-slate-400" />
-        <button
-          v-if="loadError && !loading"
-          type="button"
-          class="text-cockpit-xs text-rose-400 hover:text-rose-300 cursor-pointer"
-          :title="loadError.message"
-          @click="refresh"
-        >
-          刷新失败 · 重试
-        </button>
         <SearchInput v-model="query" placeholder="搜索单位/联系人/批次/省份" />
         <FilterSelect v-model="selectedBatch" :options="batchOptions" />
         <FilterSelect v-model="selectedProvince" :options="provinces" />
@@ -166,7 +141,7 @@ function handlePageChange(newPage: number) {
                 </button>
               </td>
             </tr>
-            <tr v-if="!loading && !paginatedEntities.length">
+            <tr v-if="!paginatedEntities.length">
               <td colspan="10" class="px-3 py-10 text-center text-slate-500">
                 <div class="flex flex-col items-center justify-center gap-2">
                   <p>无匹配单位记录（当前筛选条件下未检索到数据）</p>
@@ -181,19 +156,11 @@ function handlePageChange(newPage: number) {
                 </div>
               </td>
             </tr>
-            <tr v-if="loading && !paginatedEntities.length">
-              <td colspan="10" class="px-3 py-10 text-center text-slate-500">
-                <div class="flex items-center justify-center gap-2">
-                  <Loader2 :size="16" class="animate-spin" />
-                  <span>加载中...</span>
-                </div>
-              </td>
-            </tr>
           </tbody>
         </table>
       </div>
 
-      <LedgerPager :model-value="page" :total-pages="totalPages" :summary="`共 ${total} 条`" @update:model-value="handlePageChange" />
+      <LedgerPager v-model="page" :total-pages="totalPages" :summary="`共 ${total} 条`" />
     </div>
   </CockpitPanel>
 

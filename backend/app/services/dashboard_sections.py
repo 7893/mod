@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from decimal import Decimal
 
 from sqlalchemy import text
@@ -29,157 +28,6 @@ def _numbers(value):
     if isinstance(value, list):
         return [_numbers(item) for item in value]
     return value
-
-
-@dataclass
-class EntitiesPage:
-    items: list[dict]
-    total: int
-    page: int
-    page_size: int
-
-
-def query_entities_paginated(
-    conn: Connection,
-    page: int = 1,
-    page_size: int = 50,
-    region: str | None = None,
-    status: str | None = None,
-    batch: int | None = None,
-    keyword: str | None = None,
-) -> EntitiesPage:
-    """直接查库的分页单位列表，支持筛选。"""
-    # 构建 WHERE 条件
-    conditions = []
-    params: dict = {}
-    
-    if region and region not in ("全部", "全部省份"):
-        # 支持带后缀和不带后缀的省份名
-        conditions.append("(o.region = :region OR o.region LIKE :region_like)")
-        params["region"] = region
-        params["region_like"] = f"{region}%"
-    
-    if status and status not in ("全部", "全部状态"):
-        # 前端展示状态需要映射回 DB 状态
-        db_statuses = [k for k, v in DISPLAY_STATUS_MAPPING.items() if v == status]
-        if db_statuses:
-            placeholders = ", ".join(f":status_{i}" for i in range(len(db_statuses)))
-            conditions.append(f"o.status IN ({placeholders})")
-            for i, s in enumerate(db_statuses):
-                params[f"status_{i}"] = s
-        else:
-            conditions.append("o.status = :status")
-            params["status"] = status
-    
-    if batch:
-        conditions.append(f"({SQL_INFERRED_BATCH_ID}) = :batch")
-        params["batch"] = batch
-    
-    if keyword:
-        conditions.append("(o.name LIKE :kw OR ow.name LIKE :kw OR o.region LIKE :kw)")
-        params["kw"] = f"%{keyword}%"
-    
-    where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
-    
-    # COUNT 查询
-    count_sql = f"""
-    WITH batch_mapped AS (
-        SELECT o.id, {SQL_INFERRED_BATCH_ID} AS batchId
-        FROM org_unit o
-    ),
-    owners AS (
-        SELECT org_id, name,
-               ROW_NUMBER() OVER (PARTITION BY org_id ORDER BY
-                   CASE WHEN job = '财务总监' THEN 1 WHEN role = '项目经理' THEN 2 ELSE 3 END, id) AS rn
-        FROM sys_user
-    )
-    SELECT COUNT(*) AS cnt
-    FROM org_unit o
-    JOIN batch_mapped bm ON bm.id = o.id
-    LEFT JOIN owners ow ON ow.org_id = o.id AND ow.rn = 1
-    {where_clause}
-    """
-    total = conn.execute(text(count_sql), params).scalar() or 0
-    
-    # 数据查询
-    params["limit"] = page_size
-    params["offset"] = (page - 1) * page_size
-    
-    data_sql = f"""
-    WITH batch_mapped AS (
-        SELECT 
-            o.id,
-            o.name,
-            o.region,
-            o.status,
-            {SQL_INFERRED_BATCH_ID} AS batchId
-        FROM org_unit o
-    ),
-    batch_names AS (
-        SELECT 1 AS id, '第一批' AS name UNION ALL
-        SELECT 2, '第二批' UNION ALL
-        SELECT 3, '第三批' UNION ALL
-        SELECT 4, '第四批' UNION ALL
-        SELECT 5, '第五批' UNION ALL
-        SELECT 6, '第六批' UNION ALL
-        SELECT 7, '第七批' UNION ALL
-        SELECT 8, '第八批'
-    ),
-    task_agg AS (
-        SELECT org_id, ROUND(AVG(progress), 1) AS construction
-        FROM construction_task GROUP BY org_id
-    ),
-    owners AS (
-        SELECT org_id, name,
-               ROW_NUMBER() OVER (PARTITION BY org_id ORDER BY
-                   CASE WHEN job = '财务总监' THEN 1 WHEN role = '项目经理' THEN 2 ELSE 3 END, id) AS rn
-        FROM sys_user
-    ),
-    dual_agg AS (
-        SELECT org_id,
-               ROUND(100.0 * SUM(CASE WHEN result = '一致' THEN 1 ELSE 0 END) / COUNT(*), 1) AS dual_rate
-        FROM dual_run_result
-        WHERE check_date <= CURRENT_DATE()
-        GROUP BY org_id
-    )
-    SELECT o.id, o.name, o.region, bm.batchId, bn.name AS batch,
-           COALESCE(ow.name, '未配置') AS owner, o.status AS rawStatus,
-           COALESCE(t.construction, 0) AS construction,
-           CAST(REPLACE(COALESCE(d.opening_rate, '0'), '%', '') AS DECIMAL(5,1)) AS openingData,
-           d.overall_status AS readinessStatus,
-           dr.dual_rate AS voucherRate
-    FROM org_unit o
-    JOIN batch_mapped bm ON bm.id = o.id
-    JOIN batch_names bn ON bn.id = bm.batchId
-    LEFT JOIN task_agg t ON t.org_id = o.id
-    LEFT JOIN data_readiness d ON d.org_id = o.id
-    LEFT JOIN owners ow ON ow.org_id = o.id AND ow.rn = 1
-    LEFT JOIN dual_agg dr ON dr.org_id = o.id
-    {where_clause}
-    ORDER BY o.id
-    LIMIT :limit OFFSET :offset
-    """
-    
-    rows = _rows(conn, data_sql, params)
-    
-    # 后处理：状态映射、省份归一化
-    for row in rows:
-        row["province"] = _normalize_region(row.pop("region"))
-        raw_status = row.pop("rawStatus")
-        vr = row.get("voucherRate")
-        if row.get("readinessStatus") == "校验通过":
-            row["readinessStatus"] = "已校验"
-        if row["batchId"] == 8:
-            row["status"] = ORG_STATUS_NOT_STARTED
-            row["construction"] = 0.0
-            row["openingData"] = 0.0
-            row["voucherRate"] = None
-        else:
-            row["status"] = DISPLAY_STATUS_MAPPING.get(raw_status, raw_status)
-            row["voucherRate"] = float(vr) if vr is not None else None
-        row["updatedAt"] = "—"
-    
-    return EntitiesPage(items=rows, total=total, page=page, page_size=page_size)
 
 
 def build_construction_summary(conn: Connection) -> dict:
@@ -486,4 +334,3 @@ def compose_rule_based_alerts(rollout_rows: list[dict], voucher_success_pct: flo
             "detail": "，".join(parts) + "，需重点防范接口联调堵点。",
         })
     return alerts
-

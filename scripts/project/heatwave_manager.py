@@ -13,6 +13,7 @@ HeatWave 内存分析集群（RAPID 引擎）运维管理与监控脚本：
 from __future__ import annotations
 
 import argparse
+from contextlib import suppress
 import os
 import sys
 import time
@@ -22,19 +23,11 @@ import pymysql
 from dotenv import dotenv_values
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+APP_ROOT = REPO_ROOT / "backend" if (REPO_ROOT / "backend" / "app").is_dir() else REPO_ROOT
+if str(APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(APP_ROOT))
 
-# 核心需要进入 HeatWave 内存加速的业务与核算大表
-TARGET_MOD_TABLES = [
-    "business_document_line",
-    "accounting_voucher_line",
-    "business_document",
-    "accounting_voucher",
-    "integration_result",
-    "rollout_status_snapshot",
-    "construction_task",
-    "dual_run_result",
-    "org_unit",
-]
+from app.heatwave_tables import TARGET_MOD_TABLES  # noqa: E402
 
 
 def get_db_connection() -> pymysql.connections.Connection:
@@ -172,11 +165,8 @@ def cmd_load() -> int:
 
             print(f"  [LOAD] 开始处理 mod.{table}...")
             # 1. 确保 SECONDARY_ENGINE = RAPID
-            try:
+            with suppress(Exception):
                 cur.execute(f"ALTER TABLE `mod`.`{table}` SECONDARY_ENGINE = RAPID")
-            except Exception:
-                # 若已设置可能抛出无害提示
-                pass
 
             # 2. 执行 SECONDARY_LOAD
             start = time.time()

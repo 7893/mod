@@ -1,12 +1,14 @@
 import os
 import re
 from inspect import getsource
+from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 
 os.environ.setdefault("MOD_DB_HOST", "127.0.0.1")
 os.environ.setdefault("MOD_DB_PASSWORD", "test_password")
 
 from app.main import app
+from app import api as api_module
 from app.api import normalize_region, load_fallback_snapshot, normalize_operations_dict
 from app.services.dashboard import REGION_SUMMARY_SQL, build_dashboard_snapshot
 
@@ -200,7 +202,6 @@ def test_v2_api_routes():
     assert res.status_code == 200
     assert res.json()["status"] == "ok"
     assert res.headers["x-robots-tag"] == "noindex, nofollow, noarchive, nosnippet, noimageindex"
-
     # Refresh Meta
     res = client.get("/api/dashboard/refresh-meta")
     assert res.status_code == 200
@@ -284,6 +285,48 @@ def test_v2_api_routes():
     assert set(projection["cumulative"]) == {"documents", "vouchers", "integrations"}
     assert all(value >= 0 for value in projection["cumulative"].values())
     assert res.headers["x-robots-tag"] == "noindex, nofollow, noarchive, nosnippet, noimageindex"
+
+
+def test_organizations_filters_unified_snapshot_without_direct_queries(monkeypatch):
+    """Compatibility paging must reuse the snapshot entity projection, not rebuild its five joins."""
+    entities = [
+        {
+            "id": 1,
+            "name": "北京一部",
+            "province": "北京",
+            "region": "华北",
+            "batch": "第一批",
+            "batchId": 1,
+            "owner": "张三",
+            "status": "已上线",
+        },
+        {
+            "id": 2,
+            "name": "上海二部",
+            "province": "上海",
+            "region": "华东",
+            "batch": "第二批",
+            "batchId": 2,
+            "owner": "李四",
+            "status": "双轨运行",
+        },
+    ]
+    conn = MagicMock()
+    monkeypatch.setattr(api_module, "dashboard_snapshot", lambda _: {"entities": entities})
+
+    result = api_module.organizations(
+        page=1,
+        page_size=20,
+        region="上海市",
+        status="双轨运行",
+        batch=2,
+        keyword="MOD-2",
+        conn=conn,
+    )
+
+    assert result.total == 1
+    assert result.items == [entities[1]]
+    conn.execute.assert_not_called()
 
 
 def test_v2_overview_r5_r6_contract():
