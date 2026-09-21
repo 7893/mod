@@ -91,7 +91,7 @@ def test_malformed_and_truncated_outputs_are_not_cached(monkeypatch):
         assert adapter.get_status()['cache']['has_cache'] is False
 
 
-def test_prompt_contains_voucher_constraint_and_chinese_labels(monkeypatch):
+def test_prompt_contains_voucher_constraint_and_excludes_open_day_metrics(monkeypatch):
     import json
     import urllib.request
     from unittest.mock import MagicMock
@@ -100,6 +100,7 @@ def test_prompt_contains_voucher_constraint_and_chinese_labels(monkeypatch):
     assert "优惠券" in _SYSTEM_PROMPT
     assert "代金券" in _SYSTEM_PROMPT
     assert "凭证" in _SYSTEM_PROMPT
+    assert "不得把累计规模改写为今日新增" in _SYSTEM_PROMPT
     assert FIELD_NAMES_CN["vouchersTotal"] == "累计财务会计凭证总数"
 
     adapter = _enabled_adapter(monkeypatch)
@@ -123,5 +124,14 @@ def test_prompt_contains_voucher_constraint_and_chinese_labels(monkeypatch):
 
     assert "优惠券" in system_msg["content"]
     assert "累计财务会计凭证总数 (vouchersTotal): 5000000" in user_msg["content"]
-    assert "今日新增财务会计凭证数 (vouchersTodayAdded): 120" in user_msg["content"]
+    assert "vouchersTodayAdded" not in user_msg["content"]
 
+
+def test_open_day_metrics_are_outside_the_ai_boundary():
+    from app.integrations.cloudflare_ai import _filter_to_whitelist
+
+    assert _filter_to_whitelist({
+        "docsTotal": 5000,
+        "docsTodayAdded": 120,
+        "vouchersTodayAdded": 80,
+    }) == {"docsTotal": 5000}

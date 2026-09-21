@@ -21,7 +21,7 @@
   --grid-template-rows-rollout-body: minmax(0, 1.1fr) minmax(0, 0.9fr); /* C2/C3/C4 分析区 + C5 台账 */
   --grid-template-columns-rollout-analysis: repeat(12, minmax(0, 1fr)); /* C2 主区 8 列，C3/C4 辅区 4 列 */
   --grid-template-rows-rollout-analysis: minmax(0, 1.2fr) minmax(0, 0.8fr); /* C3 排行略高，C4 环图摘要更紧凑 */
-  --grid-template-columns-operations: repeat(2, minmax(0, 1fr));
+  --grid-template-columns-operations: repeat(12, minmax(0, 1fr)); /* D2-D5 各半；D6/D7 按复合分析与事实卡密度分为 7:5 */
   --grid-template-rows-operations: minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.1fr);
   --grid-template-columns-issues-top: minmax(0, 1.35fr) minmax(0, 0.95fr);
   --grid-template-columns-insights: minmax(0, 1.15fr) minmax(0, 0.85fr);

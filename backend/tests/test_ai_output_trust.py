@@ -65,6 +65,7 @@ def test_briefing_freshness_uses_display_day(monkeypatch, briefing_date, stale):
     result = daily_briefing.get_latest(conn)
     assert result['status'] == 'ok'  # Additive API contract: old content is retained.
     assert result['isStale'] is stale
+    assert result['generatedAt'] == '2026-09-12T16:30:00+00:00'
 
 
 def test_fit_scores_do_not_certify_business_forecasts(monkeypatch):

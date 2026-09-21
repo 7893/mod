@@ -40,6 +40,8 @@
 - [ADR-0013](decisions/0013-DNS迁移至GoogleCloudDNS与CloudFront边缘加速.md)：全球边缘加速与权威 DNS 迁移至 Google Cloud DNS 与 CloudFront。
 - [ADR-0017](decisions/0017-六屏面板事实单一归属与主画布全量可见.md)：六屏面板事实单一归属、主画布全量可见与 Zone 演进边界。
 - [ADR-0018](decisions/0018-通用质量门禁优先采用成熟工具.md)：通用质量能力优先使用成熟工具，自研检查只保留 MOD 特有契约。
+- [ADR-0020](decisions/0020-新业务采用分阶段审批制证链路.md)：新业务单据采用分阶段审批、制证与真实时间口径。
+- [ADR-0021](decisions/0021-AI简报与实时指标按时点分层.md)：低频 AI 简报与实时日内指标按生成时点和事实来源分层。
 - [Harness 入口迁移前原文](history/2026-09-11-HARNESS-ENTRYPOINTS.md)：旧入口完整保全。
 
 - [development/README.md](development/README.md)：现行开发规范导航。

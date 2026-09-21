@@ -237,10 +237,10 @@ const lifecycleFacts = computed<MetricItem[]>(() => {
       </div>
     </CockpitPanel>
 
-    <!-- 主网格：D2-D7；第三行由 D6/D7 平分，D6 内部物料保持不变 -->
+    <!-- 主网格：D2-D5 各半；第三行按内容密度将 D6/D7 分为 7:5，D6 内部物料保持不变 -->
     <div class="grid grid-cols-operations grid-rows-operations gap-2.5 flex-1 min-h-0">
       <!-- D2: 日吞吐与集成质量趋势，不重复 D1 累计规模 -->
-      <CockpitPanel title="近 7 日业务吞吐" zone="D2" subtitle="单据、凭证日增与集成成功率">
+      <CockpitPanel title="近 7 日业务吞吐" zone="D2" subtitle="单据、凭证日增与集成成功率" class="col-span-6">
         <template #actions>
           <PanelLegend compact :items="[
             { label: '单据日增', tone: 'accent' },
@@ -256,7 +256,7 @@ const lifecycleFacts = computed<MetricItem[]>(() => {
       </CockpitPanel>
 
       <!-- D3: 凭证生成质效 -->
-      <CockpitPanel title="凭证生成质效" zone="D3" subtitle="成功率、生成规模与凭证结构">
+      <CockpitPanel title="凭证生成质效" zone="D3" subtitle="成功率、生成规模与凭证结构" class="col-span-6">
         <ChartFacts>
           <template #chart><ChartCanvas :option="voucherQualityOption" /></template>
           <template #facts><MetricGrid :items="voucherFacts" flat fill /></template>
@@ -264,7 +264,7 @@ const lifecycleFacts = computed<MetricItem[]>(() => {
       </CockpitPanel>
 
       <!-- D4: 接口集成入账 (阶梯条充实内容，消除空旷感，D-2) -->
-      <CockpitPanel title="接口集成入账" zone="D4" subtitle="实时与批量接口调用结果">
+      <CockpitPanel title="接口集成入账" zone="D4" subtitle="实时与批量接口调用结果" class="col-span-6">
         <ChartFacts variant="facts-led">
           <template #facts>
             <MetricGrid :items="integrationHeadline" flat size="lg" align="center" />
@@ -275,7 +275,7 @@ const lifecycleFacts = computed<MetricItem[]>(() => {
       </CockpitPanel>
 
       <!-- D5: 双轨运行核对 -->
-      <CockpitPanel title="双轨运行核对" zone="D5" subtitle="新老系统一致性对账">
+      <CockpitPanel title="双轨运行核对" zone="D5" subtitle="新老系统一致性对账" class="col-span-6">
         <ChartFacts v-if="dualRunStats && dualRunOutcomeOption" variant="facts-led">
           <template #facts>
             <MetricGrid :items="dualRunHeadline" flat size="lg" align="center" />
@@ -288,7 +288,7 @@ const lifecycleFacts = computed<MetricItem[]>(() => {
       </CockpitPanel>
 
       <!-- D6: 数据质量金标准核验 -->
-      <CockpitPanel title="数据质量金标准核验" zone="D6" subtitle="覆盖规模与稽核状态 · 未核验项明确标注">
+      <CockpitPanel title="数据质量金标准核验" zone="D6" subtitle="覆盖规模与稽核状态 · 未核验项明确标注" class="col-span-7">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
           <MetricGrid class="col-span-5 pr-3 border-r border-surface-veil-06" :items="qualityAuditItems" :columns="2" fill size="sm" align="center" />
 
@@ -307,7 +307,7 @@ const lifecycleFacts = computed<MetricItem[]>(() => {
       </CockpitPanel>
 
       <!-- D7: 仅统计启用新审批链路后生成的数据，历史数据不回算 -->
-      <CockpitPanel title="审批与制证流转" zone="D7" subtitle="新数据近 30 日窗口 · 历史存量不回算">
+      <CockpitPanel title="审批与制证流转" zone="D7" subtitle="新数据近 30 日窗口 · 历史存量不回算" class="col-span-5">
         <MetricGrid :items="lifecycleFacts" :columns="2" flat fill size="sm" align="center" />
       </CockpitPanel>
     </div>
