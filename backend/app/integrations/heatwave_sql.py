@@ -5,6 +5,11 @@ from ..business_rules import SQL_LAUNCHED_STATUSES
 MODEL_REGRESSION = "MOD_REGRESSION_MODEL"
 MODEL_CLASSIFIER = "MOD_RISK_CLASSIFIER"
 
+# The retraining pipeline and API snapshot refresher coordinate through one
+# server-side advisory lock.  Keeping the name here prevents either process
+# from silently drifting to a different lock namespace.
+ML_RETRAIN_LOCK_NAME = "mod_ml_retrain"
+
 # 训练特征表名（在 mod 数据库内）
 FEAT_TABLE_REGRESSION = "ml_feat_doc_delta"
 FEAT_TABLE_CLASSIFIER = "ml_feat_risk"

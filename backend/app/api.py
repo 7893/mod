@@ -12,6 +12,7 @@ from sqlalchemy.engine import Connection
 from .db import connection, get_engine
 from .heatwave_watchdog import get_heatwave_status
 from .integrations import CloudflareAIAdapter, HeatWaveMLAdapter
+from .integrations.heatwave_sql import ML_RETRAIN_LOCK_NAME
 from .schemas import Page, EntityPatch
 from .services.dashboard import (
     build_dashboard_snapshot,
@@ -41,9 +42,13 @@ _snapshot_last_refresh_duration_ms: float | None = None
 _snapshot_last_error: str | None = None
 _snapshot_last_failed_at = 0.0
 _snapshot_consecutive_failures = 0
+_snapshot_refresh_deferred_reason: str | None = None
+_snapshot_last_deferred_at: str | None = None
+_snapshot_last_deferred_monotonic = 0.0
 _SNAPSHOT_TTL_SECONDS = 60
 _REFRESH_TIMEOUT_SECONDS = 20.0
 _REFRESH_BACKOFF_SECONDS = 15.0
+_ML_RETRAIN_RETRY_SECONDS = 30.0
 
 _meta_cache: dict | None = None
 _meta_cached_at = 0.0
@@ -64,6 +69,8 @@ def _get_snapshot_health_info() -> dict:
     refresh_status = "idle"
     if _snapshot_refreshing:
         refresh_status = "refreshing"
+    elif _snapshot_refresh_deferred_reason is not None:
+        refresh_status = "deferred"
     elif _snapshot_last_error is not None:
         refresh_status = "error"
 
@@ -74,6 +81,8 @@ def _get_snapshot_health_info() -> dict:
         "last_refreshed_at": _snapshot_last_refreshed_at,
         "last_refresh_duration_ms": _snapshot_last_refresh_duration_ms,
         "last_error": _snapshot_last_error,
+        "deferred_reason": _snapshot_refresh_deferred_reason,
+        "last_deferred_at": _snapshot_last_deferred_at,
         "is_stale": is_stale,
         "consecutive_failures": _snapshot_consecutive_failures,
     }
@@ -154,17 +163,39 @@ def _get_dedicated_connection() -> Connection | None:
         return None
 
 
+def _is_ml_retrain_active(conn: Connection) -> bool:
+    """Check the retraining advisory lock without waiting or mutating state."""
+    try:
+        is_free = conn.execute(
+            text("SELECT IS_FREE_LOCK(:lock_name)"),
+            {"lock_name": ML_RETRAIN_LOCK_NAME},
+        ).scalar()
+        return is_free == 0
+    except Exception as exc:
+        logger.warning("无法读取 ML 重训协调锁，继续尝试快照刷新: %s", type(exc).__name__)
+        return False
+
+
 def _background_refresh_snapshot() -> None:
     """后台异步更新快照缓存工作线程，杜绝请求线程阻塞，具有严格超时与异常熔断保护。"""
     global _snapshot_cache, _snapshot_cached_at, _snapshot_refreshing, _snapshot_source
     global _snapshot_last_refreshed_at, _snapshot_last_refresh_duration_ms, _snapshot_last_error
     global _snapshot_last_failed_at, _snapshot_consecutive_failures
+    global _snapshot_refresh_deferred_reason, _snapshot_last_deferred_at
+    global _snapshot_last_deferred_monotonic
     t0 = monotonic()
     conn = None
     try:
         conn = _get_dedicated_connection()
         if conn is None:
             raise RuntimeError("Unable to acquire dedicated DB connection")
+        if _is_ml_retrain_active(conn):
+            with _snapshot_lock:
+                _snapshot_refresh_deferred_reason = "ml_retrain"
+                _snapshot_last_deferred_at = datetime.now().isoformat()
+                _snapshot_last_deferred_monotonic = monotonic()
+            logger.info("后台快照刷新已延后：HeatWave AutoML 正在重训")
+            return
         snap = build_dashboard_snapshot(conn)
         duration_ms = round((monotonic() - t0) * 1000, 2)
         with _snapshot_lock:
@@ -175,6 +206,7 @@ def _background_refresh_snapshot() -> None:
             _snapshot_last_refresh_duration_ms = duration_ms
             _snapshot_last_error = None
             _snapshot_consecutive_failures = 0
+            _snapshot_refresh_deferred_reason = None
         logger.info(
             "后台快照异步刷新就绪 (耗时: %.1fms, TTL: %ds, 纳管单位: %d)",
             duration_ms,
@@ -195,6 +227,7 @@ def _background_refresh_snapshot() -> None:
             _snapshot_consecutive_failures += 1
             _snapshot_last_error = f"{err_category}: 快照刷新超时或执行异常"
             _snapshot_last_refresh_duration_ms = duration_ms
+            _snapshot_refresh_deferred_reason = None
         logger.error(
             "后台快照异步刷新异常 (耗时: %.1fms, 连续失败: %d): %s",
             duration_ms,
@@ -218,6 +251,11 @@ def prewarm_snapshot(sync: bool = False) -> None:
             if now - _snapshot_refresh_started_at < _REFRESH_TIMEOUT_SECONDS:
                 return
             logger.warning("前次快照刷新已超过 %.1fs 未完成，强制重置刷新状态", _REFRESH_TIMEOUT_SECONDS)
+        if (
+            _snapshot_refresh_deferred_reason == "ml_retrain"
+            and now - _snapshot_last_deferred_monotonic < _ML_RETRAIN_RETRY_SECONDS
+        ):
+            return
         if _snapshot_consecutive_failures > 0 and (now - _snapshot_last_failed_at < _REFRESH_BACKOFF_SECONDS):
             return
         _snapshot_refreshing = True
@@ -255,7 +293,14 @@ def dashboard_snapshot(conn: Connection | None) -> dict:
         with _snapshot_lock:
             should_refresh = False
             if not _snapshot_refreshing:
-                if _snapshot_consecutive_failures == 0 or (now - _snapshot_last_failed_at >= _REFRESH_BACKOFF_SECONDS):
+                retrain_backoff_elapsed = (
+                    _snapshot_refresh_deferred_reason != "ml_retrain"
+                    or now - _snapshot_last_deferred_monotonic >= _ML_RETRAIN_RETRY_SECONDS
+                )
+                if retrain_backoff_elapsed and (
+                    _snapshot_consecutive_failures == 0
+                    or now - _snapshot_last_failed_at >= _REFRESH_BACKOFF_SECONDS
+                ):
                     should_refresh = True
             elif now - _snapshot_refresh_started_at >= _REFRESH_TIMEOUT_SECONDS:
                 logger.warning("SWR 发现前次刷新超时 (%.1fs)，重置并重新触发异步刷新", now - _snapshot_refresh_started_at)

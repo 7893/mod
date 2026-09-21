@@ -41,7 +41,8 @@ from simulation.lifecycle_advancer import (  # noqa: E402
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def test_lifecycle_advancer_causal_diff_penalty():
@@ -171,6 +172,10 @@ def test_heatwave_ml_shap_explain_risk_native():
     assert res["orgId"] == 88
     assert res["orgName"] == "天府创新示范基地"
     assert len(res["topAttributions"]) == 3
+    shap_call = conn.execute.call_args
+    assert "MAX_EXECUTION_TIME(10000)" in str(shap_call.args[0])
+    assert "CAST(:feats AS JSON)" in str(shap_call.args[0])
+    assert shap_call.args[1]["model_handle"] == "MOD_RISK_CLASSIFIER"
 
     top1 = res["topAttributions"][0]
     top2 = res["topAttributions"][1]
@@ -186,6 +191,11 @@ def test_heatwave_ml_shap_explain_risk_native():
     # Total of Top 3 normalized weights should be 100% (45/90=50%, 30/90=33%, 15/90=17%)
     total_pct = top1["weightPct"] + top2["weightPct"] + top3["weightPct"]
     assert total_pct == 100
+
+    cached = adapter.explain_risk(88)
+    assert cached["explanationSource"] == "HEATWAVE_SHAP"
+    assert cached["explanationCached"] is True
+    assert conn.execute.call_count == 1
 
 
 def test_heatwave_ml_shap_explain_risk_fallback_on_db_error():
@@ -229,12 +239,16 @@ def test_heatwave_ml_shap_explain_risk_fallback_on_db_error():
 def test_insights_risk_explanation_api_endpoint(client):
     """GET /api/insights/risk-explanation/{org_id} should return valid explanation structure."""
     # 1. Disconnected state returns graceful unavailable response
-    response = client.get("/api/insights/risk-explanation/1")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["orgId"] == 1
-    assert data["status"] in ("unavailable", "ok")
-    assert data["explanationSource"] in ("UNAVAILABLE", "RULE_BASED", "HEATWAVE_SHAP")
+    app.dependency_overrides[connection] = lambda: None
+    try:
+        response = client.get("/api/insights/risk-explanation/1")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["orgId"] == 1
+        assert data["status"] == "unavailable"
+        assert data["explanationSource"] == "UNAVAILABLE"
+    finally:
+        app.dependency_overrides.clear()
 
     # 2. When mock connection is injected
     mock_conn = MagicMock()

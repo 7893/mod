@@ -318,7 +318,7 @@ onUnmounted(() => { ++loadSequence; loadController?.abort() })
           type="button"
           :disabled="enriching"
           class="flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-surface-veil-03 hover:bg-white/10 border border-surface-veil-06 disabled:opacity-50 text-slate-200 font-medium transition-colors text-cockpit-xs cursor-pointer"
-          title="调用 Cloudflare Workers AI 深度研判（受 3,000 Neurons/日 硬限制保护，保障 $0.00 账单）"
+          title="调用 Cloudflare Workers AI 深度研判（受项目侧 3,000 Neurons/日预算熔断保护，不等同于 Cloudflare 账户账单上限）"
           @click="handleEnrich"
         >
           <Sparkles :size="12" class="text-amber-400" :class="{ 'animate-spin': enriching }" />

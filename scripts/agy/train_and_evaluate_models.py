@@ -51,6 +51,7 @@ from app.db import get_engine  # noqa: E402
 from app.integrations.heatwave_sql import (  # noqa: E402
     FEAT_TABLE_CLASSIFIER,
     FEAT_TABLE_REGRESSION,
+    ML_RETRAIN_LOCK_NAME,
     _DDL_FEAT_CLASSIFIER,
     _DDL_FEAT_REGRESSION,
     _INSERT_FEAT_CLASSIFIER,
@@ -864,17 +865,32 @@ def run_full_pipeline(run_type: str = "manual") -> dict[str, Any]:
     t_start = time.time()
 
     with engine.connect() as conn:
-        ensure_metadata_tables(conn)
-        rebuild_feature_tables(conn)
-        check_feature_integrity(conn)
-        split_info = split_datasets(conn)
-        train_heatwave_models(conn)
-        cls_eval = evaluate_classifier(conn)
-        reg_eval = evaluate_regression(conn)
-        execute_full_batch_scoring(conn)
-        duration = time.time() - t_start
-        persist_metadata_and_audit(conn, cls_eval, reg_eval, run_type=run_type, total_duration=duration)
-        print_comparison_report(cls_eval, reg_eval)
+        lock_acquired = conn.execute(
+            text("SELECT GET_LOCK(:lock_name, 0)"),
+            {"lock_name": ML_RETRAIN_LOCK_NAME},
+        ).scalar()
+        if lock_acquired != 1:
+            raise RuntimeError("Another HeatWave AutoML retraining run is already active")
+        try:
+            ensure_metadata_tables(conn)
+            rebuild_feature_tables(conn)
+            check_feature_integrity(conn)
+            split_info = split_datasets(conn)
+            train_heatwave_models(conn)
+            cls_eval = evaluate_classifier(conn)
+            reg_eval = evaluate_regression(conn)
+            execute_full_batch_scoring(conn)
+            duration = time.time() - t_start
+            persist_metadata_and_audit(conn, cls_eval, reg_eval, run_type=run_type, total_duration=duration)
+            print_comparison_report(cls_eval, reg_eval)
+        finally:
+            try:
+                conn.execute(
+                    text("SELECT RELEASE_LOCK(:lock_name)"),
+                    {"lock_name": ML_RETRAIN_LOCK_NAME},
+                )
+            except Exception as exc:
+                logger.warning("Failed to release retraining advisory lock: %s", type(exc).__name__)
 
     return {
         "status": "success",

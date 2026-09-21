@@ -7,7 +7,7 @@ describe('AiQuotaCapsule', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders quota usage and zero-cost guarantee badge', async () => {
+  it('renders project quota without claiming an account billing guarantee', async () => {
     const mockData = {
       statDate: '2026-09-08',
       callCount: 3,
@@ -29,10 +29,12 @@ describe('AiQuotaCapsule', () => {
     const wrapper = mount(AiQuotaCapsule)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('CF AI')
+    expect(wrapper.text()).toContain('治理 AI')
     expect(wrapper.text()).toContain('12.5')
     expect(wrapper.text()).toContain('3000')
-    expect(wrapper.text()).toContain('$0.00保障')
+    expect(wrapper.text()).toContain('预算正常')
+    expect(wrapper.text()).not.toContain('$0.00')
+    expect(wrapper.attributes('title')).toContain('不代表 Cloudflare 账户账单')
   })
 
   it('renders fused state badge when quota is exhausted', async () => {

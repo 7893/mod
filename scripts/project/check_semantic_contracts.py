@@ -79,6 +79,20 @@ def validate_contracts(root: Path = ROOT) -> list[str]:
         if source not in heatwave or source not in risk_table:
             errors.append(f"model explanation provenance drift: `{source}` is not end-to-end")
 
+    quota_capsule = _read(root, "frontend/src/components/AiQuotaCapsule.vue")
+    compliance_drawer = _read(root, "frontend/src/components/ComplianceInspectDrawer.vue")
+    for relative, content in (
+        ("frontend/src/components/AiQuotaCapsule.vue", quota_capsule),
+        ("frontend/src/components/ComplianceInspectDrawer.vue", compliance_drawer),
+    ):
+        for forbidden in ("$0.00", "零费用", "免费日配额"):
+            if forbidden in content:
+                errors.append(f"AI quota billing boundary drift: {relative} contains `{forbidden}`")
+    if "不代表 Cloudflare 账户账单" not in quota_capsule:
+        errors.append("AI quota scope drift: quota capsule lacks the account-billing disclaimer")
+    if "不等同于 Cloudflare 账户账单上限" not in compliance_drawer:
+        errors.append("AI quota scope drift: compliance drawer lacks the account-billing disclaimer")
+
     # Deployment topology and recovery boundaries are repeated across several living
     # documents. Keep the small set of dangerous, previously observed contradictions
     # mechanically aligned with the implementation.
