@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronRight } from 'lucide-vue-next'
 import CockpitPanel from './CockpitPanel.vue'
 import LiveProjectionIndicator from './LiveProjectionIndicator.vue'
 import { formatCount, formatPercent } from '../formatters/metrics.ts'
@@ -115,17 +114,16 @@ const valueClass: Record<DomainTone, string> = {
         v-for="card in domainCards"
         :key="card.id"
         type="button"
-        class="group flex items-center gap-3 px-4 min-w-0 text-left hover:bg-white/5 transition-colors cursor-pointer"
+        class="group flex flex-col items-center justify-center gap-1 px-3 min-w-0 text-center hover:bg-white/5 transition-colors cursor-pointer"
         :title="`进入 ${card.label}`"
         @click="emit('navigate', card.route)"
       >
-        <span class="flex-shrink-0 font-mono text-cockpit-sm font-bold text-slate-500">{{ card.id }}</span>
-        <span class="flex-1 min-w-0">
-          <span class="block text-cockpit-sm font-medium text-slate-300 truncate">{{ card.label }}</span>
-          <b class="block font-mono text-cockpit-kpi leading-tight" :class="valueClass[card.tone]">{{ card.value }}</b>
-          <span class="block text-cockpit-xs text-slate-500 truncate">{{ card.detail }}</span>
+        <span class="flex items-center justify-center gap-2 min-w-0 w-full">
+          <span class="flex-shrink-0 font-mono text-cockpit-sm font-bold text-slate-500">{{ card.id }}</span>
+          <span class="text-cockpit-sm font-medium text-slate-300 truncate">{{ card.label }}</span>
         </span>
-        <ChevronRight :size="14" class="flex-shrink-0 text-slate-600 group-hover:text-slate-300 transition-colors" />
+        <b class="font-mono text-cockpit-kpi leading-tight" :class="valueClass[card.tone]">{{ card.value }}</b>
+        <span class="text-cockpit-xs text-slate-500 truncate w-full">{{ card.detail }}</span>
       </button>
     </div>
   </CockpitPanel>

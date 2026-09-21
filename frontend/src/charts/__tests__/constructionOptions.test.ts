@@ -5,6 +5,7 @@ import {
   createTrainingConversionOption,
   createTrainingMixOption,
 } from '../constructionOptions.ts'
+import { CHART_FONT } from '../tokens.ts'
 
 const taskStages = Array.from({ length: 8 }, (_, index) => ({
   name: `阶段${index + 1}`,
@@ -45,6 +46,7 @@ describe('construction command charts', () => {
     expect(option.xAxis.data).toHaveLength(8)
     expect(option.yAxis.data).toEqual(['已完成', '进行中', '未开始'])
     expect(option.visualMap.show).toBe(false)
+    expect(option.series[0].label.fontSize).toBe(CHART_FONT.body)
   })
 
   it('maps every readiness state without changing its drill-down label', () => {

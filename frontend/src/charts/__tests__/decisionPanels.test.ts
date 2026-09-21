@@ -6,6 +6,7 @@ import { createOperationsTrendOption, createQualityAuditVolumeOption } from '../
 import { createCoverageOption } from '../panelOptions'
 import { createRolloutTrendMatrixOption } from '../rolloutOptions'
 import { chartTooltip } from '../theme'
+import { CHART_FONT } from '../tokens'
 
 describe('decision panel options', () => {
   it('keeps each decision fact in one visible panel', () => {
@@ -38,6 +39,8 @@ describe('decision panel options', () => {
     expect(sources.operations).toContain('title="近 7 日业务吞吐"')
     expect(sources.operations).toContain('zone="D3"')
     expect(sources.operations).toContain('zone="D7"')
+    expect(sources.operations).toContain('class="col-span-5 pr-3 border-r border-surface-veil-06"')
+    expect(sources.operations).toContain("item.rate != null ? `${item.rate}%` : '未核验'")
     expect(sources.operations).toContain('title="端到端业务链路"')
     expect(sources.operations).not.toContain('zone="D2"')
     expect(sources.issues).toContain('title="近期工单流转"')
@@ -51,6 +54,7 @@ describe('decision panel options', () => {
     expect(sources.rollout).toContain('class="col-span-8 row-span-2"')
     expect(sources.rollout).not.toContain('ChartBlock :stats="c4Stats"')
     expect(sources.theme).toContain('--grid-template-rows-construction: minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 0.55fr)')
+    expect(sources.theme).toContain('--grid-template-rows-dashboard-left: minmax(0, 1.1fr) minmax(0, 0.9fr)')
     expect(sources.theme).toContain('--grid-template-rows-rollout-body: minmax(0, 1.1fr) minmax(0, 0.9fr)')
   })
 
@@ -74,6 +78,7 @@ describe('decision panel options', () => {
     expect(option.yAxis.data).toEqual(['第一批', '第二批'])
     expect(option.series[0].type).toBe('heatmap')
     expect(option.series[0].data).toHaveLength(3)
+    expect(option.series[0].label.fontSize).toBe(CHART_FONT.body)
   })
 
   it('builds the D3 daily-volume bars and quality line', () => {
@@ -95,6 +100,7 @@ describe('decision panel options', () => {
     const values = option.series[0].data.map((item) => item.value)
     expect(values[0]).not.toBe(values[1])
     expect(values.every((value) => value < 10)).toBe(true)
+    expect(option.series[0].label.fontSize).toBe(CHART_FONT.body)
   })
 
   it('builds C5 coverage ring without center title and with confined tooltip (KI-065)', () => {

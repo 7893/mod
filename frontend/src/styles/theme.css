@@ -14,7 +14,7 @@
 @theme {
   /* 骨架契约：驾驶舱固定分区，受保护结构，改比例即结构变更 */
   --grid-template-columns-cockpit: 390px 1fr 370px;   /* 三栏：左固定 中弹性 右固定 */
-  --grid-template-rows-dashboard-left: minmax(0, 0.8fr) minmax(0, 1.2fr); /* A2 省域摘要 + A4 趋势 */
+  --grid-template-rows-dashboard-left: minmax(0, 1.1fr) minmax(0, 0.9fr); /* A2 省域摘要 + A4 趋势：摘要略高，趋势紧凑 */
   --grid-template-rows-cockpit-right: minmax(0, 0.8fr) minmax(0, 1.2fr); /* A6 当日变化 + A7 行动队列 */
   --grid-template-columns-construction: repeat(12, minmax(0, 1fr));
   --grid-template-rows-construction: minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 0.55fr); /* B2-B5 分析 + B6 常驻台账预览 */

@@ -201,7 +201,7 @@ const openAction = (row: StatusRow) => {
               </button>
             </div>
           </template>
-          <MetricGrid :items="provinceFacts" :columns="2" fill flat size="sm" />
+          <MetricGrid :items="provinceFacts" :columns="2" fill flat size="md" align="center" />
         </CockpitPanel>
 
         <CockpitPanel
