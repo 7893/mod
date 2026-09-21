@@ -1,6 +1,6 @@
 # MOD 文档索引
 
-更新日期：2026-09-17
+更新日期：2026-09-21
 状态：现行索引
 适用范围：当前规范、项目资料、历史基线、运维记录与证据入口
 
@@ -17,6 +17,9 @@
 
 ### 本轮重大缺陷
 
+- [KI-102 六屏信息去重与全量可见布局重构](issues/KI-102-六屏信息去重与全量可见布局重构.md)
+- [KI-100 大屏图表物料抽象与业务视图配置解耦](issues/KI-100-大屏图表物料抽象与业务视图配置解耦.md)
+- [KI-099 图表 Design Tokens 双端契约与静态门禁治理](issues/KI-099-图表DesignTokens双端契约与静态门禁治理.md)
 - [KI-076 前端展示事实、组合布局与视觉回归缺口](issues/KI-076-FRONTEND-PRESENTATION-CONTRACT.md)
 
 配套验收：[前端视觉回归](development/FRONTEND-VISUAL-VERIFICATION.md)。
@@ -35,6 +38,8 @@
 - [ADR-0011](decisions/0011-local-harness.md)：公共包与项目适配分离。
 - [ADR-0012](decisions/0012-恢复USA生产部署机与JPA专属开发机架构.md)：恢复 USA 生产部署机与 JPA 专属开发机职责分离架构。
 - [ADR-0013](decisions/0013-DNS迁移至GoogleCloudDNS与CloudFront边缘加速.md)：全球边缘加速与权威 DNS 迁移至 Google Cloud DNS 与 CloudFront。
+- [ADR-0017](decisions/0017-六屏面板事实单一归属与主画布全量可见.md)：六屏面板事实单一归属、主画布全量可见与 Zone 演进边界。
+- [ADR-0018](decisions/0018-通用质量门禁优先采用成熟工具.md)：通用质量能力优先使用成熟工具，自研检查只保留 MOD 特有契约。
 - [Harness 入口迁移前原文](history/2026-09-11-HARNESS-ENTRYPOINTS.md)：旧入口完整保全。
 
 - [development/README.md](development/README.md)：现行开发规范导航。
@@ -133,7 +138,8 @@ Worker 均已退出当前运行架构。
 新增的脱敏历史治理快照：[2026-09-08 CHANGELOG 机制治理前快照](history/2026-09-08-CHANGELOG机制治理前快照.md)、
 [2026-09-08 本地质量基线更新前快照](history/2026-09-08-本地质量基线更新前快照.md)、
 2026-09-09 KI-070~074 治理前现状切片（本地存档，含敏感信息，不纳入版本库），以及
-[2026-09-17 约束与文档收敛前现状切片](history/2026-09-17-CONSTRAINT-DOCUMENT-CONVERGENCE-SNAPSHOT.md)。
+[2026-09-17 约束与文档收敛前现状切片](history/2026-09-17-CONSTRAINT-DOCUMENT-CONVERGENCE-SNAPSHOT.md)，以及
+[2026-09-21 前端重构部署收口前现状切片](history/2026-09-21-FRONTEND-REFACTOR-PRE-DOCUMENT-CONVERGENCE.md)。
 
 - [KI-080 · AI 输出可信度与能力边界失真](issues/KI-080-AI-OUTPUT-TRUST.md)：本地修复与验收记录。
 

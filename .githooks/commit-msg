@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 #
-# MOD commit-message gate. Shared policy implementation lives in scripts/project.
+# MOD commit-message gate. Policy is declared in .gitlint.
 #
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-python3 scripts/project/validate_commit_message.py "$1"
+uv run --project backend pre-commit run gitlint \
+  --hook-stage commit-msg \
+  --commit-msg-filename "$1"

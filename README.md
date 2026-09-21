@@ -50,12 +50,12 @@ MOD 将跨 34 个省级行政区、数千家分级单位、多批次推进的大
 
 | 屏幕模块 | 核心定位与决策重点 |
 |---|---|
-| **A · 项目总览 (Overview)** | 全局战况总览、关键运营规模、上线推进节奏、指挥部决策横幅与收官信号 |
-| **B · 建设进度 (Construction)** | 阶段里程碑穿透、工序任务结构、人员培训考核、期初数据准备与单位建设主台账 |
-| **C · 上线推广 (Rollout)** | 34 省级地图下钻、8 个推广批次全景、区域双轨就绪度与上线积压瓶颈分析 |
-| **D · 业务运营 (Operations)** | 真实单据与凭证流转、接口集成吞吐、财务双轨核对一致率（~96%）与数据质量审计 |
-| **E · 合规监督 (Compliance)** | 多层级合规态势、批次合规横向对比、规则校验雷达与历史困难户重点预警 |
-| **F · 风险与智能研判 (Risk & AI)** | 风险特征集中度、HeatWave AutoML 特征贡献归因、模型就绪评估与每日决策研判简报 |
+| **A · 项目总览 (Overview)** | 五域态势导航、省域地图与联动摘要、跨域趋势、今日变化和行动队列 |
+| **B · 建设进度 (Construction)** | 建设概览、阶段任务矩阵、滞后省域、上线门禁、数据就绪和常驻台账预览 |
+| **C · 上线推广 (Rollout)** | 批次当前态与历史爬坡、区域推进缺口、联系人例外和单位上线台账 |
+| **D · 业务运营 (Operations)** | 单据—凭证—集成端到端链路、日吞吐、双轨核对和数据质量审计 |
+| **E · 合规监督 (Compliance)** | 合规摘要、风险标签、治理工单流转、实时广播和问题下钻 |
+| **F · 风险与智能研判 (Risk & AI)** | 首要瓶颈与行动优先级、风险分布、模型治理和每日决策简报 |
 
 ### 三、MOD 的核心工程特色
 
@@ -65,7 +65,7 @@ MOD 将跨 34 个省级行政区、数千家分级单位、多批次推进的大
 - **湖仓一体内存加速与机器学习**：MySQL HeatWave 内存集群加载 9 张核心分析大表，支撑千万级明细实时聚合计算与 AutoML 风险评分。
 - **高密度响应式可视化与统一视觉契约**：Vue 3 + ECharts 6 实现 34 省份矢量地图穿透交互、跨面板联动、动态秒级时钟与自适应缩放。
 - **现代软件工程与制度化治理**：
-  - 前后端测试全绿（29 个前端测试文件 148 个用例 + 24 个后端治理测试全部通过）；
+  - 本地与 CI 复用类型检查、单元测试、静态契约、构建和文档治理门禁，易漂移的测试数量不在 README 手工固化；
   - CI/CD 启用 OpenSSH ControlMaster 连接多路复用，极大提升自动化部署可靠性；
   - 彻底停用 GitHub Issues，全面转向内聚受控的本地已知问题（KI）生命周期治理体系（[ADR-0014](docs/decisions/0014-停用GitHub-Issues统一使用本地KI问题跟踪体系.md)）；
   - 基于 `git-cliff` 2.13.1 锁定版本自动生成结构化发布变更日志。
@@ -120,7 +120,7 @@ MOD 将跨 34 个省级行政区、数千家分级单位、多批次推进的大
 | **前端大屏 (Frontend)** | Vue 3.5、TypeScript 5.9、Pinia、ECharts 6.1、Tailwind CSS、Vite |
 | **后端接口 (Backend)** | FastAPI、Python 3.12+、SQLAlchemy 2.0、Uvicorn、Pydantic |
 | **数据与湖仓加速 (Data)** | MySQL 8.4 HeatWave、HeatWave In-Memory Cluster、AutoML |
-| **质量与安全保障 (QA)** | Pytest、Vitest、Playwright、Ruff、vue-tsc、文档保全与凭据扫描闸门 |
+| **质量与安全保障 (QA)** | Pytest、Vitest、Playwright、Ruff、vue-tsc、ESLint、Stylelint、pre-commit、detect-secrets、gitlint、Lychee 与 MOD 专有契约 |
 | **部署与交付运维 (Ops)** | Nginx、systemd、原子版本软链切换、GitHub Actions、Fail2ban 防护 |
 
 ### 六、本地快速启动
@@ -185,12 +185,12 @@ The command cockpit comprises 6 dense, interconnected screens sharing global Pin
 
 | Screen | Core Purpose & Decision Focus |
 |---|---|
-| **A · Overview** | Macro progress, rollout velocity, operational scale, executive headline, and closure signals |
-| **B · Construction** | Stage milestones, task structures, personnel training, data preparation, and unit ledgers |
-| **C · Rollout** | 34-region map drill-down, 8 rollout batches, regional dual-run readiness, and backlog analysis |
-| **D · Operations** | Document/voucher throughput, integration metrics, dual-run reconciliation (~96%), and quality audits |
-| **E · Compliance** | Hierarchical compliance posture, batch cross-comparison, rule radar, and lagging-unit alerts |
-| **F · Risk & Intelligence** | Risk feature concentration, HeatWave AutoML attribution, model readiness, and daily decision briefings |
+| **A · Overview** | Five-domain navigation, regional map and linked summaries, cross-domain trends, daily changes, and action queue |
+| **B · Construction** | Construction overview, stage matrix, lagging regions, go-live gates, data readiness, and persistent ledger preview |
+| **C · Rollout** | Current and historical batch progress, regional rollout gaps, contact exceptions, and unit rollout ledger |
+| **D · Operations** | End-to-end document, voucher, and integration flow, daily throughput, dual-run reconciliation, and quality audits |
+| **E · Compliance** | Compliance summary, risk tags, governance workflow, live activity, and issue drill-down |
+| **F · Risk & Intelligence** | Primary bottlenecks, action priorities, risk distribution, model governance, and daily decision briefings |
 
 ### 3. Key Engineering Highlights
 
@@ -200,7 +200,7 @@ The command cockpit comprises 6 dense, interconnected screens sharing global Pin
 - **Lakehouse In-Memory Acceleration & AutoML**: 9 core analytics tables are loaded into the MySQL HeatWave in-memory cluster, enabling instant multi-million row aggregations and automated risk scoring.
 - **Dense, Responsive Visualization**: Vue 3 and ECharts 6 deliver interactive 34-region map penetration, cross-panel filtering, a real-time ticking clock, and auto-scaling layouts.
 - **Enterprise Engineering Rigor**:
-  - Full test suite passing (29 frontend test suites with 148 specs + 24 backend and governance checks);
+  - Local and CI workflows share type, unit, static-contract, build, and documentation gates; volatile test counts are derived rather than copied into this README;
   - CI/CD hardened with OpenSSH ControlMaster connection multiplexing for rapid, reliable deployments;
   - GitHub Issues deprecated in favor of a locally governed Known Issues (KI) lifecycle system ([ADR-0014](docs/decisions/0014-停用GitHub-Issues统一使用本地KI问题跟踪体系.md));
   - Reproducible release changelogs generated automatically with pinned `git-cliff` 2.13.1.
@@ -255,7 +255,7 @@ Standard production delivery runs through GitHub Actions CI/CD upon push to `mai
 | **Frontend** | Vue 3.5, TypeScript 5.9, Pinia, ECharts 6.1, Tailwind CSS, Vite |
 | **Backend** | FastAPI, Python 3.12+, SQLAlchemy 2.0, Uvicorn, Pydantic |
 | **Data & Acceleration** | MySQL 8.4 HeatWave, HeatWave In-Memory Cluster, AutoML |
-| **Quality & Assurance** | Pytest, Vitest, Playwright, Ruff, vue-tsc, credential scanning, doc gates |
+| **Quality & Assurance** | Pytest, Vitest, Playwright, Ruff, vue-tsc, ESLint, Stylelint, pre-commit, detect-secrets, gitlint, Lychee, and MOD-specific contracts |
 | **Operations & Delivery** | Nginx, systemd, atomic release symlinks, GitHub Actions, Fail2ban |
 
 ### 6. Local Quick Start

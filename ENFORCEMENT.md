@@ -54,8 +54,8 @@
 - 凭据只能从环境变量或受控密钥机制读取，源码中不得保留任何可用的回退默认值。
 - 提交前必须有机制扫描本次改动是否含凭据特征，命中即阻断提交，而不是靠人工肉眼检查。
 - `.env.example` 只允许变量名与安全占位符。
-- 本地 `.githooks/pre-commit` 与 CI `.github/workflows/quality.yml` 共同调用
-  `scripts/project/scan_secrets.py`，分别扫描暂存区和提交范围。
+- 本地 `.githooks/pre-commit` 与 CI `.github/workflows/quality.yml` 共用
+  `.pre-commit-config.yaml` 中的 `detect-secrets` 规则，分别扫描暂存文件和提交范围。
 
 ### 闸门 B · 数据库与生产操作
 
@@ -72,7 +72,7 @@
 - 若本次变更改变了事实（数据规模、架构、路径、命令、部署状态），提交必须同步更新
   `docs/CURRENT-STATE.md` 或相应当前文档；未同步的变更视为未完成。
 - 数据规模类事实应改由只读查询实时派生，尽量不以手写数字留在文档中，以避免漂移。
-- `.githooks/commit-msg` 与 CI 共同调用 `scripts/project/validate_commit_message.py` 校验提交主题；
+- `.githooks/commit-msg` 与 CI 共同使用 `.gitlint` 校验提交主题；
   CI 同时运行 `make check`，防止本地 `--no-verify` 绕过成为最终结果。
 
 ### 闸门 D · 危险操作即停与发布授权

@@ -18,4 +18,22 @@ describe('CockpitPanel', () => {
     expect(subtitle.classes()).toContain('truncate')
     expect(subtitle.classes()).not.toContain('block')
   })
+
+  it('can keep a long subtitle in the header tooltip only', () => {
+    const wrapper = mount(CockpitPanel, {
+      props: {
+        zone: 'A2',
+        title: '省域摘要',
+        subtitle: '全国总体 · 点击地图切换省域',
+        subtitleDisplay: 'tooltip',
+      },
+    })
+
+    const header = wrapper.get('header')
+    expect(header.attributes('title')).toBe('省域摘要 · 全国总体 · 点击地图切换省域')
+    expect(header.attributes('aria-label')).toBe('省域摘要 · 全国总体 · 点击地图切换省域')
+    expect(header.text()).toContain('A2')
+    expect(header.text()).toContain('省域摘要')
+    expect(header.text()).not.toContain('全国总体')
+  })
 })

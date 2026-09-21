@@ -41,3 +41,9 @@ pythonpath = ["..", "."]
 filterwarnings = [
   "error::starlette.exceptions.StarletteDeprecationWarning",
 ]
+
+[dependency-groups]
+dev = [
+    "detect-secrets>=1.5.0",
+    "pre-commit>=4.6.2",
+]

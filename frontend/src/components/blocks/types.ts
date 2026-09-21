@@ -14,6 +14,12 @@ export type BlockTone = 'default' | 'accent' | 'success' | 'warning' | 'danger'
 export interface MetricItem {
   label: string
   value: string | number
+  /** 数值变化时使用统一的缓动过渡；仅对 number 生效。 */
+  animate?: boolean
+  /** 数字前缀，如当日增量使用「+」。 */
+  prefix?: string
+  /** 动画数字的小数位数，默认 0。 */
+  decimals?: number
   /** 数值后缀，如「家」「%」「笔」。用小字号弱化，不与数值抢视线。 */
   unit?: string
   /** 卡片底部的一行补充说明。 */

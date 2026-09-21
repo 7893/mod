@@ -11,15 +11,16 @@
 
 - `frontend/capture-dashboard.mjs`：截取本地驾驶舱页面；通过 `MOD_SCREENSHOT_URL` 和
   `MOD_SCREENSHOT_PATH` 指定地址与输出路径。
-- `scan_secrets.py`：只读扫描暂存区或指定 Git 范围的新增行，供 pre-commit 与 CI 共用。
-- `validate_commit_message.py`：校验本地 commit message 文件或 CI Git 范围中的提交主题。
 - `lint_frontend_arbitrary_values.py`：扫描 `frontend/src/**/*.vue` 中禁止的 Tailwind 任意值（字号/颜色/间距等），供 `make check` 与 CI 共用。
 - `lint_frontend_styles.py`：校验前端样式层契约——`frontend/src/styles/` 仅含 theme/base/shell/blocks 四文件、色值字面量只出现在 `theme.css` 与 `charts/theme.ts`、ECharts 字号必须引用 `charts/tokens.ts`、禁止旧变量（`--c-*`/`--space-*`/`--text-xs` 等）、媒体查询与 `clamp()` 仅限 `shell.css`、全局 CSS 选择器必须被 `.vue`/`.ts` 引用、引用 Token 的 SFC `<style>` 须以 `@reference` 开头。纳入 `make check` 与 CI。
-- `check_doc_links.py`：只读检查 Markdown 相对链接是否指向现存文件。
 - `check_document_governance.py`：只读阻断文档删除、冻结正文减损、KI 状态分裂、必需元数据缺失和现行索引漏项。
 - `check_doc_sync.py`：只读检查行为与运行事实变更是否在同一改动中同步 `docs/CURRENT-STATE.md`；未同步时阻断。
 - `check_changelog.py`：只读校验 git-cliff 版本契约、基线提交可达性、TOML 配置和 CHANGELOG 生成标记。
 - `generate_changelog.py`：用锁定的 git-cliff 2.13.1 从 `.git-cliff-baseline` 到指定 revision 生成变更日志；默认只输出 stdout。
+
+凭据扫描、提交信息、Markdown 链接及前端通用 lint 已由锁定的成熟工具承担，
+配置分别位于 `.pre-commit-config.yaml`、`.gitlint`、`frontend/eslint.config.js` 与
+`frontend/stylelint.config.mjs`，不再向本目录添加同类通用脚本。
 
 ## 文档治理检查
 

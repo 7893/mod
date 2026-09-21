@@ -68,28 +68,18 @@ jobs:
           echo "base=$base" >> "$GITHUB_OUTPUT"
 
       - name: Scan changed lines for credentials
-        run: python3 scripts/project/scan_secrets.py --base "${{ steps.comparison.outputs.base }}"
+        run: uv run --project backend pre-commit run detect-secrets --from-ref "${{ steps.comparison.outputs.base }}" --to-ref HEAD
 
       - name: Validate commit messages
-        run: python3 scripts/project/validate_commit_message.py --base "${{ steps.comparison.outputs.base }}"
-
-      - name: Lint frontend arbitrary values
-        run: python3 scripts/project/lint_frontend_arbitrary_values.py
-
-      - name: Lint frontend style contracts
-        run: python3 scripts/project/lint_frontend_styles.py
-
-      - name: Check documentation links
-        run: python3 scripts/project/check_doc_links.py
+        env:
+          GITLINT_COMMITS: "${{ steps.comparison.outputs.base }}..HEAD"
+        run: uv run --project backend pre-commit run gitlint-ci --hook-stage manual
 
       - name: Enforce CURRENT-STATE sync
         run: python3 scripts/project/check_doc_sync.py --base "${{ steps.comparison.outputs.base }}"
 
       - name: Enforce documentation governance
         run: python3 scripts/project/check_document_governance.py --base "${{ steps.comparison.outputs.base }}"
-
-      - name: Validate changelog contract
-        run: python3 scripts/project/check_changelog.py
 
       - name: Run repository checks
         run: make check

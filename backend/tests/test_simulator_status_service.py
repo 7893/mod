@@ -236,7 +236,7 @@ def test_status_whitelist_purity(tmp_path, api_client):
         "service": "mod-simulator",
         "status": "RUNNING",
         "timestamp": now_hkt.isoformat(),
-        "db_secret_key": "topsecret123",
+        "db_secret_key": "topsecret123",  # pragma: allowlist secret
         "internal_server_ip": "10.0.1.99",
         "unauthorized_dump": "sensitive data",
     }

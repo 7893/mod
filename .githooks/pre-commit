@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# MOD pre-commit 闸门（decision C：凭据扫描 + 完整 make check）
+# MOD pre-commit 闸门（成熟工具扫描 + 完整 make check）
 # 依据 ENFORCEMENT.md 闸门 A/C 与 docs/development/SECRET-SCAN-HOOK-DESIGN.md。
 #
 # 启用方式（一次性）：git config core.hooksPath .githooks
@@ -11,9 +11,9 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-# 1) 凭据扫描（只读暂存区新增行；命中即阻断）
+# 1) 凭据扫描（pre-commit 负责暂存文件选择与隔离）
 echo "[pre-commit] 扫描暂存改动中的疑似凭据..."
-python3 scripts/project/scan_secrets.py
+uv run --project backend pre-commit run detect-secrets
 
 # 2) 完整质量检查（Ruff + pytest + 前端 typecheck/build）
 echo "[pre-commit] 运行 make check..."

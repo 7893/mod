@@ -1,10 +1,17 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = withDefaults(defineProps<{
   title: string
   zone?: string
   subtitle?: string
+  subtitleDisplay?: 'inline' | 'tooltip'
   tone?: 'default' | 'risk'
-}>()
+}>(), {
+  subtitleDisplay: 'inline',
+})
+
+const fullTitle = computed(() => props.subtitle ? `${props.title} · ${props.subtitle}` : props.title)
 </script>
 
 <template>
@@ -18,7 +25,11 @@ defineProps<{
     :data-zone="zone"
   >
     <!-- 面板标准头部 -->
-    <header class="flex items-center justify-between px-3.5 py-2 border-b border-white/5 flex-shrink-0 gap-3">
+    <header
+      class="flex items-center justify-between px-3.5 py-2 border-b border-white/5 flex-shrink-0 gap-3"
+      :title="fullTitle"
+      :aria-label="fullTitle"
+    >
       <div class="flex items-center gap-2 min-w-0 flex-1">
         <span
           v-if="zone"
@@ -26,11 +37,11 @@ defineProps<{
         >
           {{ zone }}
         </span>
-        <h3 :title="title" class="text-cockpit-md font-semibold tracking-wide text-slate-100 whitespace-nowrap truncate min-w-0">
+        <h3 class="text-cockpit-md font-semibold tracking-wide text-slate-100 whitespace-nowrap truncate min-w-0">
           {{ title }}
         </h3>
-        <span v-if="subtitle" class="text-slate-700 flex-shrink-0" aria-hidden="true">·</span>
-        <span v-if="subtitle" :title="subtitle" class="text-cockpit-xs text-slate-500 font-normal truncate min-w-0">
+        <span v-if="subtitle && subtitleDisplay === 'inline'" class="text-slate-700 flex-shrink-0" aria-hidden="true">·</span>
+        <span v-if="subtitle && subtitleDisplay === 'inline'" class="text-cockpit-xs text-slate-500 font-normal truncate min-w-0">
           {{ subtitle }}
         </span>
       </div>

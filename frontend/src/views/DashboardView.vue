@@ -85,23 +85,31 @@ const provinceFacts = computed<MetricItem[]>(() => [
 const todayFacts = computed<MetricItem[]>(() => [
   {
     label: '今日业务单据',
-    value: `+${formatCount(liveStore.liveOverview.docsTodayAdded)}`,
+    value: liveStore.liveOverview.docsTodayAdded,
+    prefix: '+',
+    animate: true,
     tone: 'accent',
   },
   {
     label: '今日会计凭证',
-    value: `+${formatCount(liveStore.liveOverview.vouchersTodayAdded)}`,
+    value: liveStore.liveOverview.vouchersTodayAdded,
+    prefix: '+',
+    animate: true,
     tone: 'success',
   },
   {
     label: '实时集成推送',
-    value: `+${formatCount(liveStore.cumulative.integrations)}`,
+    value: liveStore.cumulative.integrations,
+    prefix: '+',
+    animate: true,
     tone: 'warning',
     hint: '当前投影会话',
   },
   {
     label: '今日新增单位',
-    value: `+${formatCount(store.snapshot.overview.orgTodayAdded)}`,
+    value: store.snapshot.overview.orgTodayAdded,
+    prefix: '+',
+    animate: true,
     tone: 'default',
   },
 ])
@@ -182,6 +190,7 @@ const openAction = (row: StatusRow) => {
         <CockpitPanel
           title="省域摘要"
           zone="A2"
+          subtitle-display="tooltip"
           :subtitle="selectedProvince === '全国' ? '全国总体 · 点击地图切换省域' : `${selectedProvince} · 纳入 ${selectedProvinceData.total} 家`"
         >
           <template #actions>
@@ -207,6 +216,7 @@ const openAction = (row: StatusRow) => {
         <CockpitPanel
           title="上线双轨走势"
           zone="A4"
+          subtitle-display="tooltip"
           :subtitle="`7 个进度节点 · 累计上线 ${store.snapshot.overview.launched ?? 0} 家`"
         >
           <template #actions>
@@ -245,7 +255,7 @@ const openAction = (row: StatusRow) => {
           zone="A6"
           subtitle="只呈现当日增量，不重复累计规模"
         >
-          <MetricGrid :items="todayFacts" :columns="2" fill flat size="sm" />
+          <MetricGrid :items="todayFacts" :columns="2" fill flat size="sm" align="center" />
         </CockpitPanel>
 
         <CockpitPanel

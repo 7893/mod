@@ -24,8 +24,8 @@
 |---|---|
 | Python 后端 | Ruff、相关 pytest、全量 `make check` |
 | API 路由或响应 | 正常、降级、错误状态和兼容字段测试 |
-| Vue/TypeScript 前端 | `pnpm test`（Vitest 单元测试）、`pnpm run typecheck`、`pnpm run build`、全量 `make check` |
-| CSS/布局 | 缩放单测、类型检查、本地生产构建、固定场景浏览器回归；初始基准和重大视觉变更需人工审阅 |
+| Vue/TypeScript 前端 | `pnpm run lint`、`pnpm test`、`pnpm run typecheck`、`pnpm run build`、全量 `make check` |
+| CSS/布局 | `pnpm run lint:styles`、MOD 样式契约、缩放单测、类型检查、本地生产构建、固定场景浏览器回归；初始基准和重大视觉变更需人工审阅 |
 | 配置或依赖 | 解析/启动检查、锁文件一致性、全量 `make check` |
 | 文档 | 链接和事实检查、`git diff --check`、全量 `make check` |
 | 生产（运行主机） | 用户/系统服务、单一 8100 监听、API、静态资源、禁止索引和日志核验 |
@@ -55,7 +55,7 @@ git status --short
 
 文档变更的 `make check` 必须同时通过：
 
-- Markdown 相对链接检查；
+- Lychee Markdown 本地链接检查；
 - 文档删除与冻结正文保全检查；
 - KI 看板/详情状态一致性、必需元数据与索引覆盖检查；
 - 核心行为变更与 `CURRENT-STATE.md` 同步的阻断检查；

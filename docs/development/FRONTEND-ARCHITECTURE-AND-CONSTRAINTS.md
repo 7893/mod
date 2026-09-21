@@ -23,6 +23,8 @@
     由本文第二部分的 `CockpitPanel` + Tailwind 契约取代。
 - 目录归属与文件规模沿用 `DEVELOPMENT-STANDARD.md` 前端章节与 `PROJECT-ORGANIZATION.md`，本文不重复。
 - 执行强制方式以 `ENFORCEMENT.md` 为准；本文是内容规范，不自带闸门。
+- 面板事实单一归属、主画布全量可见与 Zone 演进规则由
+  [ADR-0017](../decisions/0017-六屏面板事实单一归属与主画布全量可见.md)记录决策理由。
 
 ---
 
@@ -58,6 +60,7 @@ Zone 编号是产品坐标，用于沟通定位，不得替代业务标题，也
 - 一排出现 6 个及以上同构小卡、且主要用于比较时，优先改为柱图、堆叠图或折线图；卡片只保留需要独立强调的核心 KPI。
 - 大面板不得靠重复标签、说明文字或硬编码数字填空；应选择能表达构成、趋势、排序或差异的图表。
 - 图表必须回答明确问题，同一面板不重复展示完全相同的信息；tooltip 承载明细，画布保留主比较关系。
+- 指标矩阵和分区摘要应在各自明确的子区域内居中，数值至少使用正文级图表字号；排行、长文和时序图仍按阅读方向对齐，禁止把“全局居中”当作万能补丁。
 - 连续类别若数值与状态完全相同、且阅读重点是异常或在推项，应合并为汇总类别，把明细留给 tooltip 或台账，避免重复线条挤压有效画布。
 - 缺失数据不画满格、不回填 100% 或 0 异常，统一显示 `—` 或明确空态。
 
@@ -156,11 +159,12 @@ Zone 编号是产品坐标，用于沟通定位，不得替代业务标题，也
 组件私有样式写在其 SFC `<style>` 内（ECharts tooltip 这类渲染在组件根之外的 HTML 用非 scoped 块）。
 任何全局 CSS 类若在 `.vue`/`.ts` 中无引用即为死代码，必须删除。
 
-以上文件集、色值字面量位置、旧变量、媒体查询位置、选择器引用与 `@reference` 要求由
-`scripts/project/lint_frontend_styles.py` 在 `make check` 与 CI 中机器校验；模板任意值由
-`lint_frontend_arbitrary_values.py` 校验。两者失败均阻断提交。
+通用 TypeScript/Vue 错误规则由 ESLint 校验，CSS/Vue style 通用语法规则由 Stylelint 校验。
+上述文件集、色值字面量位置、旧变量、媒体查询位置、选择器引用与 `@reference` 等 MOD 专有契约
+继续由 `scripts/project/lint_frontend_styles.py` 校验；模板任意值由 `lint_frontend_arbitrary_values.py` 校验。
+四者均经 `make check` 进入本地与 CI 门禁，职责不重叠。
 
-## 迁移现状与推进
+## 迁移现状与稳态维护
 
 - 六屏均已使用 `CockpitPanel` 外壳与具名 Grid Token。2026-09-09 完成 C/D/E/F 屏积木化：首行指挥带统一为 `blocks/CommandBand`（左主图 + 右事实栏），面板内事实栏/对账明细/TOP 列表统一为 `MetricGrid`/`StatList` 的 `flat` 平铺形态，规则告警统一为 `StatusList`，提示条统一为 `NoteBanner`，空态统一为 `EmptyNote`；D7 金标准核验四卡收敛为 `MetricGrid` 数据映射。
 - 去「模板感」原则：面板内不再叠彩色底卡（card-in-panel），分区只用 hairline 分隔；没有语义的装饰线（如未稽核项的空进度轨）、胶囊标签一律不画；文本内容宁可滚动也不得截断成「另有 N 条」。2026-09-09 据此改写 F5 简报（`BriefingList` 纵向全文）、D7 核验卡（去进度轨）、F3 分布图（去底卡、隐藏与柱标重叠的坐标刻度）。
@@ -177,7 +181,7 @@ Zone 编号是产品坐标，用于沟通定位，不得替代业务标题，也
 - E/F 屏合规治理与 AI 算力护栏闭环（GI-003/GI-004）：E 屏顶端集成 `LiveActivityTicker.vue`，毫秒级轮播专班一线处置流水，赋予大屏环境生命体征；E 屏台账支持下钻唤起 `ComplianceInspectDrawer.vue`（六态 Stepper、专班责任人、一键督办上帝之手与 AI 深度研判）；空闲 45 秒由 `KioskSpotlightTour.vue` 自动唤醒展厅聚光灯巡航 HUD 浮窗，交互瞬时淡出；F 屏操作区嵌入 `AiQuotaCapsule.vue`，透视 Cloudflare AI 每日 3,000 Neurons 安全额度与熔断状态，坚守 $0.00 零费用硬防护。详见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](GOVERNANCE-SIMULATION-SYNTHESIS.md)。
 
 
-## 重构执行顺序（后续 AI 必须按此顺序，不得跳步）
+## 前端结构变更顺序（后续 AI 必须按此顺序，不得跳步）
 
 1. **先读标杆**：以 `DashboardView.vue` + `CockpitPanel.vue` + `theme.css` 为唯一参照，
    不自造布局与样式体系。
@@ -187,13 +191,12 @@ Zone 编号是产品坐标，用于沟通定位，不得替代业务标题，也
    外壳以 **1920×1080** 为目标屏幕，常驻导航下的内容画布以 **1920×980**
    为唯一设计基准；靠整体等比缩放适配，不加逐屏断点补丁，也不得用最小缩放值造成横向裁切。
 4. **填内容**：所有面板用 `CockpitPanel` 包裹，格内只用 Token 与原子类填充。
-5. **删旧 CSS**：迁移完成后删除该屏对应的旧 `xxx.css`，并从 `styles.css` 移除其 `@import`。
+5. **删旧实现**：发现被现行骨架、物料或 Token 取代的 CSS、组件和 option 时同步删除，不叠加兼容补丁。
 6. **验证**：`pnpm run typecheck`、`pnpm run build`、`make check` 全绿；**由人工做实际页面视觉验收**
    并执行[固定场景浏览器回归](FRONTEND-VISUAL-VERIFICATION.md)。AI 可检查实际渲染与几何边界，人工负责审美与初始基准确认。
-7. **一屏一提交**：每屏独立提交，信息说明迁移了哪屏、删了哪个旧 CSS。
+7. **控制提交边界**：跨屏结构变更按可独立回归的屏或契约分提交，说明改了哪个事实归属、骨架或物料。
 
-- 顺序原则：不为重构而一次性全改；优先迁移业务数据已稳定的屏，
-  依赖 [已知问题看板](../KNOWN-ISSUES.md) 中未修数据（如 KI-001/002/003）的屏往后放，避免布局与逻辑两次返工。
+- 顺序原则：不为统一外观而强制六屏同构；先确认业务事实稳定，再修改承载它的唯一专业面板，避免布局与逻辑两次返工。
 
 ## 完成定义
 
