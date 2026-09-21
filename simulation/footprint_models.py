@@ -29,7 +29,7 @@ class DocumentFootprint:
     nature: str
     amount: Decimal
     submit_time: datetime
-    approve_time: datetime
+    approve_time: Optional[datetime]
     status: str
     lines: List[DocumentLineFootprint] = field(default_factory=list)
 
@@ -157,6 +157,9 @@ def validate_footprint(event: EventFootprint) -> None:
         raise ValueError(
             f"Organization ID mismatch between doc ({doc.org_id}) and voucher ({vch.org_id})"
         )
+
+    if doc.approve_time is None:
+        raise ValueError("Completed footprint requires an approval timestamp")
 
     if not (doc.submit_time <= doc.approve_time <= vch.gen_time <= vch.int_time):
         raise ValueError(

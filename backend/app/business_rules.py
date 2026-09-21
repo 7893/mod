@@ -45,6 +45,13 @@ DISPLAY_STATUS_MAPPING: dict[str, str] = {
 }
 DISPLAY_STATUSES: tuple[str, ...] = ("未启动", "准备中", "双轨运行", "已上线")
 
+# 新版拟真业务流水的隔离标记与单据状态。历史数据不回填、不进入新审批队列。
+SIMULATED_FLOW_NATURE = "正式业务·拟真审批链"
+DOC_STATUS_PENDING_APPROVAL = "审批中"
+DOC_STATUS_REJECTED = "已驳回"
+DOC_STATUS_PENDING_VOUCHER = "待生成凭证"
+DOC_STATUS_COMPLETED = "处理完成"
+
 
 def sql_status_list(statuses: Iterable[str]) -> str:
     """Render a constant status tuple as a SQL IN-list, e.g. ``('已上线', '稳定运行')``."""

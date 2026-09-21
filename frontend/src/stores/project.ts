@@ -271,6 +271,16 @@ export interface ProjectSnapshot {
     }>
   }
   operationsTrend?: OperationsTrendItem[]
+  operationsLifecycle?: {
+    pendingApproval: number
+    pendingVoucher: number
+    rejectedToday: number
+    voucherizedDocumentsToday: number
+    backlogClearedToday: number
+    avgApprovalMinutes: number | null
+    avgVoucherMinutes: number | null
+    windowDays: number
+  }
   quality?: {
     voucherBalanceErrors?: number | null
     timeOrderErrors?: number | null

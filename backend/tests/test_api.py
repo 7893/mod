@@ -565,6 +565,13 @@ def test_ki061_fallback_snapshot_contracts():
     for field in ("date", "fullDate", "documents", "vouchers", "integrations"):
         assert field in first_ot, f"operationsTrend 元素必须包含 {field}"
 
+    # D7: fallback keeps the panel structurally visible but does not invent lifecycle facts.
+    flow = snap["operationsLifecycle"]
+    assert flow["windowDays"] == 30
+    assert flow["pendingApproval"] == 0
+    assert flow["pendingVoucher"] == 0
+    assert flow["avgApprovalMinutes"] is None
+
     # D6: operations dualRun fields
     ops = snap.get("operations", {})
     for field in ("dualRunResult", "dualRunConsistent", "dualRunInconsistent", "dualRunConsistencyPct", "integrationSuccess", "integrationFailed"):

@@ -9,7 +9,16 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
-from ..business_rules import ORG_STATUS_DUAL_RUNNING, SQL_INFERRED_BATCH_ID, SQL_LAUNCHED_STATUSES, public_business_rules
+from ..business_rules import (
+    DOC_STATUS_PENDING_APPROVAL,
+    DOC_STATUS_PENDING_VOUCHER,
+    DOC_STATUS_REJECTED,
+    ORG_STATUS_DUAL_RUNNING,
+    SIMULATED_FLOW_NATURE,
+    SQL_INFERRED_BATCH_ID,
+    SQL_LAUNCHED_STATUSES,
+    public_business_rules,
+)
 from ..config import get_display_timezone, get_settings
 from .dashboard_sections import (
     build_construction_summary,
@@ -163,6 +172,16 @@ def load_fallback_snapshot() -> dict:
             with open(path, "r", encoding="utf-8") as f:
                 snapshot = json.load(f)
                 snapshot["businessRules"] = public_business_rules()
+                snapshot.setdefault("operationsLifecycle", {
+                    "pendingApproval": 0,
+                    "pendingVoucher": 0,
+                    "rejectedToday": 0,
+                    "voucherizedDocumentsToday": 0,
+                    "backlogClearedToday": 0,
+                    "avgApprovalMinutes": None,
+                    "avgVoucherMinutes": None,
+                    "windowDays": 30,
+                })
                 return snapshot
     # 兜底文件也缺失时只返回空结构，不编造任何数字。
     return {
@@ -175,6 +194,16 @@ def load_fallback_snapshot() -> dict:
         "issues": [],
         "issuesSummary": {},
         "operations": {},
+        "operationsLifecycle": {
+            "pendingApproval": 0,
+            "pendingVoucher": 0,
+            "rejectedToday": 0,
+            "voucherizedDocumentsToday": 0,
+            "backlogClearedToday": 0,
+            "avgApprovalMinutes": None,
+            "avgVoucherMinutes": None,
+            "windowDays": 30,
+        },
         "quality": {},
     }
 
@@ -570,6 +599,61 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
             }
             for ct, data in sorted(breakdown_by_type.items())
         ]
+
+        flow_params = {
+            "anchor_date": anchor_date,
+            "flow_nature": SIMULATED_FLOW_NATURE,
+            "pending_approval": DOC_STATUS_PENDING_APPROVAL,
+            "pending_voucher": DOC_STATUS_PENDING_VOUCHER,
+            "rejected": DOC_STATUS_REJECTED,
+        }
+        flow_document = dict(conn.execute(text("""
+        SELECT
+            COALESCE(SUM(status = :pending_approval), 0) AS pendingApproval,
+            COALESCE(SUM(status = :pending_voucher), 0) AS pendingVoucher,
+            COALESCE(SUM(
+                status = :rejected
+                AND approve_time >= :anchor_date
+                AND approve_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
+            ), 0) AS rejectedToday,
+            ROUND(AVG(CASE
+                WHEN approve_time >= :anchor_date
+                 AND approve_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
+                THEN TIMESTAMPDIFF(SECOND, submit_time, approve_time) / 60.0
+            END), 1) AS avgApprovalMinutes
+        FROM business_document
+        WHERE submit_time >= DATE_SUB(:anchor_date, INTERVAL 30 DAY)
+          AND submit_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
+          AND nature = :flow_nature
+        """), flow_params).mappings().one())
+        flow_voucher = dict(conn.execute(text("""
+        SELECT
+            COUNT(*) AS voucherizedDocumentsToday,
+            COALESCE(SUM(DATE(submit_time) < :anchor_date), 0) AS backlogClearedToday,
+            ROUND(AVG(TIMESTAMPDIFF(SECOND, approve_time, first_voucher_time) / 60.0), 1)
+                AS avgVoucherMinutes
+        FROM (
+            SELECT d.id, d.submit_time, d.approve_time, MIN(v.gen_time) AS first_voucher_time
+            FROM accounting_voucher v
+            JOIN document_voucher_link l ON l.voucher_id = v.id
+            JOIN business_document d ON d.id = l.doc_id
+            WHERE v.gen_time >= :anchor_date
+              AND v.gen_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
+              AND d.submit_time >= DATE_SUB(:anchor_date, INTERVAL 30 DAY)
+              AND d.nature = :flow_nature
+            GROUP BY d.id, d.submit_time, d.approve_time
+        ) AS voucherized
+        """), flow_params).mappings().one())
+        operations_lifecycle = {
+            "pendingApproval": int(flow_document["pendingApproval"] or 0),
+            "pendingVoucher": int(flow_document["pendingVoucher"] or 0),
+            "rejectedToday": int(flow_document["rejectedToday"] or 0),
+            "voucherizedDocumentsToday": int(flow_voucher["voucherizedDocumentsToday"] or 0),
+            "backlogClearedToday": int(flow_voucher["backlogClearedToday"] or 0),
+            "avgApprovalMinutes": numeric(flow_document["avgApprovalMinutes"]),
+            "avgVoucherMinutes": numeric(flow_voucher["avgVoucherMinutes"]),
+            "windowDays": 30,
+        }
         
         # 小表行数（快速查询）
         small_tables_sql = """
@@ -675,6 +759,7 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
             "issues": issues,
             "issuesSummary": issues_summary,
             "operations": operations,
+            "operationsLifecycle": operations_lifecycle,
             "operationsTrend": operations_trend,
             "quality": quality,
             "construction": construction,
