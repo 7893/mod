@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app.config import get_display_timezone
 
@@ -23,7 +23,7 @@ TABLE_NAME = "daily_briefing"
 
 _DDL_CREATE = f"""
 CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
-    briefing_date   DATE         NOT NULL COMMENT '简报所属日期(展示时区)',
+    briefing_date   DATE         NOT NULL COMMENT '日报统计日期(展示时区)',
     content         MEDIUMTEXT   NOT NULL COMMENT 'LLM 生成的研判正文',
     model           VARCHAR(128)          DEFAULT NULL COMMENT '生成模型标识',
     source          VARCHAR(32)  NOT NULL DEFAULT 'llm' COMMENT 'llm / template',
@@ -56,20 +56,22 @@ def _utc_iso(value: object) -> str:
 
 
 def get_latest(conn: Connection | None) -> dict:
-    """只读返回最新一条简报；无则返回 status=no_briefing。不触发任何外部请求。"""
+    """只读返回不晚于上一完整自然日的最新简报；不触发任何外部请求。"""
     if conn is None:
         return {"status": "no_briefing", "message": "无数据库连接"}
+    expected_date = datetime.now(get_display_timezone()).date() - timedelta(days=1)
     try:
         row = conn.execute(text(
             f"SELECT briefing_date, content, model, source, generated_at "
-            f"FROM {TABLE_NAME} ORDER BY briefing_date DESC LIMIT 1"
-        )).mappings().first()
+            f"FROM {TABLE_NAME} WHERE briefing_date <= :expected_date "
+            f"ORDER BY briefing_date DESC LIMIT 1"
+        ), {"expected_date": expected_date}).mappings().first()
     except Exception:
         # 表不存在或查询失败，安全降级
         return {"status": "no_briefing", "message": "简报表尚未就绪"}
     if not row:
         return {"status": "no_briefing", "message": "尚未生成任何简报"}
-    is_stale = str(row["briefing_date"]) != datetime.now(get_display_timezone()).date().isoformat()
+    is_stale = str(row["briefing_date"]) != expected_date.isoformat()
     return {
         "status": "ok",
         "isStale": is_stale,
@@ -84,7 +86,7 @@ def get_latest(conn: Connection | None) -> dict:
 
 def generate_and_store(conn: Connection, overview: dict, cf_adapter, display_tz: str = "Asia/Hong_Kong") -> dict:
     """
-    生成并存储当日简报（写操作）。
+    生成并存储上一完整自然日的简报（写操作）。
 
     - overview：脱敏后的宏观聚合指标（仅数字，来自 dashboard overview）。
     - cf_adapter：CloudflareAIAdapter 实例，经 mod-gateway 调用。
@@ -95,7 +97,23 @@ def generate_and_store(conn: Connection, overview: dict, cf_adapter, display_tz:
 
     ensure_table(conn)
 
-    result = cf_adapter.generate_insights(overview)
+    today = datetime.now(ZoneInfo(display_tz)).date()
+    reporting_date = today - timedelta(days=1)
+    daily_row = conn.execute(text("""
+        SELECT doc_today, voucher_today
+        FROM daily_stats
+        WHERE stat_date = :reporting_date
+    """), {"reporting_date": reporting_date}).mappings().first()
+    if not daily_row:
+        return {"status": "unavailable", "message": "上一完整自然日尚无统计数据"}
+
+    metrics = dict(overview)
+    metrics.pop("docsTodayAdded", None)
+    metrics.pop("vouchersTodayAdded", None)
+    metrics["docsClosedDayAdded"] = int(daily_row["doc_today"] or 0)
+    metrics["vouchersClosedDayAdded"] = int(daily_row["voucher_today"] or 0)
+
+    result = cf_adapter.generate_insights(metrics, reporting_date=reporting_date.isoformat())
     status = result.get("status")
     content = result.get("content") or result.get("insight")
 
@@ -103,22 +121,21 @@ def generate_and_store(conn: Connection, overview: dict, cf_adapter, display_tz:
         # 不写假简报，如实返回降级状态
         return {"status": status or "unavailable", "message": result.get("message", "LLM 未产生有效简报")}
 
-    today = datetime.now(ZoneInfo(display_tz)).date()
     generated_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    fp = _fingerprint({k: v for k, v in overview.items() if isinstance(v, (int, float))})
+    fp = _fingerprint({k: v for k, v in metrics.items() if isinstance(v, (int, float))})
 
     conn.execute(text(
         f"REPLACE INTO {TABLE_NAME} "
         f"(briefing_date, content, model, source, metrics_fingerprint, generated_at) "
         f"VALUES (:d, :c, :m, :s, :fp, :g)"
     ), {
-        "d": today, "c": content, "m": result.get("model"),
+        "d": reporting_date, "c": content, "m": result.get("model"),
         "s": "llm", "fp": fp, "g": generated_at,
     })
 
     return {
         "status": "ok",
-        "briefingDate": str(today),
+        "briefingDate": str(reporting_date),
         "content": content,
         "model": result.get("model"),
         "generatedAt": _utc_iso(generated_at),

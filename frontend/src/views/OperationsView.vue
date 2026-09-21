@@ -237,7 +237,7 @@ const lifecycleFacts = computed<MetricItem[]>(() => {
       </div>
     </CockpitPanel>
 
-    <!-- 主网格：D2-D5 各半；第三行按内容密度将 D6/D7 分为 7:5，D6 内部物料保持不变 -->
+    <!-- 主网格：D2-D5 各半；第三行按内容量分配为规则区约 44%、覆盖图约 31%、流转矩阵约 25% -->
     <div class="grid grid-cols-operations grid-rows-operations gap-2.5 flex-1 min-h-0">
       <!-- D2: 日吞吐与集成质量趋势，不重复 D1 累计规模 -->
       <CockpitPanel title="近 7 日业务吞吐" zone="D2" subtitle="单据、凭证日增与集成成功率" class="col-span-6">
@@ -288,12 +288,12 @@ const lifecycleFacts = computed<MetricItem[]>(() => {
       </CockpitPanel>
 
       <!-- D6: 数据质量金标准核验 -->
-      <CockpitPanel title="数据质量金标准核验" zone="D6" subtitle="覆盖规模与稽核状态 · 未核验项明确标注" class="col-span-7">
+      <CockpitPanel title="数据质量金标准核验" zone="D6" subtitle="覆盖规模与稽核状态 · 未核验项明确标注" class="col-span-9">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
-          <MetricGrid class="col-span-5 pr-3 border-r border-surface-veil-06" :items="qualityAuditItems" :columns="2" fill size="sm" align="center" />
+          <MetricGrid class="col-span-7 pr-3 border-r border-surface-veil-06" :items="qualityAuditItems" :columns="2" fill size="sm" align="center" />
 
           <!-- 右侧：覆盖规模图表 -->
-          <div class="col-span-7 flex flex-1 min-h-0 flex-col pl-1">
+          <div class="col-span-5 flex flex-1 min-h-0 flex-col pl-1">
             <div class="flex items-center justify-between px-1 text-cockpit-xs flex-shrink-0">
               <div class="flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-sky-400" />
@@ -307,7 +307,7 @@ const lifecycleFacts = computed<MetricItem[]>(() => {
       </CockpitPanel>
 
       <!-- D7: 仅统计启用新审批链路后生成的数据，历史数据不回算 -->
-      <CockpitPanel title="审批与制证流转" zone="D7" subtitle="新数据近 30 日窗口 · 历史存量不回算" class="col-span-5">
+      <CockpitPanel title="审批与制证流转" zone="D7" subtitle="新数据近 30 日窗口 · 历史存量不回算" class="col-span-3">
         <MetricGrid :items="lifecycleFacts" :columns="2" flat fill size="sm" align="center" />
       </CockpitPanel>
     </div>

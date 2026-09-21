@@ -49,7 +49,7 @@ def test_no_positive_factors_do_not_create_a_hundred_percent_cause(native):
     assert result['topAttributions'] == []
 
 
-@pytest.mark.parametrize('briefing_date, stale', [('2026-09-13', False), ('2026-09-12', True)])
+@pytest.mark.parametrize('briefing_date, stale', [('2026-09-12', False), ('2026-09-11', True)])
 def test_briefing_freshness_uses_display_day(monkeypatch, briefing_date, stale):
     class Clock(datetime):
         @classmethod
@@ -66,6 +66,51 @@ def test_briefing_freshness_uses_display_day(monkeypatch, briefing_date, stale):
     assert result['status'] == 'ok'  # Additive API contract: old content is retained.
     assert result['isStale'] is stale
     assert result['generatedAt'] == '2026-09-12T16:30:00+00:00'
+    assert str(conn.execute.call_args.args[1]['expected_date']) == '2026-09-12'
+
+
+def test_briefing_uses_previous_complete_calendar_day(monkeypatch):
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            value = datetime(2026, 9, 20, 16, 30, tzinfo=ZoneInfo('UTC'))
+            return value.astimezone(tz) if tz else value.replace(tzinfo=None)
+
+    monkeypatch.setattr(daily_briefing, 'datetime', Clock)
+    conn = MagicMock()
+    stats_result = MagicMock()
+    stats_result.mappings.return_value.first.return_value = {
+        'doc_today': 8200,
+        'voucher_today': 7900,
+    }
+    conn.execute.side_effect = [MagicMock(), stats_result, MagicMock()]
+    adapter = MagicMock()
+    adapter.generate_insights.return_value = {
+        'status': 'ok',
+        'content': '上一完整自然日摘要',
+        'model': 'model',
+    }
+
+    result = daily_briefing.generate_and_store(
+        conn,
+        {
+            'docsTotal': 5_000_000,
+            'docsTodayAdded': 12,
+            'vouchersTodayAdded': 3,
+        },
+        adapter,
+        display_tz='Asia/Hong_Kong',
+    )
+
+    payload = adapter.generate_insights.call_args.args[0]
+    assert payload['docsClosedDayAdded'] == 8200
+    assert payload['vouchersClosedDayAdded'] == 7900
+    assert 'docsTodayAdded' not in payload
+    assert 'vouchersTodayAdded' not in payload
+    assert adapter.generate_insights.call_args.kwargs['reporting_date'] == '2026-09-20'
+    assert result['briefingDate'] == '2026-09-20'
+    write_params = conn.execute.call_args_list[2].args[1]
+    assert str(write_params['d']) == '2026-09-20'
 
 
 def test_fit_scores_do_not_certify_business_forecasts(monkeypatch):

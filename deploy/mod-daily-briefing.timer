@@ -1,5 +1,5 @@
 [Unit]
-Description=MOD Daily Command Briefing Timer (HKT 00:30, after retrain)
+Description=MOD Previous Complete Day Briefing Timer (HKT 00:30, after retrain)
 PartOf=mod-daily-briefing.service
 
 [Timer]

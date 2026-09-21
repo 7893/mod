@@ -185,7 +185,7 @@ const decisionItems = computed<MetricItem[]>(() => {
       <CockpitPanel
         title="每日指挥部决策简报"
         zone="F5"
-        subtitle="Cloudflare Workers AI · 每日自动生成 · 只读研判"
+        subtitle="Cloudflare Workers AI · 上一完整自然日 · 只读研判"
       >
         <template #actions>
           <div class="flex items-center gap-2">
@@ -194,7 +194,7 @@ const decisionItems = computed<MetricItem[]>(() => {
           </div>
         </template>
         <div class="flex flex-col h-full min-h-0 gap-2">
-          <NoteBanner :icon="ShieldAlert">{{ briefing?.isStale ? '历史简报 · 今日尚未更新，请勿作为当前态势' : 'AI 汇总摘要 · 原因与行动需另行核实' }}</NoteBanner>
+          <NoteBanner :icon="ShieldAlert">{{ briefing?.isStale ? '历史日报 · 上一完整自然日尚未生成，请勿作为最新日报' : '上一完整自然日 AI 摘要 · 当前实时态势以大盘指标为准' }}</NoteBanner>
 
           <div class="flex-1 min-h-0">
             <!-- 加载中 -->

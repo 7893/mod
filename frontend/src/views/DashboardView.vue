@@ -33,7 +33,7 @@ const briefingSummary = computed(() => {
     .map((line) => line.replace(/[#*`>-]/g, '').trim())
     .find((line) => line.length > 8) || ''
 })
-const briefingAsOf = computed(() => {
+const briefingGeneratedAt = computed(() => {
   if (!briefing.value?.generatedAt) return ''
   return formatDateParts(briefing.value.generatedAt, {
     timeZone: store.snapshot.meta.displayTimezone || 'Asia/Shanghai',
@@ -217,10 +217,10 @@ const openAction = (row: StatusRow) => {
       type="button"
       class="h-8 flex-shrink-0 flex items-center justify-center gap-2 px-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-center hover:bg-sky-500/15 transition-colors cursor-pointer w-full min-w-0 disabled:invisible disabled:pointer-events-none"
       :disabled="!briefingSummary"
-      :title="briefingSummary ? `简报生成时点：${briefingAsOf || '未知'}；点击查看智能研判全文` : undefined"
+      :title="briefingSummary ? `日报统计日：${briefing?.briefingDate || '未知'}；生成于：${briefingGeneratedAt || '未知'}；点击查看智能研判全文` : undefined"
       @click="router.push('/f')"
     >
-      <span class="flex-shrink-0 font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">{{ briefing?.isStale ? `历史简报 ${briefing.briefingDate}` : briefingAsOf ? `AI 简报 · 截至 ${briefingAsOf}` : 'AI 简报' }}</span>
+      <span class="flex-shrink-0 font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">{{ briefing?.isStale ? `历史日报 ${briefing.briefingDate}` : briefing?.briefingDate ? `AI 日报 · ${briefing.briefingDate}` : 'AI 日报' }}</span>
       <span class="text-cockpit-sm text-slate-300 truncate min-w-0 max-w-4xl">{{ briefingSummary }}</span>
       <ChevronRight :size="13" class="flex-shrink-0 text-sky-400" />
     </button>

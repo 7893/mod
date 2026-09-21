@@ -100,7 +100,7 @@ def test_prompt_contains_voucher_constraint_and_excludes_open_day_metrics(monkey
     assert "优惠券" in _SYSTEM_PROMPT
     assert "代金券" in _SYSTEM_PROMPT
     assert "凭证" in _SYSTEM_PROMPT
-    assert "不得把累计规模改写为今日新增" in _SYSTEM_PROMPT
+    assert "不得把累计规模或 ClosedDay 指标改写为今天" in _SYSTEM_PROMPT
     assert FIELD_NAMES_CN["vouchersTotal"] == "累计财务会计凭证总数"
 
     adapter = _enabled_adapter(monkeypatch)
@@ -116,14 +116,20 @@ def test_prompt_contains_voucher_constraint_and_excludes_open_day_metrics(monkey
         return res
 
     monkeypatch.setattr(urllib.request, "urlopen", mock_urlopen)
-    adapter.generate_insights({"vouchersTotal": 5000000, "vouchersTodayAdded": 120})
+    adapter.generate_insights({
+        "vouchersTotal": 5000000,
+        "vouchersTodayAdded": 120,
+        "vouchersClosedDayAdded": 8600,
+    }, reporting_date="2026-09-20")
 
     messages = captured_body["messages"]
     system_msg = next(m for m in messages if m["role"] == "system")
     user_msg = next(m for m in messages if m["role"] == "user")
 
     assert "优惠券" in system_msg["content"]
+    assert "日报统计日（上一完整自然日）: 2026-09-20" in user_msg["content"]
     assert "累计财务会计凭证总数 (vouchersTotal): 5000000" in user_msg["content"]
+    assert "上一完整自然日新增财务会计凭证数 (vouchersClosedDayAdded): 8600" in user_msg["content"]
     assert "vouchersTodayAdded" not in user_msg["content"]
 
 
