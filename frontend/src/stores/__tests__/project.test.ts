@@ -209,11 +209,11 @@ describe('stores/project', () => {
     expect(store.entities.length).toBeGreaterThan(0)
   })
 
-  it('provides complete contract for C3 rolloutTrend, D3 operationsTrend, and D6 dualRun (KI-061)', async () => {
+  it('provides complete contract for C2 rolloutTrend, D2 operationsTrend, and D5 dualRun (KI-061)', async () => {
     store = useProjectStore()
     await flushPromises()
 
-    // C3: 批次历程走势
+    // C2: 批次历程走势
     expect(store.snapshot.rolloutTrend).toBeDefined()
     expect(store.snapshot.rolloutTrend!.length).toBeGreaterThan(0)
     const firstRt = store.snapshot.rolloutTrend![0]
@@ -221,14 +221,14 @@ describe('stores/project', () => {
     expect(firstRt.batchId).toBeGreaterThan(0)
     expect(typeof firstRt.launchedPct).toBe('number')
 
-    // D3: 日均吞吐趋势
+    // D2: 日均吞吐趋势
     expect(store.snapshot.operationsTrend).toBeDefined()
     expect(store.snapshot.operationsTrend!.length).toBeGreaterThan(0)
     const firstOt = store.snapshot.operationsTrend![0]
     expect(firstOt.date).toBeDefined()
     expect(firstOt.documents).toBeDefined()
 
-    // D6: 双轨运行核对
+    // D5: 双轨运行核对
     const ops = store.snapshot.operations
     expect(ops.dualRunConsistent).toBeDefined()
     expect(ops.dualRunInconsistent).toBeDefined()

@@ -16,11 +16,12 @@ import { useLiveProjection } from '../composables/useLiveProjection.ts'
 import { useDailyBriefing } from '../composables/useDailyBriefing.ts'
 import { useLiveProjectionStore } from '../stores/liveProjection.ts'
 import { useProjectStore } from '../stores/project.ts'
+import { aggregateSelectedProvinces, toggleProvinceSelection } from '../utils/provinceSelection.ts'
 
 const store = useProjectStore()
 const liveStore = useLiveProjectionStore()
 const router = useRouter()
-const selectedProvince = ref('全国')
+const selectedProvinces = ref<string[]>([])
 const { connected: projectionConnected, recentEvent } = useLiveProjection(liveStore.apply)
 
 const { briefing } = useDailyBriefing()
@@ -34,7 +35,8 @@ const briefingSummary = computed(() => {
 })
 
 const selectedProvinceData = computed(() => {
-  if (selectedProvince.value === '全国') {
+  const aggregate = aggregateSelectedProvinces(store.provinceSummary, selectedProvinces.value)
+  if (!aggregate) {
     return {
       total: store.snapshot.overview.orgTotal,
       launched: store.snapshot.overview.launched,
@@ -43,14 +45,22 @@ const selectedProvinceData = computed(() => {
     }
   }
 
-  const item = store.provinceSummary.find((province) => province.name === selectedProvince.value)
-  if (!item) return { total: 0, launched: 0, dual: 0, progress: 0 }
-  return {
-    total: item.total,
-    launched: item.launched,
-    dual: item.dual,
-    progress: item.value,
-  }
+  return aggregate
+})
+
+const isNationalSelection = computed(() => selectedProvinces.value.length === 0)
+const provinceSelectionLabel = computed(() => {
+  if (isNationalSelection.value) return '全国'
+  if (selectedProvinces.value.length === 1) return selectedProvinces.value[0]
+  return `${selectedProvinces.value.length} 省联选`
+})
+const provinceSelectionNames = computed(() => selectedProvinces.value.join('、'))
+const provinceSelectionSubtitle = computed(() => {
+  if (isNationalSelection.value) return '全国总体 · 点击单选，Ctrl/Command 多选'
+  const scope = selectedProvinces.value.length === 1
+    ? selectedProvinces.value[0]
+    : `${selectedProvinces.value.length} 省合计`
+  return `${scope} · 纳入 ${selectedProvinceData.value.total} 家`
 })
 
 const provinceFacts = computed<MetricItem[]>(() => [
@@ -163,8 +173,12 @@ const actionRows = computed<StatusRow[]>(() => {
   return [...operationsRows, ...issueRows]
 })
 
-const chooseProvince = (name: string) => {
-  selectedProvince.value = selectedProvince.value === name ? '全国' : name
+const chooseProvince = (name: string, additive = false) => {
+  selectedProvinces.value = toggleProvinceSelection(selectedProvinces.value, name, additive)
+}
+
+const resetProvinceSelection = () => {
+  selectedProvinces.value = []
 }
 
 const openAction = (row: StatusRow) => {
@@ -203,14 +217,14 @@ const openAction = (row: StatusRow) => {
           title="省域摘要"
           zone="A2"
           subtitle-display="tooltip"
-          :subtitle="selectedProvince === '全国' ? '全国总体 · 点击地图切换省域' : `${selectedProvince} · 纳入 ${selectedProvinceData.total} 家`"
+          :subtitle="provinceSelectionSubtitle"
         >
           <template #actions>
             <div class="flex items-center gap-1.5">
               <button
-                v-if="selectedProvince !== '全国'"
+                v-if="!isNationalSelection"
                 class="text-cockpit-sm font-medium text-amber-400 hover:text-amber-300 transition-colors px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20 cursor-pointer"
-                @click="selectedProvince = '全国'"
+                @click="resetProvinceSelection"
               >
                 返回全国
               </button>
@@ -227,7 +241,7 @@ const openAction = (row: StatusRow) => {
 
         <CockpitPanel
           title="上线双轨走势"
-          zone="A4"
+          zone="A3"
           subtitle-display="tooltip"
           :subtitle="`7 个进度节点 · 累计上线 ${store.snapshot.overview.launched ?? 0} 家`"
         >
@@ -241,20 +255,25 @@ const openAction = (row: StatusRow) => {
         </CockpitPanel>
       </aside>
 
-      <section data-zone="A5" class="min-h-0 rounded-xl bg-slate-900/60 border border-white/10 backdrop-blur-md overflow-hidden p-3 flex flex-col gap-2">
+      <section data-zone="A4" class="min-h-0 rounded-xl bg-slate-900/60 border border-white/10 backdrop-blur-md overflow-hidden p-3 flex flex-col gap-2">
         <div class="flex items-center justify-between gap-3 flex-shrink-0">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 tracking-wide">A5</span>
+            <span class="font-mono text-cockpit-xs font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 tracking-wide">A4</span>
             <span class="text-cockpit-md font-semibold text-slate-100 tracking-wide">全域推展沙盘</span>
-            <span class="text-cockpit-xs text-slate-500 truncate">点击省域联动左侧摘要</span>
+            <span class="text-cockpit-xs text-slate-500 truncate">点击单选 · Ctrl/Command 多选</span>
           </div>
-          <span class="font-mono text-cockpit-sm text-sky-400 flex-shrink-0">{{ selectedProvince }}</span>
+          <span
+            class="font-mono text-cockpit-sm text-sky-400 flex-shrink-0"
+            :title="provinceSelectionNames || '全国'"
+          >
+            {{ provinceSelectionLabel }}
+          </span>
         </div>
 
         <div class="flex-1 w-full min-h-0">
           <ChinaMap
             :data="store.provinceSummary"
-            :selected="selectedProvince"
+            :selected="selectedProvinces"
             :live-event="recentEvent"
             @select="chooseProvince"
           />
@@ -264,7 +283,7 @@ const openAction = (row: StatusRow) => {
       <aside class="grid grid-rows-cockpit-right gap-2.5 min-h-0">
         <CockpitPanel
           title="今日变化"
-          zone="A6"
+          zone="A5"
           subtitle="只呈现当日增量，不重复累计规模"
         >
           <MetricGrid :items="todayFacts" :columns="2" fill flat size="sm" align="center" />
@@ -272,7 +291,7 @@ const openAction = (row: StatusRow) => {
 
         <CockpitPanel
           title="跨域行动"
-          zone="A7"
+          zone="A6"
           tone="risk"
           :subtitle="`${actionRows.length} 项待处置`"
         >

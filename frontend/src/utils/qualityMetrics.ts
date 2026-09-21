@@ -64,7 +64,7 @@ export function calcDualRunConsistency(
 }
 
 /**
- * 构建 D7 金标准核验项明细
+ * 构建 D6 金标准核验项明细
  */
 export function buildQualityAuditList(
   quality?: {
