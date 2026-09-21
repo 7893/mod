@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 import pymysql
 
 from .footprint_models import EventFootprint, SimulationAuditRecord, validate_footprint
+from .daily_stats import add_daily_delta, apply_daily_deltas
 
 logger = logging.getLogger(__name__)
 
@@ -208,21 +209,25 @@ class SimulationWriter:
                     integ.error_code, integ.error_message, integ.integration_time
                 ))
 
-                stat_date = doc.submit_time.date()
-                if stat_date not in date_deltas:
-                    date_deltas[stat_date] = {
-                        "docs": 0, "doc_lines": 0, "vouchers": 0,
-                        "voucher_lines": 0, "links": 0, "integrations": 0,
-                        "success": 0,
-                    }
-                date_deltas[stat_date]["docs"] += 1
-                date_deltas[stat_date]["doc_lines"] += len(doc.lines)
-                date_deltas[stat_date]["vouchers"] += 1
-                date_deltas[stat_date]["voucher_lines"] += len(vch.lines)
-                date_deltas[stat_date]["links"] += 1
-                date_deltas[stat_date]["integrations"] += 1
-                if integ.status == "SUCCESS":
-                    date_deltas[stat_date]["success"] += 1
+                add_daily_delta(
+                    date_deltas,
+                    doc.submit_time.date(),
+                    docs=1,
+                    doc_lines=len(doc.lines),
+                )
+                add_daily_delta(
+                    date_deltas,
+                    vch.gen_time.date(),
+                    vouchers=1,
+                    voucher_lines=len(vch.lines),
+                    links=1,
+                )
+                add_daily_delta(
+                    date_deltas,
+                    integ.integration_time.date(),
+                    integrations=1,
+                    success=int(integ.status == "SUCCESS"),
+                )
 
             # 2. Execute multi-row INSERTs
             cursor.executemany(
@@ -271,69 +276,8 @@ class SimulationWriter:
             )
             rows_written["integration_result"] = len(integ_rows)
 
-            # 3. Synchronously cascade update daily_stats
-            for stat_date, delta in date_deltas.items():
-                cursor.execute(
-                    "SELECT stat_date FROM daily_stats WHERE stat_date = %s FOR UPDATE;",
-                    (stat_date,),
-                )
-                exists = cursor.fetchone()
-                if exists:
-                    cursor.execute(
-                        "UPDATE daily_stats SET "
-                        "doc_count = doc_count + %s, doc_today = doc_today + %s, "
-                        "voucher_count = voucher_count + %s, voucher_today = voucher_today + %s, "
-                        "integration_count = integration_count + %s, integration_success = integration_success + %s, "
-                        "doc_line_count = doc_line_count + %s, voucher_line_count = voucher_line_count + %s, "
-                        "link_count = link_count + %s "
-                        "WHERE stat_date = %s;",
-                        (
-                            delta["docs"], delta["docs"],
-                            delta["vouchers"], delta["vouchers"],
-                            delta["integrations"], delta["success"],
-                            delta["doc_lines"], delta["voucher_lines"],
-                            delta["links"],
-                            stat_date,
-                        ),
-                    )
-                else:
-                    # Inherit base numbers from latest preceding stat_date
-                    cursor.execute(
-                        "SELECT org_count, user_count, doc_count, voucher_count, "
-                        "integration_count, integration_success, doc_line_count, "
-                        "voucher_line_count, link_count, dual_run_count, snapshot_count "
-                        "FROM daily_stats ORDER BY stat_date DESC LIMIT 1;"
-                    )
-                    prev = cursor.fetchone()
-                    if prev:
-                        (org_cnt, usr_cnt, p_doc, p_vch, p_int, p_succ,
-                         p_dline, p_vline, p_link, p_dual, p_snap) = prev
-                    else:
-                        # KI-086 #4: Query actual counts from base tables instead of hardcoded fallback.
-                        # This ensures accurate baseline even on fresh environment initialization.
-                        cursor.execute("SELECT COUNT(*) FROM org_unit")
-                        org_cnt = cursor.fetchone()[0] or 0
-                        cursor.execute("SELECT COUNT(*) FROM sys_user")
-                        usr_cnt = cursor.fetchone()[0] or 0
-                        p_doc, p_vch, p_int, p_succ = 0, 0, 0, 0
-                        p_dline, p_vline, p_link, p_dual, p_snap = 0, 0, 0, 0, 0
-
-                    cursor.execute(
-                        "INSERT INTO daily_stats ("
-                        "stat_date, org_count, user_count, doc_count, doc_today, "
-                        "voucher_count, voucher_today, integration_count, integration_success, "
-                        "doc_line_count, voucher_line_count, link_count, dual_run_count, snapshot_count"
-                        ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);",
-                        (
-                            stat_date, org_cnt, usr_cnt,
-                            p_doc + delta["docs"], delta["docs"],
-                            p_vch + delta["vouchers"], delta["vouchers"],
-                            p_int + delta["integrations"], p_succ + delta["success"],
-                            p_dline + delta["doc_lines"], p_vline + delta["voucher_lines"],
-                            p_link + delta["links"], p_dual, p_snap
-                        ),
-                    )
-                rows_written["daily_stats"] += 1
+            # 3. Synchronously cascade by each record's actual business timestamp.
+            rows_written["daily_stats"] = apply_daily_deltas(cursor, date_deltas)
 
             duration_ms = (time.perf_counter() - start_time) * 1000.0
             if auto_commit:

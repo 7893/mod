@@ -148,6 +148,8 @@ def main() -> int:
         fuse_state_path=output_dir / "simulator_fuse_state.json",
         status_file_path=output_dir / "simulator_status.json",
         audit_log_path=output_dir / "simulation_audit.log",
+        approval_pipeline_enabled=os.getenv("MOD_APPROVAL_PIPELINE_ENABLED", "true").strip().lower()
+        in {"true", "1", "yes"},
         dry_run=args.dry_run,
     )
 

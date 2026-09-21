@@ -452,6 +452,45 @@ def test_runtime_service_successful_writes(tmp_path, monkeypatch):
     assert last_writer_kwargs.get("create_backup") is False
 
 
+def test_runtime_approval_pipeline_publishes_actual_uneven_increments(tmp_path, monkeypatch):
+    monkeypatch.setenv("MOD_SIMULATION_ENGINE_ENABLED", "true")
+    config = SimulatorRuntimeConfig(
+        approval_pipeline_enabled=True,
+        slow_movie_interval_cycles=99,
+        fail_closed_flag_path=tmp_path / "flag.flag",
+        fuse_state_path=tmp_path / "fuse.json",
+        status_file_path=tmp_path / "status.json",
+        audit_log_path=tmp_path / "audit.log",
+    )
+    conn = _mock_conn_with_lock()
+    projected = []
+    service = SimulatorRuntimeService(
+        config=config,
+        conn=conn,
+        seed=42,
+        projection_writer=lambda _conn, records: projected.extend(records),
+    )
+    service._fast_baseline = _mock_fast_baseline()
+    service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
+    service._construction_baseline = _mock_construction_baseline()
+    service._construction_allocator = IdAllocator(service._construction_baseline.next_ids)
+    monkeypatch.setattr(
+        "simulation.runtime_service.ApprovalFlowWriter.write_batch",
+        lambda self, batch, **kwargs: MagicMock(success=True, event_count=len(batch.submissions)),
+    )
+
+    result = service.step_cycle(datetime(2026, 9, 21, 10, 0, tzinfo=HK_TZ))
+
+    assert result.status == "SUCCESS"
+    assert result.events_written > 0
+    assert projected[0]["business_type"] == "approval_flow_advanced"
+    assert projected[0]["increments"] == {
+        "documents": result.events_written,
+        "vouchers": 0,
+        "integrations": 0,
+    }
+
+
 def test_runtime_service_rate_limit_throttle(tmp_path, monkeypatch, caplog):
     """KI-038: 熔断告警限制频率，相同原因 300s 内只打一条 warning 日志，防止日志刷爆磁盘。"""
     import logging

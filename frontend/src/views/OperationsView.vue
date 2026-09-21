@@ -181,6 +181,32 @@ const qualityAuditItems = computed<MetricItem[]>(() => qualityAuditList.value.ma
 })))
 
 const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualityAuditList.value))
+const lifecycleFacts = computed<MetricItem[]>(() => {
+  const flow = store.snapshot.operationsLifecycle
+  const backlogCleared = flow?.backlogClearedToday ?? 0
+  return [
+    { label: '待审核', value: format(flow?.pendingApproval ?? 0), unit: '笔', tone: 'warning' },
+    { label: '待制证', value: format(flow?.pendingVoucher ?? 0), unit: '笔', tone: 'accent' },
+    { label: '今日驳回', value: format(flow?.rejectedToday ?? 0), unit: '笔', tone: 'danger' },
+    {
+      label: '今日已制证',
+      value: format(flow?.voucherizedDocumentsToday ?? 0),
+      unit: '笔单据',
+      tone: 'success',
+      hint: `其中跨日积压 ${format(backlogCleared)} 笔`,
+    },
+    {
+      label: '平均审核',
+      value: flow?.avgApprovalMinutes == null ? '—' : flow.avgApprovalMinutes,
+      unit: flow?.avgApprovalMinutes == null ? undefined : '分钟',
+    },
+    {
+      label: '平均制证',
+      value: flow?.avgVoucherMinutes == null ? '—' : flow.avgVoucherMinutes,
+      unit: flow?.avgVoucherMinutes == null ? undefined : '分钟',
+    },
+  ]
+})
 </script>
 
 <template>
@@ -211,7 +237,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       </div>
     </CockpitPanel>
 
-    <!-- 主网格：D2-D6 -->
+    <!-- 主网格：D2-D7；第三行由 D6/D7 平分，D6 内部物料保持不变 -->
     <div class="grid grid-cols-operations grid-rows-operations gap-2.5 flex-1 min-h-0">
       <!-- D2: 日吞吐与集成质量趋势，不重复 D1 累计规模 -->
       <CockpitPanel title="近 7 日业务吞吐" zone="D2" subtitle="单据、凭证日增与集成成功率">
@@ -262,7 +288,7 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       </CockpitPanel>
 
       <!-- D6: 数据质量金标准核验 -->
-      <CockpitPanel title="数据质量金标准核验" zone="D6" subtitle="覆盖规模与稽核状态 · 未核验项明确标注" class="col-span-2">
+      <CockpitPanel title="数据质量金标准核验" zone="D6" subtitle="覆盖规模与稽核状态 · 未核验项明确标注">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
           <MetricGrid class="col-span-5 pr-3 border-r border-surface-veil-06" :items="qualityAuditItems" :columns="2" fill size="sm" align="center" />
 
@@ -278,6 +304,11 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
             <ChartCanvas class="flex-1" :option="qualityVolumeOption" />
           </div>
         </div>
+      </CockpitPanel>
+
+      <!-- D7: 仅统计启用新审批链路后生成的数据，历史数据不回算 -->
+      <CockpitPanel title="审批与制证流转" zone="D7" subtitle="新数据近 30 日窗口 · 历史存量不回算">
+        <MetricGrid :items="lifecycleFacts" :columns="2" flat fill size="sm" align="center" />
       </CockpitPanel>
     </div>
   </div>

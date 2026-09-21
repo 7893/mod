@@ -39,6 +39,9 @@ import pymysql
 from app.live_projection.simulation_engine import HongKongDiurnalEngine
 from app.live_projection.outbox_writer import append_outbox, prune_outbox_deferred
 from .construction_models import validate_construction_event
+from .approval_models import ApprovalFlowBatch, validate_approval_flow
+from .approval_pipeline import ApprovalPipeline
+from .approval_writer import ApprovalFlowWriter
 from .pool_onboarding import ReservePoolAdmissionPlaybook
 from .construction_writer import ConstructionWriter
 from .engine_context import (
@@ -71,6 +74,7 @@ class SimulatorRuntimeConfig:
     min_wait_seconds: float = 2.5
     max_wait_seconds: float = 90.0
     dry_run: bool = False
+    approval_pipeline_enabled: bool = False
 
 
 class FailClosedManager:
@@ -573,6 +577,9 @@ class SimulatorRuntimeService:
         conn = None
         lifecycle_state_saved = True
         db_lock_acquired = False
+        c_writer: Optional[ConstructionWriter] = None
+        s_writer: Optional[SimulationWriter] = None
+        a_writer: Optional[ApprovalFlowWriter] = None
         try:
             conn = self._get_connection()
 
@@ -604,20 +611,34 @@ class SimulatorRuntimeService:
                 # Generate slow-movie construction event
                 all_events = self._generate_slow_movie_events(now_hkt.date())
                 is_construction = True
+                is_approval_flow = False
             else:
-                # Generate fast-movie expense events
-                playbook = ExpensePlaybook(self._fast_baseline, self._fast_allocator, seed=self.rng.randint(1, 1000000))
-                fast_events: List[EventFootprint] = []
-                for _ in range(burst_count):
-                    fe = playbook.generate_event(target_date=now_hkt)
-                    validate_footprint(fe)
-                    fast_events.append(fe)
-                all_events = fast_events  # type: ignore
+                # New-flow records advance through approval and voucher gates. The
+                # legacy complete-event path stays available as a rollback switch.
+                if self.config.approval_pipeline_enabled:
+                    pipeline = ApprovalPipeline(
+                        self._fast_baseline,
+                        self._fast_allocator,
+                        seed=self.rng.randint(1, 1000000),
+                    )
+                    all_events = pipeline.build_batch(conn, burst_count, now_hkt)
+                    is_approval_flow = True
+                else:
+                    playbook = ExpensePlaybook(
+                        self._fast_baseline,
+                        self._fast_allocator,
+                        seed=self.rng.randint(1, 1000000),
+                    )
+                    fast_events: List[EventFootprint] = []
+                    for _ in range(burst_count):
+                        fe = playbook.generate_event(target_date=now_hkt)
+                        validate_footprint(fe)
+                        fast_events.append(fe)
+                    all_events = fast_events  # type: ignore
+                    is_approval_flow = False
                 is_construction = False
 
             # 5. Real Atomic Write Execution (Single-Transaction Ownership)
-            c_writer: Optional[ConstructionWriter] = None
-            s_writer: Optional[SimulationWriter] = None
             construction_audit: Optional[Any] = None
 
             if is_construction:
@@ -667,6 +688,20 @@ class SimulatorRuntimeService:
                 if c_writer is not None and construction_audit is not None:
                     c_writer.record_success_audit(construction_audit)
                 lifecycle_state_saved = self._save_evolution_state()
+            elif is_approval_flow:
+                approval_batch: ApprovalFlowBatch = all_events  # type: ignore[assignment]
+                validate_approval_flow(approval_batch)
+                a_writer = ApprovalFlowWriter(conn=conn, audit_log_path=str(self.config.audit_log_path))
+                a_res = a_writer.write_batch(approval_batch, auto_commit=False)
+                if not a_res.success:
+                    raise RuntimeError(f"Approval-flow write failed: {a_res.error}")
+
+                projection = self._approval_projection_record(approval_batch, now_hkt)
+                if projection is not None:
+                    self.projection_writer(conn, [projection])
+                conn.commit()
+                a_writer.record_success_audit(a_res)
+                events_written = len(approval_batch.submissions)
             else:
                 s_writer = SimulationWriter(conn=conn, audit_log_path=str(self.config.audit_log_path))
                 s_res = s_writer.write_events(all_events, auto_commit=False)  # type: ignore
@@ -746,6 +781,9 @@ class SimulatorRuntimeService:
                     c_writer.record_failure_audit(err_msg, event_count=len(all_events) if 'all_events' in locals() else 0)
                 elif s_writer:
                     s_writer.record_failure_audit(err_msg, event_count=len(all_events) if 'all_events' in locals() else 0)
+                elif a_writer:
+                    count = len(all_events.submissions) if 'all_events' in locals() else 0
+                    a_writer.record_failure_audit(err_msg, event_count=count)
             except Exception as audit_ex:
                 logger.warning("失败审计落库自身失败，本周期失败仅存日志: %s", type(audit_ex).__name__)
 
@@ -862,6 +900,38 @@ class SimulatorRuntimeService:
             ),
             "amount": str(event.document.amount),
             "badge_tone": "success" if integration_ok else "danger",
+        }
+
+    def _approval_projection_record(
+        self,
+        batch: ApprovalFlowBatch,
+        committed_at: datetime,
+    ) -> Optional[Dict[str, Any]]:
+        """Publish factual aggregate increments for one committed staged-flow batch."""
+        increments = batch.increment_counts
+        if not any(increments.values()):
+            return None
+        first_doc = batch.submissions[0] if batch.submissions else None
+        first_source = next(iter(batch.source_documents.values()), None)
+        org_id = first_doc.org_id if first_doc else (first_source.org_id if first_source else None)
+        org = self._construction_baseline.orgs.get(org_id, {}) if org_id is not None else {}
+        event_key = first_doc.id if first_doc else batch.vouchers[0].id
+        return {
+            "event_id": f"approval-flow-{event_key}",
+            "committed_at": committed_at.isoformat(),
+            "business_type": "approval_flow_advanced",
+            "increments": increments,
+            "unit_id": org_id,
+            "unit_name": org.get("name"),
+            "province": org.get("region"),
+            "batch_name": f"第{org.get('batch_id')}批" if org.get("batch_id") else None,
+            "story_title": "审批与制证链路推进",
+            "story_desc": (
+                f"新单 {increments['documents']} · 凭证 {increments['vouchers']} · "
+                f"集成 {increments['integrations']}"
+            ),
+            "amount": str(sum((doc.amount for doc in batch.submissions), 0)),
+            "badge_tone": "success",
         }
 
     def _restore_evolution_state(self) -> None:
