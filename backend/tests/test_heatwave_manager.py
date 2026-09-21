@@ -15,10 +15,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.project import heatwave_manager  # noqa: E402
+from app.heatwave_tables import TARGET_MOD_TABLES  # noqa: E402
 
 
 def test_heatwave_target_tables_list():
-    """KI-045: 验证目标加载表包含全部 9 张核心报表大表。"""
+    """HeatWave 管理脚本与应用共用一份目标表配置。"""
     required_tables = [
         "business_document_line",
         "accounting_voucher_line",
@@ -29,7 +30,11 @@ def test_heatwave_target_tables_list():
         "construction_task",
         "dual_run_result",
         "org_unit",
+        "sys_user",
+        "data_readiness",
+        "daily_stats",
     ]
+    assert heatwave_manager.TARGET_MOD_TABLES == TARGET_MOD_TABLES
     for table in required_tables:
         assert table in heatwave_manager.TARGET_MOD_TABLES
 
@@ -72,4 +77,3 @@ def test_engine_configured_with_autocommit():
 
     engine = get_engine()
     assert engine.get_execution_options().get("isolation_level") == "AUTOCOMMIT"
-

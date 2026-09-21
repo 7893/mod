@@ -28,17 +28,17 @@ def test_get_heatwave_status_healthy():
 
 def test_get_heatwave_status_degraded():
     mock_conn = MagicMock()
-    # 假设只有 7 张表就绪，缺 2 张
-    available = TARGET_MOD_TABLES[:7]
+    # 假设目标表中缺 2 张
+    available = TARGET_MOD_TABLES[:-2]
     mock_conn.execute.return_value.fetchall.return_value = [
         (table, "AVAIL_RPDGSTABSTATE") for table in available
     ]
 
     status = get_heatwave_status(mock_conn)
     assert status["status"] == "DEGRADED"
-    assert status["loaded_count"] == 7
+    assert status["loaded_count"] == len(available)
     assert len(status["missing_tables"]) == 2
-    assert set(status["missing_tables"]) == set(TARGET_MOD_TABLES[7:])
+    assert set(status["missing_tables"]) == set(TARGET_MOD_TABLES[-2:])
 
 
 def test_get_heatwave_status_exception_graceful():
@@ -117,8 +117,8 @@ def test_health_api_includes_heatwave_status():
         assert "heatwave" in data
         hw = data["heatwave"]
         assert hw["status"] == "HEALTHY"
-        assert hw["loaded_count"] == 9
-        assert hw["total_target"] == 9
+        assert hw["loaded_count"] == len(TARGET_MOD_TABLES)
+        assert hw["total_target"] == len(TARGET_MOD_TABLES)
         assert hw["missing_tables"] == []
     finally:
         app.dependency_overrides.pop(connection, None)

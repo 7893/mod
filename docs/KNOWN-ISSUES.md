@@ -29,7 +29,7 @@
 | KI-093 | 数据库结构变更缺少版本化迁移 | OPEN | P2 | [详情](issues/KI-093-数据库结构变更缺少版本化迁移.md) |
 | KI-092 | 单位调态前后端契约缺失与鉴权未闭环 | OPEN | P1 | [详情](issues/KI-092-单位调态前后端契约缺失与鉴权未闭环.md) |
 | KI-091 | 模拟器应用层ID分配仍存在重启竞态 | OPEN | P1 | [详情](issues/KI-091-模拟器应用层ID分配仍存在重启竞态.md) |
-| KI-090 | HeatWave加载清单与热点查询来源错位 | OPEN | P2 | [详情](issues/KI-090-HeatWave加载清单与热点查询来源错位.md) |
+| KI-090 | HeatWave加载清单与热点查询来源错位 | IN-PROGRESS | P2 | [详情](issues/KI-090-HeatWave加载清单与热点查询来源错位.md) |
 | KI-089 | 多Worker快照缓存状态分裂 | OPEN | P1 | [详情](issues/KI-089-多Worker快照缓存状态分裂.md) |
 
 ## 已关闭问题（DONE）

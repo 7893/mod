@@ -102,6 +102,9 @@ Zone 编号是当前产品坐标，用于沟通定位，不得替代业务标题
   `EntityEditDrawer`）与 `composables/usePagedList.ts`（分页状态机）、`composables/useEntityEditor.ts`
   （调态抽屉）、`utils/entityOptions.ts`（省份/批次/状态顺序表、带计数选项、关键字匹配），
   不得在组件内重写筛选、分页、计数或抽屉逻辑。
+- 单位台账的原始列表必须来自全局快照 `store.entities`；C5 和 B 屏完整台账统一使用
+  `composables/useEntityLedger.ts` 组合筛选与分页。风险、合规等派生清单可以增加业务分类，但不得为同一批单位
+  再发起列表请求或在后端重复组装投影。`GET /api/organizations` 只是兼容面，不是前端新台账的数据源。
 - 新增或修改的 HTTP JSON 请求统一经过 `api/http.ts`，由其处理应用子路径、可选独立 API Origin
   与错误正文；组件不得自行拼接 `/api`。可被新筛选或页面卸载取代的请求必须支持 AbortSignal，
   且只有最新请求可以写入响应状态。存量直连请求按面板渐进迁移，不要求一次性重写六屏。
@@ -176,6 +179,8 @@ Zone 编号是当前产品坐标，用于沟通定位，不得替代业务标题
 - 风险维度汇总 `qualityMetrics.buildRiskDimensionBreakdown(units, rules)` 必须传入 `businessRules`，门禁文案由规则生成，高危数按单位级 `riskLevel` 统计，不得固定写维度等级。合规标签枚举以 `COMPLIANCE_TAGS` 为唯一来源，视图的标签筛选与计数都从它派生。
 - 2026-09-09 完成全局样式收口：删除 `foundation/components/utilities/page-hierarchy/dashboard-topbar/responsive-breakpoints` 六个文件及约 120 条无引用规则，全局 CSS 由 1897 行降至约 880 行；删除 `:root` 旧变量层，Token 唯一来源为 `theme.css`。
 - 2026-09-09 完成台账层去重：`ConstructionLedger`/`RolloutLedgerTable`/`AtRiskUnitTable` 的筛选、分页、计数、调态抽屉收敛到 `components/ledger/` 与 `usePagedList`/`useEntityEditor`/`entityOptions`，三组件合计由 1234 行降至约 790 行；`AtRiskUnitTable` 顺带补齐总页数收缩时的最小页钳位。
+- 2026-09-21 完成台账数据源收口：C5 退役 `useOrganizations.ts` 独立列表请求，与 B 屏台账共用
+  `store.entities` + `useEntityLedger.ts`；后端兼容接口仅筛选同一快照，不再存在五表重算分支。
 - 数字与日期时间展示统一走 `formatters/metrics.ts`（`formatCount`/`formatPercent`/`formatDateTime`）：视图、组件、图表 tooltip 与 store 中不得再直接调用 `toLocaleString`/`Intl.*`，空值一律显示 `—`。
 - KI-102 第二轮信息架构治理已完成主职责收敛。A 屏当前为 A1 五域导航、A2 省域摘要、A3 跨域趋势、A4 地图、A5 今日变化、A6 行动队列；批次与运营专业事实分别归 B/C 与 D。D 屏当前为 D1 端到端业务链路，D2–D7 分别承载日吞吐、凭证、集成、双轨、质量与审批制证流转职责；第三行按内容量分配 D6 左、D6 右与 D7，外层固定 9:3，D6 内部固定 7:5，约占整行 44%/31%/25%。
 - B 屏已删除历史同源雷达，当前 B1–B6 连续编号，B3 为滞后视角，B6 台账预览常驻；完整筛选与调态台账使用宽抽屉，不再替换主画布。C 屏把批次当前构成与历史爬坡合并到 C2，C3 为省域推进缺口，C4 仅在联系人覆盖存在例外时显示分布，C5 为单位台账。E1 只保留合规摘要，E2 展示风险标签，E3 基于最近治理活动去重后展示工单流转阶段；该统计不是全量工单库存。F1 只给首要瓶颈与行动优先级，F3/F4 分别承载风险分布与模型实验事实。时间序列或异常字段缺失时必须显示明确空态。
