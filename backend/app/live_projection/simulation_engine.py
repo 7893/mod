@@ -2,7 +2,7 @@
 Diurnal rhythm and burst-interval model for the persistent simulator.
 
 Provides the display-timezone (default Asia/Hong_Kong) 24h intensity curve,
-weekend damping, month-end spikes and Poisson burst spacing consumed by
+mainland work-calendar damping, month-end spikes and Poisson burst spacing consumed by
 simulation.runtime_service. Event content itself is produced by the
 runtime service and streamed through the live-projection journal.
 """
@@ -15,6 +15,7 @@ import random
 from datetime import datetime
 from typing import Dict, Tuple
 
+from ..business_calendar import activity_day_weight
 from .models import DISPLAY_TIMEZONE
 
 # 核心时区契约：作息节律使用统一展示时区（默认 Asia/Hong_Kong），定义见 app/config.py
@@ -59,7 +60,7 @@ class HongKongDiurnalEngine:
         23: 0.04,
     }
 
-    # 工作日 vs 节假日衰减因子 (周一到周五 1.0~1.1x，周末 0.15x)
+    # 常规星期权重；法定休息日与周末调班工作日由统一业务日历覆盖。
     WEEKDAY_WEIGHTS: Dict[int, float] = {
         0: 1.05,  # 周一：周末堆积业务集中释放
         1: 1.10,  # 周二：全周峰值
@@ -75,7 +76,12 @@ class HongKongDiurnalEngine:
         """根据传入时间（转为香港时区）计算当前业务活跃强度系数"""
         hkt = dt.astimezone(HONG_KONG_TZ)
         hour_w = cls.HOUR_WEIGHTS.get(hkt.hour, 0.5)
-        day_w = cls.WEEKDAY_WEIGHTS.get(hkt.weekday(), 1.0)
+        day_w = activity_day_weight(
+            hkt.date(),
+            cls.WEEKDAY_WEIGHTS,
+            holiday_weight=0.08,
+            makeup_workday_weight=1.0,
+        )
         
         # 月末结账效应 (25日 ~ 月底强度上浮 30%~50%)
         month_end_mult = 1.0

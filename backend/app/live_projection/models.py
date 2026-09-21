@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 
+from ..business_calendar import activity_day_weight
 from ..config import get_display_timezone
 
 DISPLAY_TIMEZONE = get_display_timezone()
@@ -63,5 +64,11 @@ class ActivityProfile:
             day_factor = 1.4
         else:
             day_factor = 1.6
-        factor = cls.HOUR_FACTORS[local.hour] * cls.WEEKDAY_FACTORS[local.weekday()] * day_factor
+        calendar_factor = activity_day_weight(
+            local.date(),
+            cls.WEEKDAY_FACTORS,
+            holiday_weight=0.10,
+            makeup_workday_weight=1.0,
+        )
+        factor = cls.HOUR_FACTORS[local.hour] * calendar_factor * day_factor
         return max(0.01, min(2.0, factor))
