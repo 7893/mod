@@ -65,10 +65,10 @@ function handlePageChange(newPage: number) {
 </script>
 
 <template>
-  <!-- C6: 单位台账表格与分页 -->
+  <!-- C5: 单位台账表格与分页 -->
   <CockpitPanel
     title="单位台账"
-    zone="C6"
+    zone="C5"
     :subtitle="isFiltered ? `筛选出 ${total} 家 / 共 ${store.entities.length} 家纳管单位` : `共 ${total} 家纳管单位`"
     class="flex-1 min-h-0"
   >

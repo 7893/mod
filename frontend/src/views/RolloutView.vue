@@ -119,7 +119,7 @@ const contactFacts = computed<StatRow[]>(() => [
     </CockpitPanel>
 
     <div class="grid grid-rows-rollout-body gap-2.5 flex-1 min-h-0">
-      <!-- C2 同屏表达批次当前态与历史态；C4/C5 只展示缺口与例外 -->
+      <!-- C2 同屏表达批次当前态与历史态；C3/C4 只展示缺口与例外 -->
       <div class="grid grid-cols-rollout-analysis grid-rows-rollout-analysis gap-2.5 min-h-0">
         <CockpitPanel title="批次推进全景" zone="C2" subtitle="左看当前缺口，右看历史爬坡" class="col-span-8 row-span-2">
           <div class="grid grid-cols-12 gap-3 h-full min-h-0">
@@ -139,11 +139,11 @@ const contactFacts = computed<StatRow[]>(() => [
           </div>
         </CockpitPanel>
 
-        <CockpitPanel title="省域推进缺口" zone="C4" subtitle="待推进单位最多三省" class="col-span-4 min-h-0">
+        <CockpitPanel title="省域推进缺口" zone="C3" subtitle="待推进单位最多三省" class="col-span-4 min-h-0">
           <StatList :rows="provinceBacklogRows" ranked density="dense" />
         </CockpitPanel>
 
-        <CockpitPanel title="联系人覆盖例外" zone="C5" subtitle="只在存在缺口时展示分布" class="col-span-4 min-h-0">
+        <CockpitPanel title="联系人覆盖例外" zone="C4" subtitle="只在存在缺口时展示分布" class="col-span-4 min-h-0">
           <div v-if="contactCoverage && contactCoverage.gap > 0" class="grid grid-cols-5 h-full min-h-0 gap-2 items-center">
             <ChartCanvas class="col-span-2" :option="contactCoverageOption" />
             <StatList class="col-span-3 self-stretch" :rows="contactFacts" flat density="dense" />
@@ -152,7 +152,7 @@ const contactFacts = computed<StatRow[]>(() => [
         </CockpitPanel>
       </div>
 
-      <!-- C6: 单位台账表格与分页组件 -->
+      <!-- C5: 单位台账表格与分页组件 -->
       <RolloutLedgerTable />
     </div>
   </div>

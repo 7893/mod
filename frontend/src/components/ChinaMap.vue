@@ -15,6 +15,10 @@ import {
   type ChinaMapDatum,
 } from '../charts/chinaMapOptions.ts'
 import type { LiveProjectionEvent } from '../composables/useLiveProjection'
+import {
+  hasProvinceMultiSelectModifier,
+  type ProvinceSelectionModifierEvent,
+} from '../utils/provinceSelection.ts'
 import ChartCanvas from './charts/ChartCanvas.vue'
 
 use([CanvasRenderer, MapChart, ScatterChart, EffectScatterChart, TooltipComponent, GeoComponent])
@@ -22,11 +26,11 @@ echarts.registerMap('MOD_CHINA', chinaGeoJson as never)
 
 const props = defineProps<{
   data: ChinaMapDatum[]
-  selected?: string
+  selected?: readonly string[]
   liveEvent?: LiveProjectionEvent | null
 }>()
 
-const emit = defineEmits<{ select: [province: string] }>()
+const emit = defineEmits<{ select: [province: string, additive: boolean] }>()
 
 /** 实时事件浮动条 */
 const liveBanner = ref<{
@@ -73,10 +77,17 @@ const option = computed(() => createChinaMapOption(
   scale.value,
 ))
 
-function handleClick(params: { name?: string }) {
-  if (params?.name) {
-    emit('select', params.name)
-  }
+interface MapClickParams {
+  name?: string
+  seriesType?: string
+  data?: { province?: string }
+  event?: ProvinceSelectionModifierEvent
+}
+
+function handleClick(params: MapClickParams) {
+  const province = params.seriesType === 'effectScatter' ? params.data?.province : params.name
+  if (!province) return
+  emit('select', province, hasProvinceMultiSelectModifier(params.event))
 }
 </script>
 
@@ -92,7 +103,7 @@ function handleClick(params: { name?: string }) {
       <div
         v-if="liveBanner"
         class="map-live-banner"
-        @click="liveBanner.province && emit('select', liveBanner.province)"
+        @click="liveBanner.province && emit('select', liveBanner.province, false)"
       >
         <span class="map-live-banner__beacon"></span>
         <span class="map-live-banner__tag">实时动态</span>
@@ -102,7 +113,12 @@ function handleClick(params: { name?: string }) {
       </div>
     </transition>
 
-    <ChartCanvas class="china-map" :option="option" @chart-click="handleClick" />
+    <ChartCanvas
+      class="china-map"
+      :option="option"
+      :update-options="{ replaceMerge: ['geo'] }"
+      @chart-click="handleClick"
+    />
 
     <!-- 自绘横向图例：分档色块 + 两端数值 -->
     <div class="map-legend">

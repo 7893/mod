@@ -8,6 +8,11 @@ import { createRolloutTrendMatrixOption } from '../rolloutOptions'
 import { chartTooltip } from '../theme'
 import { CHART_FONT } from '../tokens'
 
+function panelZoneNumbers(prefix: string, ...sources: string[]) {
+  const matches = sources.join('\n').matchAll(new RegExp(`(?:zone|data-zone)="${prefix}(\\d+)"`, 'g'))
+  return [...matches].map(match => Number(match[1]))
+}
+
 describe('decision panel options', () => {
   it('keeps each decision fact in one visible panel', () => {
     const sources = {
@@ -21,9 +26,25 @@ describe('decision panel options', () => {
       theme: readFileSync(resolve(process.cwd(), 'src/styles/theme.css'), 'utf8'),
     }
 
+    const screens = {
+      A: [sources.topBar, sources.dashboard],
+      B: [sources.construction],
+      C: [sources.rollout, readFileSync(resolve(process.cwd(), 'src/components/RolloutLedgerTable.vue'), 'utf8')],
+      D: [sources.operations],
+      E: [sources.issues],
+      F: [sources.insights],
+    }
+    for (const [prefix, screenSources] of Object.entries(screens)) {
+      const numbers = panelZoneNumbers(prefix, ...screenSources)
+      const uniqueNumbers = [...new Set(numbers)].sort((left, right) => left - right)
+      expect(numbers, `${prefix} screen contains duplicate panel zone IDs`).toHaveLength(uniqueNumbers.length)
+      expect(uniqueNumbers, `${prefix} screen panel zones must start at 1 and remain continuous`).toEqual(
+        Array.from({ length: uniqueNumbers.length }, (_, index) => index + 1),
+      )
+    }
+
     expect(sources.dashboard).toContain('title="跨域行动"')
-    expect(sources.dashboard).not.toContain('zone="A3"')
-    expect(sources.dashboard).not.toContain('zone="A8"')
+    expect(sources.dashboard).toContain('zone="A6"')
     expect(sources.topBar).toContain('title="五域指挥入口"')
     expect(sources.topBar).not.toContain('ChartCanvas')
     expect(sources.topBar).toContain("detail: '单据凭证全链路'")
@@ -41,15 +62,14 @@ describe('decision panel options', () => {
     expect(sources.construction).not.toContain('createTaskStageRadarOption')
     expect(sources.rollout).toContain('title="批次推进全景"')
     expect(sources.rollout).toContain('zone="C2"')
-    expect(sources.rollout).not.toContain('zone="C3"')
     expect(sources.rollout).toContain('title="省域推进缺口"')
+    expect(sources.rollout).toContain('zone="C3"')
     expect(sources.operations).toContain('title="近 7 日业务吞吐"')
-    expect(sources.operations).toContain('zone="D3"')
-    expect(sources.operations).toContain('zone="D7"')
+    expect(sources.operations).toContain('zone="D2"')
+    expect(sources.operations).toContain('zone="D6"')
     expect(sources.operations).toContain('class="col-span-5 pr-3 border-r border-surface-veil-06"')
     expect(sources.operations).toContain("item.rate != null ? `${item.rate}%` : '未核验'")
     expect(sources.operations).toContain('title="端到端业务链路"')
-    expect(sources.operations).not.toContain('zone="D2"')
     expect(sources.issues).toContain('title="近期工单流转"')
     expect(sources.issues).not.toContain('title="合规评级构成"')
     expect(sources.insights).toContain('title="风险决策摘要"')
@@ -74,7 +94,7 @@ describe('decision panel options', () => {
     expect(option.series.map((series) => series.data[0])).toEqual([60, 30, 10])
   })
 
-  it('builds the C3 batch-by-date heatmap with rollout context', () => {
+  it('builds the C2 batch-by-date heatmap with rollout context', () => {
     const option = createRolloutTrendMatrixOption([
       { date: '09-01', batchId: 1, name: '第一批', total: 100, launchedPct: 80, dualPct: 15 },
       { date: '09-08', batchId: 1, name: '第一批', total: 100, launchedPct: 90, dualPct: 8 },
@@ -88,7 +108,7 @@ describe('decision panel options', () => {
     expect(option.series[0].label.fontSize).toBe(CHART_FONT.body)
   })
 
-  it('builds the D3 daily-volume bars and quality line', () => {
+  it('builds the D2 daily-volume bars and quality line', () => {
     const option = createOperationsTrendOption([
       { date: '09-08', documents: 20, vouchers: 18, integrations: 18, integrationSuccessPct: 94.4 },
     ])
@@ -98,7 +118,7 @@ describe('decision panel options', () => {
     expect('legend' in option).toBe(false)
   })
 
-  it('uses checked volume rather than four identical compliance bars in D7', () => {
+  it('uses checked volume rather than four identical compliance bars in D6', () => {
     const option = createQualityAuditVolumeOption([
       { rule: '借贷平衡核验', total: 1_000_000, errors: 0, rate: 100, unit: '张凭证' },
       { rule: '状态演进追踪', total: 2_000, errors: 3, rate: 99.85, unit: '家单位' },
@@ -110,7 +130,7 @@ describe('decision panel options', () => {
     expect(option.series[0].label.fontSize).toBe(CHART_FONT.body)
   })
 
-  it('builds C5 coverage ring without center title and with confined tooltip (KI-065)', () => {
+  it('builds C4 coverage ring without center title and with confined tooltip (KI-065)', () => {
     const option = createCoverageOption({ rate: 85.5, covered: 1710, gap: 290 })
     expect(option).not.toHaveProperty('title')
     expect(option.tooltip.confine).toBe(true)

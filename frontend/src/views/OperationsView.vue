@@ -211,10 +211,10 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
       </div>
     </CockpitPanel>
 
-    <!-- 主网格：D3-D7 -->
+    <!-- 主网格：D2-D6 -->
     <div class="grid grid-cols-operations grid-rows-operations gap-2.5 flex-1 min-h-0">
-      <!-- D3: 日吞吐与集成质量趋势，不重复 D1/D2 累计规模 -->
-      <CockpitPanel title="近 7 日业务吞吐" zone="D3" subtitle="单据、凭证日增与集成成功率">
+      <!-- D2: 日吞吐与集成质量趋势，不重复 D1 累计规模 -->
+      <CockpitPanel title="近 7 日业务吞吐" zone="D2" subtitle="单据、凭证日增与集成成功率">
         <template #actions>
           <PanelLegend compact :items="[
             { label: '单据日增', tone: 'accent' },
@@ -229,16 +229,16 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
         />
       </CockpitPanel>
 
-      <!-- D4: 凭证生成质效 -->
-      <CockpitPanel title="凭证生成质效" zone="D4" subtitle="成功率、生成规模与凭证结构">
+      <!-- D3: 凭证生成质效 -->
+      <CockpitPanel title="凭证生成质效" zone="D3" subtitle="成功率、生成规模与凭证结构">
         <ChartFacts>
           <template #chart><ChartCanvas :option="voucherQualityOption" /></template>
           <template #facts><MetricGrid :items="voucherFacts" flat fill /></template>
         </ChartFacts>
       </CockpitPanel>
 
-      <!-- D5: 接口集成入账 (阶梯条充实内容，消除空旷感，D-2) -->
-      <CockpitPanel title="接口集成入账" zone="D5" subtitle="实时与批量接口调用结果">
+      <!-- D4: 接口集成入账 (阶梯条充实内容，消除空旷感，D-2) -->
+      <CockpitPanel title="接口集成入账" zone="D4" subtitle="实时与批量接口调用结果">
         <ChartFacts variant="facts-led">
           <template #facts>
             <MetricGrid :items="integrationHeadline" flat size="lg" align="center" />
@@ -248,8 +248,8 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
         </ChartFacts>
       </CockpitPanel>
 
-      <!-- D6: 双轨运行核对 -->
-      <CockpitPanel title="双轨运行核对" zone="D6" subtitle="新老系统一致性对账">
+      <!-- D5: 双轨运行核对 -->
+      <CockpitPanel title="双轨运行核对" zone="D5" subtitle="新老系统一致性对账">
         <ChartFacts v-if="dualRunStats && dualRunOutcomeOption" variant="facts-led">
           <template #facts>
             <MetricGrid :items="dualRunHeadline" flat size="lg" align="center" />
@@ -261,8 +261,8 @@ const qualityVolumeOption = computed(() => createQualityAuditVolumeOption(qualit
         <EmptyNote v-else>当前快照未提供双轨明细</EmptyNote>
       </CockpitPanel>
 
-      <!-- D7: 数据质量金标准核验 -->
-      <CockpitPanel title="数据质量金标准核验" zone="D7" subtitle="覆盖规模与稽核状态 · 未核验项明确标注" class="col-span-2">
+      <!-- D6: 数据质量金标准核验 -->
+      <CockpitPanel title="数据质量金标准核验" zone="D6" subtitle="覆盖规模与稽核状态 · 未核验项明确标注" class="col-span-2">
         <div class="grid grid-cols-12 gap-3 h-full min-h-0">
           <MetricGrid class="col-span-5 pr-3 border-r border-surface-veil-06" :items="qualityAuditItems" :columns="2" fill size="sm" align="center" />
 

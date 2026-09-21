@@ -40,11 +40,15 @@ describe('china map options', () => {
   it('keeps selection styling, live points, and tooltip facts in the option factory', () => {
     const scale = createChinaMapScale(data)
     const points = createChinaMapScatterData({ province: '广东', unitName: '广东单位' })
-    const option = createChinaMapOption(data, '广东', points, scale)
+    const option = createChinaMapOption(data, ['广东', '江苏'], points, scale)
 
-    expect(option.geo.regions[0].selected).toBe(true)
     expect(option.geo.regions[0].itemStyle.areaColor).toBe(chartPalette.accentDim)
+    expect(option.geo.regions[1].itemStyle.areaColor).toBe(chartPalette.accentDim)
+    expect(option.geo.selectedMode).toBe(false)
     expect(option.series[0].data).toEqual(points)
+
+    const resetOption = createChinaMapOption(data, [], points, scale)
+    expect(resetOption.geo.regions.every(region => region.itemStyle.areaColor !== chartPalette.accentDim)).toBe(true)
 
     const formatter = option.tooltip.formatter as (params: Record<string, unknown>) => string
     expect(formatter({ name: '江苏' })).toContain('纳管 8 家 · 上线 5 家 · 双轨 1 家')

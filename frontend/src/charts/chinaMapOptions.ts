@@ -123,7 +123,7 @@ function colorFor(value: number, scale: ChinaMapScale) {
 
 export function createChinaMapOption(
   data: ChinaMapDatum[],
-  selected: string | undefined,
+  selected: readonly string[] | undefined,
   scatterData: ChinaMapScatterPoint[],
   scale: ChinaMapScale,
 ) {
@@ -162,7 +162,7 @@ export function createChinaMapOption(
       left: 8,
       right: 8,
       regions: data.map((item) => {
-        const isSelected = !!(selected && selected !== '全国' && selected === item.name)
+        const isSelected = selected?.includes(item.name) ?? false
         return {
           name: item.name,
           itemStyle: {
@@ -170,7 +170,6 @@ export function createChinaMapOption(
             borderColor: isSelected ? chartPalette.accent : chartInk.border,
             borderWidth: isSelected ? 2 : 0.8,
           },
-          selected: isSelected,
         }
       }),
       itemStyle: { areaColor: mapRamp.noData, borderColor: chartInk.border, borderWidth: 0.8 },
@@ -178,11 +177,7 @@ export function createChinaMapOption(
         itemStyle: { areaColor: chartPalette.accent },
         label: { show: true, color: chartInk.onAccent, fontWeight: 600 },
       },
-      select: {
-        itemStyle: { areaColor: chartPalette.warning, borderColor: chartPalette.warning, borderWidth: 1.5 },
-        label: { color: chartInk.onAccent },
-      },
-      selectedMode: 'single',
+      selectedMode: false,
       label: { show: false },
     },
     series: [{
