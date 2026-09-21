@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from app.config import get_display_timezone
 
@@ -44,33 +44,50 @@ def _fingerprint(payload: dict) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:32]
 
 
-def _utc_iso(value: object) -> str:
-    """Serialize the database's naive UTC DATETIME without browser-local ambiguity."""
+def _as_utc_datetime(value: object) -> datetime:
+    """Interpret the database's naive DATETIME as UTC."""
     if isinstance(value, datetime):
         parsed = value
     else:
         parsed = datetime.fromisoformat(str(value))
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc).isoformat()
+    return parsed.astimezone(timezone.utc)
+
+
+def _utc_iso(value: object) -> str:
+    """Serialize the database's naive UTC DATETIME without browser-local ambiguity."""
+    return _as_utc_datetime(value).isoformat()
+
+
+def _is_closed_day_record(row: dict, display_tz) -> bool:
+    """Reject legacy rows generated on the same local date they claim to summarize."""
+    try:
+        reporting_date = date.fromisoformat(str(row["briefing_date"]))
+        generated_local_date = _as_utc_datetime(row["generated_at"]).astimezone(display_tz).date()
+    except (KeyError, TypeError, ValueError):
+        return False
+    return generated_local_date > reporting_date
 
 
 def get_latest(conn: Connection | None) -> dict:
     """只读返回不晚于上一完整自然日的最新简报；不触发任何外部请求。"""
     if conn is None:
         return {"status": "no_briefing", "message": "无数据库连接"}
-    expected_date = datetime.now(get_display_timezone()).date() - timedelta(days=1)
+    display_tz = get_display_timezone()
+    expected_date = datetime.now(display_tz).date() - timedelta(days=1)
     try:
-        row = conn.execute(text(
+        rows = conn.execute(text(
             f"SELECT briefing_date, content, model, source, generated_at "
             f"FROM {TABLE_NAME} WHERE briefing_date <= :expected_date "
-            f"ORDER BY briefing_date DESC LIMIT 1"
-        ), {"expected_date": expected_date}).mappings().first()
+            f"ORDER BY briefing_date DESC LIMIT 31"
+        ), {"expected_date": expected_date}).mappings().all()
     except Exception:
         # 表不存在或查询失败，安全降级
         return {"status": "no_briefing", "message": "简报表尚未就绪"}
+    row = next((candidate for candidate in rows if _is_closed_day_record(candidate, display_tz)), None)
     if not row:
-        return {"status": "no_briefing", "message": "尚未生成任何简报"}
+        return {"status": "no_briefing", "message": "尚无上一完整自然日口径的日报"}
     is_stale = str(row["briefing_date"]) != expected_date.isoformat()
     return {
         "status": "ok",
