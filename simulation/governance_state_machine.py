@@ -19,6 +19,8 @@ from enum import Enum
 import random
 from typing import Any, Dict, List, Optional, Tuple
 
+from app.business_calendar import activity_day_weight
+
 
 class GovernanceStatus(str, Enum):
     DISCOVERED = "DISCOVERED"
@@ -155,16 +157,18 @@ def compute_rhythm_factor(now: Optional[datetime] = None) -> float:
     - Overtime evening (17:30-21:30): k = 1.0 (Standard maintenance)
     - Deep night (22:00-07:00): k = 0.0 (Strictly frozen, zero fake resolutions at 3 AM)
     - Other daytime hours: k = 1.0
+    - Mainland holidays/weekends are damped; official makeup workdays run normally.
     - Month-End sprint (day >= 25): 1.5x multiplier on active periods.
     """
     if now is None:
         now = datetime.now(timezone.utc)
 
     if now.tzinfo is None:
-        hour, minute, day = now.hour, now.minute, now.day
+        local = now
     else:
-        hkt = now.astimezone(timezone(timedelta(hours=8)))
-        hour, minute, day = hkt.hour, hkt.minute, hkt.day
+        local = now.astimezone(timezone(timedelta(hours=8)))
+
+    hour, minute, day = local.hour, local.minute, local.day
 
     t = hour + minute / 60.0
     if (8.5 <= t <= 11.5) or (14.0 <= t <= 17.5):
@@ -177,6 +181,14 @@ def compute_rhythm_factor(now: Optional[datetime] = None) -> float:
         base_k = 0.0
     else:
         base_k = 1.0
+
+    day_weight = activity_day_weight(
+        local.date(),
+        {0: 1.0, 1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0, 5: 0.15, 6: 0.10},
+        holiday_weight=0.10,
+        makeup_workday_weight=1.0,
+    )
+    base_k *= day_weight
 
     if day >= 25 and base_k > 0.0:
         base_k = min(3.0, round(base_k * 1.5, 2))
