@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { Activity, ChevronLeft, ChevronRight, Radio } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Radio } from 'lucide-vue-next'
 
 export interface GovernanceActivity {
   id: number

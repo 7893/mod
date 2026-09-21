@@ -1,6 +1,6 @@
 # MOD 历史资料目录
 
-更新日期：2026-09-17
+更新日期：2026-09-21
 状态：现行目录
 适用范围：`docs/history/` 冻结资料的稳定编号、可见性、完整性和实际保全状态
 
@@ -40,6 +40,7 @@
 | H-029 | `2026-09-11-FRONTEND-STANDARDS.md` | 仓库可见 / 已脱敏 | Git 历史 + SHA-256 |
 | H-030 | `2026-09-11-HARNESS-ENTRYPOINTS.md` | 仓库可见 / 已脱敏 | Git 历史 + SHA-256 |
 | H-031 | `2026-09-17-CONSTRAINT-DOCUMENT-CONVERGENCE-SNAPSHOT.md` | 仓库可见 / 已审阅 | Git 历史 + SHA-256 |
+| H-032 | `2026-09-21-FRONTEND-REFACTOR-PRE-DOCUMENT-CONVERGENCE.md` | 仓库可见 / 已审阅 | Git 历史 + SHA-256 |
 
 ## 恢复规则
 

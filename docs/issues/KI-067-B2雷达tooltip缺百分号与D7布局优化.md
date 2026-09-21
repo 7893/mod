@@ -2,7 +2,7 @@
 
 - 状态：DONE
 - 优先级：P3
-- 更新日期：2026-09-09
+- 更新日期：2026-09-21
 - 适用范围：B 屏 B2 阶段均衡雷达图 tooltip 文案；D 屏 D7 数据质量金标准面板布局
 - 关联：[已知问题看板](../KNOWN-ISSUES.md)、[前端架构与约束](../development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md)、`frontend/src/charts/constructionOptions.ts`、`frontend/src/views/OperationsView.vue`
 
@@ -55,5 +55,5 @@
 ## 进度
 
 - 2026-09-09 立项登记（OPEN）。承接 A~F 六屏细节核查中发现的 B2 雷达 tooltip 与 D7 布局两处观感问题。
-- 2026-09-09 修复验收（RESOLVED）：B2 雷达图增加自定义 tooltip formatter 带百分比读数并补充单元测试；D7 面板重构为左侧 5 列四项规则垂直排布、右侧 7 列覆盖规模条形图，提升版面呼吸感，无任意值样式违规。
+- 2026-09-09 修复验收（DONE）：B2 雷达图增加自定义 tooltip formatter 带百分比读数并补充单元测试；D7 面板重构为左侧 5 列四项规则垂直排布、右侧 7 列覆盖规模条形图，提升版面呼吸感，无任意值样式违规。
 - 2026-09-21 KI-102 复核：后续信息架构重构曾把 D7 左右比例回退为 7:5，本次按原设计恢复 5:7；未返回离线稽核结果的合规率与异常数由「—」改为「未核验」，避免被误判为渲染故障。

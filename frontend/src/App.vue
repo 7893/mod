@@ -15,7 +15,7 @@ import {
   WifiOff,
 } from 'lucide-vue-next'
 import { useProjectStore } from './stores/project.ts'
-import { formatCount, formatDateParts, formatDateTime } from './formatters/metrics.ts'
+import { formatCount, formatDateParts } from './formatters/metrics.ts'
 import { useScaleScreen } from './composables/useScaleScreen.ts'
 
 const route = useRoute()
@@ -37,9 +37,6 @@ const dataTimeParts = computed(() => {
   const meta = store.snapshot.meta
   return formatDateParts(currentTime.value, { seconds: true, timeZone: meta?.displayTimezone || 'Asia/Shanghai' })
 })
-const dataTime = computed(() => dataTimeParts.value.full)
-
-
 const isFullscreen = ref(false)
 
 const syncFullscreenState = () => {

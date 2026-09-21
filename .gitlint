@@ -1,0 +1,16 @@
+[general]
+contrib = contrib-title-conventional-commits
+ignore = T1,T2,T3,T4,T5,T6,B1,B2,B3,B4,B5,B6
+ignore-stdin = true
+ignore-merge-commits = true
+ignore-revert-commits = false
+ignore-fixup-commits = false
+ignore-fixup-amend-commits = false
+ignore-squash-commits = false
+
+[contrib-title-conventional-commits]
+types = build,chore,ci,docs,feat,fix,perf,refactor,revert,style,test
+
+[title-match-regex]
+# Preserve the MOD policy: ASCII lowercase Conventional Commit, at most 7 words.
+regex = ^(?!(?:\S+\s+){7,}\S+$)(?:build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(?:\([a-z0-9-]+\))?: [a-z0-9][a-z0-9 ._/-]*$

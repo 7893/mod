@@ -1,0 +1,33 @@
+minimum_pre_commit_version: 4.6.2
+
+repos:
+  - repo: local
+    hooks:
+      - id: detect-secrets
+        name: Detect secrets
+        entry: detect-secrets-hook
+        language: system
+        types: [text]
+        args:
+          - --no-verify
+          - --disable-plugin
+          - Base64HighEntropyString
+          - --disable-plugin
+          - HexHighEntropyString
+          - --exclude-lines
+          - "(?:secret-scan: allow|pragma: allowlist (?:nextline )?secret)"
+        exclude: ^(?:archive/|frontend/(?:dist|node_modules|output|releases)/|backend/(?:\.venv|current|releases)/|graphify-out/)
+
+  - repo: https://github.com/jorisroovers/gitlint
+    rev: acc9d9de6369b76d22cb4167029d2035e8730b98 # v0.19.1
+    hooks:
+      - id: gitlint
+      - id: gitlint-ci
+
+  - repo: https://github.com/lycheeverse/lychee.git
+    rev: 2bba271688c1abb1503097a064e6c3bc1d1b6a9b # lychee-v0.24.2
+    hooks:
+      - id: lychee
+        name: Check Markdown links
+        types: [markdown]
+        args: [--offline, --no-progress]

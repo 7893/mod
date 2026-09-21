@@ -118,6 +118,7 @@ docs/history/*
 !docs/history/2026-09-09-KI070-074治理前现状切片.md
 !docs/history/2026-09-11-HARNESS-ENTRYPOINTS.md
 !docs/history/2026-09-11-FRONTEND-STANDARDS.md
+!docs/history/2026-09-21-FRONTEND-REFACTOR-PRE-DOCUMENT-CONVERGENCE.md
 !docs/history/23-V2六屏驾驶舱页面区域与布局规范.md
 !docs/history/MOD-V2数据库整改执行提示词.txt
 frontend/releases/

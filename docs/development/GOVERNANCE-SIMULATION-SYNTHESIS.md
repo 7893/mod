@@ -246,7 +246,7 @@ erDiagram
 
 1. **凭据零容忍（ENFORCEMENT 闸门 A）**：
    - 杜绝在任何源码、脚本或测试文件中出现明文内网 IP、口令或 Token 默认值；
-   - 本地与 CI `scan_secrets.py` 扫描暂存区改动，发现疑似凭据立即以非零状态阻断提交。
+   - 本地与 CI 共用 `.pre-commit-config.yaml` 中的 `detect-secrets` 规则，发现疑似凭据立即以非零状态阻断提交。
 
 2. **单测 100% 离线自洽（ENFORCEMENT 闸门 B）**：
    - 依据 KI-063 治理教训，所有单元测试与集成测试严禁直连外部生产库或公网；

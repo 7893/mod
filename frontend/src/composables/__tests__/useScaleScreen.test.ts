@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
-import { useScaleScreen, type ScaleScreenOptions } from '../useScaleScreen'
+import { useScaleScreen } from '../useScaleScreen'
 
 function runInSetup<T>(fn: () => T): { result: T; unmount: () => void } {
   let result!: T

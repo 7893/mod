@@ -1,4 +1,4 @@
-# MOD frozen-history integrity manifest (updated 2026-09-09)
+# MOD frozen-history integrity manifest (updated 2026-09-21)
 # Raw local-only files remain excluded from the public repository; hashes make deletion/change detectable on the primary host.
 c59f89bd879bc94f10431c34db1b5598b9ae416783663ebf52c5198c87947ac8  docs/history/01-产品与业务设计-待确认.md
 f75c8b90895db78976e3c65ab8ab80206c6dc0d5da13e17afa4946bd0289e1f8  docs/history/02-数据模型-待确认.md
@@ -31,6 +31,7 @@ d3b00a6bdc9f45ac5ba83539f5c4784ba7991472cd8d0fb20d2e0c832db50de5  docs/history/2
 6ee5bb9e2f029a365553fd0d0377223cc9b3639595bc7a536184eb21bacbae58  docs/history/2026-09-11-FRONTEND-STANDARDS.md
 c3bf53b2b0e3fcd4597e48942809b2dcb64dafce1188d7b6f219b61d5c6197ba  docs/history/2026-09-11-HARNESS-ENTRYPOINTS.md
 e182152fe7e21315094af4e8a05f307f76e84534ffb8c579b71d98684f342563  docs/history/2026-09-17-CONSTRAINT-DOCUMENT-CONVERGENCE-SNAPSHOT.md
+a0ef58eeb42f7ee4dffa1096c3fe12b7658d7597de6c5b829fd9ffd8cb8ddfba  docs/history/2026-09-21-FRONTEND-REFACTOR-PRE-DOCUMENT-CONVERGENCE.md
 
 # Sanitized historical documents (KI-074, 2026-09-12)
 74451d56ca99ecc7afac4a5a09ff17695c3af1ae1fd1d1bdeb0f8494e3e83adf  docs/history/01-产品与业务设计-待确认.sanitized.md

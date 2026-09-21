@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { balancedColumns } from '../../layout/grid.ts'
+import AnimatedNumber from '../AnimatedNumber.vue'
 import type { MetricItem } from './types.ts'
 
 const props = withDefaults(
@@ -56,8 +57,14 @@ const gridStyle = computed(() => ({
 
       <div class="metric-cell__body">
         <span class="metric-cell__label" :title="item.label">{{ item.label }}</span>
-        <b class="metric-cell__value" tabindex="0" :title="`${item.value}${item.unit ?? ''}`" :aria-label="`${item.label}：${item.value}${item.unit ?? ''}`">
-          {{ item.value }}<small v-if="item.unit">{{ item.unit }}</small>
+        <b class="metric-cell__value" tabindex="0" :title="`${item.prefix ?? ''}${item.value}${item.unit ?? ''}`" :aria-label="`${item.label}：${item.prefix ?? ''}${item.value}${item.unit ?? ''}`">
+          <AnimatedNumber
+            v-if="item.animate && typeof item.value === 'number'"
+            :value="item.value"
+            :prefix="item.prefix"
+            :decimals="item.decimals"
+          />
+          <template v-else>{{ item.prefix }}{{ item.value }}</template><small v-if="item.unit">{{ item.unit }}</small>
         </b>
 
         <div v-if="item.progress !== undefined" class="metric-cell__track">

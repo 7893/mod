@@ -9,10 +9,12 @@ sim-status:
 check: backend-check frontend-check doc-check
 
 backend-check:
-	cd backend && .venv/bin/ruff check app tests ../simulation
-	cd backend && .venv/bin/python -m pytest -p no:cacheprovider -q
+	cd backend && uv run ruff check app tests ../simulation
+	cd backend && uv run python -m pytest -p no:cacheprovider -q
 
 frontend-check:
+	cd frontend && pnpm run lint
+	cd frontend && pnpm run lint:styles
 	python3 scripts/project/lint_frontend_arbitrary_values.py
 	python3 scripts/project/lint_frontend_styles.py
 	cd frontend && pnpm test
@@ -23,7 +25,7 @@ doc-check:
 	python3 scripts/project/sanitize_history.py --check
 	python3 scripts/project/check_history_integrity.py
 	python3 scripts/project/check_semantic_contracts.py
-	python3 scripts/project/check_doc_links.py
+	uv run --project backend pre-commit run lychee --all-files
 	python3 scripts/project/check_document_governance.py
 	python3 scripts/project/check_doc_sync.py
 	python3 scripts/project/check_changelog.py

@@ -4,10 +4,8 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import {
   AlertTriangle,
   CheckCircle2,
-  Clock,
   RotateCcw,
   Send,
-  ShieldAlert,
   Sparkles,
   UserCheck,
   X,

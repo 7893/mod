@@ -145,6 +145,30 @@ describe('stores/liveProjection', () => {
     expect(overview.vouchersTotal).toBe(initialVouchersTotal)
     expect(overview.vouchersTodayAdded).toBe(initialVouchersToday)
   })
+
+  it('shows committed increments newer than the current snapshot until it catches up', async () => {
+    projectStore = useProjectStore()
+    const liveStore = useLiveProjectionStore()
+    await flushPromises()
+
+    const initialDocsToday = projectStore.snapshot.overview.docsTodayAdded
+    const initialVouchersToday = projectStore.snapshot.overview.vouchersTodayAdded
+    liveStore.apply(makeEvent({
+      occurredAt: '2026-09-14T08:00:00+08:00',
+      increments: { documents: 2, vouchers: 1, integrations: 1 },
+      cumulative: { documents: 2, vouchers: 1, integrations: 1 },
+    }))
+
+    expect(liveStore.liveOverview.docsTodayAdded).toBe(initialDocsToday + 2)
+    expect(liveStore.liveOverview.vouchersTodayAdded).toBe(initialVouchersToday + 1)
+
+    projectStore.snapshot = {
+      ...projectStore.snapshot,
+      meta: { ...projectStore.snapshot.meta, generatedAt: '2026-09-14T08:01:00+08:00' },
+    }
+    expect(liveStore.liveOverview.docsTodayAdded).toBe(initialDocsToday)
+    expect(liveStore.liveOverview.vouchersTodayAdded).toBe(initialVouchersToday)
+  })
 })
 
 it('refreshes the authoritative snapshot on an explicit retention reset', async () => {
