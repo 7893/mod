@@ -1,5 +1,6 @@
 import os
 import re
+from inspect import getsource
 from fastapi.testclient import TestClient
 
 os.environ.setdefault("MOD_DB_HOST", "127.0.0.1")
@@ -7,7 +8,7 @@ os.environ.setdefault("MOD_DB_PASSWORD", "test_password")
 
 from app.main import app
 from app.api import normalize_region, load_fallback_snapshot, normalize_operations_dict
-from app.services.dashboard import LATEST_COMPLETED_DOCUMENT_DATE_SQL, REGION_SUMMARY_SQL
+from app.services.dashboard import REGION_SUMMARY_SQL, build_dashboard_snapshot
 
 client = TestClient(app)
 
@@ -290,8 +291,8 @@ def test_v2_overview_r5_r6_contract():
     R5 & R6 contract tests:
     - R5: All 4 metrics (org, contacts, docs, vouchers) must provide cumulative values.
           Contacts retain traceability metadata and provide calculated organization coverage.
-    - R6: Document additions date (2026-08-29) must not be confused with global snapshot date (2026-08-30).
-          Both API and snapshot must return addedAsOfDate per metric and for all 34 provinces.
+    - R6: Daily document and voucher additions use the same snapshot business date.
+          Both API and snapshot return addedAsOfDate per metric and for all 34 provinces.
     """
     res = client.get("/api/dashboard/overview")
     assert res.status_code == 200
@@ -323,9 +324,10 @@ def test_v2_overview_r5_r6_contract():
     assert isinstance(ov["vouchersTodayAdded"], int) and ov["vouchersTodayAdded"] >= 0
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", ov["vouchersAddedAsOfDate"])
 
-    # Total snapshot date vs Document additions date differentiation (R6)
+    # All "today" metrics must use the same snapshot business date (R6).
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", ov["asOfDate"])
-    assert ov["docsAddedAsOfDate"] != ov["asOfDate"]
+    assert ov["docsAddedAsOfDate"] == ov["asOfDate"]
+    assert ov["vouchersAddedAsOfDate"] == ov["asOfDate"]
 
     # 2. Provincial additions date contract
     reg_res = client.get("/api/dashboard/regions")
@@ -339,7 +341,7 @@ def test_v2_overview_r5_r6_contract():
 
 
 def test_v2_snapshot_internal_consistency_contract():
-    """R3 and R6 remain enforced in the checked-in fallback snapshot."""
+    """R3 and same-day R6 remain enforced in the checked-in fallback snapshot."""
     snap = load_fallback_snapshot()
     overview = snap["overview"]
     provinces = snap["provinces"]
@@ -348,18 +350,28 @@ def test_v2_snapshot_internal_consistency_contract():
     total_prov_docs_today = sum(p["todayAdded"] for p in provinces)
     assert total_prov_docs_today == overview["docsTodayAdded"]
 
-    # R6: document additions date must remain distinct from the total baseline date.
+    # R6: document and voucher additions share the total snapshot business date.
     api_ov = client.get("/api/dashboard/overview").json()
-    assert api_ov["docsAddedAsOfDate"] != api_ov["asOfDate"]
+    assert api_ov["docsAddedAsOfDate"] == api_ov["asOfDate"]
+    assert api_ov["vouchersAddedAsOfDate"] == api_ov["asOfDate"]
 
 
 def test_v2_region_query_derives_document_additions():
-    assert "submit_time < :anchor_date" in LATEST_COMPLETED_DOCUMENT_DATE_SQL
-    assert "DATE(MAX(submit_time))" in LATEST_COMPLETED_DOCUMENT_DATE_SQL
-    assert "MAX(DATE(" not in LATEST_COMPLETED_DOCUMENT_DATE_SQL
     assert "0 AS todayAdded" not in REGION_SUMMARY_SQL
     assert "COUNT(*) AS docs_today_added" in REGION_SUMMARY_SQL
-    assert "submit_time >= :docs_as_of_date" in REGION_SUMMARY_SQL
+    assert "submit_time >= :anchor_date" in REGION_SUMMARY_SQL
+    assert "DATE_ADD(:anchor_date, INTERVAL 1 DAY)" in REGION_SUMMARY_SQL
+    assert ":docs_as_of_date" not in REGION_SUMMARY_SQL
+
+
+def test_v2_overview_uses_one_daily_stats_row_for_today_metrics():
+    source = getsource(build_dashboard_snapshot)
+    assert "ds.doc_today AS docs_today_added" in source
+    assert "ds.voucher_today AS vouchers_today_added" in source
+    assert "ds.stat_date AS docs_as_of_date" in source
+    assert "ds.stat_date AS vouchers_as_of_date" in source
+    assert 'ov_row["docs_today_added"] = sum' not in source
+    assert "ops = ov_row" in source
 
 
 def test_v2_refresh_meta_total_rows():

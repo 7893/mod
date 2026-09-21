@@ -54,6 +54,8 @@ describe('decision panel options', () => {
     expect(sources.dashboard).toContain("label: '尚未上线'")
     expect(sources.dashboard).not.toContain("label: '今日单据'")
     expect(sources.dashboard).toContain('<MetricGrid :items="provinceFacts" :columns="3"')
+    expect(sources.dashboard).toContain('if (docsDate && docsDate === vouchersDate)')
+    expect(sources.dashboard).toContain(':subtitle="todayFactsSubtitle"')
     expect(sources.construction).toContain('title="上线门禁攻坚"')
     expect(sources.construction).toContain('zone="B4"')
     expect(sources.construction).toContain('title="建设台账预览"')

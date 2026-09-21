@@ -31,12 +31,6 @@ REGION_SUFFIX_RULES = [
     '特别行政区', '壮族自治区', '回族自治区', '维吾尔自治区', '自治区', '省', '市'
 ]
 
-LATEST_COMPLETED_DOCUMENT_DATE_SQL = """
-SELECT DATE(MAX(submit_time)) AS docs_as_of_date
-FROM business_document
-WHERE submit_time < :anchor_date
-"""
-
 REGION_SUMMARY_SQL = f"""
 WITH task_agg AS (
     SELECT org_id, ROUND(AVG(progress), 1) AS construction_pct
@@ -46,8 +40,8 @@ WITH task_agg AS (
 doc_agg AS (
     SELECT org_id, COUNT(*) AS docs_today_added
     FROM business_document
-    WHERE submit_time >= :docs_as_of_date
-      AND submit_time < DATE_ADD(:docs_as_of_date, INTERVAL 1 DAY)
+    WHERE submit_time >= :anchor_date
+      AND submit_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
     GROUP BY org_id
 )
 SELECT
@@ -194,17 +188,7 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         today_display_date = datetime.now(get_display_timezone()).date()
         anchor_date = anchor_row["stat_date"] or today_display_date
         anchor_date_str = str(anchor_date)
-        document_date_row = conn.execute(
-            text(LATEST_COMPLETED_DOCUMENT_DATE_SQL),
-            {"anchor_date": anchor_date},
-        ).mappings().one()
-        docs_as_of_date_value = document_date_row["docs_as_of_date"]
-        if docs_as_of_date_value is None:
-            raise ValueError(f"No business documents exist before snapshot date {anchor_date}")
-        sql_params = {
-            "anchor_date": anchor_date,
-            "docs_as_of_date": docs_as_of_date_value,
-        }
+        sql_params = {"anchor_date": anchor_date}
 
         # Overview - 优化版：使用 daily_stats 汇总表 + 简化查询
         overview_sql = f"""
@@ -213,10 +197,18 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
             ds.user_count AS contacts_total,
             (SELECT COUNT(DISTINCT org_id) FROM sys_user) AS contacts_covered_orgs,
             ds.doc_count AS docs_total,
-            :docs_as_of_date AS docs_as_of_date,
+            ds.doc_today AS docs_today_added,
+            ds.stat_date AS docs_as_of_date,
+            ds.doc_line_count,
             ds.voucher_count AS vouchers_total,
             ds.voucher_today AS vouchers_today_added,
             ds.stat_date AS vouchers_as_of_date,
+            ds.voucher_line_count,
+            ds.link_count,
+            ds.integration_count,
+            ds.integration_success,
+            ds.dual_run_count,
+            ds.snapshot_count,
             (SELECT COUNT(*) FROM org_unit WHERE status IN {SQL_LAUNCHED_STATUSES}) AS launched,
             (SELECT COUNT(*) FROM org_unit WHERE status = '{ORG_STATUS_DUAL_RUNNING}') AS dual_run,
             (SELECT ROUND(AVG(progress), 1) FROM construction_task) AS construction_pct,
@@ -448,7 +440,7 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         rollout_trend_rows = [r for r in rollout_trend_rows if r["fullDate"] in distinct_dates]
         rollout_trend_rows.sort(key=lambda r: (r["fullDate"], r["batchId"]))
 
-        # 34 Provinces - aggregate the latest completed business day once per organization.
+        # 34 Provinces - aggregate the same business day used by the overview metrics.
         region_rows = mappings(conn, REGION_SUMMARY_SQL, sql_params)
 
         NATIONAL_PROVINCE_ORDER = [
@@ -499,20 +491,13 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
                 return 999
 
         provinces.sort(key=_prov_order_key)
-        ov_row["docs_today_added"] = sum(province["todayAdded"] for province in provinces)
 
-        # Operations - 从 daily_stats 获取（毫秒级）
-        ops_sql = """
-        SELECT doc_count, doc_line_count, voucher_count, voucher_line_count,
-               link_count, integration_count, integration_success, dual_run_count, snapshot_count
-        FROM daily_stats WHERE stat_date = (SELECT MAX(stat_date) FROM daily_stats)
-        """
-        ops = dict(conn.execute(text(ops_sql)).mappings().one())
-        
+        # Overview and operations reuse the same daily_stats row so one API payload is internally consistent.
+        ops = ov_row
         operations = {
-            "businessDocument": ops["doc_count"],
+            "businessDocument": ops["docs_total"],
             "businessDocumentLine": ops["doc_line_count"],
-            "accountingVoucher": ops["voucher_count"],
+            "accountingVoucher": ops["vouchers_total"],
             "accountingVoucherLine": ops["voucher_line_count"],
             "documentVoucherLink": ops["link_count"],
             "integrationResult": ops["integration_count"],
@@ -533,6 +518,14 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         ORDER BY stat_date DESC
         LIMIT 8
         """, {"anchor_date": anchor_date})
+        for row in operation_trend_source:
+            if str(row["fullDate"]) == anchor_date_str:
+                row.update({
+                    "documents": ov_row["docs_today_added"],
+                    "vouchers": ov_row["vouchers_today_added"],
+                    "integrationTotal": ov_row["integration_count"],
+                    "integrationSuccess": ov_row["integration_success"],
+                })
         operations_trend = build_operations_trend(operation_trend_source)
         dual_type_rows = mappings(conn, """
         SELECT check_type, result, COUNT(*) AS count
@@ -596,7 +589,7 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         full_rows = sum(
             ops[key]
             for key in (
-                "doc_count", "doc_line_count", "voucher_count", "voucher_line_count",
+                "docs_total", "doc_line_count", "vouchers_total", "voucher_line_count",
                 "link_count", "integration_count", "snapshot_count",
             )
         ) + operations["dualRunResult"] + small_total

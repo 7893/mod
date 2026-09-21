@@ -137,6 +137,14 @@ const todayFacts = computed<MetricItem[]>(() => [
   },
 ])
 
+const todayFactsSubtitle = computed(() => {
+  const docsDate = store.snapshot.overview.docsAddedAsOfDate
+  const vouchersDate = store.snapshot.overview.vouchersAddedAsOfDate
+  if (docsDate && docsDate === vouchersDate) return `统计日 ${docsDate} · 同日增量`
+  if (docsDate && vouchersDate) return `单据 ${docsDate} · 凭证 ${vouchersDate}`
+  return '只呈现当日增量，不重复累计规模'
+})
+
 const qualityErrorCount = computed<number | null>(() => {
   const quality = store.snapshot.quality
   const values = [quality?.voucherBalanceErrors, quality?.timeOrderErrors, quality?.orphanLinkErrors]
@@ -284,7 +292,7 @@ const openAction = (row: StatusRow) => {
         <CockpitPanel
           title="今日变化"
           zone="A5"
-          subtitle="只呈现当日增量，不重复累计规模"
+          :subtitle="todayFactsSubtitle"
         >
           <MetricGrid :items="todayFacts" :columns="2" fill flat size="sm" align="center" />
         </CockpitPanel>
