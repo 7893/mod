@@ -14,7 +14,6 @@ const props = defineProps<{
   overview: ProjectSnapshot['overview']
   issuesSummary?: ProjectSnapshot['issuesSummary']
   construction?: ProjectSnapshot['construction']
-  live: ProjectSnapshot['overview']
   projectionConnected: boolean
   recentEvent: LiveProjectionEvent | null
 }>()
@@ -66,7 +65,7 @@ const domainCards = computed<DomainCard[]>(() => [
     id: 'D',
     label: '业务运行',
     value: formatPercent(props.overview.integrationSuccessPct),
-    detail: `今日单据 +${formatCount(props.live.docsTodayAdded)}`,
+    detail: '单据凭证全链路',
     route: '/d',
     tone: 'accent',
   },

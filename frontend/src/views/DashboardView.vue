@@ -40,18 +40,16 @@ const selectedProvinceData = computed(() => {
       launched: store.snapshot.overview.launched,
       dual: store.snapshot.overview.dual,
       progress: store.snapshot.overview.constructionPct,
-      todayAdded: store.snapshot.overview.docsTodayAdded,
     }
   }
 
   const item = store.provinceSummary.find((province) => province.name === selectedProvince.value)
-  if (!item) return { total: 0, launched: 0, dual: 0, progress: 0, todayAdded: 0 }
+  if (!item) return { total: 0, launched: 0, dual: 0, progress: 0 }
   return {
     total: item.total,
     launched: item.launched,
     dual: item.dual,
     progress: item.value,
-    todayAdded: item.todayAdded ?? item.docsTodayAdded ?? 0,
   }
 })
 
@@ -63,22 +61,22 @@ const provinceFacts = computed<MetricItem[]>(() => [
     progress: selectedProvinceData.value.progress,
   },
   {
+    label: '纳入单位',
+    value: formatCount(selectedProvinceData.value.total),
+    unit: '家',
+    tone: 'default',
+  },
+  {
     label: '已上线',
     value: formatCount(selectedProvinceData.value.launched),
     unit: '家',
     tone: 'success',
-    hint: `纳入 ${formatCount(selectedProvinceData.value.total)} 家`,
   },
   {
     label: '双轨运行',
     value: formatCount(selectedProvinceData.value.dual),
     unit: '家',
     tone: 'warning',
-  },
-  {
-    label: '今日单据',
-    value: `+${formatCount(selectedProvinceData.value.todayAdded)}`,
-    tone: 'accent',
   },
 ])
 
@@ -166,7 +164,6 @@ const openAction = (row: StatusRow) => {
         :overview="store.snapshot.overview"
         :issues-summary="store.snapshot.issuesSummary"
         :construction="store.snapshot.construction"
-        :live="liveStore.liveOverview"
         :projection-connected="projectionConnected"
         :recent-event="recentEvent"
         @navigate="router.push"
