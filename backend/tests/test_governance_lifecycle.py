@@ -130,8 +130,8 @@ def test_governance_rework_loop():
     assert rework_triggered, "Rework loop should be triggered on verification failure"
 
 
-def test_governance_api_endpoints(monkeypatch):
-    """Verify FastAPI governance endpoints (list, detail, timeline, dispatch)."""
+def test_governance_read_api_endpoints(monkeypatch):
+    """Verify the read-only FastAPI governance endpoints."""
     mock_conn = MagicMock()
     app.dependency_overrides[connection] = lambda: mock_conn
     client = TestClient(app)
@@ -152,11 +152,6 @@ def test_governance_api_endpoints(monkeypatch):
         "app.services.governance.get_issue_timeline",
         lambda conn, issue_id: [{"action": "一键督办", "actor": "专班专家", "detail": "推进督办"}],
     )
-    monkeypatch.setattr(
-        "app.services.governance.dispatch_issue",
-        lambda conn, issue_id: {"id": issue_id, "status": "IN_PROGRESS"},
-    )
-
     try:
         # 1. List
         res = client.get("/api/governance/issues?page=1&page_size=5")
@@ -175,10 +170,6 @@ def test_governance_api_endpoints(monkeypatch):
         assert res_timeline.status_code == 200
         assert res_timeline.json()[0]["action"] == "一键督办"
 
-        # 4. Dispatch
-        res_dispatch = client.post("/api/governance/issues/ISS-TEST-001/dispatch")
-        assert res_dispatch.status_code == 200
-        assert res_dispatch.json()["status"] == "IN_PROGRESS"
     finally:
         app.dependency_overrides.pop(connection, None)
 

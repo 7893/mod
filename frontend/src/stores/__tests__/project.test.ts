@@ -101,26 +101,6 @@ describe('stores/project', () => {
     expect(totalFromCounts).toBe(store.entities.length)
   })
 
-  it('updates an entity and records an audit log entry', async () => {
-    store = useProjectStore()
-    await flushPromises()
-
-    const target = store.entities[0]
-    const originalStatus = target.status
-    const newStatus = originalStatus === '已上线' ? '双轨运行' : '已上线'
-    const initialAuditsLength = store.audits.length
-
-    store.updateEntity(target.id, { status: newStatus as any })
-
-    expect(target.status).toBe(newStatus)
-    expect(target.updatedAt).toBe('刚刚')
-    expect(store.audits.length).toBe(initialAuditsLength + 1)
-    expect(store.audits[0].entity).toBe(target.name)
-    expect(store.audits[0].field).toBe('上线状态')
-    expect(store.audits[0].before).toBe(originalStatus)
-    expect(store.audits[0].after).toBe(newStatus)
-  })
-
   it('refreshes snapshot from API, transforms snake_case to camelCase, and handles success', async () => {
     store = useProjectStore()
     await flushPromises()

@@ -90,8 +90,18 @@ def validate_contracts(root: Path = ROOT) -> list[str]:
                 errors.append(f"AI quota billing boundary drift: {relative} contains `{forbidden}`")
     if "不代表 Cloudflare 账户账单" not in quota_capsule:
         errors.append("AI quota scope drift: quota capsule lacks the account-billing disclaimer")
-    if "不等同于 Cloudflare 账户账单上限" not in compliance_drawer:
-        errors.append("AI quota scope drift: compliance drawer lacks the account-billing disclaimer")
+    for forbidden in ("handleDispatch", "handleEnrich", "/dispatch", "/enrich"):
+        if forbidden in compliance_drawer:
+            errors.append(f"read-only governance drawer drift: found online write marker `{forbidden}`")
+
+    api = _read(root, "backend/app/api.py")
+    for forbidden in (
+        '@router.patch("/organizations/{org_id}")',
+        '@router.post("/governance/issues/{issue_id}/dispatch")',
+        '@router.post("/governance/issues/{issue_id}/enrich")',
+    ):
+        if forbidden in api:
+            errors.append(f"read-only display API drift: found write route `{forbidden}`")
 
     # Deployment topology and recovery boundaries are repeated across several living
     # documents. Keep the small set of dangerous, previously observed contradictions

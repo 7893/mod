@@ -25,12 +25,6 @@ class Settings:
     display_timezone: str
 
     @property
-    def is_readonly_mode(self) -> bool:
-        if os.getenv("MOD_READONLY_MODE", "").lower() in ("1", "true", "yes"):
-            return True
-        return self.db_user == "mod_readonly" or "readonly" in self.db_user.lower()
-
-    @property
     def database_url(self) -> str:
         password = quote_plus(self.db_password)
         return (

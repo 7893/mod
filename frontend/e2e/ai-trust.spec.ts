@@ -12,12 +12,12 @@ test('KI-080: old briefing and synthetic model limits are visible on A and F', a
     } },
   } }))
   await page.goto('/#/a')
-  await expect(page.getByText('历史简报 2026-09-10')).toBeVisible()
-  await page.getByText('历史简报 2026-09-10').click()
+  await expect(page.getByText('历史日报 2026-09-10')).toBeVisible()
+  await page.getByText('历史日报 2026-09-10').click()
   await expect(page.locator('[data-zone="F4"]')).toContainText('拟合分不代表未来预测能力')
   await expect(page.locator('[data-zone="F4"]')).toContainText('实验已评估')
   await expect(page.locator('[data-zone="F4"]')).not.toContainText('推理就绪')
-  await expect(page.locator('[data-zone="F5"]')).toContainText('历史简报 · 今日尚未更新')
+  await expect(page.locator('[data-zone="F5"]')).toContainText('历史日报 · 上一完整自然日尚未生成，请勿作为最新日报')
   await expect(page.locator('[data-zone="F5"]')).toContainText('上线率为80%')
   await page.clock.runFor(1800)
   const clipped = await page.locator('[data-zone]').evaluateAll(nodes => nodes.filter(node => {

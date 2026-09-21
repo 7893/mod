@@ -13,7 +13,7 @@ from .db import connection, get_engine
 from .heatwave_watchdog import get_heatwave_status
 from .integrations import CloudflareAIAdapter, HeatWaveMLAdapter
 from .integrations.heatwave_sql import ML_RETRAIN_LOCK_NAME
-from .schemas import Page, EntityPatch
+from .schemas import Page
 from .services.dashboard import (
     build_dashboard_snapshot,
     load_fallback_snapshot as load_fallback_snapshot,
@@ -388,75 +388,6 @@ def organizations(
     return Page(items=items, total=total, page=page, page_size=page_size)
 
 
-@router.patch("/organizations/{org_id}")
-def update_organization(
-    org_id: int,
-    patch: EntityPatch,
-    conn: Connection | None = Depends(connection),
-) -> dict:
-    """更新单位状态（调态）。"""
-    from .config import get_settings
-    
-    if conn is None:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="数据库不可用")
-    
-    if get_settings().is_readonly_mode:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前为只读模式，无法修改")
-    
-    # 检查单位是否存在
-    exists = conn.execute(text("SELECT id FROM org_unit WHERE id = :id"), {"id": org_id}).fetchone()
-    if not exists:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="单位不存在")
-    
-    # 构建更新字段
-    updates = []
-    params: dict = {"id": org_id}
-    
-    if patch.status is not None:
-        updates.append("status = :status")
-        params["status"] = patch.status
-    
-    if patch.owner is not None:
-        # 更新 sys_user 表中该单位的主联系人（财务总监）
-        conn.execute(
-            text("""
-                UPDATE sys_user 
-                SET name = :owner 
-                WHERE org_id = :id AND job = '财务总监'
-                LIMIT 1
-            """),
-            {"id": org_id, "owner": patch.owner},
-        )
-    
-    if patch.construction is not None:
-        # 更新 construction_task 的平均进度
-        conn.execute(
-            text("""
-                UPDATE construction_task 
-                SET progress = :progress 
-                WHERE org_id = :id
-            """),
-            {"id": org_id, "progress": patch.construction},
-        )
-    
-    if patch.opening_data is not None:
-        # 更新 data_readiness 的 opening_rate
-        conn.execute(
-            text("""
-                UPDATE data_readiness 
-                SET opening_rate = :rate 
-                WHERE org_id = :id
-            """),
-            {"id": org_id, "rate": f"{patch.opening_data}%"},
-        )
-    
-    if updates:
-        conn.execute(text(f"UPDATE org_unit SET {', '.join(updates)} WHERE id = :id"), params)
-    
-    conn.commit()
-    return {"ok": True, "id": org_id}
-
-
 @router.get("/issues/summary")
 def issues_summary(conn: Connection | None = Depends(connection)) -> dict:
     snap = dashboard_snapshot(conn)
@@ -631,26 +562,6 @@ def governance_issue_timeline(
     return get_issue_timeline(conn, issue_id)
 
 
-@router.post("/governance/issues/{issue_id}/dispatch")
-def governance_issue_dispatch(
-    issue_id: str,
-    conn: Connection | None = Depends(connection),
-) -> dict:
-    from .config import get_settings
-    if get_settings().is_readonly_mode:
-        raise HTTPException(status_code=403, detail="当前处于只读演示模式，禁止在线派单操作")
-    if conn is None:
-        raise HTTPException(status_code=503, detail="Database connection unavailable")
-    from .services.governance import dispatch_issue
-    try:
-        updated = dispatch_issue(conn, issue_id)
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
-    if not updated:
-        raise HTTPException(status_code=404, detail="Issue not found")
-    return updated
-
-
 @router.get("/governance/ai-quota")
 def governance_ai_quota(
     conn: Connection | None = Depends(connection),
@@ -659,26 +570,6 @@ def governance_ai_quota(
         raise HTTPException(status_code=503, detail="Database connection unavailable")
     from .services.governance import get_ai_quota_status
     return get_ai_quota_status(conn)
-
-
-@router.post("/governance/issues/{issue_id}/enrich")
-def governance_issue_enrich(
-    issue_id: str,
-    conn: Connection | None = Depends(connection),
-) -> dict:
-    from .config import get_settings
-    if get_settings().is_readonly_mode:
-        raise HTTPException(status_code=403, detail="当前处于只读演示模式，禁止在线AI研判操作")
-    if conn is None:
-        raise HTTPException(status_code=503, detail="Database connection unavailable")
-    from .services.governance import enrich_governance_issue
-    try:
-        updated = enrich_governance_issue(conn, issue_id)
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
-    if not updated:
-        raise HTTPException(status_code=404, detail="Issue not found")
-    return updated
 
 
 @router.get("/governance/recent-activities")

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { formatCount } from '../../formatters/metrics.ts'
-import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import type { CompositionTone } from '../../charts/panelData.ts'
 import { createOverviewCompositionOption } from '../../charts/panelOptions.ts'
+import ChartCanvas from '../charts/ChartCanvas.vue'
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent])
 
@@ -34,7 +34,9 @@ const dotClasses: Record<CompositionTone, string> = {
 
 <template>
   <div class="flex flex-col gap-1.5 min-w-0">
-    <VChart :option="option" autoresize class="w-full h-7 flex-shrink-0" />
+    <div class="w-full h-7 flex-shrink-0">
+      <ChartCanvas :option="option" />
+    </div>
     <div class="flex items-center justify-between gap-2 text-cockpit-xs min-w-0">
       <div v-for="part in parts" :key="part.label" class="flex items-center gap-1 min-w-0">
         <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="dotClasses[part.tone]" />
