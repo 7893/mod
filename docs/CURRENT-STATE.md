@@ -96,7 +96,7 @@
     - **fallback 数据契约对齐**：补齐前后端 fallback 快照（`v2-sim-snapshot.json`）的 `rolloutTrend`、`operationsTrend` 及 `operations` 双轨明细字段（`dualRunConsistent`、`dualRunInconsistent`、`dualRunConsistencyPct`、`integrationSuccess`、`integrationFailed`），消除降级时 C3、D3、D6 面板假性空白。
     - **健康探针与发布门禁收紧**：`/api/health` 增加 `snapshot` 元数据（含 `source`、`status`、`last_refreshed_at`、`last_refresh_duration_ms`、`last_error`、`is_stale`、`consecutive_failures`）；`/api/dashboard/refresh-meta` 严格根据 `_snapshot_source` 真实返回 `data_version`（`live` 或 `frozen`）与 `status`（`ok` 或 `fallback`），禁止仅凭 DB 连接存在谎报 `live`；`publish.sh` 增加 C3/D3/D6 字段完整性发布门禁。
   - **前端零转圈策略（`stores/project.ts`）**：store 初始即用内置兜底快照（`data/fallback-snapshot.json`）预填 `snapshot`/`entities`，`loading` 初值为 `false`；`refresh()` 仅在「完全没有任何可展示数据」时才置 `loading`。因兜底数据恒存在，首屏与轮询刷新（含后端快照冷启动 >1s 的极端情形）都走静默替换，顶栏刷新指示与各屏内容区均不出现转圈/白屏。轮询刷新沿用 `silent=true`。六个屏幕（A~F）共享同一 store 快照渲染，切屏不重新请求、无独立整屏加载态；F 屏「每日简报」「风险解释」为局部按需小加载态，不影响整屏。
-- **单位台账统一投影（2026-09-21，本地实现待发布）**：
+- **单位台账统一投影（2026-09-21，已部署）**：
   - `build_entities()` 产生的全景快照是单位台账唯一原始投影；前端 C5 与 B 屏完整台账均从 `store.entities`
     读取，共用 `useEntityLedger.ts` 的筛选与分页内核，不再为 C5 发起第二次单位列表请求。
   - 已删除 `useOrganizations.ts` 和后端 `query_entities_paginated()` 五表重算路径。`GET /api/organizations`
@@ -569,7 +569,7 @@ KI-060 更新前的本节原文完整保存在
   经公网后默认/批次/省份/关键字场景多次超过 1s，尚不能宣称端到端全部载入均满足 `<1s`。
   当前根因是 20 行分页仍重复执行联系人窗口计算与 `dual_run_result` 全量分组，同时主快照已携带全量单位又由
   C5 二次请求。HeatWave 免费层已命中不等于单核 GROUP BY 自动低于 1s；后续应优先消除重复载入并把分组结果预聚合。
-- **2026-09-21 C5 性能路径收口（本地实现）**：上述复核促成了单位台账读路径统一；C5 不再追加五表查询，因此它的读取时间由已加载的全景快照决定，不再存在一套独立的 C5 计算时延。HeatWave 目标表已在代码中收口到 `backend/app/heatwave_tables.py`，并按快照热依赖从 9 张表扩为 12 张（新增 `sys_user`、`data_readiness`、`daily_stats`）。生产环境当前仍是 9 张就绪，本轮未执行 HeatWave DDL/补载且未部署；后续必须在独立数据库授权下补载、验证 12/12 健康后再发布这份目标配置。
+- **2026-09-21 C5 性能路径收口（已部署）**：提交 `7a5193c` 删除 C5 二次列表请求和五表重算，使单位台账读取时间由统一全景快照决定。GitHub Actions 运行 `35596006939` 的 Quality/Deploy 均成功，生产 release 为 `20260921-115005`。经授权的看门狗补载 `sys_user`、`data_readiness`、`daily_stats` 后，HeatWave 已由 9/12 恢复为 12/12 `HEALTHY`；生产机内部热快照实测 7.3ms，兼容单位分页接口实测 3.7ms。业务服务、模拟器、HeatWave 定时器与公网禁止索引响应头验收正常。
 
 ## 操作边界
 
