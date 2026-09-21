@@ -119,9 +119,10 @@ ALTER TABLE mod.business_document SECONDARY_ENGINE = NULL;
 - 2026-09-21 代码目标为 12 张：原 9 张业务与事实表，加上单位投影/快照热依赖
   `sys_user`、`data_readiness`、`daily_stats`。小表也会决定整个 join 是否具备 RAPID 下推条件，
   不能只按表体积判断是否加载。
-- 截至同日的只读核查，生产仍是旧清单 9/9 就绪；本轮只更改代码与文档，没有执行
-  `SECONDARY_ENGINE`/`SECONDARY_LOAD`。因为看门狗会对缺失目标表自动补载，该代码发布必须与独立数据库
-  授权、补载窗口和 12/12 健康验证作为同一个受控操作，不得仅发布代码后任由定时器意外触发 DDL。
+- 2026-09-21 已在明确数据库/生产授权下完成迁移：看门狗只识别到
+  `sys_user`、`data_readiness`、`daily_stats` 三张缺失表，分别执行 `SECONDARY_LOAD`；
+  业务行数据未改写，生产健康检查随后达到 12/12 `HEALTHY`。今后目标表变更仍必须把代码发布、
+  数据库授权、补载窗口、回退方案和健康验证作为同一个受控操作。
 
 ---
 
