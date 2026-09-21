@@ -40,6 +40,7 @@ Code intelligence & graph tools (ADR-0015):
 - Backend/API: development and API compatibility sections; database/security rules if access is needed.
 - Documents: documentation standard/lifecycle sections relevant to editing, KI or history.
 - KI is for defects only; new capabilities use feature/task tracking. Keep board/detail status aligned.
+- Owner-retired KIs remain `DONE` and must not be reopened or implemented from historical analysis alone. If a similar defect recurs, verify current evidence and register a new KI; cite the retired KI only as history.
 - Changed behavior/facts must update relevant living docs and CURRENT-STATE content, not merely its date.
 - Database investigation: use scripts/project/safe_db_query.py or the project mod_db_query tool.
 - Production: read ENFORCEMENT gates B/D and deployment standards; check make sim-status before authorized publishing.

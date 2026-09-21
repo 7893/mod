@@ -2,7 +2,7 @@
 
 更新日期：2026-09-21
 状态：现行
-适用范围：已发现但尚未修复的业务、数据、系统与清理类问题
+适用范围：已发现问题及其当前追踪状态
 
 本文只登记问题，不作为执行授权。修复任一条目前需按 `ENFORCEMENT.md` 与
 `docs/development/DATA-AND-SECURITY-STANDARD.md` 确认范围、只读核查、备份与授权。
@@ -10,27 +10,28 @@
 
 项目已彻底停用 GitHub Issues（详见 [ADR-0014](decisions/0014-停用GitHub-Issues统一使用本地KI问题跟踪体系.md)）。所有需求、任务、缺陷与技术债务统一在仓内任务与已知问题看板中闭环管理。每个已知问题的详细背景、分析与处置记录见 `docs/issues/`。
 
-条目状态取值：OPEN（待处理）、IN-PROGRESS（处理中）、DONE（已完成，保留供追溯）。
+条目状态取值：OPEN（待处理）、IN-PROGRESS（处理中）、DONE（已完成或由 Owner 终止追踪，保留供追溯）。
+2026-09-21 的存量看板重置见 [ADR-0023](decisions/0023-清空存量KI并按当前复现重新登记.md)；
+被 Owner 终止的条目不代表已验证修复，不重开，同类缺陷只按当前新证据重新登记。
 
 ---
 
 ## 活跃问题（OPEN / IN-PROGRESS）
 
-| 编号 | 标题 | 状态 | 优先级 | 链接 |
-|---|---|---|---|---|
-| KI-101 | 调度大屏常驻自愈看门狗与实时流帧率节流 | OPEN | P2 | [详情](issues/KI-101-调度大屏常驻自愈看门狗与实时流帧率节流.md) |
-| KI-098 | API 后端迁移至 Cloudflare Workers 全家桶 | OPEN | P2 | [详情](issues/KI-098-API后端迁移至CloudflareWorkers全家桶.md) |
-| KI-097 | 自动发布与应急发布重复实现 | OPEN | P2 | [详情](issues/KI-097-自动发布与应急发布重复实现.md) |
-| KI-094 | 模拟审计日志完整性与容量失控 | OPEN | P2 | [详情](issues/KI-094-模拟审计日志完整性与容量失控.md) |
-| KI-093 | 数据库结构变更缺少版本化迁移 | OPEN | P2 | [详情](issues/KI-093-数据库结构变更缺少版本化迁移.md) |
-| KI-091 | 模拟器应用层ID分配仍存在重启竞态 | OPEN | P1 | [详情](issues/KI-091-模拟器应用层ID分配仍存在重启竞态.md) |
-| KI-090 | HeatWave加载清单与热点查询来源错位 | IN-PROGRESS | P2 | [详情](issues/KI-090-HeatWave加载清单与热点查询来源错位.md) |
-| KI-089 | 多Worker快照缓存状态分裂 | OPEN | P1 | [详情](issues/KI-089-多Worker快照缓存状态分裂.md) |
+当前无活跃 KI。
 
 ## 已关闭问题（DONE）
 
 | 编号 | 标题 | 状态 | 优先级 | 链接 |
 |---|---|---|---|---|
+| KI-101 | 调度大屏常驻自愈看门狗与实时流帧率节流·Owner 终止追踪 | DONE | P2 | [详情](issues/KI-101-调度大屏常驻自愈看门狗与实时流帧率节流.md) |
+| KI-098 | API 后端迁移至 Cloudflare Workers 全家桶·Owner 终止追踪 | DONE | P2 | [详情](issues/KI-098-API后端迁移至CloudflareWorkers全家桶.md) |
+| KI-097 | 自动发布与应急发布重复实现·Owner 终止追踪 | DONE | P2 | [详情](issues/KI-097-自动发布与应急发布重复实现.md) |
+| KI-094 | 模拟审计日志完整性与容量失控·Owner 终止追踪 | DONE | P2 | [详情](issues/KI-094-模拟审计日志完整性与容量失控.md) |
+| KI-093 | 数据库结构变更缺少版本化迁移·Owner 终止追踪 | DONE | P2 | [详情](issues/KI-093-数据库结构变更缺少版本化迁移.md) |
+| KI-091 | 模拟器应用层 ID 分配仍存在重启竞态·Owner 终止追踪 | DONE | P1 | [详情](issues/KI-091-模拟器应用层ID分配仍存在重启竞态.md) |
+| KI-090 | HeatWave 加载清单与热点查询来源错位·Owner 终止追踪 | DONE | P2 | [详情](issues/KI-090-HeatWave加载清单与热点查询来源错位.md) |
+| KI-089 | 多 Uvicorn 进程快照缓存状态分裂·Owner 终止追踪 | DONE | P1 | [详情](issues/KI-089-多Worker快照缓存状态分裂.md) |
 | KI-102 | 六屏信息去重与全量可见布局重构 | DONE | P1 | [详情](issues/KI-102-六屏信息去重与全量可见布局重构.md) |
 | KI-100 | 大屏图表物料抽象与业务视图配置解耦 | DONE | P2 | [详情](issues/KI-100-大屏图表物料抽象与业务视图配置解耦.md) |
 | KI-099 | 图表 Design Tokens 双端契约与静态门禁治理 | DONE | P2 | [详情](issues/KI-099-图表DesignTokens双端契约与静态门禁治理.md) |
