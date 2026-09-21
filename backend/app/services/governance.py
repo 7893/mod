@@ -101,53 +101,6 @@ def get_issue_timeline(conn: Connection, issue_id: str) -> List[Dict[str, Any]]:
     return [dict(r) for r in conn.execute(text(sql), {"issue_id": issue_id}).mappings()]
 
 
-def dispatch_issue(
-    conn: Connection,
-    issue_id: str,
-    action: str = "一键督办",
-    actor: str = "数字化总指挥部",
-    detail: str = "指挥中心下发特派军令状，要求 24 小时内攻克卡阻并限期清账。"
-) -> Optional[Dict[str, Any]]:
-    """Dispatch and boost an issue (Interactive God-hand)."""
-    issue = get_governance_issue(conn, issue_id)
-    if not issue:
-        return None
-
-    now = datetime.now(timezone.utc)
-    new_status = "IN_PROGRESS" if issue["status"] == "DISCOVERED" else issue["status"]
-    assigned_owner = issue["owner"] or "总指挥部特派督导专班·刘波"
-
-    try:
-        conn.execute(text("""
-            UPDATE governance_issue
-            SET status = :status, owner = :owner, updated_at = :now
-            WHERE id = :issue_id
-        """), {
-            "status": new_status,
-            "owner": assigned_owner,
-            "now": now,
-            "issue_id": issue_id,
-        })
-
-        conn.execute(text("""
-            INSERT INTO issue_timeline (issue_id, action, actor, detail, occurred_at)
-            VALUES (:issue_id, :action, :actor, :detail, :now)
-        """), {
-            "issue_id": issue_id,
-            "action": action,
-            "actor": actor,
-            "detail": detail,
-            "now": now,
-        })
-        conn.commit()
-    except Exception as e:
-        if "1142" in str(e) or "denied to user" in str(e).lower():
-            raise PermissionError("当前数据库账号处于只读模式，无写入权限") from e
-        raise
-
-    return get_governance_issue(conn, issue_id)
-
-
 def get_ai_quota_status(conn: Connection) -> Dict[str, Any]:
     """Retrieve today's AI quota ledger and status."""
     today = datetime.now(timezone.utc).date()
@@ -181,64 +134,6 @@ def get_ai_quota_status(conn: Connection) -> Dict[str, Any]:
     }
 
 
-def enrich_governance_issue(conn: Connection, issue_id: str) -> Optional[Dict[str, Any]]:
-    """On-demand AI diagnosis and enrichment for an issue."""
-    issue = get_governance_issue(conn, issue_id)
-    if not issue:
-        return None
-
-    from simulation.cf_ai_client import CloudflareAIClient
-
-    client = CloudflareAIClient()
-    res = client.enrich_issue(
-        issue_id=issue_id,
-        issue_type=issue["issueType"],
-        unit_name=issue["unitName"],
-        province=issue["province"],
-        current_description=issue["description"] or "",
-        rework_count=issue["reworkCount"],
-    )
-
-    now = datetime.now(timezone.utc)
-    cur_desc = issue["description"] or ""
-    expanded_desc = (
-        f"{cur_desc}\n\n"
-        f"【专家深度研判 · {res.source}】\n"
-        f"问题定性：{res.summary}\n"
-        f"根本原因：{res.root_cause}\n"
-        f"督办举措：{res.suggested_action}"
-    ).strip()
-
-    try:
-        conn.execute(text("""
-            UPDATE governance_issue
-            SET ai_enriched = 1, description = :desc, updated_at = :now
-            WHERE id = :issue_id
-        """), {
-            "desc": expanded_desc,
-            "now": now,
-            "issue_id": issue_id,
-        })
-
-        timeline_detail = f"{res.summary}。根因：{res.root_cause}。建议：{res.suggested_action}"
-        conn.execute(text("""
-            INSERT INTO issue_timeline (issue_id, action, actor, detail, occurred_at)
-            VALUES (:issue_id, 'AI深度研判', :actor, :detail, :now)
-        """), {
-            "issue_id": issue_id,
-            "actor": f"AI督察专家（{res.model}）",
-            "detail": timeline_detail,
-            "now": now,
-        })
-        conn.commit()
-    except Exception as e:
-        if "1142" in str(e) or "denied to user" in str(e).lower():
-            raise PermissionError("当前数据库账号处于只读模式，无写入权限") from e
-        raise
-
-    return get_governance_issue(conn, issue_id)
-
-
 def get_recent_governance_activities(conn: Connection, limit: int = 10) -> List[Dict[str, Any]]:
     """Retrieve recent issue timeline activities across all issues for live broadcast ticker."""
     sql = """
@@ -252,5 +147,4 @@ def get_recent_governance_activities(conn: Connection, limit: int = 10) -> List[
         LIMIT :limit
     """
     return [dict(r) for r in conn.execute(text(sql), {"limit": limit}).mappings()]
-
 

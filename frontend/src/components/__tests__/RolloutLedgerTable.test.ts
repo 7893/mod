@@ -6,16 +6,12 @@ import { useProjectStore } from '../../stores/project'
 import snapshotData from '../../data/fallback-snapshot.json'
 
 function mockLedgerApi() {
-  return vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+  return vi.fn().mockImplementation((url: string) => {
     if (url.includes('/api/dashboard/snapshot')) {
       return Promise.resolve({
         ok: true,
         json: async () => snapshotData,
       })
-    }
-    if (url.includes('/api/organizations/') && init?.method === 'PATCH') {
-      const id = Number(url.split('/').pop())
-      return Promise.resolve({ ok: true, json: async () => ({ ok: true, id }) })
     }
     return Promise.reject(new Error(`Unexpected fetch: ${url}`))
   })
@@ -136,25 +132,13 @@ describe('RolloutLedgerTable', () => {
     expect(wrapper.findAll('tbody tr').length).toBeGreaterThan(0)
   })
 
-  it('keeps the paginated row synchronized after an edit', async () => {
+  it('is a read-only ledger without edit affordances', async () => {
     const wrapper = mount(RolloutLedgerTable)
     await flushPromises()
 
-    const firstEdit = wrapper.findAll('button').find((button) => button.text().includes('调态'))
-    await firstEdit?.trigger('click')
-
-    const drawer = wrapper.get('[role="dialog"]')
-    const ownerInput = drawer.find('input:not([type="range"])')
-    await ownerInput.setValue('新项目联系人')
-    await drawer.get('form').trigger('submit')
-    await flushPromises()
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('新项目联系人')
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/organizations/'),
-      expect.objectContaining({ method: 'PATCH' }),
-    )
+    expect(wrapper.text()).not.toContain('调态')
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+    expect(vi.mocked(globalThis.fetch).mock.calls.every(([, init]) => !init?.method || init.method === 'GET')).toBe(true)
   })
 
   it('does not start a second organization-list request', async () => {

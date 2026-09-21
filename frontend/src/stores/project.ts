@@ -1,4 +1,3 @@
-import { formatDateTime } from '../formatters/metrics.ts'
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import snapshotData from '../data/fallback-snapshot.json'
@@ -21,16 +20,6 @@ export interface EntityRow {
   readinessStatus?: '已导入' | '已校验' | '收集中' | '未收集' | null
   voucherRate: number | null
   updatedAt: string
-}
-
-export interface AuditRow {
-  id: number
-  time: string
-  operator: string
-  entity: string
-  field: string
-  before: string
-  after: string
 }
 
 export interface RolloutBatchItem {
@@ -318,11 +307,6 @@ export const useProjectStore = defineStore('project', () => {
   let timerId: number | null = null
   let refreshSequence = 0
 
-  const audits = ref<AuditRow[]>([
-    { id: 1, time: '2026-08-30 15:10:08', operator: '项目管理员', entity: '第一批·羊城林业研究院', field: '上线状态', before: '双轨运行', after: '已上线' },
-    { id: 2, time: '2026-08-30 14:51:32', operator: '数据负责人', entity: '第二批·辽宁生态发展中心', field: '期初数据完成率', before: '98%', after: '100%' },
-  ])
-
   const statusCount = computed(() => entities.value.reduce<Record<string, number>>((acc, row) => {
     acc[row.status] = (acc[row.status] ?? 0) + 1
     return acc
@@ -372,31 +356,6 @@ export const useProjectStore = defineStore('project', () => {
     })
     return list
   })
-
-  function updateEntity(id: number, patch: Partial<EntityRow>) {
-    const row = entities.value.find((item) => item.id === id)
-    if (!row) return
-    const labels: Record<string, string> = {
-      status: '上线状态',
-      construction: '建设完成率',
-      openingData: '期初数据完成率',
-      owner: '项目联系人',
-    }
-    Object.entries(patch).forEach(([field, after]) => {
-      const before = String(row[field as keyof EntityRow] ?? '')
-      if (before === String(after)) return
-      audits.value.unshift({
-        id: Date.now() + audits.value.length,
-        time: formatDateTime(new Date(), { seconds: true }),
-        operator: '项目管理员',
-        entity: row.name,
-        field: labels[field] ?? field,
-        before: field.includes('construction') || field.includes('openingData') ? `${before}%` : before,
-        after: field.includes('construction') || field.includes('openingData') ? `${after}%` : String(after),
-      })
-    })
-    Object.assign(row, patch, { updatedAt: '刚刚' })
-  }
 
   async function refresh(silent = false) {
     // KI-059：绝不整屏/顶栏转圈。首屏与轮询始终已有兜底或上一份有效快照可展示，
@@ -458,7 +417,6 @@ export const useProjectStore = defineStore('project', () => {
   return {
     snapshot,
     entities,
-    audits,
     statusCount,
     provinceSummary,
     loading,
@@ -467,7 +425,6 @@ export const useProjectStore = defineStore('project', () => {
     dataSource,
     pollIntervalMs,
     refresh,
-    updateEntity,
     startPolling,
     stopPolling,
   }

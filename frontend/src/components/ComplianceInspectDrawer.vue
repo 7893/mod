@@ -3,10 +3,7 @@ import DrawerShell from './DrawerShell.vue'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import {
   AlertTriangle,
-  CheckCircle2,
   RotateCcw,
-  Send,
-  Sparkles,
   UserCheck,
   X,
 } from 'lucide-vue-next'
@@ -63,16 +60,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'dispatched', issue: GovernanceIssue): void
 }>()
 
 const issue = ref<GovernanceIssue | null>(null)
 const timeline = ref<TimelineEvent[]>([])
 const loading = ref(false)
-const dispatching = ref(false)
-const enriching = ref(false)
-const actionNotice = ref<string | null>(null)
-const actionError = ref(false)
+const loadError = ref<string | null>(null)
 let loadSequence = 0
 let loadController: AbortController | null = null
 
@@ -102,8 +95,7 @@ async function fetchIssueAndTimeline(unitId: number) {
   loading.value = true
   issue.value = null
   timeline.value = []
-  actionNotice.value = null
-  actionError.value = false
+  loadError.value = null
   try {
     const res = await fetch(props.issueId ? `${import.meta.env.BASE_URL}api/governance/issues/${encodeURIComponent(props.issueId)}` : `${import.meta.env.BASE_URL}api/governance/issues?unit_id=${unitId}&page_size=1`, {
       signal: controller.signal,
@@ -121,8 +113,7 @@ async function fetchIssueAndTimeline(unitId: number) {
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') return
     if (sequence !== loadSequence) return
-    actionError.value = true
-    actionNotice.value = '治理工单读取失败，请稍后重试。'
+    loadError.value = '治理工单读取失败，请稍后重试。'
     console.warn('Failed to load governance issue:', err)
   } finally {
     if (sequence === loadSequence) loading.value = false
@@ -135,87 +126,6 @@ async function fetchTimeline(issueId: string, signal?: AbortSignal): Promise<Tim
   return await res.json() as TimelineEvent[]
 }
 
-async function handleDispatch() {
-  if (!issue.value) return
-  dispatching.value = true
-  actionNotice.value = null
-  actionError.value = false
-  const issueId = issue.value.id
-  const unitId = props.unit?.id
-  try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issueId}/dispatch`, {
-      method: 'POST',
-    })
-    if (!res.ok) {
-      if (res.status === 403) {
-        const data = await res.json().catch(() => ({})) as { detail?: string }
-        throw new Error(data.detail || '当前处于演示只读模式，暂不支持在线派单')
-      }
-      throw new Error(`HTTP ${res.status}`)
-    }
-    const updated = await res.json() as GovernanceIssue
-    if (props.unit?.id !== unitId || issue.value?.id !== issueId) return
-    issue.value = updated
-    try {
-      timeline.value = await fetchTimeline(updated.id)
-      actionNotice.value = '特派军令状已下达！攻坚专班进入强力处置。'
-    } catch (timelineError) {
-      actionError.value = true
-      actionNotice.value = '督办已成功，但时间线刷新失败，请稍后重新打开。'
-      console.warn('Timeline refresh after dispatch failed:', timelineError)
-    }
-    emit('dispatched', updated)
-  } catch (err: any) {
-    actionError.value = true
-    actionNotice.value = (err?.message && !err.message.startsWith('HTTP'))
-      ? err.message
-      : '督办失败，工单未变更，请稍后重试。'
-    console.warn('Dispatch failed:', err)
-  } finally {
-    dispatching.value = false
-  }
-}
-
-async function handleEnrich() {
-  if (!issue.value) return
-  enriching.value = true
-  actionNotice.value = null
-  actionError.value = false
-  const issueId = issue.value.id
-  const unitId = props.unit?.id
-  try {
-    const res = await fetch(`${import.meta.env.BASE_URL}api/governance/issues/${issueId}/enrich`, {
-      method: 'POST',
-    })
-    if (!res.ok) {
-      if (res.status === 403) {
-        const data = await res.json().catch(() => ({})) as { detail?: string }
-        throw new Error(data.detail || '当前处于演示只读模式，暂不支持在线AI研判')
-      }
-      throw new Error(`HTTP ${res.status}`)
-    }
-    const updated = await res.json() as GovernanceIssue
-    if (props.unit?.id !== unitId || issue.value?.id !== issueId) return
-    issue.value = updated
-    try {
-      timeline.value = await fetchTimeline(updated.id)
-      actionNotice.value = 'AI 专家研判完成，已回填深层根因与销项举措。'
-    } catch (timelineError) {
-      actionError.value = true
-      actionNotice.value = 'AI 研判已完成，但时间线刷新失败，请稍后重新打开。'
-      console.warn('Timeline refresh after enrichment failed:', timelineError)
-    }
-  } catch (err: any) {
-    actionError.value = true
-    actionNotice.value = (err?.message && !err.message.startsWith('HTTP'))
-      ? err.message
-      : 'AI 研判失败，工单未变更，请稍后重试。'
-    console.warn('Enrich failed:', err)
-  } finally {
-    enriching.value = false
-  }
-}
-
 watch(
   () => [props.unit, props.issueId] as const,
   ([newUnit]) => {
@@ -226,7 +136,7 @@ watch(
       loadController?.abort()
       issue.value = null
       timeline.value = []
-      actionNotice.value = null
+      loadError.value = null
     }
   },
   { immediate: true },
@@ -243,7 +153,7 @@ onUnmounted(() => { ++loadSequence; loadController?.abort() })
             <span class="font-mono text-cockpit-xs text-sky-400 font-bold">MOD-{{ unit.id }}</span>
             <span v-if="issue" class="font-mono text-cockpit-xs text-slate-500 font-semibold">{{ issue.id }}</span>
           </div>
-          <h3 class="text-cockpit-md font-semibold text-slate-100">合规攻防与督办协同</h3>
+          <h3 class="text-cockpit-md font-semibold text-slate-100">合规治理流水核查</h3>
         </div>
         <button
           type="button"
@@ -302,39 +212,13 @@ onUnmounted(() => { ++loadSequence; loadController?.abort() })
         </div>
       </div>
 
-      <!-- 上帝之手双向督办动作条 -->
-      <div v-if="issue && !isTerminal" class="flex items-center gap-2">
-        <button
-          type="button"
-          :disabled="dispatching"
-          class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold transition-colors text-cockpit-xs cursor-pointer shadow-lg shadow-sky-950/40"
-          @click="handleDispatch"
-        >
-          <Send :size="12" :class="{ 'animate-pulse': dispatching }" />
-          <span>{{ dispatching ? '特派指令下达中…' : '一键督办（指挥部令）' }}</span>
-        </button>
-
-        <button
-          type="button"
-          :disabled="enriching"
-          class="flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-surface-veil-03 hover:bg-white/10 border border-surface-veil-06 disabled:opacity-50 text-slate-200 font-medium transition-colors text-cockpit-xs cursor-pointer"
-          title="调用 Cloudflare Workers AI 深度研判（受项目侧 3,000 Neurons/日预算熔断保护，不等同于 Cloudflare 账户账单上限）"
-          @click="handleEnrich"
-        >
-          <Sparkles :size="12" class="text-amber-400" :class="{ 'animate-spin': enriching }" />
-          <span>{{ enriching ? 'AI研判中…' : 'AI深度研判' }}</span>
-        </button>
-      </div>
-
-      <!-- 操作通知反馈 -->
+      <!-- 读取失败反馈 -->
       <div
-        v-if="actionNotice"
-        class="p-2 rounded text-cockpit-xs flex items-center gap-1.5"
-        :class="actionError ? 'bg-rose-950/30 border border-rose-500/30 text-rose-400' : 'bg-emerald-950/30 border border-emerald-500/30 text-emerald-400'"
+        v-if="loadError"
+        class="p-2 rounded text-cockpit-xs flex items-center gap-1.5 bg-rose-950/30 border border-rose-500/30 text-rose-400"
       >
-        <AlertTriangle v-if="actionError" :size="13" class="flex-shrink-0" />
-        <CheckCircle2 v-else :size="13" class="flex-shrink-0" />
-        <span>{{ actionNotice }}</span>
+        <AlertTriangle :size="13" class="flex-shrink-0" />
+        <span>{{ loadError }}</span>
       </div>
 
       <!-- 专家深入研判内容 -->

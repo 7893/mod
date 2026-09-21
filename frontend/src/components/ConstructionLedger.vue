@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ArrowLeft, Building, CheckCircle2, Database, Filter, History, RotateCcw } from 'lucide-vue-next'
+import { ArrowLeft, Building, CheckCircle2, Database, Filter, RotateCcw } from 'lucide-vue-next'
 import CockpitPanel from './CockpitPanel.vue'
 import MetricGrid from './blocks/MetricGrid.vue'
 import type { MetricItem } from './blocks/types.ts'
-import EntityEditDrawer from './ledger/EntityEditDrawer.vue'
 import FilterSelect from './ledger/FilterSelect.vue'
 import LedgerPager from './ledger/LedgerPager.vue'
 import SearchInput from './ledger/SearchInput.vue'
-import { useEntityEditor } from '../composables/useEntityEditor.ts'
 import { useEntityLedger } from '../composables/useEntityLedger.ts'
 import { formatCount, formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
@@ -124,7 +122,6 @@ const summaryItems = computed<MetricItem[]>(() => [
   },
 ])
 
-const { editing, draft, saving, error: editError, open: openEdit, close: closeEdit, save } = useEntityEditor()
 </script>
 
 <template>
@@ -132,7 +129,7 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
     <!-- 概览与下钻导航 -->
     <CockpitPanel
       title="数据准备台账与单位状态"
-      :subtitle="`${formatCount(store.entities.length)} 家单位建设完成度、期初数据状态与审计留痕`"
+      :subtitle="`${formatCount(store.entities.length)} 家单位建设完成度与期初数据状态`"
       class="flex-shrink-0"
     >
       <template #actions>
@@ -151,7 +148,7 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
     <!-- 台账主表 -->
     <CockpitPanel
       title="单位建设与期初数据台账"
-      :subtitle="isFiltered ? `筛选出 ${filtered.length} 家 / 共 ${store.entities.length} 家纳管单位` : `全量纳管单位建设完成度、期初数据与推进状态维护（共 ${store.entities.length} 家）`"
+      :subtitle="isFiltered ? `筛选出 ${filtered.length} 家 / 共 ${store.entities.length} 家纳管单位` : `全量纳管单位建设完成度、期初数据与推进状态（共 ${store.entities.length} 家）`"
       class="flex-1 min-h-0"
     >
       <template #actions>
@@ -188,7 +185,6 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
                 <th class="px-3 py-2 text-right">期初数据 / 准备态</th>
                 <th class="px-3 py-2 text-right">凭证率</th>
                 <th class="px-3 py-2">更新时间</th>
-                <th class="px-3 py-2 text-center">操作</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-surface-veil-06">
@@ -234,18 +230,9 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
                 </td>
                 <td class="px-3 py-1.5 text-right font-mono text-slate-300">{{ formatPercent(row.voucherRate) }}</td>
                 <td class="px-3 py-1.5 text-slate-400 font-mono text-cockpit-xs">{{ row.updatedAt }}</td>
-                <td class="px-3 py-1.5 text-center">
-                  <button
-                    type="button"
-                    class="px-2.5 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/25 transition-colors text-cockpit-xs font-medium cursor-pointer"
-                    @click="openEdit(row)"
-                  >
-                    调态
-                  </button>
-                </td>
               </tr>
               <tr v-if="!paginated.length">
-                <td colspan="10" class="px-3 py-10 text-center text-slate-500">
+                <td colspan="9" class="px-3 py-10 text-center text-slate-500">
                   <div class="flex flex-col items-center justify-center gap-2">
                     <p>无匹配单位记录（当前筛选条件下未检索到数据）</p>
                     <button
@@ -267,21 +254,5 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
       </div>
     </CockpitPanel>
 
-    <!-- 最近操作记录 -->
-    <CockpitPanel title="最近操作记录" subtitle="台账变更审计留痕" class="flex-shrink-0">
-      <template #actions><History :size="16" class="text-slate-400" /></template>
-      <div class="flex flex-col gap-1.5 divide-y divide-surface-veil-06">
-        <div v-for="audit in store.audits.slice(0, 5)" :key="audit.id" class="flex items-center gap-3 py-1 text-cockpit-xs text-slate-300 flex-wrap">
-          <span class="font-mono text-slate-500">{{ audit.time }}</span>
-          <b class="font-semibold text-slate-100">{{ audit.operator }}</b>
-          <span class="text-slate-400">修改「{{ audit.entity }}」{{ audit.field }}</span>
-          <del class="text-rose-400 font-mono">{{ audit.before }}</del>
-          <span class="text-slate-600">→</span>
-          <ins class="text-emerald-400 font-mono no-underline">{{ audit.after }}</ins>
-        </div>
-      </div>
-    </CockpitPanel>
-
-    <EntityEditDrawer v-if="editing" v-model:draft="draft" :entity="editing" :saving="saving" :error="editError" @close="closeEdit" @save="save" />
   </div>
 </template>

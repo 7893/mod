@@ -98,10 +98,10 @@ Zone 编号是当前产品坐标，用于沟通定位，不得替代业务标题
 - 复用组件放 `components/`，页面放 `views/`，复用逻辑放 `composables/`，共享状态放 `stores/`，
   无副作用的纯函数放 `utils/`（必须配套单测）；不新建 `misc` 型散装模块。
 - 积木库 `components/blocks/` 现有：`MetricGrid`（`flat`/`fill`/`size xs–lg`）、`StatList`（`flat`/`dense`/`ranked`）、`StatusList`（`wrap`/`scroll`/`chevron`）、`ChartBlock`、`CommandBand`、`OverviewBand`、`CompositionBar`、`NoteBanner`、`EmptyNote`、`BriefingList`（分节要点全文列表，不截断）。新增展示结构前先检查能否由现有积木 + 数据映射表达；新增积木需同时补 `blocks.css` 原型与本表。
-- 台账/清单类面板必须复用 `components/ledger/` 物料（`SearchInput`、`FilterSelect`、`LedgerPager`、
-  `EntityEditDrawer`）与 `composables/usePagedList.ts`（分页状态机）、`composables/useEntityEditor.ts`
-  （调态抽屉）、`utils/entityOptions.ts`（省份/批次/状态顺序表、带计数选项、关键字匹配），
-  不得在组件内重写筛选、分页、计数或抽屉逻辑。
+- 台账/清单类面板必须复用 `components/ledger/` 物料（`SearchInput`、`FilterSelect`、`LedgerPager`）、
+  `composables/usePagedList.ts`（分页状态机）与 `utils/entityOptions.ts`（省份/批次/状态顺序表、
+  带计数选项、关键字匹配），不得在组件内重写筛选、分页或计数逻辑。展示前端不提供单位调态；
+  不得新增缺少身份、授权和服务端审计的写入口。
 - 单位台账的原始列表必须来自全局快照 `store.entities`；C5 和 B 屏完整台账统一使用
   `composables/useEntityLedger.ts` 组合筛选与分页。风险、合规等派生清单可以增加业务分类，但不得为同一批单位
   再发起列表请求或在后端重复组装投影。`GET /api/organizations` 只是兼容面，不是前端新台账的数据源。
@@ -178,15 +178,15 @@ Zone 编号是当前产品坐标，用于沟通定位，不得替代业务标题
 - 状态词表四态：前端 `RolloutStatus` 与后端 `DISPLAY_STATUSES`（未启动/准备中/双轨运行/已上线）一致，不允许出现后端不会返回的幻影状态（如「建设中」）。建设/期初滞后只对「双轨运行」单位评估；「准备中」单位一律走 `prepStuck`（准备期卡顿），二者互斥；「已上线」不再评估进度。高危/关注分界读 `risk.constructionCriticalRate`。
 - 风险维度汇总 `qualityMetrics.buildRiskDimensionBreakdown(units, rules)` 必须传入 `businessRules`，门禁文案由规则生成，高危数按单位级 `riskLevel` 统计，不得固定写维度等级。合规标签枚举以 `COMPLIANCE_TAGS` 为唯一来源，视图的标签筛选与计数都从它派生。
 - 2026-09-09 完成全局样式收口：删除 `foundation/components/utilities/page-hierarchy/dashboard-topbar/responsive-breakpoints` 六个文件及约 120 条无引用规则，全局 CSS 由 1897 行降至约 880 行；删除 `:root` 旧变量层，Token 唯一来源为 `theme.css`。
-- 2026-09-09 完成台账层去重：`ConstructionLedger`/`RolloutLedgerTable`/`AtRiskUnitTable` 的筛选、分页、计数、调态抽屉收敛到 `components/ledger/` 与 `usePagedList`/`useEntityEditor`/`entityOptions`，三组件合计由 1234 行降至约 790 行；`AtRiskUnitTable` 顺带补齐总页数收缩时的最小页钳位。
+- 2026-09-09 完成台账层去重：`ConstructionLedger`/`RolloutLedgerTable`/`AtRiskUnitTable` 的筛选、分页与计数收敛到 `components/ledger/`、`usePagedList` 和 `entityOptions`；当时保留的调态抽屉与 `useEntityEditor` 已于 2026-09-21 按 KI-092 只读决策删除。`AtRiskUnitTable` 同时补齐总页数收缩时的最小页钳位。
 - 2026-09-21 完成台账数据源收口：C5 退役 `useOrganizations.ts` 独立列表请求，与 B 屏台账共用
   `store.entities` + `useEntityLedger.ts`；后端兼容接口仅筛选同一快照，不再存在五表重算分支。
 - 数字与日期时间展示统一走 `formatters/metrics.ts`（`formatCount`/`formatPercent`/`formatDateTime`）：视图、组件、图表 tooltip 与 store 中不得再直接调用 `toLocaleString`/`Intl.*`，空值一律显示 `—`。
 - KI-102 第二轮信息架构治理已完成主职责收敛。A 屏当前为 A1 五域导航、A2 省域摘要、A3 跨域趋势、A4 地图、A5 今日变化、A6 行动队列；批次与运营专业事实分别归 B/C 与 D。D 屏当前为 D1 端到端业务链路，D2–D7 分别承载日吞吐、凭证、集成、双轨、质量与审批制证流转职责；第三行按内容量分配 D6 左、D6 右与 D7，外层固定 9:3，D6 内部固定 7:5，约占整行 44%/31%/25%。
-- B 屏已删除历史同源雷达，当前 B1–B6 连续编号，B3 为滞后视角，B6 台账预览常驻；完整筛选与调态台账使用宽抽屉，不再替换主画布。C 屏把批次当前构成与历史爬坡合并到 C2，C3 为省域推进缺口，C4 仅在联系人覆盖存在例外时显示分布，C5 为单位台账。E1 只保留合规摘要，E2 展示风险标签，E3 基于最近治理活动去重后展示工单流转阶段；该统计不是全量工单库存。F1 只给首要瓶颈与行动优先级，F3/F4 分别承载风险分布与模型实验事实。时间序列或异常字段缺失时必须显示明确空态。
+- B 屏已删除历史同源雷达，当前 B1–B6 连续编号，B3 为滞后视角，B6 台账预览常驻；完整筛选台账使用宽抽屉，不再替换主画布，且保持只读。C 屏把批次当前构成与历史爬坡合并到 C2，C3 为省域推进缺口，C4 仅在联系人覆盖存在例外时显示分布，C5 为只读单位台账。E1 只保留合规摘要，E2 展示风险标签，E3 基于最近治理活动去重后展示工单流转阶段；该统计不是全量工单库存。F1 只给首要瓶颈与行动优先级，F3/F4 分别承载风险分布与模型实验事实。时间序列或异常字段缺失时必须显示明确空态。
 - 信息密度必须驱动具名骨架比例：A 屏左栏由 `dashboard-left` 固定 A2/A3 面积分工，右栏由 `cockpit-right` 固定 A5/A6 面积分工；B 屏三行分别承载主分析、门禁与常驻台账预览；C2 作为主分析画布占左侧 8 列并跨两行，C3/C4 作为辅助区在右侧 4 列上下叠放。比例只允许在 `theme.css` 的具名 Token 中维护。异步简报等首屏内容必须预留稳定槽位，数据到达不得推动主体布局；单行简报内容整体居中。
 - 笛卡尔图表的分类图例统一放入 `CockpitPanel` 标题行的 `actions` 插槽，不得侵占绘图区顶部或从右侧切割坐标系；窄面板使用 `PanelLegend compact` 只显示颜色块，原生悬停提示与无障碍文本提供完整含义。只有 B5 等环图适合保持“图形在左、图例或精确读数在右”的横向组织。
-- E/F 屏合规治理与 AI 算力护栏闭环（GI-003/GI-004）：E 屏顶端集成 `LiveActivityTicker.vue`，毫秒级轮播专班一线处置流水，赋予大屏环境生命体征；E 屏台账支持下钻唤起 `ComplianceInspectDrawer.vue`（六态 Stepper、专班责任人、一键督办上帝之手与 AI 深度研判）；空闲 45 秒由 `KioskSpotlightTour.vue` 自动唤醒展厅聚光灯巡航 HUD 浮窗，交互瞬时淡出；F 屏操作区嵌入 `AiQuotaCapsule.vue`，透视 Cloudflare AI 每日 3,000 Neurons 安全额度与熔断状态，坚守 $0.00 零费用硬防护。详见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](GOVERNANCE-SIMULATION-SYNTHESIS.md)。
+- E/F 屏合规治理与 AI 算力护栏闭环（GI-003/GI-004）：E 屏顶端集成 `LiveActivityTicker.vue`，毫秒级轮播专班一线处置流水，赋予大屏环境生命体征；E 屏台账支持下钻唤起只读 `ComplianceInspectDrawer.vue`（六态 Stepper、专班责任人、历史研判与治理流水），不从展示端派单或触发 AI 写回；空闲 45 秒由 `KioskSpotlightTour.vue` 自动唤醒展厅聚光灯巡航 HUD 浮窗，交互瞬时淡出；F 屏操作区嵌入 `AiQuotaCapsule.vue`，透视 Cloudflare AI 每日 3,000 Neurons 安全额度与熔断状态，坚守 $0.00 零费用硬防护。详见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](GOVERNANCE-SIMULATION-SYNTHESIS.md)。
 
 
 ## 前端结构变更顺序（后续 AI 必须按此顺序，不得跳步）

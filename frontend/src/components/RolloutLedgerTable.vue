@@ -2,11 +2,9 @@
 import { computed, ref } from 'vue'
 import { RotateCcw } from 'lucide-vue-next'
 import CockpitPanel from './CockpitPanel.vue'
-import EntityEditDrawer from './ledger/EntityEditDrawer.vue'
 import FilterSelect from './ledger/FilterSelect.vue'
 import LedgerPager from './ledger/LedgerPager.vue'
 import SearchInput from './ledger/SearchInput.vue'
-import { useEntityEditor } from '../composables/useEntityEditor.ts'
 import { useEntityLedger } from '../composables/useEntityLedger.ts'
 import { formatPercent } from '../formatters/metrics.ts'
 import { useProjectStore } from '../stores/project.ts'
@@ -46,7 +44,6 @@ function resetFilters() {
   query.value = ''
 }
 
-const { editing, draft, saving, error: editError, open: openEdit, close: closeEdit, save } = useEntityEditor()
 </script>
 
 <template>
@@ -89,7 +86,6 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
               <th class="sticky top-0 bg-slate-900 px-3 py-2 text-right font-medium text-slate-400">期初数据</th>
               <th class="sticky top-0 bg-slate-900 px-3 py-2 text-right font-medium text-slate-400">凭证率</th>
               <th class="sticky top-0 bg-slate-900 px-3 py-2 text-left font-medium text-slate-400">更新时间</th>
-              <th class="sticky top-0 bg-slate-900 px-3 py-2 text-center font-medium text-slate-400">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -132,17 +128,9 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
               <td class="px-3 py-1.5 text-right font-mono">{{ row.openingData }}%</td>
               <td class="px-3 py-1.5 text-right font-mono">{{ formatPercent(row.voucherRate) }}</td>
               <td class="px-3 py-1.5 text-slate-400 font-mono text-cockpit-xs">{{ row.updatedAt }}</td>
-              <td class="px-3 py-1.5 text-center">
-                <button
-                  class="px-2.5 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/25 transition-colors text-cockpit-xs font-medium cursor-pointer"
-                  @click="openEdit(row)"
-                >
-                  调态
-                </button>
-              </td>
             </tr>
             <tr v-if="!paginatedEntities.length">
-              <td colspan="10" class="px-3 py-10 text-center text-slate-500">
+              <td colspan="9" class="px-3 py-10 text-center text-slate-500">
                 <div class="flex flex-col items-center justify-center gap-2">
                   <p>无匹配单位记录（当前筛选条件下未检索到数据）</p>
                   <button
@@ -164,5 +152,4 @@ const { editing, draft, saving, error: editError, open: openEdit, close: closeEd
     </div>
   </CockpitPanel>
 
-  <EntityEditDrawer v-if="editing" v-model:draft="draft" :entity="editing" :saving="saving" :error="editError" @close="closeEdit" @save="save" />
 </template>

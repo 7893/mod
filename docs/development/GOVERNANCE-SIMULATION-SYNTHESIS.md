@@ -91,7 +91,7 @@ graph TD
 - **架构解法**：
   - **$0.00 零费用硬防护**：挂接 Cloudflare Workers AI 免费额度，每日设置 3,000 Neurons 硬限制看门狗（`QuotaWatchdog`），日级流水记录于 `sim_ai_quota_ledger`，超额瞬时熔断（FUSED）。
   - **离线降级双保险**：内置五大行业（煤炭开采、电力能源、化工新材、高端装备、现代金融）高拟真叙事库（`LocalNarrativeLibrary`），网络异常或熔断时零等待无感降级。
-  - **前端交互闭环**：E 屏落地 `ComplianceInspectDrawer.vue`（六态 Stepper、专班展示、一键督办上帝之手），F 屏落地 `AiQuotaCapsule.vue`（实时算力监控胶囊）。
+  - **前端核查闭环**：E 屏落地只读 `ComplianceInspectDrawer.vue`（六态 Stepper、专班展示、历史研判与治理流水），F 屏落地 `AiQuotaCapsule.vue`（实时算力监控胶囊）；2026-09-21 起展示端不再提供一键督办或在线 AI 写回。
 
 ### 4. KI-062：推进器组件存在但未接入主循环静默失效
 - **缺陷现象**：`ConstructionPropeller` 与 `TrickleBackfiller` 代码虽已实现，但未在模拟器主循环 `simulation/runtime_service.py` 的慢电影建设周期中调用，导致模拟器运行时治理状态完全静止。

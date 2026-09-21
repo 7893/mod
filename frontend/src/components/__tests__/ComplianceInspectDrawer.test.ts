@@ -53,7 +53,7 @@ describe('ComplianceInspectDrawer', () => {
     },
   ]
 
-  it('renders issue status machine, specialist, and action buttons', async () => {
+  it('renders issue status and timeline without online write actions', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockImplementation((url: string) => {
@@ -82,9 +82,10 @@ describe('ComplianceInspectDrawer', () => {
     expect(wrapper.text()).toContain('ISS-20260908-0872')
     expect(wrapper.text()).toContain('二次返工 x1')
     expect(wrapper.text()).toContain('省信通前置网络保障小组·赵伟')
-    expect(wrapper.text()).toContain('一键督办（指挥部令）')
-    expect(wrapper.text()).toContain('AI深度研判')
+    expect(wrapper.text()).not.toContain('一键督办（指挥部令）')
+    expect(wrapper.text()).not.toContain('AI深度研判')
     expect(wrapper.text()).toContain('专项排查')
+    expect(vi.mocked(globalThis.fetch).mock.calls.every(([, init]) => !init?.method || init.method === 'GET')).toBe(true)
   })
 
   it('emits close event when close button is clicked', async () => {

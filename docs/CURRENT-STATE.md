@@ -100,8 +100,8 @@
   - `build_entities()` 产生的全景快照是单位台账唯一原始投影；前端 C5 与 B 屏完整台账均从 `store.entities`
     读取，共用 `useEntityLedger.ts` 的筛选与分页内核，不再为 C5 发起第二次单位列表请求。
   - 已删除 `useOrganizations.ts` 和后端 `query_entities_paginated()` 五表重算路径。`GET /api/organizations`
-    仅作兼容接口，在同一快照投影上筛选、分页，不执行额外 SQL；调态仍经 `PATCH /api/organizations/{id}`
-    写入并由 store 局部同步，后续快照刷新进行权威对齐。
+    仅作兼容接口，在同一快照投影上筛选、分页，不执行额外 SQL；展示端与 API 均不提供单位调态，
+    权威状态只由后台业务/模拟进程推进并通过快照刷新进入前端。
   - 原 2026-09-14 的 C5 独立服务端分页路线已被本决策取代；原有降级能力不变，仍由全景快照统一切换 live/fallback。
 - 数据库为托管 MySQL HeatWave（库 `mod`，Always Free 规格），连接主机、端口与凭据
   仅存于运行主机的本地环境文件，不写入版本库或文档。原运行环境的旧数据库实例已删除。
@@ -229,8 +229,8 @@
   - **F4/F5 智能研判**：F4 两个模型改为上下质量仪表卡，正文说明下沉到悬停提示，首屏只保留真实质量、算法、目标、验证状态与两项特征；F5 将 Markdown 文字墙解析为“成效/瓶颈/行动”三列简报卡，每类首屏显示前三条且卡片悬停保留完整内容；
   - **统一图表契约**：全量走 `charts/theme.ts`（`chartPalette`、`chartInk`、`chartTooltip`、`calmAnimation`），零硬编码十六进制色值，缺失数据显示 `—`，0 值如实展示；
   - **图例空间统一**：A3/A4、B4、C2/C4、D3、E4 等笛卡尔图表的图例移入面板标题行，窄面板仅显示带悬停说明的颜色块，不再占用图内顶部或切割绘图区右侧；A2 与 B5/C5 等环图保持图形在左、精确读数或图例在右；
-  - **调态对话框居中**：C6/B7 等台账的"调态"编辑弹窗从右侧抽屉改为屏幕居中圆角对话框（420px 宽、85vh 高上限），视觉更聚焦；
-  - **调态持久化 API（P4）**：新增 `PATCH /api/organizations/{id}` 端点支持持久化单位状态调整（状态、联系人、建设进度、期初数据）；只读模式（`mod_readonly` 账号）下返回 403，前端显示错误提示；可写模式下更新 `org_unit`、`sys_user`、`construction_task`、`data_readiness` 四张表；
+  - **调态对话框居中（历史形态）**：当时把 C6/B7 台账编辑弹窗改为居中对话框；该写入口与组件已于 2026-09-21 按 KI-092 退役；
+  - **调态持久化 API（P4，历史形态）**：曾新增 `PATCH /api/organizations/{id}` 支持持久化单位状态调整，并以只读模式返回 403；该半成品写链路已于 2026-09-21 按 KI-092 决策整体退役，现行展示 API 不暴露单位调态；
   - **质量缺失态修正**：D7 缺失稽核规模、异常数或状态演进数据时不再回填 100%/0 异常/2000 家，卡片与图表统一显示 `—`。
 - KI-048 低效面板治理已完成代码实现、等待人工视觉验收：
   - A8 移除与 C5 重复的联系人覆盖，改为只展示接口失败、双轨差异与金标异常的聚合运营红线哨位；
@@ -266,10 +266,10 @@
   地图实时光圈与浮条由调色板外的荧光青改为 sky-400。未被引用的 `AnimatedProgress.vue`、`MarkdownLite.vue`
   已删除。新增 `scripts/project/lint_frontend_styles.py` 闸门（样式文件集、色值位置、旧变量、媒体查询位置、
   死选择器、`@reference`）纳入 `make check` 与 CI。待发布并需人工视觉验收。
-- 本地台账层已去重：C6/B7/F 屏三个表格组件的搜索框、筛选下拉、分页条、调态抽屉收敛为
-  `components/ledger/` 四个物料，分页状态机、抽屉编辑、省份/批次/状态顺序表与带计数选项构造分别
-  收敛为 `usePagedList`、`useEntityEditor`、`utils/entityOptions.ts`（均配套单测），三组件由 1234 行降至
-  约 790 行；`AtRiskUnitTable` 补齐总页数收缩到 0 时的最小页钳位。待发布。
+- 本地台账层已去重：C5/B 屏/F 屏表格组件的搜索框、筛选下拉和分页条统一复用
+  `components/ledger/`、`usePagedList`、`useEntityLedger` 与 `utils/entityOptions.ts`；2026-09-21 按 KI-092
+  删除调态抽屉、编辑组合式函数和伪审计，单位台账保持只读。`AtRiskUnitTable` 已补齐总页数收缩到 0
+  时的最小页钳位。
 - 本地 C/D/E/F 屏已收敛到积木库：新增 `blocks/CommandBand`、`NoteBanner`、`EmptyNote`，`MetricGrid`/`StatList`
   增加 `flat` 平铺形态，`StatusList` 增加 `wrap`；四屏手写的指挥带栅格、事实栏、D7 核验四卡、F3 告警卡、
   F4/F5 提示条与六处空态全部改为积木 + 数据映射，四视图由 1462 行降至约 1220 行。E 屏合规监督与
@@ -365,8 +365,8 @@
   - 配额看门狗（`simulation/quota_watchdog.py`）：按 HKT 业务日使用数据库行锁在外部调用前预留、调用后结算，项目侧预算为每日 3,000 Neurons；该预算闸门不等同于云厂商计费上限，也不承诺账单恒为零。
   - AI 算力挂接与零故障降级（`simulation/cf_ai_client.py`）：接入 Cloudflare Workers AI，异常或断网时平滑降级至本地离线叙事库。
   - 涓流回填流水线（`simulation/trickle_backfill.py`）：受控微批量（≤3 单）异步富化存量工单与时间线，实现历史数据真实有机充填。
-  - 治理与配额端点（`backend/app/api.py`, `backend/app/services/governance.py`）：提供工单分页查询、详情透视、全景时间线、一键督办（`POST /api/governance/issues/{id}/dispatch`）、配额透视（`GET /api/governance/ai-quota`）以及单工单 AI 富化（`POST /api/governance/issues/{id}/enrich`）。
-  - 前端 E/F 屏双向交互抽屉（`ComplianceInspectDrawer.vue`, `AiQuotaCapsule.vue`）：E 屏提供六态流转 Stepper、专班展示、多节点流水展示、一键督办与 AI 深度研判；终态禁止继续写操作且请求按最新目标隔离。F 屏胶囊展示项目侧每日预算状态，不把它描述为云账单保证。
+  - 治理与配额端点（`backend/app/api.py`, `backend/app/services/governance.py`）：展示 API 只提供工单分页查询、详情透视、全景时间线、近期活动与配额透视（`GET /api/governance/ai-quota`）；派单和 AI 富化由模拟器/后台写进程承担，不暴露在线写路由。
+  - 前端 E/F 屏只读核查抽屉（`ComplianceInspectDrawer.vue`, `AiQuotaCapsule.vue`）：E 屏提供六态流转 Stepper、专班展示、历史研判与多节点流水，所有请求按最新目标隔离；F 屏胶囊展示项目侧每日预算状态，不把它描述为云账单保证。
   - 编号口径与线上追踪（KI-064）：治理仿真的 "GI-001~GI-004" 是文档「演进代际」叙事编号，与 GitHub Issue 真实编号 `#1~#4` 不逐一对应，权威映射见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](development/GOVERNANCE-SIMULATION-SYNTHESIS.md) 第一章。承载上述能力的 GitHub Issue `#1`/`#2`/`#3`/`#4` 均已随生产发布 `20260909-095536` 上线并以 `completed` 回写关闭，当前线上无 open issue；KI（本地缺陷看板）与 GI（GitHub 新功能）分轨管理沿用 AGENTS.md 四铁律。
 - Ruff 检查已清零并纳入 `make check`。
 - 文档治理闸门已纳入 `make check` 与 CI：阻断已跟踪文档删除、冻结正文减损、KI 状态分裂、必需元数据缺失与现行索引漏项；核心行为变更未同步本文时直接失败，不再仅输出警告。
@@ -512,7 +512,7 @@ KI-060 更新前的本节原文完整保存在
 
 ## 2026-09-13 生产致命缺陷与高可用短板治理（KI-084，DONE）
 
-- **写接口只读模式拦截与防穿透**：针对生产环境使用 `mod_readonly` 只读数据库账号导致合规监督抽屉在线派单/研判接口崩溃的问题，在 `backend/app/config.py` 与 `backend/app/api.py` 中引入只读模式自动判定并前置返回结构化 HTTP 403 响应，底层服务层捕获 MySQL 1142 异常并转化为 `PermissionError`；前端 `ComplianceInspectDrawer.vue` 拦截 403 提示只读模式通知，避免未捕获的 500 服务异常。
+- **写接口只读模式拦截与防穿透（历史止血方案）**：当时针对生产 `mod_readonly` 账号为在线派单/研判增加 403 降级，避免未捕获的 500；2026-09-21 KI-092 进一步删除展示端按钮、写路由及专用服务函数，现行 API 以“不暴露写入口”取代运行时拦截。
 - **SSE 连接池扩容与单飞读取合并（Single-flight）**：在 `backend/app/live_projection/outbox.py` 中将 Outbox 引擎连接池扩容（`pool_size=4, max_overflow=6, pool_timeout=5`），并在 `backend/app/live_projection/broker.py` 中引入并发游标单飞合并机制（`_inflight`），相同游标的多客户端轮询共用单个底层读任务，消除大屏多开造成的 `QueuePool limit of size 4 overflow 0 reached` 连接池溢出与 502 断流。
 - **Uvicorn 多 Worker 与零停机平滑热重载**：在 `scripts/project/run_unified.py` 中为 API 统一运行时启用 Uvicorn 原生多进程支持（默认 `--workers 2`，支持 `MOD_API_WORKERS`），并在主守护器中实现 `SIGHUP` 信号监听与安全向下透传；在 `deploy/mod.service` 增加 `ExecReload=/bin/kill -HUP $MAINPID`，并在 `scripts/project/publish.sh` 中优先采用 `systemctl reload`，使部署更新通过滚动重启 Worker 实现零停机平滑过渡，消灭服务重启造成的 3~8 秒 502 Bad Gateway 窗口。
 - 详细复盘与核验记录见 [KI-084](issues/KI-084-生产致命缺陷与高可用短板治理.md)。
@@ -524,7 +524,7 @@ KI-060 更新前的本节原文完整保存在
 - **生命周期状态落盘优化（#7）**：在 `simulation/runtime_service.py` 中移除 `_save_evolution_state` 的 `indent=2` 格式化和同步 `os.fsync()`，文件体积从 ~2.1MB 降至 ~1.4MB，消除每周期数百毫秒的磁盘阻塞。
 - **备份密钥安全警告（#9）**：（已随 [KI-095](issues/KI-095-项目级R2备份链路退役.md) 退役，项目级 R2 备份链路不再维护。）
 - **AI Prompt 财经术语约束（#10）**：在 `backend/app/integrations/cloudflare_ai.py` 中新增 `FIELD_NAMES_CN` 中英文术语映射，System Prompt 注入"会计凭证严禁翻译为优惠券"约束，杜绝大模型英文直译偏差。
-- **前端调态临时性提示（#12）**：在 `frontend/src/components/ledger/EntityEditDrawer.vue` 中添加明确提示，说明调态操作为临时会话调整，数据刷新后将恢复系统真实状态。
+- **前端调态临时性提示（#12，历史方案）**：当时在 `EntityEditDrawer.vue` 中提示调态仅为临时会话；2026-09-21 KI-092 已删除该抽屉及全部调态入口，不再展示不可兑现的保存能力。
 - **Nginx 静态入口防缓存策略（#13）**：在 `deploy/nginx/mod.conf.example` 中为 HTML 文件添加专项 location 块，强制 `no-cache, no-store, must-revalidate`，杜绝发版后 ChunkLoadError。
 - **发布脚本依赖同步（#14）**：在 `scripts/project/publish.sh` 和 `.github/workflows/quality.yml` 中增加 `pyproject.toml`/`uv.lock` 同步及 `uv sync --frozen` 步骤，确保生产环境 Python 依赖与代码同步。
 - 详细问题清单与核验标准见 [KI-085](issues/KI-085-核心架构缺陷与数据安全治理.md)。
@@ -539,9 +539,10 @@ KI-060 更新前的本节原文完整保存在
 
 - **全局字体梯队放大（+2px）**：全局 CSS 变量体系（`theme.css`）与基础图表主题（`charts/*.ts`）全面上浮 2px（`xs: 13px, sm: 14px, md: 16px, lg: 18px, metric: 20px, kpi: 26px`）。
 - **组件及视图内嵌图表微小字号补齐**：补齐 `CockpitTopBar.vue`（A1 面板业务单据/会计凭证/接口集成字号与数值由 9px 提升至 11px，微调 `grid` 边距防遮挡）、`ModelContractCard.vue`、`OverviewTrendChart.vue`、`ChinaMap.vue` 以及各业务视图（Construction、Insights、Issues、Rollout）中散落硬编码的微小字号（9~11px 统一定向提升 2px 至 11~13px），彻底消除 10px 及以下微小字号，保障大屏全域视觉清晰可读。
-- **2026-09-20 Token 与物料化治理（已部署，人工视觉验收待完成）**：ECharts 字号已收敛到 `charts/tokens.ts` 的 `CHART_FONT`，既有样式检查器阻断新增裸 `fontSize`；A~F 六屏图表已完成 option 纯函数化和 `ChartCanvas` 迁移，中国地图保留专用交互外壳，统一画布补齐加载、错误、空态、autoresize 与语义点击透传。KI-099/100 为 IN-PROGRESS，分别等待固定场景人工视觉验收，以及最后一个 `CompositionBar` 直接渲染入口收口。
-- **2026-09-20 C6 请求一致性治理（历史上线形态，读路径已被 2026-09-21 统一投影取代）**：当时为独立组织分页请求补了取消与最新响应保护；现行 C5 已不发起该列表请求。调态编辑仍使用统一 JSON API 客户端；KI-092 的鉴权、真实身份与服务端审计仍未闭环。
-- **2026-09-21 六屏信息架构治理（代码阶段已部署，人工验收进行中）**：登记 KI-102，允许合并没有独立决策价值的历史 Zone；A1 已改为五域导航摘要，A3/A8 收敛进省域摘要与行动队列，D1/D2 合为唯一端到端业务链路；B 屏删除同源雷达和总览/台账整页互斥，B6 台账预览常驻，完整台账进入宽抽屉；C 屏合并批次当前/历史面板，省域与联系人切到缺口视角；E1/E3 不再重复合规构成，F1 不再复制 F3 风险分布和 F4 模型评分。首轮代码随 `0e56932` 部署；1920×1080 / 1366×768 两档主画布几何可见性检查 14/14 通过。人工视觉验收仍待进行，确认前不更新既有截图基线。
+- **2026-09-20 Token 与物料化治理（DONE）**：ECharts 字号已收敛到 `charts/tokens.ts` 的 `CHART_FONT`，既有样式检查器阻断新增裸 `fontSize`；A~F 六屏图表及共享 `CompositionBar` 均已通过 `ChartCanvas` 渲染，中国地图保留专用交互外壳，统一画布补齐加载、错误、空态、autoresize 与语义点击透传。源码中仅统一画布及其适配契约测试直接依赖 `vue-echarts`；用户确认现行布局后，两档固定场景基线已更新，22 项浏览器回归全部通过，KI-099/100 关闭。
+- **2026-09-20 C6 请求一致性治理（历史上线形态，读路径已被 2026-09-21 统一投影取代）**：当时为独立组织分页请求补了取消与最新响应保护；现行 C5 已不发起该列表请求。2026-09-21 KI-092 进一步删除调态编辑与展示 API 写路由。
+- **2026-09-21 六屏信息架构治理（DONE）**：KI-102 允许合并没有独立决策价值的历史 Zone；A1 已改为五域导航摘要，A3/A8 收敛进省域摘要与行动队列，D1/D2 合为唯一端到端业务链路；B 屏删除同源雷达和总览/台账整页互斥，B6 台账预览常驻，完整台账进入宽抽屉；C 屏合并批次当前/历史面板，省域与联系人切到缺口视角；E1/E3 不再重复合规构成，F1 不再复制 F3 风险分布和 F4 模型评分。首轮代码随 `0e56932` 部署；用户确认现行布局后，1920×1080 / 1366×768 两档基线更新，22 项浏览器回归全部通过。
+- **2026-09-21 展示 API/UI 只读收口（KI-092，DONE，待发布）**：B/C 单位台账删除调态按钮、编辑抽屉和本地伪审计；合规治理抽屉只展示状态、历史研判与流水。API 删除单位更新、在线派单、在线 AI 研判三个无鉴权写路由及专用死代码，并以安全回归测试锁定路径不存在。模拟器、治理推进器与后台 AI 回填继续由独立写进程承担。
 - **2026-09-21 A 屏标题与实时数字微调（已部署，人工视觉验收待完成）**：现行架构已退役 A3，第二块左栏面板编号为 A4；A2/A4 改为短标题常显、完整说明在整条标题栏悬停展示。A6 数字矩阵已居中并接入共用缓动数字；SSE 已提交事件只叠加晚于当前权威快照的单据/凭证增量，快照时间追上后自动撤销临时叠加，避免实时感缺失或重复计数。提交 `9493f48` 的质量门、生产部署、API 健康探针与快照契约探针均已通过。
 - **2026-09-21 A1/A2/A6 指标职责去重（已部署）**：A6 独占今日单据、今日凭证与实时投影增量；A2 默认展示全国建设完成率、纳入单位、已上线和双轨运行，地图选省后原位切换为该省同口径汇总；A1 业务运行入口不再重复今日单据数字，只保留端到端业务语义和专业屏入口。提交 `dc55ef2` 的质量门与生产 Deploy 已成功。
 - **2026-09-21 A2 六项地域摘要（本地待提交）**：A2 在既有四项上增加由纳入单位和已上线数直接推导的上线率、尚未上线，采用 3×2 居中布局；默认读取全国汇总，地图选省后六项整体切换为该省同口径数据，仍不复制 A6 的今日指标。

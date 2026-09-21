@@ -220,7 +220,7 @@ const ledgerPreviewRows = computed(() => [...store.entities]
       <CockpitPanel title="建设台账预览" zone="B6" subtitle="优先显示准备度和建设进度最低单位" class="col-span-12 min-h-0">
         <template #actions>
           <button type="button" class="text-cockpit-sm text-sky-400 hover:text-sky-300 cursor-pointer" @click="openLedgerWithFilter('全部')">
-            打开筛选与调态台账
+            打开筛选台账
           </button>
         </template>
         <div class="flex-1 min-h-0 overflow-hidden rounded-lg border border-surface-veil-06">

@@ -261,9 +261,9 @@ def test_trickle_backfiller_execution():
     mock_conn.commit.assert_not_called()
 
 
-def test_governance_ai_quota_and_enrich_endpoints(monkeypatch):
-    """Verify /api/governance/ai-quota and /api/governance/issues/{id}/enrich API endpoints."""
-    from app.api import governance_ai_quota, governance_issue_enrich
+def test_governance_ai_quota_endpoint(monkeypatch):
+    """Verify the read-only /api/governance/ai-quota endpoint."""
+    from app.api import governance_ai_quota
     mock_conn = MagicMock()
 
     monkeypatch.setattr(
@@ -277,20 +277,7 @@ def test_governance_ai_quota_and_enrich_endpoints(monkeypatch):
             "remainingNeurons": 2850.0,
         },
     )
-    monkeypatch.setattr(
-        "app.services.governance.enrich_governance_issue",
-        lambda conn, issue_id: {
-            "id": issue_id,
-            "aiEnriched": 1,
-            "description": "【专家深度研判】整改完毕",
-        },
-    )
-
     quota_data = governance_ai_quota(conn=mock_conn)
     assert quota_data["statDate"] == "2026-09-09"
     assert quota_data["dailyLimit"] == 3000.0
     assert quota_data["status"] == "ACTIVE"
-
-    enriched_data = governance_issue_enrich("ISS-TEST-001", conn=mock_conn)
-    assert enriched_data["id"] == "ISS-TEST-001"
-    assert enriched_data["aiEnriched"] == 1
