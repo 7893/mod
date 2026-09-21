@@ -58,15 +58,37 @@ def test_briefing_freshness_uses_display_day(monkeypatch, briefing_date, stale):
     monkeypatch.setattr(daily_briefing, 'datetime', Clock)
     monkeypatch.setattr(daily_briefing, 'get_display_timezone', lambda: ZoneInfo('Asia/Singapore'))
     conn = MagicMock()
-    conn.execute.return_value.mappings.return_value.first.return_value = {
+    conn.execute.return_value.mappings.return_value.all.return_value = [{
         'briefing_date': briefing_date, 'content': '摘要', 'model': 'model',
         'source': 'llm', 'generated_at': '2026-09-12 16:30:00',
-    }
+    }]
     result = daily_briefing.get_latest(conn)
     assert result['status'] == 'ok'  # Additive API contract: old content is retained.
     assert result['isStale'] is stale
     assert result['generatedAt'] == '2026-09-12T16:30:00+00:00'
     assert str(conn.execute.call_args.args[1]['expected_date']) == '2026-09-12'
+
+
+def test_legacy_same_day_briefing_is_not_presented_as_closed_day(monkeypatch):
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 9, 21, 9, tzinfo=ZoneInfo('UTC')).astimezone(tz)
+
+    monkeypatch.setattr(daily_briefing, 'datetime', Clock)
+    monkeypatch.setattr(daily_briefing, 'get_display_timezone', lambda: ZoneInfo('Asia/Hong_Kong'))
+    conn = MagicMock()
+    conn.execute.return_value.mappings.return_value.all.return_value = [{
+        'briefing_date': '2026-09-20',
+        'content': '旧口径今日新增',
+        'model': 'model',
+        'source': 'llm',
+        'generated_at': '2026-09-19 16:30:00',
+    }]
+
+    result = daily_briefing.get_latest(conn)
+
+    assert result == {'status': 'no_briefing', 'message': '尚无上一完整自然日口径的日报'}
 
 
 def test_briefing_uses_previous_complete_calendar_day(monkeypatch):
