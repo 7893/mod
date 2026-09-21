@@ -177,7 +177,7 @@ Zone 编号是当前产品坐标，用于沟通定位，不得替代业务标题
 - 2026-09-09 完成全局样式收口：删除 `foundation/components/utilities/page-hierarchy/dashboard-topbar/responsive-breakpoints` 六个文件及约 120 条无引用规则，全局 CSS 由 1897 行降至约 880 行；删除 `:root` 旧变量层，Token 唯一来源为 `theme.css`。
 - 2026-09-09 完成台账层去重：`ConstructionLedger`/`RolloutLedgerTable`/`AtRiskUnitTable` 的筛选、分页、计数、调态抽屉收敛到 `components/ledger/` 与 `usePagedList`/`useEntityEditor`/`entityOptions`，三组件合计由 1234 行降至约 790 行；`AtRiskUnitTable` 顺带补齐总页数收缩时的最小页钳位。
 - 数字与日期时间展示统一走 `formatters/metrics.ts`（`formatCount`/`formatPercent`/`formatDateTime`）：视图、组件、图表 tooltip 与 store 中不得再直接调用 `toLocaleString`/`Intl.*`，空值一律显示 `—`。
-- KI-102 第二轮信息架构治理已完成主职责收敛。A 屏当前为 A1 五域导航、A2 省域摘要、A3 跨域趋势、A4 地图、A5 今日变化、A6 行动队列；批次与运营专业事实分别归 B/C 与 D。D 屏当前为 D1 端到端业务链路，D2–D6 分别承载日吞吐、凭证、集成、双轨与质量职责。
+- KI-102 第二轮信息架构治理已完成主职责收敛。A 屏当前为 A1 五域导航、A2 省域摘要、A3 跨域趋势、A4 地图、A5 今日变化、A6 行动队列；批次与运营专业事实分别归 B/C 与 D。D 屏当前为 D1 端到端业务链路，D2–D7 分别承载日吞吐、凭证、集成、双轨、质量与审批制证流转职责；第三行按信息密度将 D6/D7 固定为 7:5，而非机械等宽。
 - B 屏已删除历史同源雷达，当前 B1–B6 连续编号，B3 为滞后视角，B6 台账预览常驻；完整筛选与调态台账使用宽抽屉，不再替换主画布。C 屏把批次当前构成与历史爬坡合并到 C2，C3 为省域推进缺口，C4 仅在联系人覆盖存在例外时显示分布，C5 为单位台账。E1 只保留合规摘要，E2 展示风险标签，E3 基于最近治理活动去重后展示工单流转阶段；该统计不是全量工单库存。F1 只给首要瓶颈与行动优先级，F3/F4 分别承载风险分布与模型实验事实。时间序列或异常字段缺失时必须显示明确空态。
 - 信息密度必须驱动具名骨架比例：A 屏左栏由 `dashboard-left` 固定 A2/A3 面积分工，右栏由 `cockpit-right` 固定 A5/A6 面积分工；B 屏三行分别承载主分析、门禁与常驻台账预览；C2 作为主分析画布占左侧 8 列并跨两行，C3/C4 作为辅助区在右侧 4 列上下叠放。比例只允许在 `theme.css` 的具名 Token 中维护。异步简报等首屏内容必须预留稳定槽位，数据到达不得推动主体布局；单行简报内容整体居中。
 - 笛卡尔图表的分类图例统一放入 `CockpitPanel` 标题行的 `actions` 插槽，不得侵占绘图区顶部或从右侧切割坐标系；窄面板使用 `PanelLegend compact` 只显示颜色块，原生悬停提示与无障碍文本提供完整含义。只有 B5 等环图适合保持“图形在左、图例或精确读数在右”的横向组织。

@@ -44,6 +44,17 @@ def _fingerprint(payload: dict) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:32]
 
 
+def _utc_iso(value: object) -> str:
+    """Serialize the database's naive UTC DATETIME without browser-local ambiguity."""
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        parsed = datetime.fromisoformat(str(value))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc).isoformat()
+
+
 def get_latest(conn: Connection | None) -> dict:
     """只读返回最新一条简报；无则返回 status=no_briefing。不触发任何外部请求。"""
     if conn is None:
@@ -67,7 +78,7 @@ def get_latest(conn: Connection | None) -> dict:
         "content": row["content"],
         "model": row["model"],
         "source": row["source"],
-        "generatedAt": str(row["generated_at"]),
+        "generatedAt": _utc_iso(row["generated_at"]),
     }
 
 
@@ -110,5 +121,5 @@ def generate_and_store(conn: Connection, overview: dict, cf_adapter, display_tz:
         "briefingDate": str(today),
         "content": content,
         "model": result.get("model"),
-        "generatedAt": str(generated_at),
+        "generatedAt": _utc_iso(generated_at),
     }
