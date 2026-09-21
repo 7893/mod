@@ -7,7 +7,7 @@ import json
 import math
 import os
 import threading
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 # CloudflareAIAdapter — Cloudflare Workers AI REST API 适配器
 # ---------------------------------------------------------------------------
@@ -55,6 +55,8 @@ _CF_AI_ALLOWED_FIELDS: frozenset[str] = frozenset({
     "highRisk",
     "docsTotal",
     "vouchersTotal",
+    "docsClosedDayAdded",
+    "vouchersClosedDayAdded",
     "regions",
 })
 
@@ -76,7 +78,8 @@ _SYSTEM_PROMPT = (
     "你是财务运营演练看板的摘要助手。输入仅为模拟数据的全国汇总数字，"
     "不包含趋势、区域对比、问题原因或经过验证的未来预测。"
     "只描述提供的指标，不推断增长、改善、延期或因果，不编造区域、单位、人名、单号。"
-    "输入不包含尚未封账的当日新增量；不得把累计规模改写为今日新增或全天完成量。"
+    "输入不包含尚未封账的当日新增量；ClosedDay 指标属于上一完整自然日，"
+    "不得把累计规模或 ClosedDay 指标改写为今天的新增或完成量。"
     "系统术语约束：在本系统中，'凭证'或'会计凭证'（对应英文 voucher/vouchers）专指企业财务核算记账凭证，绝对严禁理解、表述或翻译为'优惠券'、'代金券'或'消费券'。"
     "建议必须表述为待核实的检查动作，不得声称已定位瓶颈。"
     "仅用三个 Markdown 二级标题：## 当前概况、## 待核实事项、## 建议检查。"
@@ -97,6 +100,8 @@ FIELD_NAMES_CN: dict[str, str] = {
     "highRisk": "高风险事项数",
     "docsTotal": "累计业务单据总数",
     "vouchersTotal": "累计财务会计凭证总数",
+    "docsClosedDayAdded": "上一完整自然日新增业务单据数",
+    "vouchersClosedDayAdded": "上一完整自然日新增财务会计凭证数",
     "regions": "覆盖省份行政区数",
 }
 
@@ -257,7 +262,7 @@ class CloudflareAIAdapter:
     # 公开接口 2：主动生成洞察（唯一可触发外部请求的入口，仅供每日简报服务调用）
     # ------------------------------------------------------------------
 
-    def generate_insights(self, summary_data: dict) -> dict:
+    def generate_insights(self, summary_data: dict, reporting_date: str | None = None) -> dict:
         """
         主动触发 Cloudflare Workers AI 调用，返回洞察文本并更新进程缓存。
 
@@ -311,7 +316,18 @@ class CloudflareAIAdapter:
                 "data_boundary": sorted(_CF_AI_ALLOWED_FIELDS),
             }
 
-        fp = _fingerprint(safe_payload)
+        normalized_reporting_date = None
+        if reporting_date is not None:
+            try:
+                normalized_reporting_date = date.fromisoformat(reporting_date).isoformat()
+            except (TypeError, ValueError):
+                return {
+                    "status": "unavailable",
+                    "message": "日报统计日期无效，放弃请求",
+                    "data_boundary": sorted(safe_payload.keys()),
+                }
+
+        fp = _fingerprint({"reportingDate": normalized_reporting_date, **safe_payload})
 
         # ---- 3. 检查缓存（线程安全）----
         with _cf_cache_lock:
@@ -346,6 +362,8 @@ class CloudflareAIAdapter:
 
         # ---- 5. 构造用户消息（纯数字键值对，包含中文规范财经术语映射）----
         user_message = "当前项目宏观指标（均为虚构模拟数据）：\n"
+        if normalized_reporting_date:
+            user_message += f"  日报统计日（上一完整自然日）: {normalized_reporting_date}\n"
         for k, v in sorted(safe_payload.items()):
             cn_name = FIELD_NAMES_CN.get(k, k)
             user_message += f"  {cn_name} ({k}): {v}\n"

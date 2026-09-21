@@ -2,9 +2,9 @@
 """
 scripts/kiro/run_daily_briefing.py
 ==================================
-每日指挥部决策简报生成入口（供 systemd timer 调用，ADR-0010 第二期）。
+上一完整自然日指挥部决策简报生成入口（供 systemd timer 调用，ADR-0010 第二期）。
 
-流程：读取当前 dashboard overview 聚合指标 → 经 CloudflareAIAdapter（走 mod-gateway）
+流程：读取当前 dashboard overview 稳定指标与上一完整自然日增量 → 经 CloudflareAIAdapter（走 mod-gateway）
 生成研判简报 → 写入 daily_briefing 表。全程后台运行，大屏只读展示。
 
 用法：
