@@ -73,8 +73,23 @@ const provinceFacts = computed<MetricItem[]>(() => [
     tone: 'success',
   },
   {
+    label: '上线率',
+    value: formatPercent(
+      selectedProvinceData.value.total > 0
+        ? (selectedProvinceData.value.launched * 100) / selectedProvinceData.value.total
+        : 0,
+    ),
+    tone: 'success',
+  },
+  {
     label: '双轨运行',
     value: formatCount(selectedProvinceData.value.dual),
+    unit: '家',
+    tone: 'warning',
+  },
+  {
+    label: '尚未上线',
+    value: formatCount(Math.max(0, selectedProvinceData.value.total - selectedProvinceData.value.launched)),
     unit: '家',
     tone: 'warning',
   },
@@ -207,7 +222,7 @@ const openAction = (row: StatusRow) => {
               </button>
             </div>
           </template>
-          <MetricGrid :items="provinceFacts" :columns="2" fill flat size="md" align="center" />
+          <MetricGrid :items="provinceFacts" :columns="3" fill flat size="md" align="center" />
         </CockpitPanel>
 
         <CockpitPanel
