@@ -23,6 +23,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+
+def _env_enabled(name: str, default: bool = True) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in ("1", "true", "yes", "on")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -33,35 +40,41 @@ async def lifespan(app: FastAPI):
     logger.info("只读实时投影%s", "已启动" if live_projection.enabled else "未启用")
 
     # HeatWave 内存加速状态开机只读观测 (KI-049/KI-050: 遵循只读账号边界，自愈由系统看门狗服务托管)
-    try:
-        from .db import get_engine
-        from .heatwave_watchdog import get_heatwave_status
-        with get_engine().connect() as conn:
-            hw_info = get_heatwave_status(conn)
-            if hw_info.get("status") == "HEALTHY":
-                logger.info(
-                    "HeatWave 内存加速启动自检就绪: status=HEALTHY, loaded=%s/%s",
-                    hw_info.get("loaded_count", 0),
-                    hw_info.get("total_target", 9),
-                )
-            else:
-                logger.warning(
-                    "HeatWave 内存加速状态非 HEALTHY: status=%s, loaded=%s/%s, 缺失表=%s (自愈由 mod-heatwave-watchdog.timer 托管)",
-                    hw_info.get("status"),
-                    hw_info.get("loaded_count", 0),
-                    hw_info.get("total_target", 9),
-                    hw_info.get("missing_tables", []),
-                )
-    except Exception as e:
-        logger.warning("HeatWave 状态开机自检跳过或异常: %s", e)
+    if _env_enabled("MOD_STARTUP_DB_PROBE_ENABLED"):
+        try:
+            from .db import get_engine
+            from .heatwave_watchdog import get_heatwave_status
+            with get_engine().connect() as conn:
+                hw_info = get_heatwave_status(conn)
+                if hw_info.get("status") == "HEALTHY":
+                    logger.info(
+                        "HeatWave 内存加速启动自检就绪: status=HEALTHY, loaded=%s/%s",
+                        hw_info.get("loaded_count", 0),
+                        hw_info.get("total_target", 9),
+                    )
+                else:
+                    logger.warning(
+                        "HeatWave 内存加速状态非 HEALTHY: status=%s, loaded=%s/%s, 缺失表=%s (自愈由 mod-heatwave-watchdog.timer 托管)",
+                        hw_info.get("status"),
+                        hw_info.get("loaded_count", 0),
+                        hw_info.get("total_target", 9),
+                        hw_info.get("missing_tables", []),
+                    )
+        except Exception as e:
+            logger.warning("HeatWave 状态开机自检跳过或异常: %s", e)
+    else:
+        logger.info("HeatWave 状态开机自检已禁用")
 
     # KI-059: 全场景秒级响应 SLA 保证 —— 开机快照后台异步预热
-    try:
-        from .api import prewarm_snapshot
-        prewarm_snapshot(sync=False)
-        logger.info("开机快照异步预热已触发")
-    except Exception as e:
-        logger.warning("开机快照预热触发异常: %s", e)
+    if _env_enabled("MOD_SNAPSHOT_PREWARM_ENABLED"):
+        try:
+            from .api import prewarm_snapshot
+            prewarm_snapshot(sync=False)
+            logger.info("开机快照异步预热已触发")
+        except Exception as e:
+            logger.warning("开机快照预热触发异常: %s", e)
+    else:
+        logger.info("开机快照异步预热已禁用")
 
     yield
 

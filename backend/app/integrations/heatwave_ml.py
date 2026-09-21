@@ -38,6 +38,8 @@ import math
 import os
 import re
 from datetime import datetime
+from threading import Lock
+from time import monotonic
 from typing import Any
 
 from sqlalchemy import text
@@ -65,6 +67,39 @@ from .heatwave_sql import (
 )
 
 logger = logging.getLogger(__name__)
+
+_SHAP_CACHE_TTL_SECONDS = 15 * 60
+_SHAP_CACHE_MAX_ENTRIES = 512
+_shap_cache: dict[str, tuple[float, dict[str, float]]] = {}
+_shap_cache_lock = Lock()
+
+
+def _shap_cache_get(key: str) -> dict[str, float] | None:
+    now = monotonic()
+    with _shap_cache_lock:
+        cached = _shap_cache.get(key)
+        if cached is None:
+            return None
+        cached_at, attributions = cached
+        if now - cached_at > _SHAP_CACHE_TTL_SECONDS:
+            _shap_cache.pop(key, None)
+            return None
+        return dict(attributions)
+
+
+def _shap_cache_put(key: str, attributions: dict[str, float]) -> None:
+    with _shap_cache_lock:
+        if len(_shap_cache) >= _SHAP_CACHE_MAX_ENTRIES:
+            oldest_key = min(_shap_cache, key=lambda item: _shap_cache[item][0])
+            _shap_cache.pop(oldest_key, None)
+        _shap_cache[key] = (monotonic(), dict(attributions))
+
+
+def _db_error_code(exc: Exception) -> str:
+    """Return a safe database error code without logging SQL or feature data."""
+    original = getattr(exc, "orig", exc)
+    args = getattr(original, "args", ())
+    return str(args[0]) if args else type(exc).__name__
 
 class HeatWaveMLAdapter:
     """
@@ -670,6 +705,7 @@ class HeatWaveMLAdapter:
 
         attributions: dict[str, float] = {}
         explanation_source = "UNAVAILABLE"
+        explanation_cached = False
 
         # 2. 尝试调用 HeatWave sys.ML_EXPLAIN_ROW
         try:
@@ -687,27 +723,43 @@ class HeatWaveMLAdapter:
                 "training_error_scissors": float(row.get("training_error_scissors") or 0.0),
                 "handler_concentration": float(row.get("handler_concentration") or 0.0),
             }
-            explain_res = self.conn.execute(
-                text(
-                    f"SELECT sys.ML_EXPLAIN_ROW(:feats, '{MODEL_CLASSIFIER}', JSON_OBJECT('prediction_explainer', 'shap'))"
-                ),
-                {"feats": json.dumps(feats_dict)},
-            ).scalar()
+            features_json = json.dumps(feats_dict, sort_keys=True, separators=(",", ":"))
+            cache_key = f"{org_id}:{features_json}"
+            cached_attributions = _shap_cache_get(cache_key)
+            if cached_attributions is not None:
+                attributions = cached_attributions
+                explanation_source = "HEATWAVE_SHAP"
+                explanation_cached = True
+            else:
+                explain_res = self.conn.execute(
+                    text(
+                        "SELECT /*+ MAX_EXECUTION_TIME(10000) */ "
+                        "sys.ML_EXPLAIN_ROW("
+                        "CAST(:feats AS JSON), :model_handle, "
+                        "JSON_OBJECT('prediction_explainer', 'shap'))"
+                    ),
+                    {"feats": features_json, "model_handle": MODEL_CLASSIFIER},
+                ).scalar()
 
-            if explain_res:
-                parsed = json.loads(explain_res) if isinstance(explain_res, str) else explain_res
-                raw_attrs = parsed.get("ml_results", {}).get("attributions", {})
-                if not raw_attrs:
-                    raw_attrs = {k: v for k, v in parsed.items() if k.endswith("_attribution")}
+                if explain_res:
+                    parsed = json.loads(explain_res) if isinstance(explain_res, str) else explain_res
+                    raw_attrs = parsed.get("ml_results", {}).get("attributions", {})
+                    if not raw_attrs:
+                        raw_attrs = {k: v for k, v in parsed.items() if k.endswith("_attribution")}
 
-                for k, v in raw_attrs.items():
-                    col = k.replace("_attribution", "")
-                    if col in factor_defs and v is not None and math.isfinite(float(v)):
-                        attributions[col] = float(v)
-                if attributions:
-                    explanation_source = "HEATWAVE_SHAP"
+                    for k, v in raw_attrs.items():
+                        col = k.replace("_attribution", "")
+                        if col in factor_defs and v is not None and math.isfinite(float(v)):
+                            attributions[col] = float(v)
+                    if attributions:
+                        explanation_source = "HEATWAVE_SHAP"
+                        _shap_cache_put(cache_key, attributions)
         except Exception as ex:
-            logger.warning("HeatWave SHAP 归因查询失败，降级为确定性偏离度: %s", type(ex).__name__)
+            logger.warning(
+                "HeatWave SHAP 归因查询失败，降级为确定性偏离度: %s (code=%s)",
+                type(ex).__name__,
+                _db_error_code(ex),
+            )
 
         # 3. 若 HeatWave 原生 SHAP 未产生有效归因，执行确定性因果偏离度降级计算
         if not attributions:
@@ -758,6 +810,7 @@ class HeatWaveMLAdapter:
         return {
             "status": "ok",
             "explanationSource": explanation_source,
+            "explanationCached": explanation_cached,
             "weightBasis": "positive_top3_relative",
             "predictionPurpose": "synthetic_rule_fit",
             "orgId": org_id,

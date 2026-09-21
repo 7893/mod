@@ -89,8 +89,6 @@ def test_check_and_heal_when_healthy():
 
 
 def test_health_api_includes_heatwave_status():
-    client = TestClient(app)
-
     mock_conn = MagicMock()
     mock_row = MagicMock()
     mock_row.mappings.return_value.one.return_value = {
@@ -111,7 +109,8 @@ def test_health_api_includes_heatwave_status():
 
     app.dependency_overrides[connection] = mock_connection
     try:
-        res = client.get("/api/health")
+        with TestClient(app) as client:
+            res = client.get("/api/health")
         assert res.status_code == 200
         data = res.json()
         assert data["status"] == "ok"

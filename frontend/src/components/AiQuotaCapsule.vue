@@ -37,10 +37,10 @@ onMounted(() => {
 <template>
   <div
     class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-veil-03 border border-surface-veil-06 text-cockpit-xs text-slate-300"
-    :title="`Cloudflare Workers AI 免费日配额：已用 ${quota?.neuronsUsed ?? 0} / ${quota?.dailyLimit ?? 3000} Neurons ($0.00 零费用硬防护)`"
+    :title="`治理工单 AI 项目预算：已用 ${quota?.neuronsUsed ?? 0} / ${quota?.dailyLimit ?? 3000} Neurons；仅约束本项目调用，不代表 Cloudflare 账户账单`"
   >
     <Sparkles :size="11" class="text-sky-400 flex-shrink-0" />
-    <span class="font-mono text-slate-400">CF AI</span>
+    <span class="font-mono text-slate-400">治理 AI</span>
 
     <div v-if="quota" class="flex items-center gap-1">
       <span class="font-mono text-slate-200">{{ quota.neuronsUsed }}</span>
@@ -54,7 +54,7 @@ onMounted(() => {
       >
         <AlertCircle v-if="quota.status === 'FUSED'" :size="9" class="mr-0.5" />
         <ShieldCheck v-else :size="9" class="mr-0.5" />
-        {{ quota.status === 'FUSED' ? '已熔断' : '$0.00保障' }}
+        {{ quota.status === 'FUSED' ? '已熔断' : '预算正常' }}
       </span>
     </div>
     <div v-else class="text-slate-500 font-mono">

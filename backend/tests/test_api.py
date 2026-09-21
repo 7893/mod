@@ -707,6 +707,35 @@ def test_ki061_swr_timeout_and_error_recovery(monkeypatch):
     api_mod._snapshot_last_error = None
 
 
+def test_snapshot_refresh_defers_during_ml_retraining(monkeypatch):
+    """A live AutoML retrain must preserve the last good snapshot instead of competing for HeatWave."""
+    from unittest.mock import MagicMock
+    import app.api as api_mod
+
+    mock_conn = MagicMock()
+    build_snapshot = MagicMock()
+    monkeypatch.setattr(api_mod, "_get_dedicated_connection", lambda: mock_conn)
+    monkeypatch.setattr(api_mod, "_is_ml_retrain_active", lambda conn: True)
+    monkeypatch.setattr(api_mod, "build_dashboard_snapshot", build_snapshot)
+
+    api_mod._snapshot_refreshing = True
+    api_mod._snapshot_refresh_deferred_reason = None
+    api_mod._background_refresh_snapshot()
+
+    build_snapshot.assert_not_called()
+    mock_conn.close.assert_called_once()
+    assert api_mod._snapshot_refreshing is False
+    assert api_mod._snapshot_refresh_deferred_reason == "ml_retrain"
+    assert api_mod._get_snapshot_health_info()["refresh_status"] == "deferred"
+
+    acquire_connection = MagicMock()
+    monkeypatch.setattr(api_mod, "_get_dedicated_connection", acquire_connection)
+    api_mod.prewarm_snapshot(sync=True)
+    acquire_connection.assert_not_called()
+
+    api_mod._snapshot_refresh_deferred_reason = None
+
+
 def test_should_enable_docs_governance(monkeypatch):
     """KI-078: 验证 API 交互文档与架构规范在生产模式下的屏蔽治理。"""
     from unittest.mock import MagicMock
@@ -754,4 +783,3 @@ def test_governance_readonly_mode_protection(monkeypatch):
     res = client.post("/api/governance/issues/ISSUE-001/enrich")
     assert res.status_code == 403
     assert "只读演示模式" in res.json()["detail"]
-
