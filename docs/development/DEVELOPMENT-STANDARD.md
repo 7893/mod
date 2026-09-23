@@ -39,6 +39,21 @@
 - 依赖变更必须说明用途，使用对应包管理器更新清单与锁文件，不手工伪造锁文件。
 - 未涉及依赖时不得产生无关锁文件变更。
 
+## 数据库与运行模式 (KI-105)
+
+系统支持三种由浅入深的运行模式：
+
+1. **无数据库离线模式（默认/展示）**：
+   - 不需要配置任何数据库；
+   - 后端自动加载并提供已验证的内置快照（`app/v2-sim-snapshot.json`），前端直接内置 `fallback-snapshot.json`；
+   - 支持完整的六屏联动、地图下钻与只读 API 演示。
+2. **普通 MySQL 兼容模式（本地/标准部署）**：
+   - 支持标准单机 MySQL 8.0/8.4 或容器版 MySQL；
+   - 执行基础业务查询与报表聚合；`backend/app/db.py` 自动忽略 HeatWave RAPID 专有系统变量（`use_secondary_engine`），平滑在 InnoDB 引擎上运行。
+3. **MySQL HeatWave 高性能加速与 AutoML 模式（企业生产）**：
+   - 依赖 Oracle Cloud (OCI) MySQL HeatWave 内存集群（RAPID 引擎）与 AutoML 目录；
+   - 环境变量开启 `MOD_HW_ENABLED=true` 与 `MOD_HW_ML_ENABLED=true`，实现千万级明细毫秒聚合与 SHAP 归因。
+
 ## API 与兼容性
 
 - 已公开路由、字段、状态码和导入路径默认保持兼容；破坏性变更必须明确获批并记录迁移方式。

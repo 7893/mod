@@ -2,9 +2,13 @@
 import sys
 import os
 import json
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv("/home/ubuntu/mod/.env.systemd")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(REPO_ROOT / ".env.systemd")
+load_dotenv(REPO_ROOT / ".env.local")
+load_dotenv(REPO_ROOT / ".env")
 
 from sqlalchemy import text, create_engine
 from app.db import get_engine

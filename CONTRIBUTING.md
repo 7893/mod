@@ -1,63 +1,87 @@
-# MOD 项目协作指南
+# MOD 项目协作与贡献指南 (Contributing Guide)
 
-更新日期：2026-09-17
+更新日期：2026-09-23
 状态：现行
-适用范围：在 `/home/ubuntu/mod` 工作的人类开发者与所有编码 Agent
+适用范围：开源社区贡献者、核心维护者以及项目所有编码 Agent
 
-本仓库维护在 JPA 开发机；USA 是不初始化 Git 的独立纯生产主机。代码通过 GitHub Actions 默认流水线
-或经显式授权的 `scripts/project/publish.sh` 发布为隔离 release。
+---
 
-## 接手前必读（按顺序）
+## 第一部分：开源社区贡献者指南 (Community Contributors)
 
-2026-09-11 补充：下列清单保留为资料导航，不再要求逐项全文预加载；具体读取范围以现行
-`AGENTS.md` 和 `.pi/harness.json` 为准。先读公共红线，再按领域及动作读取相关章节。
+欢迎参与 MOD（大型核心系统推广上线实时指挥驾驶舱）开源项目！无论修复缺陷、完善文档还是提出建设性改进，我们都非常期待您的贡献。
 
-1. `AGENTS.md` — 全仓库强制约束，最高优先级。
-2. `ENFORCEMENT.md` — 约束如何在动作点被强制执行（闸门，不只是指导）。
-3. `docs/CURRENT-STATE.md` — 当前运行时、数据与安全事实。
-4. `PROJECT-LAYOUT.md` — 目录与主机边界。
-5. 与任务类型匹配的领域规范 — 见 `AGENTS.md` 的"按任务类型必读规范"映射表
-   （改前端读 `FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md`，碰数据库读 `DATA-AND-SECURITY-STANDARD.md`，
-   任何改动读 `TESTING-STANDARD.md`）。按需读对应的，不必全读。
+### 1. 快速上手流程 (Workflow)
 
-文档有冲突时，以 `AGENTS.md` 的权威顺序为准。旧的多 Agent 协作状态机已于
-2026-09-17 经授权删除，不得恢复为活跃工作流。
+1. **Fork 仓库**：在 GitHub 上将 `7893/mod` Fork 到您的个人命名空间。
+2. **克隆与环境就绪**：
+   ```bash
+   git clone https://github.com/<your-username>/mod.git
+   cd mod
+   ```
+   开发前置要求：Python 3.12+、[`uv`](https://docs.astral.sh/uv/)、Node.js 20+、`pnpm` 与 `make`。
+3. **本地离线启动（无需数据库）**：
+   项目内置了高保真合成数据快照（Fallback Snapshot），无需安装或连接任何数据库即可完整体验与开发前端六屏及后端 API：
+   ```bash
+   # 终端 1：后端只读服务
+   cd backend && uv sync --all-extras
+   uv run uvicorn app.main:app --host 127.0.0.1 --port 8100
 
-## 标准工作流
+   # 终端 2：前端看板
+   cd frontend && pnpm install
+   pnpm dev
+   # 浏览器访问 http://127.0.0.1:5173/
+   ```
+4. **创建工作分支**：
+   ```bash
+   git checkout -b fix/my-bug-fix
+   # 或
+   git checkout -b feat/my-feature
+   ```
+5. **本地质量门禁验证（极其重要）**：
+   在发起提交和 PR 之前，请务必在仓库根目录执行标准公共门禁：
+   ```bash
+   make check
+   ```
+   `make check` 是项目唯一公共且可复现的质量检验入口，会自动执行：
+   - 后端 Ruff 代码风格检查与 Pytest 单元测试（完全离线自洽）；
+   - 前端 ESLint、Stylelint、Vue-tsc 类型检查、Vitest 单元测试与 Vite 构建；
+   - 文档治理与语义契约校验。
+6. **约定式提交**：
+   提交信息请遵循 Conventional Commits 规范，格式为 `type: <=7-word english subject`（如 `fix: resolve china map resize layout` 或 `docs: clarify offline fallback guide`）。
+7. **发起 Pull Request**：
+   推送到您的远程分支后，在 GitHub 发起 PR，并在模板中勾选自检清单。CI/CD 将自动执行完整的 Quality Gates。
 
-1. 运行 `git status --short`，检查相关已有改动。
-2. 查看是否有更具体的 `AGENTS.md`，然后阅读目标区域的源码、测试与当前文档。
-3. 说明预期改动范围，识别需要显式授权的操作。
-4. 在正确的领域目录做最小的连贯改动。
-5. 为行为变更和回归修复添加或更新测试。
-6. 先跑局部检查，再从仓库根目录运行 `make check`。
-7. 检查 `git diff --check`、`git diff`、`git status --short`。
-8. 凡事实、行为、路径、命令、数据或部署状态发生变化，必须同步更新当前文档。
-9. 创建签名本地提交，一次提交一个连贯意图，提交信息格式：英文小写 Conventional Commit 类型，不超过七个词。
-10. 报告验证结果、剩余风险、部署状态与提交 ID。
+### 2. 问题与安全报告机制
 
-## 改动边界
+- **日常缺陷与功能讨论**：社区问题可通过 GitHub Issues 或 Discussions 发起；
+- **安全漏洞**：切勿在公开 Issue 中披露漏洞细节！请遵循 [SECURITY.md](SECURITY.md)，使用 GitHub Private Vulnerability Reporting 进行私密报告；
+- **行为准则**：所有参与者须严格遵守 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
 
-默认只读检查。以下操作需要显式授权方可执行：数据库写入、生产服务启停、Nginx 变更、云资源变更、
-破坏性清理、或向本地仓库以外发布任何内容。生产发布部署默认通过 GitHub Actions CI/CD 流水线（push 至 main 分支触发 Quality gates 自动通过并部署）；本地脚本 `scripts/project/publish.sh` 保留为应急/直连备用发布通道，同样必须获得显式授权方可运行。不得修改 `/home/ubuntu/modo` 或其他项目。
+---
 
-## 提交约定
+## 第二部分：核心维护者与 Agent 内部治理规范 (Internal Governance)
 
-- 使用 `git commit -S` 与现有签名配置。
-- 提交主题使用英文小写 Conventional Commit 类型，不超过七个词。
-- 每次提交保持一个连贯意图。
-- 未经明确指令不得改写已有提交。
-- 未经明确指令不得添加远程仓库、推送、发布 release 或创建 GitHub 仓库。
-- 绝不提交密钥、本地数据、生成的 CSV 文件、构建产物、依赖缓存或 CLI 日志。
+本章节适用于对生产环境拥有发布权限的核心维护者以及在维护者环境中执行任务的编码 Agent。
 
-## 现行规范文档
+### 1. 架构与主机职责分离 (ADR-0012)
 
-- `docs/development/PROJECT-ORGANIZATION.md`
-- `docs/development/DEVELOPMENT-STANDARD.md`
-- `docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md`
-- `docs/development/COLLABORATION-STANDARD.md`
-- `docs/development/TESTING-STANDARD.md`
-- `docs/development/DOCUMENTATION-STANDARD.md`
-- `docs/development/DATA-AND-SECURITY-STANDARD.md`
-- `docs/development/SECRET-SCAN-HOOK-DESIGN.md`
-- `docs/development/CLI-SCRIPT-POLICY.md`
+- **开发工作区机（JPA）**：承载源码、完整开发工具链与本地测试库；
+- **生产宿主机（USA）**：不初始化 Git 仓库的独立生产部署节点，核心服务由 systemd 托管；
+- **发布机制**：标准发布由 GitHub Actions CI/CD 流水线在 push 至 `main` 分支并通过 Quality Gates 后自动触发；本地 `scripts/project/publish.sh` 保留为直连应急通道，必须获得显式授权方可运行。
+
+### 2. 核心维护者红线与约束
+
+- **约束最高优先级**：必须严格遵循 [AGENTS.md](AGENTS.md) 与 [ENFORCEMENT.md](ENFORCEMENT.md)；
+- **权限与改动边界**：默认只读。数据库写入、生产服务启停、Nginx 变更、云资源调整均需显式授权；
+- **凭据与脱敏零容忍**：绝不提交私钥、Token、真实 IP、私有域名或未脱敏数据；
+- **已知问题（KI）生命周期治理**：内部缺陷、技术债务与架构改进统一在 [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) 与 `docs/issues/` 中闭环追踪（详见 [ADR-0014](docs/decisions/0014-停用GitHub-Issues统一使用本地KI问题跟踪体系.md)）；社区确认的有效 Bug 由维护者复现后登记转入本地 KI 看板并进行原子提交修复。
+
+---
+
+## 现行核心参考规范
+
+- [项目目录布局 (PROJECT-LAYOUT.md)](PROJECT-LAYOUT.md)
+- [开发通用规范 (DEVELOPMENT-STANDARD.md)](docs/development/DEVELOPMENT-STANDARD.md)
+- [前端架构与视觉契约 (FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md)](docs/development/FRONTEND-ARCHITECTURE-AND-CONSTRAINTS.md)
+- [数据与安全标准 (DATA-AND-SECURITY-STANDARD.md)](docs/development/DATA-AND-SECURITY-STANDARD.md)
+- [文档治理与生命周期规范 (DOCUMENTATION-STANDARD.md)](docs/development/DOCUMENTATION-STANDARD.md)

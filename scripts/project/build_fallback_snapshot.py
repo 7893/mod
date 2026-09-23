@@ -7,7 +7,7 @@ live payload (so types and views stay honest) while carrying only a small,
 stratified sample of units so it stays reviewable and does not bloat the bundle.
 
 Usage:
-    python3 scripts/project/build_fallback_snapshot.py --from-url https://mod.fuming.name/api/dashboard/snapshot
+    python3 scripts/project/build_fallback_snapshot.py --from-url https://example.com/api/dashboard/snapshot
     python3 scripts/project/build_fallback_snapshot.py --from-file /tmp/snap.json
 
 Only read access to the source is needed; nothing is written except the output file.

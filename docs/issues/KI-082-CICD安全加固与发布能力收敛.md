@@ -24,7 +24,7 @@
 SSH_OPTS="-i ~/.ssh/id_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
 ```
 
-`StrictHostKeyChecking=no` 完全跳过服务器身份验证。若 DNS 被劫持或 `USA_HOST` IP 被替换，CI/CD 会无感知地连上攻击者服务器并执行 `rsync` 和远程命令，导致生产代码被替换或服务器被入侵。USA 服务器（`193.122.180.196`）的真实指纹已在本地 `~/.ssh/known_hosts` 中，可直接提取并存入 GitHub Secret。
+`StrictHostKeyChecking=no` 完全跳过服务器身份验证。若 DNS 被劫持或 `USA_HOST` IP 被替换，CI/CD 会无感知地连上攻击者服务器并执行 `rsync` 和远程命令，导致生产代码被替换或服务器被入侵。USA 服务器（`<public-ip>`）的真实指纹已在本地 `~/.ssh/known_hosts` 中，可直接提取并存入 GitHub Secret。
 
 ### 2. publish.sh 直接从 Nginx 文件解析回源密钥并绕过密钥扫描
 
@@ -74,7 +74,7 @@ CI/CD deploy job 构建并部署前端，但不更新 `frontend/src/data/fallbac
 
 ```bash
 # 在本地执行，获取服务器公钥
-ssh-keyscan -H 193.122.180.196
+ssh-keyscan -H <public-ip>
 # 把输出内容存入 GitHub Secret: USA_HOST_KEY  # secret-scan: allow
 ```
 

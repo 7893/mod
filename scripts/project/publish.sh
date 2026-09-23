@@ -46,6 +46,7 @@ FE_CURRENT="$REPO_ROOT/frontend/current"
 FE_RELEASE_DIR="$FE_RELEASES/$TS"
 
 ORIGIN_SECRET="${CLOUDFRONT_ORIGIN_SECRET:-}"
+ORIGIN_HOST="${MOD_ORIGIN_HOST:-${MOD_PUBLIC_HOST:-127.0.0.1}}"
 
 echo "=========================================="
 if [ "$LOCAL_MODE" = true ]; then
@@ -125,9 +126,9 @@ fetch_probe() {
     local endpoint="$1"
     if [ -n "$ORIGIN_SECRET" ]; then
         if [ "$LOCAL_MODE" = true ]; then
-            curl -s -k -H "Host: mod.fuming.name" -H "X-Origin-Secret: $ORIGIN_SECRET" "https://127.0.0.1$endpoint"
+            curl -s -k -H "Host: $ORIGIN_HOST" -H "X-Origin-Secret: $ORIGIN_SECRET" "https://127.0.0.1$endpoint"
         else
-            ssh "$REMOTE_HOST" "curl -s -k -H 'Host: mod.fuming.name' -H 'X-Origin-Secret: $ORIGIN_SECRET' 'https://127.0.0.1$endpoint'"
+            ssh "$REMOTE_HOST" "curl -s -k -H 'Host: $ORIGIN_HOST' -H 'X-Origin-Secret: $ORIGIN_SECRET' 'https://127.0.0.1$endpoint'"
         fi
     else
         if [ "$LOCAL_MODE" = true ]; then

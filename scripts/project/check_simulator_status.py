@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+import os
 import urllib.request
 import json
 import sys
 
 def main():
     try:
-        req = urllib.request.Request("https://mod.fuming.name/api/simulator/status")
+        url = os.environ.get("MOD_SIMULATOR_URL", "http://127.0.0.1:8100/api/simulator/status")
+        req = urllib.request.Request(url)
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode())
             

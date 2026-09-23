@@ -33,16 +33,16 @@
 
 | 敏感类别 | 原始示例 / 识别特征 | 脱敏替换规范 | 说明 |
 |---|---|---|---|
-| **内网 IP (IPv4)** | `10.0.10.27` / `10.0.0.152` | `10.0.x.x (内网地址，已脱敏)` 或 `<internal-ip>` | 保护私有子网拓扑 |
-| **公网 IP (IPv4)** | `193.122.180.196` | `193.122.x.x (USA公网地址，已脱敏)` 或 `<public-ip>` | 隐藏生产宿主机真实外网 IP |
-| **私网 IPv6** | `2603:c020:400d:de00:0:5dc5:c462:fc01` | `<ipv6-address (已脱敏)>` | 隐藏 IPv6 分配明细 |
-| **OCI 租户 OCID** | `ocid1.tenancy.oc1...qzsena` | `<tenancy-ocid>` | 隐藏 OCI 租户唯一标识 |
-| **OCI 子网 OCID** | `ocid1.subnet.oc1...7v5mya` | `<subnet-ocid>` | 隐藏 OCI 私有子网标识 |
-| **Compute 实例名** | `instance-20210605-2242` | `<usa-vm-instance-id>` | 隐藏具体计算节点名称 |
-| **MySQL 实例名** | `mysqldbsystem20260822145022` | `<mysql-instance-name>` | 隐藏云数据库实例真实命名 |
-| **MySQL 备份标识** | `mysqlbackup20260830172017` | `<mysql-backup-id>` | 隐藏云备份任务内部标识 |
-| **可用域与容错域** | `ypNq:US-ASHBURN-AD-1` / `FAULT-DOMAIN-2` | `<us-ashburn-ad>` / `<fault-domain>` | 隐藏具体 AD/FD 内部编号 |
-| **生产域名** | `usa.8n8m.cfd` / `*.8n8m.cfd` | `<production-domain>` 或 `example.com` | 隐藏生产解析域名 |
+| **内网 IP (IPv4)** | `10.0.10.x` / `10.0.0.x` | `10.0.x.x (内网地址，已脱敏)` 或 `<internal-ip>` | 保护私有子网拓扑 |
+| **公网 IP (IPv4)** | `193.122.x.x` | `193.122.x.x (USA公网地址，已脱敏)` 或 `<public-ip>` | 隐藏生产宿主机真实外网 IP |
+| **私网 IPv6** | `2603:c020:...` | `<ipv6-address (已脱敏)>` | 隐藏 IPv6 分配明细 |
+| **OCI 租户 OCID** | `ocid1.tenancy.oc1...` | `<tenancy-ocid>` | 隐藏 OCI 租户唯一标识 |
+| **OCI 子网 OCID** | `ocid1.subnet.oc1...` | `<subnet-ocid>` | 隐藏 OCI 私有子网标识 |
+| **Compute 实例名** | `<usa-vm-instance-id>` | `<usa-vm-instance-id>` | 隐藏具体计算节点名称 |
+| **MySQL 实例名** | `<mysql-instance-name>` | `<mysql-instance-name>` | 隐藏云数据库实例真实命名 |
+| **MySQL 备份标识** | `<mysql-backup-id>` | `<mysql-backup-id>` | 隐藏云备份任务内部标识 |
+| **可用域与容错域** | `<us-ashburn-ad>` / `<fault-domain>` | `<us-ashburn-ad>` / `<fault-domain>` | 隐藏具体 AD/FD 内部编号 |
+| **生产域名** | `*.8n8m.cfd` | `<production-domain>` 或 `example.com` | 隐藏生产解析域名 |
 | **数据库明文密码** | `IDENTIFIED BY '...'` / 环境变量 | `<db-password>` 或 `<REDACTED>` | 绝对严禁明文出现 |
 | **API 密钥与 Token** | `cfat_...` / `Bearer ...` | `<cf-api-token>` / `<auth-token>` | 隐藏外部 API 凭据 |
 
