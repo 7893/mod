@@ -179,7 +179,7 @@ def test_heatwave_ml_shap_explain_risk_native():
             [
                 {
                     "ml_results": json.dumps(shap_results),
-                    "model_trained_at": "2026-09-23 00:08:00",
+                    "model_trained_at": "2026-09-23 00:08:00.987654",
                     "feature_fingerprint": risk_feature_fingerprint(mock_org_row),
                     "generated_at": "2026-09-23 00:30:00",
                 }
@@ -364,7 +364,7 @@ def test_refresh_persisted_shap_uses_ten_row_batches_and_atomic_swap():
 
     result = refresh_persisted_shap_explanations(
         conn,
-        model_trained_at=datetime(2026, 9, 23, 0, 8),
+        model_trained_at=datetime(2026, 9, 23, 0, 8, 0, 314815),
     )
 
     sql = "\n".join(statement for statement, _ in conn.statements)
@@ -374,6 +374,17 @@ def test_refresh_persisted_shap_uses_ten_row_batches_and_atomic_swap():
     assert sql.count("CALL sys.ML_EXPLAIN_TABLE") == 2
     assert "RENAME TABLE" in sql
     assert "ml_risk_explanation_previous" in sql
+    inserted_batches = [
+        params
+        for statement, params in conn.statements
+        if "INSERT INTO `mod`.`ml_risk_explanation_next`" in statement
+    ]
+    assert inserted_batches
+    assert all(
+        row["model_trained_at"] == datetime(2026, 9, 23, 0, 8)
+        for batch in inserted_batches
+        for row in batch
+    )
 
 
 def test_refresh_persisted_shap_does_not_swap_incomplete_snapshot():

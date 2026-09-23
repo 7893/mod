@@ -65,6 +65,7 @@ from .heatwave_sql import (
 )
 from .heatwave_explanations import (
     RISK_EXPLANATION_TABLE,
+    model_timestamps_match,
     parse_shap_attributions,
     risk_feature_fingerprint,
     top_risk_attributions,
@@ -698,8 +699,9 @@ class HeatWaveMLAdapter:
         if persisted_rows:
             persisted = persisted_rows[0]
             fingerprint_matches = persisted.get("feature_fingerprint") == risk_feature_fingerprint(row)
-            model_matches = str(persisted.get("model_trained_at") or "") == str(
-                row.get("model_trained_at") or ""
+            model_matches = model_timestamps_match(
+                persisted.get("model_trained_at"),
+                row.get("model_trained_at"),
             )
             if fingerprint_matches and model_matches:
                 attributions = parse_shap_attributions(persisted.get("ml_results"))

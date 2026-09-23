@@ -78,6 +78,28 @@ def risk_feature_fingerprint(row: dict[str, Any]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def normalize_model_trained_at(value: Any) -> str:
+    """Normalize model timestamps to the second precision stored by metadata."""
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        return value.replace(microsecond=0).isoformat(sep=" ")
+    raw = str(value).strip()
+    if not raw:
+        return ""
+    try:
+        return datetime.fromisoformat(raw).replace(microsecond=0).isoformat(sep=" ")
+    except ValueError:
+        return raw
+
+
+def model_timestamps_match(left: Any, right: Any) -> bool:
+    """Compare model timestamps at the precision supported by ml_model_metadata."""
+    normalized_left = normalize_model_trained_at(left)
+    normalized_right = normalize_model_trained_at(right)
+    return bool(normalized_left and normalized_left == normalized_right)
+
+
 def parse_shap_attributions(raw_result: Any) -> dict[str, float]:
     """Normalize ML_EXPLAIN_ROW and ML_EXPLAIN_TABLE JSON shapes."""
     if raw_result is None:
@@ -152,6 +174,7 @@ def refresh_persisted_shap_explanations(
     """
     if not 1 <= batch_size <= MAX_EXPLANATION_BATCH_SIZE:
         raise ValueError(f"batch_size must be between 1 and {MAX_EXPLANATION_BATCH_SIZE}")
+    model_trained_at = model_trained_at.replace(microsecond=0)
 
     conn.execute(text(_DDL_RISK_EXPLANATION))
     source_rows = [

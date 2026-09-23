@@ -988,7 +988,9 @@ def run_full_pipeline(run_type: str = "manual") -> dict[str, Any]:
             check_feature_integrity(conn)
             split_info = split_datasets(conn)
             train_heatwave_models(conn)
-            model_trained_at = datetime.now()
+            # ml_model_metadata uses DATETIME (second precision). Keep the SHAP
+            # snapshot timestamp identical instead of persisting extra microseconds.
+            model_trained_at = datetime.now().replace(microsecond=0)
             cls_eval = evaluate_classifier(conn)
             reg_eval = evaluate_regression(conn)
             execute_full_batch_scoring(conn)
