@@ -11,6 +11,38 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class PortabilityContractTests(unittest.TestCase):
+    def test_docker_context_and_nginx_are_isolated(self) -> None:
+        dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+        patterns = (ROOT / ".dockerignore").read_text(encoding="utf-8").splitlines()
+        for pattern in (
+            "**", "!frontend/**", "!backend/app/**", "!backend/pyproject.toml",
+            "!backend/uv.lock", "**/node_modules", "**/.env", "**/.env.*",
+            "frontend/dist", "frontend/shared", "frontend/releases", "frontend/current",
+        ):
+            self.assertIn(pattern, patterns)
+        self.assertLess(patterns.index("!frontend/**"), patterns.index("**/node_modules"))
+        self.assertLess(patterns.index("!frontend/**"), patterns.index("**/.env.*"))
+        self.assertIn(
+            "COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./",
+            dockerfile,
+        )
+        self.assertIn("rm -f /etc/nginx/sites-enabled/default &&", dockerfile)
+        self.assertIn("listen 80 default_server;", dockerfile)
+        self.assertIn("/etc/nginx/conf.d/default.conf && nginx -t", dockerfile)
+
+    def test_docker_toolchain_matches_local_versions(self) -> None:
+        versions = dict(
+            line.split()
+            for line in (ROOT / ".tool-versions").read_text(encoding="utf-8").splitlines()
+        )
+        dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn(
+            f"FROM node:{versions['nodejs']}-alpine AS frontend-builder", dockerfile
+        )
+        self.assertIn(f"RUN npm install --global pnpm@{versions['pnpm']}\n", dockerfile)
+        self.assertNotIn("corepack", dockerfile)
+        self.assertIn("RUN pnpm install --frozen-lockfile", dockerfile)
+
     def test_node_toolchain_is_pinned_and_actions_are_node24_native(self) -> None:
         package = json.loads((ROOT / "frontend/package.json").read_text(encoding="utf-8"))
         tool_versions = (ROOT / ".tool-versions").read_text(encoding="utf-8")

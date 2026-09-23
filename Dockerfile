@@ -1,12 +1,12 @@
 # Multi-stage Dockerfile for MOD full-cycle dashboard
 
 # --- Stage 1: Build Frontend SPA ---
-FROM node:22-alpine AS frontend-builder
+FROM node:26.10.0-alpine AS frontend-builder
 WORKDIR /app/frontend
 ARG VITE_CHINA_MAP_GEOJSON_URL=
 ENV VITE_CHINA_MAP_GEOJSON_URL=$VITE_CHINA_MAP_GEOJSON_URL
-RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN npm install --global pnpm@12.6.0
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
 RUN pnpm build
@@ -36,8 +36,8 @@ RUN uv sync --frozen --no-dev
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
 # Nginx config for SPA routing and API proxy
-RUN echo 'server { \
-    listen 80; \
+RUN rm -f /etc/nginx/sites-enabled/default && echo 'server { \
+    listen 80 default_server; \
     server_name localhost; \
     location / { \
         root /usr/share/nginx/html; \
@@ -48,7 +48,7 @@ RUN echo 'server { \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
     } \
-}' > /etc/nginx/conf.d/default.conf
+}' > /etc/nginx/conf.d/default.conf && nginx -t
 
 WORKDIR /app
 EXPOSE 80
