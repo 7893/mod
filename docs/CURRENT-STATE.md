@@ -13,6 +13,9 @@
   几何数据。
 - 地图仅在部署者设置 `VITE_CHINA_MAP_GEOJSON_URL` 后按需加载，并校验数据必须是包含命名要素的 GeoJSON
   `FeatureCollection`；未配置、加载失败或格式不合格时诚实显示不可用状态，不启用隐藏兜底。
+- 项目所有者明确决定，自有的非商业学习研究生产部署继续使用历史 `china-geojson@1.0.0` 地图；该文件
+  仅保存于 USA 部署机的 `frontend/shared/`，发布时复制到不可变前端 release，不进入公开仓库或默认构建。
+  生产发布在目标主机已配置时强制要求 `VITE_CHINA_MAP_GEOJSON_URL`，缺失即阻断，避免自有部署再次丢图。
 - 外部地图的来源、授权、行政区划现势性、审图要求与发布合规由部署者独立负责；MOD 只提供渲染、业务数据
   叠加和交互能力。Apache ECharts 的 Apache-2.0 与上游 NOTICE 已记录在 `THIRD_PARTY_NOTICES.md`。
 
