@@ -8,7 +8,7 @@
 
   <p>
     <a href="https://github.com/7893/mod/actions/workflows/quality.yml"><img src="https://github.com/7893/mod/actions/workflows/quality.yml/badge.svg" alt="Quality gates" /></a>
-    <a href="https://github.com/7893/mod/releases/tag/v0.9.0"><img src="https://img.shields.io/badge/Release-v0.9.0-blue.svg" alt="Release: v0.9.0" /></a>
+    <a href="https://github.com/7893/mod/releases/tag/v0.10.0"><img src="https://img.shields.io/badge/Release-v0.10.0-blue.svg" alt="Release: v0.10.0" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" /></a>
     <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white" alt="Vue 3" />
     <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
@@ -36,7 +36,7 @@
 
 ## 简体中文
 
-更新日期：2026-09-13 · 状态：现行项目概览 · 现行版本：`v0.9.0`<br>
+更新日期：2026-09-23 · 状态：现行项目概览 · 现行版本：`v0.10.0`<br>
 适用范围：系统定位、运行架构、六屏叙事、开发指南与仓库导航
 
 ### 一、系统概述
@@ -177,7 +177,7 @@ MOD 自研代码遵循 [MIT License](LICENSE) 开源协议。仓库、依赖锁�
 
 ## English
 
-Updated: 2026-09-13 · Status: Active project overview · Current release: `v0.9.0`<br>
+Updated: 2026-09-23 · Status: Active project overview · Current release: `v0.10.0`<br>
 Scope: System positioning, architecture, 6-screen storytelling, development guide, and repository navigation
 
 ### 1. System Overview

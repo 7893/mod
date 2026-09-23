@@ -603,7 +603,9 @@ KI-060 更新前的本节原文完整保存在
   可用凭据或能绕过现有边界，仍须立即撤销、轮换或加固。
 - **KI-104（DONE）**：治理文件已按“公开源码 + 审阅 Pull Request”的展示型模式收敛，Issues 与
   Discussions 保持关闭；GitHub Private Vulnerability Reporting 已经授权启用，并以未登录外部视角确认
-  **Report a vulnerability** 入口可见。
+  **Report a vulnerability** 入口可见。`main` 已启用分支保护：外部变更需经 Pull Request、1 次审批、
+  最新主线同步与 GitHub Actions `check` 门禁，提交要求签名，普通贡献者不得删除或强推；管理员保留
+  受控紧急绕过能力。
 - **KI-105（DONE）**：公共质量入口、路径推导、生产依赖清单以及无数据库/普通 MySQL/HeatWave 模式
   已解耦并通过回归；容器文件作为非阻塞便利能力保留，当前机器无容器运行时，因此不声称已完成容器实测。
 

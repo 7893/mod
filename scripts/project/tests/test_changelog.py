@@ -42,6 +42,13 @@ class ChangelogTests(unittest.TestCase):
         self.assertIn(f"{'a' * 40}..HEAD", command)
         self.assertEqual(command[-2:], ["--output", "out.md"])
 
+    def test_generator_can_name_an_uncreated_release_tag(self) -> None:
+        command = build_command(
+            "git-cliff", "a" * 40, "HEAD", Path("out.md"), "v0.10.0"
+        )
+        self.assertIn("v0.10.0", command)
+        self.assertEqual(command[-4:], ["--tag", "v0.10.0", "--output", "out.md"])
+
     def test_workflow_is_pinned_and_read_only(self) -> None:
         workflow = (
             f"uses: orhun/git-cliff-action@{ACTION_SHA}\n"

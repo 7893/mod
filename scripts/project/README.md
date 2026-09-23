@@ -49,6 +49,10 @@ MOD_GIT_CLIFF_BIN=/tmp/git-cliff python3 scripts/project/generate_changelog.py
 
 # 显式输出到文件；生成前按文档保全规则保存上一版快照
 MOD_GIT_CLIFF_BIN=/tmp/git-cliff python3 scripts/project/generate_changelog.py --output /tmp/CHANGELOG.md
+
+# 发布候选无需预先创建本地标签；显式指定将写入变更日志的版本标题
+MOD_GIT_CLIFF_BIN=/tmp/git-cliff python3 scripts/project/generate_changelog.py \
+  --tag v0.10.0 --output /tmp/CHANGELOG.md
 ```
 
 Linux aarch64 官方 `2.13.1` 压缩包 SHA-256 为

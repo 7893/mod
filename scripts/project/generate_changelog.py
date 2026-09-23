@@ -35,13 +35,21 @@ def resolve_binary() -> str:
     return binary
 
 
-def build_command(binary: str, baseline: str, revision: str, output: Path | None) -> list[str]:
+def build_command(
+    binary: str,
+    baseline: str,
+    revision: str,
+    output: Path | None,
+    tag: str | None = None,
+) -> list[str]:
     command = [
         binary,
         "--config",
         str(ROOT / "cliff.toml"),
         f"{baseline}..{revision}",
     ]
+    if tag is not None:
+        command.extend(["--tag", tag])
     if output is not None:
         command.extend(["--output", str(output)])
     return command
@@ -50,6 +58,7 @@ def build_command(binary: str, baseline: str, revision: str, output: Path | None
 def main() -> int:
     parser = argparse.ArgumentParser(description="用锁定版本 git-cliff 生成 CHANGELOG。")
     parser.add_argument("--revision", default="HEAD", help="生成终点，默认 HEAD")
+    parser.add_argument("--tag", help="为尚未创建标签的发布候选指定版本号，例如 v0.10.0")
     parser.add_argument("--output", type=Path, help="显式写入路径；默认只输出到 stdout")
     args = parser.parse_args()
 
@@ -57,7 +66,7 @@ def main() -> int:
     try:
         binary = resolve_binary()
         result = subprocess.run(
-            build_command(binary, baseline, args.revision, args.output),
+            build_command(binary, baseline, args.revision, args.output, args.tag),
             cwd=ROOT,
             text=True,
             check=True,
