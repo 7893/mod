@@ -33,7 +33,7 @@
 - 外部地图的来源、授权、行政区划现势性、审图要求与发布合规由部署者独立负责；MOD 只提供渲染、业务数据
   叠加和交互能力。Apache ECharts 的 Apache-2.0 与上游 NOTICE 已记录在 `THIRD_PARTY_NOTICES.md`。
 
-## 2026-09-23 HeatWave SHAP 预生成方案（已部署，首轮生成待执行）
+## 2026-09-23 HeatWave SHAP 预生成方案（已部署并完成首轮生成）
 
 - [KI-107](issues/KI-107-HeatWave原生SHAP权限边界与预生成缺口.md) 采用“管理员后台预计算、API 只读消费”路线：
   每日重训任务以最多 10 行小批次执行 `ML_EXPLAIN_TABLE`，全量校验后原子切换解释表，
@@ -43,10 +43,18 @@
   `RULE_BASED`。未向 API 数据库账号新增任何权限。
 - 签名提交 `c58775f` 经 GitHub Actions 运行 `35867791872` 完成质量门与 USA 自动部署，生产 release 为
   `20260923-133434`；API、HeatWave 12/12、重训练 timer 与 `mod.service` 验收正常。
-- `mod-ml-retrain.service` 已安装到生产 systemd，实际 `TimeoutStartUSec=3h`；首轮持久化结果表 DDL 与
-  全量生成尚未执行，解释接口按设计继续诚实返回 `RULE_BASED`。
+- `mod-ml-retrain.service` 已安装到生产 systemd，实际 `TimeoutStartUSec=3h`。
 - Owner 授权的生产探针已验证 10 行 `ML_EXPLAIN_TABLE` 在 18.4 秒内生成 10 行有效归因，临时表残留为 0。
   全量 3,207 行预计约 321 批、98 分钟。
+- Owner 授权的首轮生产生成于 21:44:42 至 23:25:24 完成，实际用时约 100 分 42 秒：3,207 行、
+  321 批全部通过归因、指纹与模型时间戳校验后原子发布；候选/输入/输出工作表、advisory lock 与临时
+  脚本均已清理。API 抽查返回 `HEATWAVE_SHAP`，`mod_readonly` 仍只有只读授权；长任务期间按设计
+  延后的大屏快照已恢复为 `live/ok`。
+- 2026-09-24 00:00 定时重训闭环在 01:46:11 成功结束：特征/当前解释增至 3,208 行，首轮 3,207 行
+  完整保留为 `ml_risk_explanation_previous`，分类独立测试准确率 80.84%，回归独立测试 R² 0.8593；
+  服务退出码 0，工作表和锁均已清理。验收同时发现解释表 `DATETIME(6)` 保存微秒、模型元数据
+  `DATETIME` 只保存秒，导致 3,208 行被严格时间匹配拒绝并诚实降级为 `RULE_BASED`。本地已统一按
+  秒精度写入和比较，26 项定向测试通过；该修复尚未提交、发布，生产数据库未做补写。
 
 ## 2026-09-21 AI 可靠性修正（已部署，SHAP 权限边界待处理）
 
