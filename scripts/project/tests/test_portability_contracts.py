@@ -18,6 +18,9 @@ class PortabilityContractTests(unittest.TestCase):
         source = (ROOT / "frontend/src/charts/chinaMapSource.ts").read_text(encoding="utf-8")
         vite_config = (ROOT / "frontend/vite.config.ts").read_text(encoding="utf-8")
         env_example = (ROOT / "frontend/.env.example").read_text(encoding="utf-8")
+        deploy_workflow = (ROOT / ".github/workflows/quality.yml").read_text(
+            encoding="utf-8"
+        )
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
 
@@ -28,6 +31,12 @@ class PortabilityContractTests(unittest.TestCase):
         self.assertIn("fetchChinaMapGeoJson", component)
         self.assertIn("FeatureCollection", source)
         self.assertRegex(env_example, r"(?m)^VITE_CHINA_MAP_GEOJSON_URL=$")
+        self.assertIn("Validate deployment configuration", deploy_workflow)
+        self.assertIn(
+            "VITE_CHINA_MAP_GEOJSON_URL is required for a configured production deployment",
+            deploy_workflow,
+        )
+        self.assertIn("frontend/shared/china.geojson", deploy_workflow)
         self.assertIn("VITE_CHINA_MAP_GEOJSON_URL", readme)
         self.assertGreaterEqual(readme.count("THIRD_PARTY_NOTICES.md"), 3)
         self.assertIn("Apache ECharts", notices)

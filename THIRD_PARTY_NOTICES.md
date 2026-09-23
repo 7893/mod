@@ -42,3 +42,24 @@ Deployment-provided data is not distributed by MOD. The deployer must independen
 authorization, current administrative boundaries, map-review requirements, distribution channel, and applicable
 law. MOD's loading capability is not an endorsement or licensing warranty for external map data, which must not
 be treated as an authoritative surveying, administrative-boundary, or border reference.
+
+### 项目所有者研究部署所用地图 / Map used by the owner's research deployment
+
+项目所有者明确决定，其独立运行的非商业学习研究部署继续使用历史地图文件：
+
+- 包：`china-geojson@1.0.0`
+- 上游：[antvis/china-geojson](https://github.com/antvis/china-geojson)
+- 固定包完整性：`sha512-WclJXmqad7RJwEnQKivYgBC43eevZ+vHUzC1g6aGectHdVunPt3RYsYM5z33coGerpXBurkDNvrhNLc91OMoww==`
+- 用途边界：项目所有者自有部署中的非商业学习研究展示
+
+该包未声明许可证，且上游已归档并撤下地图数据。因此地图文件由项目所有者在部署环境中单独保管，
+不进入 MOD 仓库、依赖锁、源码包或默认构建，也不随 MOD 的 MIT License 授权。其他部署者不得将上述
+来源说明理解为再许可，仍须自行选择并核验其地图数据源。
+
+At the project owner's explicit direction, the separately operated, non-commercial research deployment continues
+to use the historical `china-geojson@1.0.0` map file from
+[antvis/china-geojson](https://github.com/antvis/china-geojson), pinned by the integrity value above. The package
+declares no license and its upstream has archived the repository and withdrawn the map data. The file is therefore
+kept only in the owner's deployment environment: it is not committed, locked, packaged, or included in MOD's
+default build, and MOD's MIT License does not grant rights to it. Other deployers must select and validate their own
+map source rather than treating this provenance record as a sublicense.
