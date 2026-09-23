@@ -7,6 +7,18 @@
 本文是项目当前事实入口。历史多 Agent 协作状态机（调度器、agent 定义、任务与交接文件）退出运行后，
 已于 2026-09-17 经授权删除；其演进事实由 Git 和冻结历史文档保留，不再驱动开发流程。
 
+## 2026-09-23 Node 26 与 pnpm 12 工具链统一（本地实施，待发布）
+
+- 项目所有者决定采用 Node.js 26.10.0 与 pnpm 12.6.0；Node 26 在实施日仍处于 Current 阶段，尚未进入
+  LTS，项目通过全量质量门和 CI 验证承担该前沿版本选择。
+- 仓库通过根目录 `.tool-versions` 精确固定 Node.js 与 pnpm；前端 `package.json` 同步声明
+  `engines.node`、`engines.pnpm`、`packageManager: pnpm@12.6.0` 与 Node 26 类型定义，使本地、CI 和包管理器
+  约束一致。
+- 质量、部署与变更日志工作流统一从 `.tool-versions` 读取 Node，并升级到内部原生使用 Node 24 的稳定
+  Actions 版本；不再依赖 GitHub Runner 强制兼容执行声明 Node 20 的旧 Action。
+- `scripts/project/tests/test_portability_contracts.py` 阻断 Node、pnpm 与工作流 Action 版本再次漂移。
+- 关联问题：[KI-106](issues/KI-106-Node工具链版本漂移与Actions旧运行时告警.md)。
+
 ## 2026-09-23 中国地图数据隔离与第三方声明
 
 - 已移除 `china-geojson` 依赖和构建期静态导入；仓库、依赖锁及默认构建均不再包含或自动下载中国地图
