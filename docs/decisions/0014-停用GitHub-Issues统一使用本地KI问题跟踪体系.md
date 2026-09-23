@@ -53,3 +53,15 @@
 - KI-064：GI 编号口径与 GitHub Issue 状态不一致（已修复，本决策为其最终收尾）
 - [已知问题看板](../KNOWN-ISSUES.md)
 - [文档规范](../development/DOCUMENTATION-STANDARD.md)
+
+---
+
+## 2026-09-23 范围澄清（KI-104）
+
+本决策继续适用于缺陷登记：GitHub Issues 与 Discussions 保持关闭，本地 KI 仍是维护者事实源。
+它不表示外部贡献者必须操作 KI，也不禁止公开 Pull Request。现行公开协作模式为：
+
+- 外部贡献者可提交 Pull Request；维护者复现并接受缺陷后，才建立或关联内部 KI；
+- 一般支持、功能请求和答复 SLA 不对外承诺，边界以仓库根目录 `SUPPORT.md` 为准；
+- 安全漏洞只能在 GitHub Private Vulnerability Reporting 确认启用后通过
+  **Report a vulnerability** 私密提交；维护者的 **New draft advisory** 入口不得写成外部报告方式。

@@ -24,10 +24,11 @@ COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /bin/uv
 # Copy backend dependencies
 COPY backend/pyproject.toml backend/uv.lock backend/
 WORKDIR /app/backend
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy backend source
 COPY backend/app ./app
+RUN uv sync --frozen --no-dev
 
 # Copy built frontend assets
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
@@ -51,4 +52,7 @@ WORKDIR /app
 EXPOSE 80
 
 # Start script running Nginx and FastAPI uvicorn
-CMD ["sh", "-c", "nginx && cd /app/backend && uv run uvicorn app.main:app --host 127.0.0.1 --port 8100"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl --fail --silent http://127.0.0.1/api/health >/dev/null || exit 1
+
+CMD ["sh", "-c", "nginx && exec /app/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8100"]

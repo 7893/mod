@@ -8,7 +8,8 @@
 
 ## 第一部分：开源社区贡献者指南 (Community Contributors)
 
-欢迎参与 MOD（大型核心系统推广上线实时指挥驾驶舱）开源项目！无论修复缺陷、完善文档还是提出建设性改进，我们都非常期待您的贡献。
+MOD 当前公开源码并接受符合质量要求的 Pull Request，但不提供通用支持或功能请求入口；边界见
+[SUPPORT.md](SUPPORT.md)。
 
 ### 1. 快速上手流程 (Workflow)
 
@@ -51,10 +52,12 @@
 7. **发起 Pull Request**：
    推送到您的远程分支后，在 GitHub 发起 PR，并在模板中勾选自检清单。CI/CD 将自动执行完整的 Quality Gates。
 
-### 2. 问题与安全报告机制
+### 2. 协作与安全报告机制
 
-- **日常缺陷与功能讨论**：社区问题可通过 GitHub Issues 或 Discussions 发起；
-- **安全漏洞**：切勿在公开 Issue 中披露漏洞细节！请遵循 [SECURITY.md](SECURITY.md)，使用 GitHub Private Vulnerability Reporting 进行私密报告；
+- **日常缺陷与功能讨论**：GitHub Issues 与 Discussions 当前关闭；仓库不承诺一般问题答复或功能规划服务；
+- **代码改进**：可直接发起带复现、验证和影响说明的 Pull Request，维护者确认缺陷后再映射内部 KI；
+- **安全漏洞**：切勿在公开 Pull Request 中披露漏洞细节；仅在仓库 Security 页面实际显示
+  **Report a vulnerability** 时使用该私密入口，完整边界见 [SECURITY.md](SECURITY.md)；
 - **行为准则**：所有参与者须严格遵守 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
 
 ---

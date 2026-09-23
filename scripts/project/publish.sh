@@ -46,7 +46,16 @@ FE_CURRENT="$REPO_ROOT/frontend/current"
 FE_RELEASE_DIR="$FE_RELEASES/$TS"
 
 ORIGIN_SECRET="${CLOUDFRONT_ORIGIN_SECRET:-}"
-ORIGIN_HOST="${MOD_ORIGIN_HOST:-${MOD_PUBLIC_HOST:-127.0.0.1}}"
+ORIGIN_HOST="${MOD_ORIGIN_HOST:-${MOD_PUBLIC_HOST:-}}"
+
+if [ -n "$ORIGIN_SECRET" ] && [ -z "$ORIGIN_HOST" ]; then
+    echo "[Error] CLOUDFRONT_ORIGIN_SECRET requires MOD_ORIGIN_HOST (or MOD_PUBLIC_HOST)."
+    exit 1
+fi
+if [ -n "$ORIGIN_HOST" ] && [[ ! "$ORIGIN_HOST" =~ ^[A-Za-z0-9.-]+$ ]]; then
+    echo "[Error] Origin host contains unsupported characters."
+    exit 1
+fi
 
 echo "=========================================="
 if [ "$LOCAL_MODE" = true ]; then

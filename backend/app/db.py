@@ -16,17 +16,18 @@ def _on_connect(dbapi_conn: object, connection_record: ConnectionPoolEntry) -> N
 
     KI-086 #3: This eliminates 2 redundant network round-trips per HTTP request
     by moving SET statements from checkout to physical connection establishment.
-    KI-105: Suppress errors when running against standard/vanilla MySQL without HeatWave.
+    KI-105: HeatWave is explicit and fail-closed; ordinary MySQL never receives
+    HeatWave-only session statements.
     """
     cursor = dbapi_conn.cursor()  # type: ignore[union-attr]
     try:
         # 会话固定 +08:00：业务时间戳按 UTC+8 落库，与展示时区偏移一致。
         cursor.execute("SET time_zone = '+08:00'")
-        # 激活次级引擎（HeatWave RAPID）智能路由；普通 MySQL 模式下安全忽略不支持的系统变量 (KI-105)
-        hw_flag = os.getenv("MOD_HW_ENABLED")
-        if hw_flag is None or hw_flag.lower() in ("1", "true", "yes", "on"):
-            with suppress(Exception):
-                cursor.execute("SET use_secondary_engine = ON")
+        # Only an explicit opt-in may activate HeatWave RAPID. Configuration or
+        # server errors must surface instead of silently changing execution mode.
+        hw_flag = os.getenv("MOD_HW_ENABLED", "false").strip().lower()
+        if hw_flag in {"1", "true", "yes", "on"}:
+            cursor.execute("SET use_secondary_engine = ON")
     finally:
         cursor.close()
 
@@ -66,4 +67,3 @@ def connection() -> Iterator[Connection | None]:
     finally:
         with suppress(Exception):
             conn.close()
-

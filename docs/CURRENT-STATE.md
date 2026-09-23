@@ -370,6 +370,15 @@
   - 编号口径与线上追踪（KI-064）：治理仿真的 "GI-001~GI-004" 是文档「演进代际」叙事编号，与 GitHub Issue 真实编号 `#1~#4` 不逐一对应，权威映射见 [GOVERNANCE-SIMULATION-SYNTHESIS.md](development/GOVERNANCE-SIMULATION-SYNTHESIS.md) 第一章。承载上述能力的 GitHub Issue `#1`/`#2`/`#3`/`#4` 均已随生产发布 `20260909-095536` 上线并以 `completed` 回写关闭，当前线上无 open issue；KI（本地缺陷看板）与 GI（GitHub 新功能）分轨管理沿用 AGENTS.md 四铁律。
 - Ruff 检查已清零并纳入 `make check`。
 - 文档治理闸门已纳入 `make check` 与 CI：阻断已跟踪文档删除、冻结正文减损、KI 状态分裂、必需元数据缺失与现行索引漏项；核心行为变更未同步本文时直接失败，不再仅输出警告。
+- 公开仓库脱敏闸门已纳入 pre-commit、`make doc-check` 与 CI：扫描受跟踪及待提交文本中的具体网络地址、
+  云资源标识、已登记生产域名与维护者私有资产清单；命中诊断只显示路径、行号和类别，不回显真实值。
+  冻结文档仅允许由同一规则证明的确定性占位符替换，并同步历史完整性清单。
+- 公共协作采用“公开源码 + 审阅 Pull Request”模式；Issues 与 Discussions 保持关闭且不承诺支持 SLA，
+  外部贡献者无需操作内部 KI。GitHub Private Vulnerability Reporting 尚待仓库管理员启用并实测，
+  启用前不得声称存在可用的私密报告入口。
+- 数据库连接默认 `MOD_HW_ENABLED=false`，普通 MySQL 不接收 HeatWave 专用会话语句；显式启用 HeatWave
+  时配置错误会中止连接而非静默降级。公共 `make check` 不依赖 Harness，维护者 `make pre-flight`
+  在 Harness 缺失时明确返回“未执行”的非零状态。
 - CHANGELOG 从 `.git-cliff-baseline` 记录的真实公开就绪提交起计，使用锁定的 git-cliff 2.13.1 生成；质量闸门校验基线可达性、配置与生成标记，`v*` tag/人工触发工作流只上传变更日志产物，无仓库写权限。
 - 本地 Git hooks 已强制执行凭据扫描、`make check` 和提交信息格式；GitHub Actions workflow 在拉取请求和
   推送中复用质量闸门，push 至 `main` 或人工触发时在闸门通过且部署 Secrets 可用的前提下发布至 USA。
@@ -572,6 +581,22 @@ KI-060 更新前的本节原文完整保存在
   C5 二次请求。HeatWave 免费层已命中不等于单核 GROUP BY 自动低于 1s；后续应优先消除重复载入并把分组结果预聚合。
 - **2026-09-21 C5 性能路径收口（已部署）**：提交 `7a5193c` 删除 C5 二次列表请求和五表重算，使单位台账读取时间由统一全景快照决定。GitHub Actions 运行 `35596006939` 的 Quality/Deploy 均成功，应用代码首次上线 release 为 `20260921-115005`。经授权的看门狗补载 `sys_user`、`data_readiness`、`daily_stats` 后，HeatWave 已由 9/12 恢复为 12/12 `HEALTHY`；生产机内部热快照实测 7.3ms，兼容单位分页接口实测 3.7ms。业务服务、模拟器、HeatWave 定时器与公网禁止索引响应头验收正常。
 - **2026-09-21 存量 KI 看板重置（ADR-0023）**：项目 Owner 因不再持有历史 KI 的完整业务语境，决定终止追踪当时全部 8 个活跃条目；当前看板无 OPEN / IN-PROGRESS KI。此次 `DONE` 不代表技术验收或风险消失，后续只在同类问题以当前可复现故障、失败测试、生产或用户证据重新出现时，使用新编号登记；历史条目不重开、不据此自动施工。
+
+## 2026-09-23 开源准备与安全治理（KI-103～105）
+
+- **KI-103（DONE）**：当前受跟踪树已完成生产网络与云资产标识脱敏，新增扫描器进入
+  pre-commit、`make doc-check` 与 CI；运维脚本不再隐式访问生产设施。经 Owner 授权的源站只读审计确认：
+  回源密钥门对缺失/错误值返回 `403`、正确值健康探针返回 `200`，后端端口只监听回环，SSH 为公钥模式且
+  禁止密码与 root 登录，Fail2ban 正常，敏感配置权限为 `0600`。主机没有启用 UFW 且 iptables INPUT
+  默认策略并非 DROP，但未放行后端端口，回环绑定与 Nginx 回源密钥构成现行边界。可达 Git 历史只读审计
+  覆盖 375 个提交和 2,361 个文本 blob，其中 130 个历史 blob 命中资产标识规则且输出未回显原值。
+  Owner 已明确选择不重写既有公开历史，并接受资产标识持续可得的残余风险；若后续证明任何历史值是
+  可用凭据或能绕过现有边界，仍须立即撤销、轮换或加固。
+- **KI-104（DONE）**：治理文件已按“公开源码 + 审阅 Pull Request”的展示型模式收敛，Issues 与
+  Discussions 保持关闭；GitHub Private Vulnerability Reporting 已经授权启用，并以未登录外部视角确认
+  **Report a vulnerability** 入口可见。
+- **KI-105（DONE）**：公共质量入口、路径推导、生产依赖清单以及无数据库/普通 MySQL/HeatWave 模式
+  已解耦并通过回归；容器文件作为非阻塞便利能力保留，当前机器无容器运行时，因此不声称已完成容器实测。
 
 ## 操作边界
 

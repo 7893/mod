@@ -11,7 +11,7 @@ elif [ -f "$HOME/.local/share/harness/cli.mjs" ]; then
     exec node "$HOME/.local/share/harness/cli.mjs" check --project "$REPO_ROOT" --run "$@"
 else
     echo "[Info] 本地环境未检测到私有 harness 工具。"
-    echo "       `make pre-flight` 为核心维护者/Harness 专属辅助入口；"
-    echo "       外部开源贡献者或标准工作流请执行项目统一质量门禁: make check"
-    exit 0
+    echo '       make pre-flight 为核心维护者/Harness 专属辅助入口；'
+    echo '       外部开源贡献者或标准工作流请执行项目统一质量门禁: make check'
+    exit 2
 fi

@@ -14,6 +14,7 @@ from check_semantic_contracts import validate_contracts  # noqa: E402
 from check_document_governance import (  # noqa: E402
     check_changes,
     missing_metadata,
+    is_security_redaction_only,
     is_document_path,
     parse_board,
     parse_detail_status,
@@ -64,6 +65,14 @@ class DocumentGovernanceTests(unittest.TestCase):
         rewritten = "# 决策\n\n- 状态：被取代\n\n改写后的结论"
         self.assertTrue(preserves_frozen_body(old, marked))
         self.assertFalse(preserves_frozen_body(old, rewritten))
+
+    def test_frozen_body_allows_only_deterministic_security_redaction(self) -> None:
+        raw_address = ".".join(("10", "23", "45", "67"))
+        old = f"历史地址：{raw_address}\n原始结论"
+        redacted = "历史地址：<internal-ip>\n原始结论"
+        rewritten = "历史地址：<internal-ip>\n改写后的结论"
+        self.assertTrue(is_security_redaction_only(old, redacted))
+        self.assertFalse(is_security_redaction_only(old, rewritten))
 
     def test_document_paths_include_root_governance_files(self) -> None:
         self.assertTrue(is_document_path("docs/history/record.md"))
