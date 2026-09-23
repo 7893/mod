@@ -194,6 +194,10 @@ jobs:
             ubuntu@"$TARGET_HOST":${MOD_PROJECT_ROOT}/backend/releases/$TS/
 
           rsync -avz -e "ssh $SSH_OPTS" \
+            deploy/ \
+            ubuntu@"$TARGET_HOST":${MOD_PROJECT_ROOT}/deploy/
+
+          rsync -avz -e "ssh $SSH_OPTS" \
             backend/pyproject.toml backend/uv.lock \
             ubuntu@"$TARGET_HOST":${MOD_PROJECT_ROOT}/backend/
 
@@ -207,6 +211,8 @@ jobs:
             cd ${MOD_PROJECT_ROOT}/backend
             ([ -x ${HOME}/.cargo/bin/uv ] && ${HOME}/.cargo/bin/uv sync --frozen --all-extras) || true
 
+            sudo install -m 0644 ${MOD_PROJECT_ROOT}/deploy/mod-ml-retrain.service /etc/systemd/system/mod-ml-retrain.service
+            sudo systemctl daemon-reload
             sudo systemctl reload nginx || sudo systemctl restart nginx
             sudo systemctl reload mod.service || sudo systemctl restart mod.service
 

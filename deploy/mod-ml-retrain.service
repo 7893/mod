@@ -13,7 +13,7 @@ Environment=PYTHONPATH=${MOD_PROJECT_ROOT}/backend/current
 ExecStart=${MOD_PROJECT_ROOT}/backend/.venv/bin/python ${MOD_PROJECT_ROOT}/backend/current/scripts/agy/run_ml_retrain.py --once --run-type scheduled
 NoNewPrivileges=true
 PrivateTmp=true
-TimeoutStartSec=600
+TimeoutStartSec=10800
 
 [Install]
 WantedBy=multi-user.target

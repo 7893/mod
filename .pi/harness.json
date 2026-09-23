@@ -38,6 +38,26 @@
     }
   },
   "targets": {
+    "KI-107": {
+      "domains": ["backend", "data", "docs", "tooling"],
+      "references": [
+        { "path": "docs/issues/KI-107-HeatWave原生SHAP权限边界与预生成缺口.md", "reason": "当前生产缺陷、方案与验收边界" },
+        { "path": "docs/development/HEATWAVE-AUTOML-CAPABILITIES.md", "reason": "HeatWave 批量解释限制" },
+        { "path": "docs/development/ML-AI-DATA-BOUNDARY.md", "reason": "API 账号和数据安全边界" }
+      ],
+      "files": [
+        { "path": "backend/app/integrations/heatwave_explanations.py", "reason": "SHAP 预生成与原子切换" },
+        { "path": "backend/app/integrations/heatwave_ml.py", "reason": "API 只读解释路径" },
+        { "path": "scripts/agy/train_and_evaluate_models.py", "reason": "每日重训接线" },
+        { "path": "backend/tests/test_heatwave_causality_and_shap.py", "reason": "解释来源与原子切换回归" }
+      ],
+      "checks": {
+        "investigate": ["backend", "documents"],
+        "repair": ["backend", "documents"],
+        "accept": ["acceptance"]
+      },
+      "manual": ["生产 DDL/生成须另行满足数据库闸门", "部署后核对 API 来源与只读账号 SHOW GRANTS"]
+    },
     "KI-076": {
       "domains": ["frontend"],
       "references": [
