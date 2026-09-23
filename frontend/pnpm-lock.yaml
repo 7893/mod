@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      china-geojson:
-        specifier: ^1.0.0
-        version: 1.0.0
       echarts:
         specifier: ^6.0.0
         version: 6.1.0
@@ -915,10 +912,6 @@ packages:
   chai@6.2.2:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==}
     engines: {node: '>=18'}
-
-  china-geojson@1.0.0:
-    resolution: {integrity: sha512-WclJXmqad7RJwEnQKivYgBC43eevZ+vHUzC1g6aGectHdVunPt3RYsYM5z33coGerpXBurkDNvrhNLc91OMoww==}
-    engines: {node: '>=4.0.0'}
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -2616,8 +2609,6 @@ snapshots:
   callsites@3.1.0: {}
 
   chai@6.2.2: {}
-
-  china-geojson@1.0.0: {}
 
   color-convert@2.0.1:
     dependencies:

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { MapChart, ScatterChart, EffectScatterChart } from 'echarts/charts'
 import { TooltipComponent, GeoComponent } from 'echarts/components'
 import * as echarts from 'echarts/core'
-import chinaGeoJson from 'china-geojson/src/geojson/china.json'
 import {
   cleanProvinceName,
   createChinaMapLegendStops,
@@ -14,6 +13,7 @@ import {
   createChinaMapScatterData,
   type ChinaMapDatum,
 } from '../charts/chinaMapOptions.ts'
+import { fetchChinaMapGeoJson } from '../charts/chinaMapSource.ts'
 import type { LiveProjectionEvent } from '../composables/useLiveProjection'
 import {
   hasProvinceMultiSelectModifier,
@@ -22,7 +22,34 @@ import {
 import ChartCanvas from './charts/ChartCanvas.vue'
 
 use([CanvasRenderer, MapChart, ScatterChart, EffectScatterChart, TooltipComponent, GeoComponent])
-echarts.registerMap('MOD_CHINA', chinaGeoJson as never)
+
+type MapSourceStatus = 'loading' | 'ready' | 'unconfigured' | 'error'
+
+const mapSourceUrl = import.meta.env.VITE_CHINA_MAP_GEOJSON_URL?.trim() ?? ''
+const mapSourceStatus = ref<MapSourceStatus>(mapSourceUrl ? 'loading' : 'unconfigured')
+const mapSourceController = new AbortController()
+
+const mapSourceError = computed(() => {
+  if (mapSourceStatus.value === 'unconfigured') {
+    return '未配置合规地图数据源；请由部署方设置 VITE_CHINA_MAP_GEOJSON_URL'
+  }
+  if (mapSourceStatus.value === 'error') {
+    return '地图数据源不可用；请检查部署方配置、CORS 与 GeoJSON 格式'
+  }
+  return null
+})
+
+onMounted(async () => {
+  if (!mapSourceUrl) return
+  try {
+    const geometry = await fetchChinaMapGeoJson(mapSourceUrl, mapSourceController.signal)
+    echarts.registerMap('MOD_CHINA', geometry as never)
+    mapSourceStatus.value = 'ready'
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    mapSourceStatus.value = 'error'
+  }
+})
 
 const props = defineProps<{
   data: ChinaMapDatum[]
@@ -64,6 +91,7 @@ watch(() => props.liveEvent, (ev) => {
 }, { immediate: true })
 
 onUnmounted(() => {
+  mapSourceController.abort()
   if (bannerTimer !== null) window.clearTimeout(bannerTimer)
 })
 
@@ -101,7 +129,7 @@ function handleClick(params: MapClickParams) {
       leave-to-class="map-banner-transition-leave-to"
     >
       <div
-        v-if="liveBanner"
+        v-if="mapSourceStatus === 'ready' && liveBanner"
         class="map-live-banner"
         @click="liveBanner.province && emit('select', liveBanner.province, false)"
       >
@@ -115,13 +143,15 @@ function handleClick(params: MapClickParams) {
 
     <ChartCanvas
       class="china-map"
-      :option="option"
+      :option="mapSourceStatus === 'ready' ? option : null"
+      :loading="mapSourceStatus === 'loading'"
+      :error="mapSourceError"
       :update-options="{ replaceMerge: ['geo'] }"
       @chart-click="handleClick"
     />
 
     <!-- 自绘横向图例：分档色块 + 两端数值 -->
-    <div class="map-legend">
+    <div v-if="mapSourceStatus === 'ready'" class="map-legend">
       <span class="map-legend__caption">建设完成度</span>
       <span class="map-legend__bound">{{ scale.min }}%</span>
       <div class="map-legend__stops">
