@@ -1,0 +1,37 @@
+# Only application build inputs belong in the Docker context.
+**
+!frontend/
+!frontend/**
+!backend/
+!backend/pyproject.toml
+!backend/uv.lock
+!backend/app/
+!backend/app/**
+
+# Never import host dependencies, local configuration or generated output.
+**/node_modules
+**/.pnpm-store
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/.git
+**/.cache
+**/*.log
+**/*.tsbuildinfo
+frontend/dist
+frontend/output
+frontend/coverage
+frontend/playwright-report
+frontend/test-results
+frontend/.vite
+frontend/releases
+frontend/current
+frontend/shared
+frontend/vite.config.js
+frontend/vite.config.d.ts
