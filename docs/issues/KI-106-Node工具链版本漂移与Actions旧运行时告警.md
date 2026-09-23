@@ -1,6 +1,6 @@
 # KI-106 · Node 工具链版本漂移与 Actions 旧运行时告警
 
-- 状态：IN-PROGRESS
+- 状态：DONE
 - 优先级：P2
 - 更新日期：2026-09-23
 - 适用范围：本地 JavaScript 工具链、前端包元数据、GitHub Actions 质量门与部署工作流
@@ -50,9 +50,9 @@ pnpm 12.6.0。Node 26 在实施日仍为 Current、尚未进入 LTS，因此采�
 - [x] CI 的两个 Node 安装步骤均读取同一版本文件，不再分别手写版本；
 - [x] 公共快速启动文档与当前事实同步；
 - [x] 工具链一致性回归测试及全量 `make check` 通过；
-- [ ] GitHub Actions 使用新配置完成质量与部署任务，且不再产生 Node 20 Action 运行时告警。
+- [x] GitHub Actions 使用新配置完成质量与部署任务，且不再产生 Node 20 Action 运行时告警。
 
-## 本地实施与验证（2026-09-23）
+## 实施与验收（2026-09-23）
 
 - 已安装并由仓库 `.tool-versions` 选择 Node.js 26.10.0 与 pnpm 12.6.0；`node --version` 返回
   `v26.10.0`，`pnpm --version` 返回 `12.6.0`；
@@ -63,4 +63,6 @@ pnpm 12.6.0。Node 26 在实施日仍为 Current、尚未进入 LTS，因此采�
   `pnpm install --frozen-lockfile` 均通过；
 - Harness 前端与工具领域定向检查通过；全量 `make check` 通过，包括后端 280 项、前端 169 项、
   项目脚本 32 项，以及 lint、类型检查、生产构建、文档治理、链接和公开资产扫描；
-- 变更尚未提交、推送或部署，最后一项需由 GitHub 执行新工作流后验收，本 KI 保持 `IN-PROGRESS`。
+- 签名提交 `f337b98` 已推送至 `main`；GitHub Actions 运行
+  [`35850796848`](https://github.com/7893/mod/actions/runs/35850796848) 的质量门与 Deploy 均成功，Node 20
+  Action 运行时告警已消失。唯一注解是 GitHub Runner 的 Ubuntu 26 迁移通知，与本 KI 无关。
