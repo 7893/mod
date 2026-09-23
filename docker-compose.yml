@@ -1,0 +1,16 @@
+services:
+  mod-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mod-dashboard
+    ports:
+      - "8080:80"
+    environment:
+      - MOD_ENV=production
+      - MOD_HOST=127.0.0.1
+      - MOD_PORT=8100
+      - MOD_FALLBACK_SNAPSHOT_PATH=/app/backend/app/v2-sim-snapshot.json
+      - MOD_LIVE_PROJECTION_ENABLED=true
+      - MOD_HW_ENABLED=false
+    restart: unless-stopped

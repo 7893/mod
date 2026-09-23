@@ -27,15 +27,20 @@ export default function modHarness(pi: ExtensionAPI) {
     async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
       const sql = params.query.trim();
       const rowLimit = String(Math.min(params.limit || 50, 200));
+      const repoRoot = path.resolve(__dirname, "../..");
+      const pythonBin = fs.existsSync(path.join(repoRoot, "backend/.venv/bin/python"))
+        ? path.join(repoRoot, "backend/.venv/bin/python")
+        : "python3";
+      const safeDbQueryScript = path.join(repoRoot, "scripts/project/safe_db_query.py");
 
       try {
         const output = execFileSync(
-          "${MOD_PROJECT_ROOT}/backend/.venv/bin/python",
-          ["${MOD_PROJECT_ROOT}/scripts/project/safe_db_query.py", sql, rowLimit],
+          pythonBin,
+          [safeDbQueryScript, sql, rowLimit],
           {
             env: {
               ...process.env,
-              PYTHONPATH: "${MOD_PROJECT_ROOT}/backend",
+              PYTHONPATH: path.join(repoRoot, "backend"),
             },
             encoding: "utf8",
             timeout: 15000,
@@ -74,8 +79,9 @@ export default function modHarness(pi: ExtensionAPI) {
     parameters: Type.Object({}),
     async execute(_toolCallId, _params, _signal, _onUpdate, _ctx) {
       try {
+        const repoRoot = path.resolve(__dirname, "../..");
         const out = execSync("python3 scripts/project/check_simulator_status.py", {
-          cwd: "${MOD_PROJECT_ROOT}",
+          cwd: repoRoot,
           encoding: "utf8",
           timeout: 5000,
         });
