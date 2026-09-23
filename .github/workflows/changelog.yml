@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Check out full history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -39,7 +39,7 @@ jobs:
           OUTPUT: generated/CHANGELOG.md
 
       - name: Upload changelog artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: changelog-${{ github.ref_name }}
           path: generated/CHANGELOG.md

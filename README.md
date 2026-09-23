@@ -126,7 +126,8 @@ MOD 将跨 34 个省级行政区、数千家分级单位、多批次推进的大
 
 ### 六、本地快速启动
 
-前置开发环境：Python 3.12+、[`uv`](https://docs.astral.sh/uv/)、Node.js、pnpm 与 Make。
+前置开发环境：Python 3.12+、[`uv`](https://docs.astral.sh/uv/)、Node.js 26.10.0、pnpm 12.6.0 与 Make。
+Node 与 pnpm 版本的仓库级事实源为 `.tool-versions`；asdf 用户可在仓库根目录运行 `asdf install`。
 
 ```bash
 # 1. 启动后端 API 服务（终端 1）
@@ -267,7 +268,8 @@ Standard production delivery runs through GitHub Actions CI/CD upon push to `mai
 
 ### 6. Local Quick Start
 
-Prerequisites: Python 3.12+, [`uv`](https://docs.astral.sh/uv/), Node.js, pnpm, and Make.
+Prerequisites: Python 3.12+, [`uv`](https://docs.astral.sh/uv/), Node.js 26.10.0, pnpm 12.6.0, and Make.
+The repository-level Node and pnpm version source is `.tool-versions`; asdf users can run `asdf install` from the repository root.
 
 ```bash
 # 1. Start Backend API Service (Terminal 1)

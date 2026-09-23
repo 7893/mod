@@ -18,7 +18,9 @@
 
 ## 活跃问题（OPEN / IN-PROGRESS）
 
-当前无活跃 KI。
+| 编号 | 标题 | 状态 | 优先级 | 链接 |
+|---|---|---|---|---|
+| KI-106 | Node 工具链版本漂移与 Actions 旧运行时告警 | IN-PROGRESS | P2 | [详情](issues/KI-106-Node工具链版本漂移与Actions旧运行时告警.md) |
 
 ## 已关闭问题（DONE）
 

@@ -11,6 +11,46 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class PortabilityContractTests(unittest.TestCase):
+    def test_node_toolchain_is_pinned_and_actions_are_node24_native(self) -> None:
+        package = json.loads((ROOT / "frontend/package.json").read_text(encoding="utf-8"))
+        tool_versions = (ROOT / ".tool-versions").read_text(encoding="utf-8")
+        quality = (ROOT / ".github/workflows/quality.yml").read_text(encoding="utf-8")
+        changelog = (ROOT / ".github/workflows/changelog.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertEqual(tool_versions, "nodejs 26.10.0\npnpm 12.6.0\n")
+        self.assertEqual(package["packageManager"], "pnpm@12.6.0")
+        self.assertEqual(package["engines"]["node"], ">=26.10.0 <27")
+        self.assertEqual(package["engines"]["pnpm"], "12.6.0")
+        self.assertEqual(package["devDependencies"]["@types/node"], "^26.6.2")
+        self.assertEqual(quality.count('node-version-file: ".tool-versions"'), 2)
+        self.assertEqual(quality.count('version: "12.6.0"'), 2)
+        lockfile = (ROOT / "frontend/pnpm-lock.yaml").read_text(encoding="utf-8")
+        self.assertIn("packageManagerDependencies:", lockfile)
+        self.assertIn("specifier: 12.6.0", lockfile)
+        self.assertIn("'@types/node@26.6.2':", lockfile)
+        for action in (
+            "actions/checkout@v7.0.1",
+            "actions/setup-node@v7.0.0",
+            "actions/setup-python@v7.0.0",
+            "astral-sh/setup-uv@v10.2.0",
+            "pnpm/action-setup@v6.1.0",
+        ):
+            self.assertIn(action, quality)
+        self.assertIn("actions/checkout@v7.0.1", changelog)
+        self.assertIn("actions/upload-artifact@v7.0.1", changelog)
+        for legacy_action in (
+            "actions/checkout@v4",
+            "actions/setup-node@v4",
+            "actions/setup-python@v5",
+            "astral-sh/setup-uv@v6",
+            "pnpm/action-setup@v4",
+            "actions/upload-artifact@v4",
+            'version: "11.22.0"',
+        ):
+            self.assertNotIn(legacy_action, quality + changelog)
+
     def test_china_map_geometry_is_deployment_owned(self) -> None:
         package = json.loads((ROOT / "frontend/package.json").read_text(encoding="utf-8"))
         lockfile = (ROOT / "frontend/pnpm-lock.yaml").read_text(encoding="utf-8")
