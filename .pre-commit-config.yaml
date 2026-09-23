@@ -3,6 +3,13 @@ minimum_pre_commit_version: 4.6.2
 repos:
   - repo: local
     hooks:
+      - id: public-sanitization
+        name: Block sensitive infrastructure identifiers
+        entry: python3 scripts/project/check_public_sanitization.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: detect-secrets
         name: Detect secrets
         entry: detect-secrets-hook

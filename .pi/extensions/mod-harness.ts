@@ -3,8 +3,9 @@ import { Type } from "typebox";
 import { execFileSync, execSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
-import { homedir } from "node:os";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 export default function modHarness(pi: ExtensionAPI) {
   // 2026-09-11: project-only adapter. Global configuration now loads local-harness.
@@ -27,7 +28,6 @@ export default function modHarness(pi: ExtensionAPI) {
     async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
       const sql = params.query.trim();
       const rowLimit = String(Math.min(params.limit || 50, 200));
-      const repoRoot = path.resolve(__dirname, "../..");
       const pythonBin = fs.existsSync(path.join(repoRoot, "backend/.venv/bin/python"))
         ? path.join(repoRoot, "backend/.venv/bin/python")
         : "python3";
@@ -79,7 +79,6 @@ export default function modHarness(pi: ExtensionAPI) {
     parameters: Type.Object({}),
     async execute(_toolCallId, _params, _signal, _onUpdate, _ctx) {
       try {
-        const repoRoot = path.resolve(__dirname, "../..");
         const out = execSync("python3 scripts/project/check_simulator_status.py", {
           cwd: repoRoot,
           encoding: "utf8",
@@ -99,4 +98,3 @@ export default function modHarness(pi: ExtensionAPI) {
   });
 
 }
-

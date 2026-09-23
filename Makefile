@@ -22,6 +22,7 @@ frontend-check:
 	cd frontend && pnpm run build
 
 doc-check:
+	python3 scripts/project/check_public_sanitization.py
 	python3 scripts/project/sanitize_history.py --check
 	python3 scripts/project/check_history_integrity.py
 	python3 scripts/project/check_semantic_contracts.py

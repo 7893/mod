@@ -237,7 +237,7 @@ def test_status_whitelist_purity(tmp_path, api_client):
         "status": "RUNNING",
         "timestamp": now_hkt.isoformat(),
         "db_secret_key": "topsecret123",  # pragma: allowlist secret
-        "internal_server_ip": "10.0.1.99",
+        "internal_server_ip": "<internal-ip>",
         "unauthorized_dump": "sensitive data",
     }
     status_file.write_text(json.dumps(payload), encoding="utf-8")

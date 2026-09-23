@@ -118,7 +118,7 @@ location ^~ /api/ {
    - 全量后端单测全绿通过（`make backend-check`）。
 2. **Nginx 语法核验与部署验证**：
    - JPA 本地与 USA 生产机双端执行 `sudo nginx -t` 均成功验证语法；
-   - 实测线上 `curl -I https://mod.fuming.name/api/docs` 与 `/api/openapi.json` 均严格返回 404；
+   - 实测线上 `curl -I https://<production-domain>/api/docs` 与 `/api/openapi.json` 均严格返回 404；
    - 线上主接口 `/api/health` 与 `/api/v2/snapshot` 正常服务。
 3. **文档一致性与生命周期核验**：
    - `python3 scripts/project/check_doc_links.py` 检查 0 坏链；

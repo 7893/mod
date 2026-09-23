@@ -105,6 +105,16 @@ MariaDB 当前没有兼容性证据，本 KI 不作兼容承诺。
 - [x] 开发者通用脚本不依赖 `/home/ubuntu/mod` 等固定本机路径（Shell / Python / TS 工具均动态推导 REPO_ROOT）；
 - [x] 生产依赖入口 `backend/requirements.prod.txt` 移除了本机 `file://` 路径和测试依赖；
 - [x] 无数据库、普通 MySQL、HeatWave 三种模式的能力边界和配置方式已在 `DEVELOPMENT-STANDARD.md` 文档化；
-- [x] 普通 MySQL 模式安全降级，不再强制抛错中断；
-- [x] 已补充 `Dockerfile` 与 `docker-compose.yml` 提供了开箱即用的轻量容器体验；
-- [x] 定向可移植性检查与文档治理检查通过。
+- [x] 普通 MySQL 默认不发送 HeatWave 专用语句；HeatWave 只有显式启用才执行，配置失败不静默吞掉；
+- [x] 定向可移植性、数据库模式、脚本语法与文档治理检查通过；
+- [x] 全量 `make check` 在最终状态下通过。
+
+## 本地实施与验证（2026-09-23）
+
+- 新增普通 MySQL 默认模式、显式 HeatWave 模式及失败可见性的后端回归测试；
+- 新增公共脚本路径、Harness 缺失、发布 Host 失败关闭和生产依赖清单的可移植性回归测试；
+- 修复 `pre_flight.sh` 提示中的反引号命令替换递归，Harness 缺失现在快速返回“未执行”；
+- `Dockerfile` 与 `docker-compose.yml` 作为非阻塞便利能力保留并修正安装顺序；当前执行环境没有
+  Docker/Podman/Buildah，不能声称镜像已实际构建或启动，容器实测仍作为后续 feature 验收。
+- 全量验收通过：后端 280 项、前端 165 项、项目脚本 29 项，以及 lint、类型检查、生产构建、
+  文档治理、链接、历史完整性和公开资产扫描全部通过。本 KI 的缺陷关闭条件已满足。

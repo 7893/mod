@@ -31,7 +31,7 @@ SSH_OPTS="-i ~/.ssh/id_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=
 `scripts/project/publish.sh` 第 48、123、125 行：
 
 ```bash
-ORIGIN_SECRET="${CLOUDFRONT_ORIGIN_SECRET:-$(grep -m 1 -oP '...' /etc/nginx/sites-available/mod.fuming.name ...)}"  # secret-scan: allow
+ORIGIN_SECRET="${CLOUDFRONT_ORIGIN_SECRET:-$(grep -m 1 -oP '...' /etc/nginx/sites-available/<production-domain> ...)}"  # secret-scan: allow
 ...
 curl ... -H "X-Origin-Secret: $ORIGIN_SECRET"  # secret-scan: allow
 ```
@@ -40,7 +40,7 @@ curl ... -H "X-Origin-Secret: $ORIGIN_SECRET"  # secret-scan: allow
 
 ### 3. fallback 快照未纳入 CI/CD，发布后快照陈旧
 
-CI/CD deploy job 构建并部署前端，但不更新 `frontend/src/data/fallback-snapshot.json`。该文件需要连接线上 API（`https://mod.fuming.name/api/dashboard/snapshot`）才能更新，CI/CD 容器有 SSH 进服务器的能力，可以在服务器上执行更新命令。
+CI/CD deploy job 构建并部署前端，但不更新 `frontend/src/data/fallback-snapshot.json`。该文件需要连接线上 API（`https://<production-domain>/api/dashboard/snapshot`）才能更新，CI/CD 容器有 SSH 进服务器的能力，可以在服务器上执行更新命令。
 
 当前文件最后更新：`Sep 12 23:04`（人工跑的），每次发布后快照陈旧时间取决于上次手跑时间，无保证上限。
 

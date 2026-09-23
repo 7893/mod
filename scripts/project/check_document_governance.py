@@ -91,6 +91,13 @@ def preserves_frozen_body(old: str, new: str) -> bool:
     return all(any(candidate == line for candidate in new_iter) for line in old_lines)
 
 
+def is_security_redaction_only(old: str, new: str) -> bool:
+    """Allow only the deterministic public-sanitization transform on frozen text."""
+    from check_public_sanitization import redact_sensitive_text
+
+    return redact_sensitive_text(old) == new
+
+
 def is_document_path(path: str) -> bool:
     suffix = Path(path).suffix.lower()
     return suffix == ".md" or (
@@ -208,7 +215,7 @@ def check_changes(
         if status in {"M", "R"} and touches_frozen:
             old = read_revision(compare_path, old_revision)
             new = read_revision(path, new_revision)
-            if not preserves_frozen_body(old, new):
+            if not preserves_frozen_body(old, new) and not is_security_redaction_only(old, new):
                 errors.append(f"冻结文档正文被删减或改写，只允许追加标记/勘误：{path}")
 
 

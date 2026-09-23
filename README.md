@@ -155,6 +155,7 @@ make check
 | [AGENTS.md](AGENTS.md) | 人类与 AI 编码助手必须严格遵守的仓库红线与最高约束 |
 | [ENFORCEMENT.md](ENFORCEMENT.md) | 在提交、测试、发布动作点强制执行的安全与治理闸门 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 标准开发、自验、文档同步与原子提交工作流 |
+| [SUPPORT.md](SUPPORT.md) / [SECURITY.md](SECURITY.md) | 公共支持边界与私密漏洞报告前提 |
 | [当前状态事实 (CURRENT-STATE.md)](docs/CURRENT-STATE.md) | 当前运行环境、数据规模与技术事实的唯一官方入口 |
 | [文档总索引 (INDEX.md)](docs/INDEX.md) | 现行架构、开发标准、ADR 决策、历史资料与操作边界总览 |
 | [已知问题看板 (KNOWN-ISSUES.md)](docs/KNOWN-ISSUES.md) | 系统技术债务与缺陷看板（已按 ADR-0014 闭环管理） |
@@ -290,6 +291,7 @@ make check
 | [AGENTS.md](AGENTS.md) | Mandatory red lines and constraints for humans and AI agents |
 | [ENFORCEMENT.md](ENFORCEMENT.md) | Action-time safety and governance gates enforced during development |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Standard development, verification, doc sync, and commit workflows |
+| [SUPPORT.md](SUPPORT.md) / [SECURITY.md](SECURITY.md) | Public support boundaries and private vulnerability reporting prerequisites |
 | [Current State (CURRENT-STATE.md)](docs/CURRENT-STATE.md) | Canonical source of truth for runtime, data, and architecture facts |
 | [Documentation Index (INDEX.md)](docs/INDEX.md) | Master directory for architecture standards, ADRs, operations, and history |
 | [Known Issues (KNOWN-ISSUES.md)](docs/KNOWN-ISSUES.md) | Defect and technical debt tracker (governed per ADR-0014) |

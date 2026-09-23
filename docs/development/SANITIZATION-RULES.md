@@ -1,8 +1,8 @@
 # MOD 历史文档脱敏规范
 
-更新日期：2026-09-17
+更新日期：2026-09-23
 状态：现行规范
-适用范围：`docs/history/` 敏感历史资料的脱敏模式、脱敏副本命名、版本化保全与自动化处理规则
+适用范围：公开仓库全部文本、`docs/history/` 敏感历史副本、版本化保全与自动防回流规则
 
 ---
 
@@ -42,7 +42,7 @@
 | **MySQL 实例名** | `<mysql-instance-name>` | `<mysql-instance-name>` | 隐藏云数据库实例真实命名 |
 | **MySQL 备份标识** | `<mysql-backup-id>` | `<mysql-backup-id>` | 隐藏云备份任务内部标识 |
 | **可用域与容错域** | `<us-ashburn-ad>` / `<fault-domain>` | `<us-ashburn-ad>` / `<fault-domain>` | 隐藏具体 AD/FD 内部编号 |
-| **生产域名** | `*.8n8m.cfd` | `<production-domain>` 或 `example.com` | 隐藏生产解析域名 |
+| **生产域名** | `service.prod.example.com` | `<production-domain>` 或 `example.com` | 仅使用 RFC/示例域名说明规则 |
 | **数据库明文密码** | `IDENTIFIED BY '...'` / 环境变量 | `<db-password>` 或 `<REDACTED>` | 绝对严禁明文出现 |
 | **API 密钥与 Token** | `cfat_...` / `Bearer ...` | `<cf-api-token>` / `<auth-token>` | 隐藏外部 API 凭据 |
 
@@ -69,7 +69,12 @@
 
 1. **自动化脱敏工具**：
    - 执行 `python3 scripts/project/sanitize_history.py` 自动完成所有受限文档的脱敏副本派生。
-   - 执行 `python3 scripts/project/sanitize_history.py --check` 在 CI / `make check` 中执行反向泄漏扫描，若脱敏副本中残存未脱敏 IP、OCID 或敏感域名则阻断提交流程。
+   - `python3 scripts/project/check_public_sanitization.py` 扫描 Git 受跟踪及待提交文本中的具体网络地址、
+     云资源标识和已登记生产域名；诊断只输出路径、行号与类别，不回显命中值。
+   - 已知生产域名以 SHA-256 指纹登记，真实值不得写回公开规则；维护者发布审计通过未跟踪的
+     `MOD_SENSITIVE_ASSET_FILE` 注入精确资产清单。该指纹用于匹配，不应被误解为加密或秘密存储。
+   - `sanitize_history.py --check` 复用同一规则校验脱敏副本；两项检查均由 pre-commit、
+     `make doc-check` 和 CI 阻断执行。
 2. **完整性清单更新**：
    - 生成脱敏副本后，其 SHA-256 必须同步记入 `docs/history/MANIFEST.sha256`。
    - `scripts/project/check_history_integrity.py` 对原件与脱敏副本统一进行防篡改核验。

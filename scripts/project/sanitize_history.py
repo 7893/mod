@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
-"""Sanitize restricted historical documents and verify sanitization completeness.
+"""Generate and verify public-safe copies of restricted historical documents.
 
-Owner: project governance tooling (KI-074).
-Follows: docs/development/SANITIZATION-RULES.md
+Owner: project governance tooling (KI-074, KI-103).
+Input: ignored historical originals and an optional private asset inventory.
+Output: tracked ``*.sanitized.md`` copies; ``--check`` is strictly read-only.
+Risk: generation rewrites only public sanitized copies, never restricted originals.
+Validation: python3 scripts/project/sanitize_history.py --check
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
-import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+
+from check_public_sanitization import load_private_assets, redact_sensitive_text, scan_text
 
 ROOT = Path(__file__).resolve().parents[2]
 HISTORY_DIR = ROOT / "docs" / "history"
 
-# Restricted files inventory mapped to stable IDs
-RESTRICTED_FILES: List[Tuple[str, str]] = [
+RESTRICTED_FILES: list[tuple[str, str]] = [
     ("H-001", "01-产品与业务设计-待确认.md"),
     ("H-002", "02-数据模型-待确认.md"),
     ("H-003", "03-技术架构与实施计划.md"),
@@ -44,139 +46,83 @@ RESTRICTED_FILES: List[Tuple[str, str]] = [
     ("H-023", "22-项目目录集中整理记录.md"),
 ]
 
-# Sensitive patterns that must NOT appear in any sanitized document
-LEAK_SIGNATURES = [
-    r"193\.122\.180\.196",
-    r"10\.0\.10\.27",
-    r"10\.0\.0\.152",
-    r"8n8m\.cfd",
-    r"2603:c020:",
-    r"ocid1\.tenancy\.oc1",
-    r"ocid1\.subnet\.oc1",
-    r"instance-20210605-2242",
-    r"mysqldbsystem20260822145022",
-    r"mysqlbackup20260830172017",
-]
-
-# Replacement mappings in order of substitution
-REPLACEMENTS: List[Tuple[re.Pattern, str]] = [
-    # Domain
-    (re.compile(r"https?://[a-zA-Z0-9.-]+\.8n8m\.cfd/mod/?"), "https://<production-domain>/mod/"),
-    (re.compile(r"[a-zA-Z0-9.-]+\.8n8m\.cfd"), "<production-domain>"),
-    # IPs
-    (re.compile(r"193\.122\.180\.196"), "193.122.x.x (USA公网地址，已脱敏)"),
-    (re.compile(r"10\.0\.10\.27"), "10.0.10.x (MySQL私网地址，已脱敏)"),
-    (re.compile(r"10\.0\.0\.152"), "10.0.0.x (USA宿主机私网地址，已脱敏)"),
-    (re.compile(r"2603:c020:400d:de00:0:5dc5:c462:fc01"), "<ipv6-address (已脱敏)>"),
-    # OCI identifiers
-    (re.compile(r"ocid1\.tenancy\.oc1\.\.\.[a-z0-9]+"), "<tenancy-ocid>"),
-    (re.compile(r"ocid1\.subnet\.oc1\.\.\.[a-z0-9]+"), "<subnet-ocid>"),
-    (re.compile(r"instance-20210605-2242"), "<usa-vm-instance-id>"),
-    (re.compile(r"mysqldbsystem20260822145022"), "<mysql-instance-name>"),
-    (re.compile(r"mysqlbackup20260830172017"), "<mysql-backup-id>"),
-    (re.compile(r"ypNq:US-ASHBURN-AD-1"), "<us-ashburn-ad>"),
-    (re.compile(r"FAULT-DOMAIN-2"), "<fault-domain>"),
-]
-
 
 def sanitize_text(text: str, stable_id: str, raw_filename: str, raw_hash: str) -> str:
-    """Apply sanitization transformations and prepend preservation header."""
-    content = text
-    for pattern, replacement in REPLACEMENTS:
-        content = pattern.sub(replacement, content)
-
-    # Rewrite internal links to restricted history files to their sanitized counterparts
+    """Apply the shared public sanitizer and prepend preservation metadata."""
+    content = redact_sensitive_text(text, load_private_assets())
     for _, raw_name in RESTRICTED_FILES:
-        raw_sanitized = raw_name.replace(".md", ".sanitized.md")
-        content = content.replace(f"./{raw_name}", f"./{raw_sanitized}")
-        content = content.replace(f"({raw_name})", f"({raw_sanitized})")
+        sanitized_name = raw_name.replace(".md", ".sanitized.md")
+        content = content.replace(f"./{raw_name}", f"./{sanitized_name}")
+        content = content.replace(f"({raw_name})", f"({sanitized_name})")
 
     header = (
         f"> **保全说明**：本文件为历史资料 `docs/history/{raw_filename}` 的公开脱敏副本。\n"
         f"> **稳定 ID**：{stable_id}\n"
         f"> **原件哈希 (SHA-256)**：`{raw_hash}`\n"
         f"> **脱敏规范**：遵循 [SANITIZATION-RULES.md](../development/SANITIZATION-RULES.md)，"
-        f"所有真实内网/公网 IP、OCID、域名及主机标识已完成安全脱敏，技术结构与演进过程 100% 保真。\n\n"
-        f"---\n\n"
+        "真实网络、云资源与私有主机标识均由统一规则替换；技术结构与演进过程保留。\n\n"
+        "---\n\n"
     )
     return header + content
 
 
-def generate_sanitized_files() -> List[Path]:
-    """Generate or update all sanitized copies."""
-    generated: List[Path] = []
+def generate_sanitized_files() -> list[Path]:
+    """Generate public copies without modifying ignored restricted originals."""
+    generated: list[Path] = []
     for stable_id, raw_name in RESTRICTED_FILES:
         raw_path = HISTORY_DIR / raw_name
         if not raw_path.exists():
-            print(f"[sanitize-history] WARNING: Raw file not found: {raw_path}", file=sys.stderr)
+            print(f"[sanitize-history] WARNING: restricted source unavailable for {stable_id}", file=sys.stderr)
             continue
         raw_bytes = raw_path.read_bytes()
-        raw_hash = hashlib.sha256(raw_bytes).hexdigest()
-        raw_text = raw_bytes.decode("utf-8")
-
-        sanitized_text = sanitize_text(raw_text, stable_id, raw_name, raw_hash)
-        sanitized_filename = raw_name.replace(".md", ".sanitized.md")
-        sanitized_path = HISTORY_DIR / sanitized_filename
-
-        sanitized_path.write_text(sanitized_text, encoding="utf-8")
+        sanitized_path = HISTORY_DIR / raw_name.replace(".md", ".sanitized.md")
+        sanitized_path.write_text(
+            sanitize_text(
+                raw_bytes.decode("utf-8"),
+                stable_id,
+                raw_name,
+                hashlib.sha256(raw_bytes).hexdigest(),
+            ),
+            encoding="utf-8",
+        )
         generated.append(sanitized_path)
-        print(f"[sanitize-history] Generated {sanitized_filename} (from {stable_id}: {raw_name})")
-
+        print(f"[sanitize-history] Generated public copy for {stable_id}")
     return generated
 
 
-def check_sanitization() -> List[str]:
-    """Check that all sanitized files exist and contain zero leak signatures."""
-    errors: List[str] = []
-    compiled_leaks = [re.compile(sig, re.IGNORECASE) for sig in LEAK_SIGNATURES]
-
+def check_sanitization() -> list[str]:
+    """Verify every expected public copy with the shared repository scanner."""
+    errors: list[str] = []
+    private_assets = load_private_assets()
     for stable_id, raw_name in RESTRICTED_FILES:
-        sanitized_filename = raw_name.replace(".md", ".sanitized.md")
-        sanitized_path = HISTORY_DIR / sanitized_filename
-
+        sanitized_path = HISTORY_DIR / raw_name.replace(".md", ".sanitized.md")
         if not sanitized_path.exists():
-            errors.append(f"Missing sanitized copy: {sanitized_filename} for {stable_id}")
+            errors.append(f"missing public copy for {stable_id}")
             continue
-
-        text = sanitized_path.read_text(encoding="utf-8")
-        for sig_idx, regex in enumerate(compiled_leaks):
-            matches = regex.findall(text)
-            if matches:
-                errors.append(
-                    f"Sensitive leak in {sanitized_filename}: matched '{LEAK_SIGNATURES[sig_idx]}' ({len(matches)} occurrences)"
-                )
-
+        relative = sanitized_path.relative_to(ROOT).as_posix()
+        findings = scan_text(relative, sanitized_path.read_text(encoding="utf-8"), private_assets)
+        errors.extend(f"{item.path}:{item.line}: {item.category}" for item in findings)
     return errors
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Sanitize historical documents.")
-    parser.add_argument("--check", action="store_true", help="Verify sanitized copies against leakage.")
-    parser.add_argument("--generate", action="store_true", help="Generate/update sanitized copies.")
+    parser = argparse.ArgumentParser(description="Generate or verify public historical copies.")
+    parser.add_argument("--check", action="store_true", help="Read-only verification.")
+    parser.add_argument("--generate", action="store_true", help="Generate public copies (default action).")
     args = parser.parse_args()
 
-    if args.check:
-        errors = check_sanitization()
-        if errors:
-            for err in errors:
-                print(f"  SANITIZATION LEAK  {err}", file=sys.stderr)
-            return 1
-        print("[sanitize-history] OK: all 23 restricted files have leak-free sanitized copies.")
-        return 0
+    if not args.check:
+        generated = generate_sanitized_files()
+        print(f"[sanitize-history] Generated {len(generated)} public historical copies.")
 
-    # Default action is generate
-    generated = generate_sanitized_files()
-    print(f"[sanitize-history] Successfully processed {len(generated)} sanitized historical files.")
-
-    # Self-check after generation
     errors = check_sanitization()
     if errors:
-        for err in errors:
-            print(f"  SANITIZATION LEAK  {err}", file=sys.stderr)
+        for error in errors:
+            print(f"  SANITIZATION LEAK  {error}", file=sys.stderr)
         return 1
-    print("[sanitize-history] OK: self-verification passed.")
+    print("[sanitize-history] OK: all restricted records have public-safe copies.")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

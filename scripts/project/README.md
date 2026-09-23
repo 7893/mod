@@ -5,8 +5,13 @@
 
 ## 已维护脚本
 
+- `check_public_sanitization.py`：只读扫描全部 Git 受跟踪文本，阻断具体公网/私网地址、
+  云资源标识、已登记生产域名及维护者私有资产清单命中；诊断不回显真实值。默认由
+  pre-commit、`make doc-check` 和 CI 执行。维护者发布审计可通过未跟踪文件
+  `MOD_SENSITIVE_ASSET_FILE=/secure/path/assets.txt` 注入精确资产清单。
 - `pre_flight.sh`：本机公共 harness 存在时委托其按变更领域检查，返回摘要与日志路径；
-  否则使用文件内保留的原始检查实现。检查写入本地测试/构建产物，不发布或查库。
+  缺失时以非零状态提示改用公共 `make check`，避免把“未执行”误报成成功。检查写入本地
+  测试/构建产物，不发布或查库。
   用 `make pre-flight` 验证，具体边界见 `docs/development/LOCAL-HARNESS.md`。
 
 - `frontend/capture-dashboard.mjs`：截取本地驾驶舱页面；通过 `MOD_SCREENSHOT_URL` 和

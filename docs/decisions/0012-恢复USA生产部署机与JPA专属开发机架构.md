@@ -10,17 +10,17 @@
 正式恢复**JPA 专属开发机**与**USA 纯生产部署机**职责分离架构：
 1. **JPA（开发工作区机）**：
    - 承载完整 Git 仓库、全套开发与测试工具链（`pytest`、`vitest`、`vue-tsc`、`ruff`、`local-harness`）。
-   - 保留本地 Osaka MySQL（`10.1.0.186` / `10.0.1.25`）作为本地开发与自动化单测专用库。
+   - 保留本地 Osaka MySQL（`<internal-ip>` / `<internal-ip>`）作为本地开发与自动化单测专用库。
    - 停用 JPA 上的生产常驻写服务（`mod-simulator` 与 `modo-ingest`）。
    - 统领 CI/CD 发布：通过升级后的 `scripts/project/publish.sh` 在本地执行 `make check` 门禁，全绿后自动化打包推送产物至 USA 生产机。
 2. **USA（纯生产部署机）**：
    - 严格遵守 `docs/operations/USA-DEPLOYMENT-LAYOUT.md` 纯部署目录规范，不初始化 Git、不保存历史和开发工具。
    - 承载生产运行环境：FastAPI API 网关（`mod-api` 8100 端口）、真实拟真引擎（`mod-simulator`）、MODO 遥测数据网桥（`modo-api` 8000 端口与 `modo-ingest`）、Nginx 逆向代理。
-   - 数据库连接同子网 US MySQL HeatWave（`10.0.1.25`），API 服务使用最小权限只读账号 `mod_readonly`，仅后台写服务使用管理凭据。
+   - 数据库连接同子网 US MySQL HeatWave（`<internal-ip>`），API 服务使用最小权限只读账号 `mod_readonly`，仅后台写服务使用管理凭据。
    - 4 项生产维护定时器（看门狗、模型重训、每日简报、容灾备份）在 USA 独立常驻调度。
 
 ## 理由
-- **同子网极速通信**：USA 生产主机与 US MySQL（`10.0.1.25`）同属 Ashburn 局域网子网，网络 RTT < 0.2ms，彻底消除了跨洋调用带来的 172ms 网络惩罚。
+- **同子网极速通信**：USA 生产主机与 US MySQL（`<internal-ip>`）同属 Ashburn 局域网子网，网络 RTT < 0.2ms，彻底消除了跨洋调用带来的 172ms 网络惩罚。
 - **物理故障隔离**：开发、构建、文档治理与测试完全在 JPA 进行，USA 生产机仅接收已通过全量测试的 release 打包产物，物理隔离彻底消除“开发击穿生产”的可能。
 - **权限最小化**：线上 API 服务使用专用只读账号 `mod_readonly` 隔离运行，模型元数据库与业务大表受严格权限保护。
 
