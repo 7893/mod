@@ -3,6 +3,8 @@
 # --- Stage 1: Build Frontend SPA ---
 FROM node:22-alpine AS frontend-builder
 WORKDIR /app/frontend
+ARG VITE_CHINA_MAP_GEOJSON_URL=
+ENV VITE_CHINA_MAP_GEOJSON_URL=$VITE_CHINA_MAP_GEOJSON_URL
 RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile

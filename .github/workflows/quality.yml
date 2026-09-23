@@ -113,6 +113,8 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
+        env:
+          VITE_CHINA_MAP_GEOJSON_URL: ${{ vars.VITE_CHINA_MAP_GEOJSON_URL }}
         run: pnpm build
 
       - name: Deploy

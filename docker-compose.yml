@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_CHINA_MAP_GEOJSON_URL: ${VITE_CHINA_MAP_GEOJSON_URL:-}
     container_name: mod-dashboard
     ports:
       - "8080:80"

@@ -13,7 +13,8 @@
 5. [PROJECT-LAYOUT.md](../PROJECT-LAYOUT.md)：项目目录和运行主机边界。
 6. [KNOWN-ISSUES.md](KNOWN-ISSUES.md)：已知问题看板（已发现问题的看板列表，各 issue 详情见 [issues/](issues/)；本项目停用 GitHub Issues，见 [ADR-0014](decisions/0014-停用GitHub-Issues统一使用本地KI问题跟踪体系.md)）。
 7. [CHANGELOG.md](../CHANGELOG.md)：从公开就绪基线开始、由锁定版本 git-cliff 生成的发布变更快照。
-8. [HISTORY-CATALOG.md](HISTORY-CATALOG.md)：冻结历史的稳定编号、可见性、哈希与备份状态目录。
+8. [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)：第三方组件声明、中国地图数据隔离策略与使用边界。
+9. [HISTORY-CATALOG.md](HISTORY-CATALOG.md)：冻结历史的稳定编号、可见性、哈希与备份状态目录。
 
 ### 本轮重大缺陷
 

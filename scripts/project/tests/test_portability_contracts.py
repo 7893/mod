@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import tempfile
@@ -10,6 +11,28 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class PortabilityContractTests(unittest.TestCase):
+    def test_china_map_geometry_is_deployment_owned(self) -> None:
+        package = json.loads((ROOT / "frontend/package.json").read_text(encoding="utf-8"))
+        lockfile = (ROOT / "frontend/pnpm-lock.yaml").read_text(encoding="utf-8")
+        component = (ROOT / "frontend/src/components/ChinaMap.vue").read_text(encoding="utf-8")
+        source = (ROOT / "frontend/src/charts/chinaMapSource.ts").read_text(encoding="utf-8")
+        vite_config = (ROOT / "frontend/vite.config.ts").read_text(encoding="utf-8")
+        env_example = (ROOT / "frontend/.env.example").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("china-geojson", package["dependencies"])
+        self.assertNotIn("china-geojson@", lockfile)
+        self.assertNotIn("china-geojson", component)
+        self.assertNotIn("china-geojson", vite_config)
+        self.assertIn("fetchChinaMapGeoJson", component)
+        self.assertIn("FeatureCollection", source)
+        self.assertRegex(env_example, r"(?m)^VITE_CHINA_MAP_GEOJSON_URL=$")
+        self.assertIn("VITE_CHINA_MAP_GEOJSON_URL", readme)
+        self.assertGreaterEqual(readme.count("THIRD_PARTY_NOTICES.md"), 3)
+        self.assertIn("Apache ECharts", notices)
+        self.assertIn("VITE_CHINA_MAP_GEOJSON_URL", notices)
+
     def test_public_tools_do_not_embed_workspace_root(self) -> None:
         fixed_root = "/".join(("", "home", "ubuntu", "mod"))
         for relative in (

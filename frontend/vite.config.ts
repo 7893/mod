@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
   },
   build: {
     outDir: mode === 'visual' ? 'output/visual-dist' : 'dist',
-    // 大屏依赖体积大（echarts / 地图 GeoJSON），按库分包，改善首屏加载与浏览器缓存命中。
+    // 大屏依赖体积大（ECharts），按库分包，改善首屏加载与浏览器缓存命中。
     // echarts 单库约 625KB 无法再拆，上调警告阈值以消除噪音（它是独立缓存单元，业务改动不影响它）。
     chunkSizeWarningLimit: 700,
     rollupOptions: {
@@ -32,7 +32,6 @@ export default defineConfig(({ mode }) => {
         manualChunks: {
           echarts: ['echarts', 'vue-echarts'],
           vue: ['vue', 'vue-router', 'pinia'],
-          geo: ['china-geojson'],
           icons: ['lucide-vue-next'],
         },
       },

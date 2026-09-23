@@ -16,7 +16,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "china-geojson": "^1.0.0",
     "echarts": "^6.0.0",
     "lucide-vue-next": "^0.468.0",
     "pinia": "^3.0.3",

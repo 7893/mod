@@ -22,6 +22,7 @@
     <a href="docs/INDEX.md">文档索引</a> ·
     <a href="docs/CURRENT-STATE.md">当前状态</a> ·
     <a href="docs/KNOWN-ISSUES.md">已知问题</a> ·
+    <a href="THIRD_PARTY_NOTICES.md">第三方声明</a> ·
     <a href="CHANGELOG.md">变更日志</a>
   </p>
 </div>
@@ -141,6 +142,8 @@ pnpm dev
 ```
 
 > 前端已内置离线合成快照数据，无需配置本地数据库即可完整体验六屏联动交互。若需连接数据库，请参考 `docs/development/` 配置本地环境文件。
+> 仓库不分发中国地图几何数据；地图默认显示未配置状态。部署者只有在自行确认数据授权、现势性与适用法规后，
+> 才应通过 `VITE_CHINA_MAP_GEOJSON_URL` 提供兼容 ECharts 的 GeoJSON `FeatureCollection`。
 
 提交代码前请执行全量质量门禁：
 
@@ -156,6 +159,7 @@ make check
 | [ENFORCEMENT.md](ENFORCEMENT.md) | 在提交、测试、发布动作点强制执行的安全与治理闸门 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 标准开发、自验、文档同步与原子提交工作流 |
 | [SUPPORT.md](SUPPORT.md) / [SECURITY.md](SECURITY.md) | 公共支持边界与私密漏洞报告前提 |
+| [第三方组件与数据来源声明 (THIRD_PARTY_NOTICES.md)](THIRD_PARTY_NOTICES.md) | 第三方组件声明、中国地图数据隔离策略与使用边界 |
 | [当前状态事实 (CURRENT-STATE.md)](docs/CURRENT-STATE.md) | 当前运行环境、数据规模与技术事实的唯一官方入口 |
 | [文档总索引 (INDEX.md)](docs/INDEX.md) | 现行架构、开发标准、ADR 决策、历史资料与操作边界总览 |
 | [已知问题看板 (KNOWN-ISSUES.md)](docs/KNOWN-ISSUES.md) | 系统技术债务与缺陷看板（已按 ADR-0014 闭环管理） |
@@ -163,7 +167,9 @@ make check
 
 ### 八、开源许可
 
-MOD 遵循 [MIT License](LICENSE) 开源协议。
+MOD 自研代码遵循 [MIT License](LICENSE) 开源协议。仓库、依赖锁与默认构建均不包含中国地图几何数据；
+地图能力仅在部署者通过 `VITE_CHINA_MAP_GEOJSON_URL` 显式提供并自行确认合规的数据源后启用。
+第三方组件声明及地图使用边界见[第三方组件与数据来源声明](THIRD_PARTY_NOTICES.md)。
 
 ---
 
@@ -277,6 +283,9 @@ pnpm dev
 ```
 
 > The frontend includes bundled synthetic snapshot data, allowing complete exploration of all 6 screens without configuring a local database. To connect to a database, see `docs/development/` for environment configuration.
+> The repository does not distribute China map geometry, so the map honestly reports an unconfigured source by default.
+> A deployer may set `VITE_CHINA_MAP_GEOJSON_URL` to an ECharts-compatible GeoJSON `FeatureCollection` only after
+> independently confirming its authorization, currency, and regulatory suitability.
 
 Run the full quality gate before committing:
 
@@ -292,6 +301,7 @@ make check
 | [ENFORCEMENT.md](ENFORCEMENT.md) | Action-time safety and governance gates enforced during development |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Standard development, verification, doc sync, and commit workflows |
 | [SUPPORT.md](SUPPORT.md) / [SECURITY.md](SECURITY.md) | Public support boundaries and private vulnerability reporting prerequisites |
+| [Third-Party Notices (THIRD_PARTY_NOTICES.md)](THIRD_PARTY_NOTICES.md) | Third-party component notices, China-map data isolation policy, and usage boundaries |
 | [Current State (CURRENT-STATE.md)](docs/CURRENT-STATE.md) | Canonical source of truth for runtime, data, and architecture facts |
 | [Documentation Index (INDEX.md)](docs/INDEX.md) | Master directory for architecture standards, ADRs, operations, and history |
 | [Known Issues (KNOWN-ISSUES.md)](docs/KNOWN-ISSUES.md) | Defect and technical debt tracker (governed per ADR-0014) |
@@ -299,4 +309,7 @@ make check
 
 ### 8. License
 
-MOD is released under the [MIT License](LICENSE).
+MOD-authored code is released under the [MIT License](LICENSE). The repository, dependency lock, and default build
+contain no China map geometry. Map rendering is enabled only when a deployer explicitly supplies a source through
+`VITE_CHINA_MAP_GEOJSON_URL` after independently confirming compliance. See the
+[Third-Party Notices](THIRD_PARTY_NOTICES.md) for component notices and map-use boundaries.
