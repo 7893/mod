@@ -48,6 +48,9 @@ BACKEND_DIR = BASE_DIR / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
 from app.db import get_engine  # noqa: E402
+from app.integrations.heatwave_explanations import (  # noqa: E402
+    refresh_persisted_shap_explanations,
+)
 from app.integrations.heatwave_sql import (  # noqa: E402
     FEAT_TABLE_CLASSIFIER,
     FEAT_TABLE_REGRESSION,
@@ -70,7 +73,11 @@ logger = logging.getLogger("ml-train-eval")
 
 
 def load_environment() -> None:
-    for env_file in [BASE_DIR / ".env.systemd", BASE_DIR / ".env.local", BASE_DIR / ".env"]:
+    for env_file in [
+        BASE_DIR / ".env.systemd",
+        BASE_DIR / ".env.local",
+        BASE_DIR / ".env",
+    ]:
         if env_file.exists():
             with open(env_file, "r", encoding="utf-8") as f:
                 for line in f:
@@ -137,24 +144,33 @@ def rebuild_feature_tables(conn: Any) -> dict[str, int]:
     重算全部单位的特征（DELETE 后重新 INSERT），使模型始终覆盖最新单位规模，
     而非训练一批冻结的历史特征。覆盖写入，特征 SQL 见 heatwave_sql.py。
     """
-    logger.info("Rebuilding feature tables from current business data (dynamic unit coverage)...")
+    logger.info(
+        "Rebuilding feature tables from current business data (dynamic unit coverage)..."
+    )
     # 回归特征表
     conn.execute(text(_DDL_FEAT_REGRESSION))
     conn.execute(text(f"DELETE FROM `{FEAT_TABLE_REGRESSION}`"))
     conn.execute(text(_INSERT_FEAT_REGRESSION))
-    reg_rows = conn.execute(text(f"SELECT COUNT(*) FROM `{FEAT_TABLE_REGRESSION}`")).scalar()
+    reg_rows = conn.execute(
+        text(f"SELECT COUNT(*) FROM `{FEAT_TABLE_REGRESSION}`")
+    ).scalar()
     # 分类特征表
     conn.execute(text(_DDL_FEAT_CLASSIFIER))
     conn.execute(text(f"DELETE FROM `{FEAT_TABLE_CLASSIFIER}`"))
     conn.execute(text(_INSERT_FEAT_CLASSIFIER))
-    cls_rows = conn.execute(text(f"SELECT COUNT(*) FROM `{FEAT_TABLE_CLASSIFIER}`")).scalar()
+    cls_rows = conn.execute(
+        text(f"SELECT COUNT(*) FROM `{FEAT_TABLE_CLASSIFIER}`")
+    ).scalar()
     try:
         conn.commit()
     except Exception:
         pass
     logger.info(
         "Feature tables rebuilt: %s (%d rows), %s (%d rows) — now covering all current units",
-        FEAT_TABLE_REGRESSION, reg_rows, FEAT_TABLE_CLASSIFIER, cls_rows,
+        FEAT_TABLE_REGRESSION,
+        reg_rows,
+        FEAT_TABLE_CLASSIFIER,
+        cls_rows,
     )
     return {"regression_rows": reg_rows, "classifier_rows": cls_rows}
 
@@ -163,8 +179,7 @@ def check_feature_integrity(conn: Any) -> dict[str, Any]:
     """Verify feature schemas and check for data leakage."""
     logger.info("Verifying feature table integrity and leakage avoidance...")
     risk_cols = [
-        row[0]
-        for row in conn.execute(text("DESCRIBE `mod`.`ml_feat_risk`")).fetchall()
+        row[0] for row in conn.execute(text("DESCRIBE `mod`.`ml_feat_risk`")).fetchall()
     ]
     doc_cols = [
         row[0]
@@ -182,8 +197,12 @@ def check_feature_integrity(conn: Any) -> dict[str, Any]:
             "Risk features must remain cross-sectional unit state metrics."
         )
 
-    risk_count = conn.execute(text("SELECT COUNT(*) FROM `mod`.`ml_feat_risk`")).scalar()
-    doc_count = conn.execute(text("SELECT COUNT(*) FROM `mod`.`ml_feat_doc_delta`")).scalar()
+    risk_count = conn.execute(
+        text("SELECT COUNT(*) FROM `mod`.`ml_feat_risk`")
+    ).scalar()
+    doc_count = conn.execute(
+        text("SELECT COUNT(*) FROM `mod`.`ml_feat_doc_delta`")
+    ).scalar()
 
     logger.info(
         "Feature verification passed: ml_feat_risk (%d rows, cross-sectional, 0 time leakage), "
@@ -208,9 +227,13 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
     logger.info("Executing train/test split on feature tables...")
 
     # 1. Risk classifier split: random by org (deterministic seed)
-    risk_rows = conn.execute(
-        text("SELECT id, org_id, risk_flag FROM `mod`.`ml_feat_risk` ORDER BY id")
-    ).mappings().all()
+    risk_rows = (
+        conn.execute(
+            text("SELECT id, org_id, risk_flag FROM `mod`.`ml_feat_risk` ORDER BY id")
+        )
+        .mappings()
+        .all()
+    )
 
     risk_ids = [r["id"] for r in risk_rows]
     rng = random.Random(seed)
@@ -223,8 +246,12 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
     # Prepare tables
     conn.execute(text("DROP TABLE IF EXISTS `mod`.`ml_feat_risk_train`"))
     conn.execute(text("DROP TABLE IF EXISTS `mod`.`ml_feat_risk_test`"))
-    conn.execute(text("CREATE TABLE `mod`.`ml_feat_risk_train` LIKE `mod`.`ml_feat_risk`"))
-    conn.execute(text("CREATE TABLE `mod`.`ml_feat_risk_test` LIKE `mod`.`ml_feat_risk`"))
+    conn.execute(
+        text("CREATE TABLE `mod`.`ml_feat_risk_train` LIKE `mod`.`ml_feat_risk`")
+    )
+    conn.execute(
+        text("CREATE TABLE `mod`.`ml_feat_risk_test` LIKE `mod`.`ml_feat_risk`")
+    )
 
     # Batch insert into train and test
     train_ids_str = ",".join(map(str, train_risk_ids))
@@ -241,8 +268,12 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
         )
     )
 
-    train_risk_cnt = conn.execute(text("SELECT COUNT(*) FROM `mod`.`ml_feat_risk_train`")).scalar()
-    test_risk_cnt = conn.execute(text("SELECT COUNT(*) FROM `mod`.`ml_feat_risk_test`")).scalar()
+    train_risk_cnt = conn.execute(
+        text("SELECT COUNT(*) FROM `mod`.`ml_feat_risk_train`")
+    ).scalar()
+    test_risk_cnt = conn.execute(
+        text("SELECT COUNT(*) FROM `mod`.`ml_feat_risk_test`")
+    ).scalar()
     train_risk_pos = conn.execute(
         text("SELECT COUNT(*) FROM `mod`.`ml_feat_risk_train` WHERE risk_flag = 1")
     ).scalar()
@@ -262,15 +293,19 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
 
     # 2. Doc delta regression split: by unit cohort, not observation date
     # Earliest batches / highest days_since_go_live -> Train; latest -> Test
-    doc_rows = conn.execute(
-        text(
-            """
+    doc_rows = (
+        conn.execute(
+            text(
+                """
             SELECT id, org_id, batch_id, days_since_go_live, daily_doc_delta
             FROM `mod`.`ml_feat_doc_delta`
             ORDER BY days_since_go_live DESC, batch_id ASC, id ASC
             """
+            )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
 
     split_doc_idx = int(len(doc_rows) * 0.8)
     train_doc_ids = [r["id"] for r in doc_rows[:split_doc_idx]]
@@ -278,8 +313,16 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
 
     conn.execute(text("DROP TABLE IF EXISTS `mod`.`ml_feat_doc_delta_train`"))
     conn.execute(text("DROP TABLE IF EXISTS `mod`.`ml_feat_doc_delta_test`"))
-    conn.execute(text("CREATE TABLE `mod`.`ml_feat_doc_delta_train` LIKE `mod`.`ml_feat_doc_delta`"))
-    conn.execute(text("CREATE TABLE `mod`.`ml_feat_doc_delta_test` LIKE `mod`.`ml_feat_doc_delta`"))
+    conn.execute(
+        text(
+            "CREATE TABLE `mod`.`ml_feat_doc_delta_train` LIKE `mod`.`ml_feat_doc_delta`"
+        )
+    )
+    conn.execute(
+        text(
+            "CREATE TABLE `mod`.`ml_feat_doc_delta_test` LIKE `mod`.`ml_feat_doc_delta`"
+        )
+    )
 
     train_doc_str = ",".join(map(str, train_doc_ids))
     test_doc_str = ",".join(map(str, test_doc_ids))
@@ -295,8 +338,12 @@ def split_datasets(conn: Any, seed: int = 42) -> dict[str, Any]:
         )
     )
 
-    train_doc_cnt = conn.execute(text("SELECT COUNT(*) FROM `mod`.`ml_feat_doc_delta_train`")).scalar()
-    test_doc_cnt = conn.execute(text("SELECT COUNT(*) FROM `mod`.`ml_feat_doc_delta_test`")).scalar()
+    train_doc_cnt = conn.execute(
+        text("SELECT COUNT(*) FROM `mod`.`ml_feat_doc_delta_train`")
+    ).scalar()
+    test_doc_cnt = conn.execute(
+        text("SELECT COUNT(*) FROM `mod`.`ml_feat_doc_delta_test`")
+    ).scalar()
 
     logger.info(
         "Doc delta unit cohort split complete: Train %d rows, Test %d rows (same snapshot)",
@@ -336,7 +383,9 @@ def train_heatwave_models(conn: Any) -> dict[str, str]:
         pass
     try:
         conn.execute(
-            text(f"DELETE FROM `ML_SCHEMA_admin`.`MODEL_CATALOG` WHERE `model_handle` = '{cls_handle}'")
+            text(
+                f"DELETE FROM `ML_SCHEMA_admin`.`MODEL_CATALOG` WHERE `model_handle` = '{cls_handle}'"
+            )
         )
         conn.commit()
     except Exception:
@@ -394,7 +443,9 @@ def train_heatwave_models(conn: Any) -> dict[str, str]:
         pass
     try:
         conn.execute(
-            text(f"DELETE FROM `ML_SCHEMA_admin`.`MODEL_CATALOG` WHERE `model_handle` = '{reg_handle}'")
+            text(
+                f"DELETE FROM `ML_SCHEMA_admin`.`MODEL_CATALOG` WHERE `model_handle` = '{reg_handle}'"
+            )
         )
         conn.commit()
     except Exception:
@@ -425,7 +476,9 @@ def train_heatwave_models(conn: Any) -> dict[str, str]:
     return models
 
 
-def evaluate_classifier(conn: Any, handle: str = "MOD_RISK_CLASSIFIER") -> dict[str, Any]:
+def evaluate_classifier(
+    conn: Any, handle: str = "MOD_RISK_CLASSIFIER"
+) -> dict[str, Any]:
     """Evaluate classification model on train set (self-score) and test set (real score)."""
     logger.info("Evaluating classifier %s on train vs test datasets...", handle)
 
@@ -464,9 +517,11 @@ def evaluate_classifier(conn: Any, handle: str = "MOD_RISK_CLASSIFIER") -> dict[
 
     # Calculate metrics helper
     def calc_metrics(table: str) -> dict[str, Any]:
-        rows = conn.execute(
-            text(f"SELECT Prediction, risk_flag FROM `mod`.`{table}`")
-        ).mappings().all()
+        rows = (
+            conn.execute(text(f"SELECT Prediction, risk_flag FROM `mod`.`{table}`"))
+            .mappings()
+            .all()
+        )
         tp = sum(1 for r in rows if r["Prediction"] == 1 and r["risk_flag"] == 1)
         fp = sum(1 for r in rows if r["Prediction"] == 1 and r["risk_flag"] == 0)
         tn = sum(1 for r in rows if r["Prediction"] == 0 and r["risk_flag"] == 0)
@@ -475,7 +530,11 @@ def evaluate_classifier(conn: Any, handle: str = "MOD_RISK_CLASSIFIER") -> dict[
         accuracy = (tp + tn) / total if total else 0.0
         precision = tp / (tp + fp) if (tp + fp) else 0.0
         recall = tp / (tp + fn) if (tp + fn) else 0.0
-        f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) else 0.0
+        f1 = (
+            (2 * precision * recall) / (precision + recall)
+            if (precision + recall)
+            else 0.0
+        )
         return {
             "total": total,
             "accuracy": round(accuracy, 4),
@@ -529,7 +588,9 @@ def evaluate_classifier(conn: Any, handle: str = "MOD_RISK_CLASSIFIER") -> dict[
     }
 
 
-def evaluate_regression(conn: Any, handle: str = "MOD_REGRESSION_MODEL") -> dict[str, Any]:
+def evaluate_regression(
+    conn: Any, handle: str = "MOD_REGRESSION_MODEL"
+) -> dict[str, Any]:
     """Evaluate regression model on train set (self-score) and test set (real score)."""
     logger.info("Evaluating regression %s on train vs test datasets...", handle)
 
@@ -568,9 +629,13 @@ def evaluate_regression(conn: Any, handle: str = "MOD_REGRESSION_MODEL") -> dict
 
     # Calculate regression metrics
     def calc_reg_metrics(table: str) -> dict[str, Any]:
-        rows = conn.execute(
-            text(f"SELECT Prediction, daily_doc_delta FROM `mod`.`{table}`")
-        ).mappings().all()
+        rows = (
+            conn.execute(
+                text(f"SELECT Prediction, daily_doc_delta FROM `mod`.`{table}`")
+            )
+            .mappings()
+            .all()
+        )
         y_true = [float(r["daily_doc_delta"]) for r in rows]
         y_pred = [float(r["Prediction"]) for r in rows]
         n = len(y_true)
@@ -634,7 +699,9 @@ def evaluate_regression(conn: Any, handle: str = "MOD_REGRESSION_MODEL") -> dict
 
 def execute_full_batch_scoring(conn: Any) -> None:
     """Score the full 2,000 units so downstream dashboard displays real predictions."""
-    logger.info("Executing full batch scoring for ml_score_risk and ml_score_doc_delta...")
+    logger.info(
+        "Executing full batch scoring for ml_score_risk and ml_score_doc_delta..."
+    )
     conn.execute(text("DROP TABLE IF EXISTS `mod`.`ml_score_risk`"))
     conn.execute(
         text(
@@ -662,9 +729,17 @@ def execute_full_batch_scoring(conn: Any) -> None:
         )
     )
     conn.commit()
-    risk_scored = conn.execute(text("SELECT COUNT(*) FROM `mod`.`ml_score_risk`")).scalar()
-    doc_scored = conn.execute(text("SELECT COUNT(*) FROM `mod`.`ml_score_doc_delta`")).scalar()
-    logger.info("Full batch scoring complete: %d risk units, %d doc units", risk_scored, doc_scored)
+    risk_scored = conn.execute(
+        text("SELECT COUNT(*) FROM `mod`.`ml_score_risk`")
+    ).scalar()
+    doc_scored = conn.execute(
+        text("SELECT COUNT(*) FROM `mod`.`ml_score_doc_delta`")
+    ).scalar()
+    logger.info(
+        "Full batch scoring complete: %d risk units, %d doc units",
+        risk_scored,
+        doc_scored,
+    )
 
 
 def persist_metadata_and_audit(
@@ -673,31 +748,50 @@ def persist_metadata_and_audit(
     reg_eval: dict[str, Any],
     run_type: str = "manual",
     total_duration: float = 0.0,
+    trained_at: datetime | None = None,
 ) -> None:
     """Persist real quality scores and audit history into MySQL tables and MODEL_CATALOG."""
     logger.info("Persisting real model quality and verification status...")
-    now = datetime.now()
+    now = trained_at or datetime.now()
 
     models_to_save = [
-        (cls_eval, "MOD_RISK_CLASSIFIER", "风险规则标签拟合实验", "risk_flag", "unit_random_80_20"),
-        (reg_eval, "MOD_REGRESSION_MODEL", "单量合成标签拟合实验", "daily_doc_delta", "unit_cohort_80_20"),
+        (
+            cls_eval,
+            "MOD_RISK_CLASSIFIER",
+            "风险规则标签拟合实验",
+            "risk_flag",
+            "unit_random_80_20",
+        ),
+        (
+            reg_eval,
+            "MOD_REGRESSION_MODEL",
+            "单量合成标签拟合实验",
+            "daily_doc_delta",
+            "unit_cohort_80_20",
+        ),
     ]
 
     for ev, handle, name, target, split_method in models_to_save:
-        row = conn.execute(
-            text(
-                f"""
+        row = (
+            conn.execute(
+                text(
+                    f"""
                 SELECT model_type, model_metadata
                 FROM `ML_SCHEMA_admin`.`MODEL_CATALOG`
                 WHERE model_handle = '{handle}'
                 LIMIT 1
                 """
+                )
             )
-        ).mappings().first()
+            .mappings()
+            .first()
+        )
 
         algo = row.get("model_type") if row else "HeatWave AutoML"
         raw_meta = row.get("model_metadata") if row else None
-        meta_dict = json.loads(raw_meta) if isinstance(raw_meta, str) else (raw_meta or {})
+        meta_dict = (
+            json.loads(raw_meta) if isinstance(raw_meta, str) else (raw_meta or {})
+        )
 
         # 1. Update ML_SCHEMA_admin.MODEL_CATALOG model_metadata
         # Crucial: replace false self-score with real test score and mark verified=True
@@ -755,7 +849,12 @@ def persist_metadata_and_audit(
                 "name": name,
                 "task": ev["task"],
                 "target": target,
-                "algo": algo or ("DecisionTreeClassifier" if ev["task"] == "classification" else "LinearRegression"),
+                "algo": algo
+                or (
+                    "DecisionTreeClassifier"
+                    if ev["task"] == "classification"
+                    else "LinearRegression"
+                ),
                 "split": split_method,
                 "train_rows": ev["train_metrics"]["total"],
                 "test_rows": ev["test_metrics"]["total"],
@@ -818,23 +917,29 @@ def print_comparison_report(cls_eval: dict[str, Any], reg_eval: dict[str, Any]) 
     print("  - 切分方式: 按单位随机切分 (80% 训练 1600 行 / 20% 测试 400 行, seed=42)")
     print("  - 特征审查: 无时间序列单据量波动特征，杜绝业务节律造成的误判泄漏")
     print("  " + "-" * 70)
-    print(f"  {'指标':<16} | {'训练集自评分 (虚高假象)':<24} | {'测试集独立评估 (真实泛化)':<24}")
-    print("  " + "-" * 70)
     print(
-        f"  {'准确率 (Accuracy)':<14} | {cls_eval['train_metrics']['accuracy']*100:>19.2f}% | {cls_eval['test_metrics']['accuracy']*100:>19.2f}%"
-    )
-    print(
-        f"  {'精确率 (Precision)':<14} | {cls_eval['train_metrics']['precision']*100:>19.2f}% | {cls_eval['test_metrics']['precision']*100:>19.2f}%"
-    )
-    print(
-        f"  {'召回率 (Recall)':<17} | {cls_eval['train_metrics']['recall']*100:>19.2f}% | {cls_eval['test_metrics']['recall']*100:>19.2f}%"
-    )
-    print(
-        f"  {'F1-Score':<18} | {cls_eval['train_metrics']['f1']*100:>19.2f}% | {cls_eval['test_metrics']['f1']*100:>19.2f}%"
+        f"  {'指标':<16} | {'训练集自评分 (虚高假象)':<24} | {'测试集独立评估 (真实泛化)':<24}"
     )
     print("  " + "-" * 70)
-    print(f"  训练集混淆矩阵: TP={cm_train['tp']}, FP={cm_train['fp']}, TN={cm_train['tn']}, FN={cm_train['fn']}")
-    print(f"  测试集混淆矩阵: TP={cm['tp']}, FP={cm['fp']}, TN={cm['tn']}, FN={cm['fn']}")
+    print(
+        f"  {'准确率 (Accuracy)':<14} | {cls_eval['train_metrics']['accuracy'] * 100:>19.2f}% | {cls_eval['test_metrics']['accuracy'] * 100:>19.2f}%"
+    )
+    print(
+        f"  {'精确率 (Precision)':<14} | {cls_eval['train_metrics']['precision'] * 100:>19.2f}% | {cls_eval['test_metrics']['precision'] * 100:>19.2f}%"
+    )
+    print(
+        f"  {'召回率 (Recall)':<17} | {cls_eval['train_metrics']['recall'] * 100:>19.2f}% | {cls_eval['test_metrics']['recall'] * 100:>19.2f}%"
+    )
+    print(
+        f"  {'F1-Score':<18} | {cls_eval['train_metrics']['f1'] * 100:>19.2f}% | {cls_eval['test_metrics']['f1'] * 100:>19.2f}%"
+    )
+    print("  " + "-" * 70)
+    print(
+        f"  训练集混淆矩阵: TP={cm_train['tp']}, FP={cm_train['fp']}, TN={cm_train['tn']}, FN={cm_train['fn']}"
+    )
+    print(
+        f"  测试集混淆矩阵: TP={cm['tp']}, FP={cm['fp']}, TN={cm['tn']}, FN={cm['fn']}"
+    )
 
     # Regression Table
     print("\n[模型 2 · 业务单据日增量预测 (MOD_REGRESSION_MODEL)]")
@@ -842,7 +947,9 @@ def print_comparison_report(cls_eval: dict[str, Any], reg_eval: dict[str, Any]) 
     print("  - 切分方式: 按上线天数排序切分单位截面（非未来观测日期留出）")
     print("  - 特征审查: 标签由同截面公式生成，评估仅证明合成标签拟合能力")
     print("  " + "-" * 70)
-    print(f"  {'指标':<16} | {'训练集自评分 (虚高拟合)':<24} | {'测试集独立评估 (真实泛化)':<24}")
+    print(
+        f"  {'指标':<16} | {'训练集自评分 (虚高拟合)':<24} | {'测试集独立评估 (真实泛化)':<24}"
+    )
     print("  " + "-" * 70)
     print(
         f"  {'R² 拟合优度':<16} | {reg_eval['train_metrics']['r2']:>23.4f} | {reg_eval['test_metrics']['r2']:>23.4f}"
@@ -854,7 +961,9 @@ def print_comparison_report(cls_eval: dict[str, Any], reg_eval: dict[str, Any]) 
         f"  {'RMSE 均方根误差':<15} | {reg_eval['train_metrics']['rmse']:>23.4f} | {reg_eval['test_metrics']['rmse']:>23.4f}"
     )
     print("  " + "-" * 70)
-    print("\n结论: 真实测试集独立评估完成，彻底消除 100% 自评分虚假指标，已将真实质量分落库。")
+    print(
+        "\n结论: 真实测试集独立评估完成，彻底消除 100% 自评分虚假指标，已将真实质量分落库。"
+    )
     print("=" * 80 + "\n")
 
 
@@ -870,18 +979,47 @@ def run_full_pipeline(run_type: str = "manual") -> dict[str, Any]:
             {"lock_name": ML_RETRAIN_LOCK_NAME},
         ).scalar()
         if lock_acquired != 1:
-            raise RuntimeError("Another HeatWave AutoML retraining run is already active")
+            raise RuntimeError(
+                "Another HeatWave AutoML retraining run is already active"
+            )
         try:
             ensure_metadata_tables(conn)
             rebuild_feature_tables(conn)
             check_feature_integrity(conn)
             split_info = split_datasets(conn)
             train_heatwave_models(conn)
+            model_trained_at = datetime.now()
             cls_eval = evaluate_classifier(conn)
             reg_eval = evaluate_regression(conn)
             execute_full_batch_scoring(conn)
+            try:
+                shap_explanations = refresh_persisted_shap_explanations(
+                    conn,
+                    model_trained_at=model_trained_at,
+                )
+                logger.info(
+                    "Published %d persisted SHAP explanations in %d batches",
+                    shap_explanations["rows"],
+                    shap_explanations["batches"],
+                )
+            except Exception as exc:
+                shap_explanations = {
+                    "status": "retained_previous",
+                    "error": type(exc).__name__,
+                }
+                logger.warning(
+                    "Persisted SHAP refresh failed; retained previous snapshot: %s",
+                    type(exc).__name__,
+                )
             duration = time.time() - t_start
-            persist_metadata_and_audit(conn, cls_eval, reg_eval, run_type=run_type, total_duration=duration)
+            persist_metadata_and_audit(
+                conn,
+                cls_eval,
+                reg_eval,
+                run_type=run_type,
+                total_duration=duration,
+                trained_at=model_trained_at,
+            )
             print_comparison_report(cls_eval, reg_eval)
         finally:
             try:
@@ -890,23 +1028,42 @@ def run_full_pipeline(run_type: str = "manual") -> dict[str, Any]:
                     {"lock_name": ML_RETRAIN_LOCK_NAME},
                 )
             except Exception as exc:
-                logger.warning("Failed to release retraining advisory lock: %s", type(exc).__name__)
+                logger.warning(
+                    "Failed to release retraining advisory lock: %s", type(exc).__name__
+                )
 
     return {
         "status": "success",
         "split_info": split_info,
         "classifier_eval": cls_eval,
         "regression_eval": reg_eval,
+        "shap_explanations": shap_explanations,
         "duration_seconds": round(duration, 2),
     }
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="KI-015 HeatWave Model Real Training & Evaluation")
-    parser.add_argument("--split-only", action="store_true", help="Only perform train/test split")
-    parser.add_argument("--eval-only", action="store_true", help="Only evaluate existing models and persist metadata")
-    parser.add_argument("--dry-run", action="store_true", help="Validate features and print plan without training")
-    parser.add_argument("--run-type", default="manual", help="Run type for audit log (manual / scheduled)")
+    parser = argparse.ArgumentParser(
+        description="KI-015 HeatWave Model Real Training & Evaluation"
+    )
+    parser.add_argument(
+        "--split-only", action="store_true", help="Only perform train/test split"
+    )
+    parser.add_argument(
+        "--eval-only",
+        action="store_true",
+        help="Only evaluate existing models and persist metadata",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate features and print plan without training",
+    )
+    parser.add_argument(
+        "--run-type",
+        default="manual",
+        help="Run type for audit log (manual / scheduled)",
+    )
     args = parser.parse_args()
 
     load_environment()
@@ -926,7 +1083,9 @@ def main() -> None:
             reg_eval = evaluate_regression(conn)
             execute_full_batch_scoring(conn)
             duration = time.time() - t_start
-            persist_metadata_and_audit(conn, cls_eval, reg_eval, run_type="manual", total_duration=duration)
+            persist_metadata_and_audit(
+                conn, cls_eval, reg_eval, run_type="manual", total_duration=duration
+            )
             print_comparison_report(cls_eval, reg_eval)
         return
 

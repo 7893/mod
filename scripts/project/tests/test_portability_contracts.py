@@ -126,6 +126,17 @@ class PortabilityContractTests(unittest.TestCase):
         for development_package in ("pytest", "ruff", "pluggy", "iniconfig"):
             self.assertNotRegex(requirements, rf"(?m)^{development_package}(?:==|>=|$)")
 
+    def test_ml_retrain_timeout_allows_batched_shap_generation(self) -> None:
+        service = (ROOT / "deploy/mod-ml-retrain.service").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/quality.yml").read_text(encoding="utf-8")
+        publish = (ROOT / "scripts/project/publish.sh").read_text(encoding="utf-8")
+        self.assertIn("TimeoutStartSec=10800", service)
+        self.assertNotIn("TimeoutStartSec=600\n", service)
+        for deploy_path in (workflow, publish):
+            self.assertIn("install -m 0644", deploy_path)
+            self.assertIn("mod-ml-retrain.service", deploy_path)
+            self.assertIn("systemctl daemon-reload", deploy_path)
+
 
 if __name__ == "__main__":
     unittest.main()

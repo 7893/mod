@@ -38,3 +38,6 @@ CLI 临时脚本和旧环境文件。部署前必须通过 `make check`；部署
 
 现行生产维护只保留 3 个定时器：`mod-daily-briefing.timer`、`mod-heatwave-watchdog.timer`、
 `mod-ml-retrain.timer`。`mod-backup.*`、`mod-api.service` 与 `mod-simulator.service` 均已退役，不得恢复。
+
+`mod-ml-retrain.service` 的 oneshot 启动超时为 3 小时，用于容纳模型训练与 KI-107 全量分批
+SHAP 预生成；并发重训仍由 `mod_ml_retrain` advisory lock 阻断，不得通过去掉超时和锁来规避失败。

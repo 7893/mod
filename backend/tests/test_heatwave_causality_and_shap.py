@@ -25,6 +25,11 @@ if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 from app.db import connection  # noqa: E402
+from app.integrations.heatwave_explanations import (  # noqa: E402
+    parse_shap_attributions,
+    refresh_persisted_shap_explanations,
+    risk_feature_fingerprint,
+)
 from app.integrations.heatwave_ml import HeatWaveMLAdapter  # noqa: E402
 from app.integrations.heatwave_sql import (  # noqa: E402
     _DDL_FEAT_CLASSIFIER,
@@ -62,7 +67,15 @@ def test_lifecycle_advancer_causal_diff_penalty():
         orgs_by_status={"双轨运行中": [20]},
         org_users={20: [{"name": "李四", "role": "经办人"}]},
         next_ids={"construction_task": 100, "training": 100, "dual_run_result": 100},
-        batches={1: {"id": 1, "name": "第一批", "start_date": date(2026, 7, 1), "end_date": date(2026, 12, 31), "status": "双轨运行中"}},
+        batches={
+            1: {
+                "id": 1,
+                "name": "第一批",
+                "start_date": date(2026, 7, 1),
+                "end_date": date(2026, 12, 31),
+                "status": "双轨运行中",
+            }
+        },
     )
     thresholds = LifecycleThresholds(
         dual_run_days_min=14,
@@ -131,7 +144,7 @@ def test_heatwave_sql_momentum_features_contract():
 
 
 def test_heatwave_ml_shap_explain_risk_native():
-    """Verify sys.ML_EXPLAIN_ROW output parsing and Top 3 weight normalization."""
+    """Verify persisted HeatWave SHAP parsing and Top 3 weight normalization."""
     conn = MagicMock()
     adapter = HeatWaveMLAdapter(conn)
 
@@ -149,22 +162,30 @@ def test_heatwave_ml_shap_explain_risk_native():
         "stagnant_days": 18,
         "training_error_scissors": 24.5,
         "handler_concentration": 0.85,
+        "model_trained_at": "2026-09-23 00:08:00",
     }
-    adapter._safe_query = MagicMock(return_value=[mock_org_row])
-
-    # Mock sys.ML_EXPLAIN_ROW returning native SHAP attributions via scalar
     shap_results = {
-        "ml_results": {
-            "attributions": {
-                "stagnant_days_attribution": 0.45,
-                "high_risk_issues_attribution": 0.30,
-                "training_error_scissors_attribution": 0.15,
-                "unresolved_issues_attribution": 0.05,
-                "handler_concentration_attribution": 0.05,
-            }
+        "attributions": {
+            "stagnant_days_attribution": 0.45,
+            "high_risk_issues_attribution": 0.30,
+            "training_error_scissors_attribution": 0.15,
+            "unresolved_issues_attribution": 0.05,
+            "handler_concentration_attribution": 0.05,
         }
     }
-    conn.execute.return_value.scalar.return_value = json.dumps(shap_results)
+    adapter._safe_query = MagicMock(
+        side_effect=[
+            [mock_org_row],
+            [
+                {
+                    "ml_results": json.dumps(shap_results),
+                    "model_trained_at": "2026-09-23 00:08:00",
+                    "feature_fingerprint": risk_feature_fingerprint(mock_org_row),
+                    "generated_at": "2026-09-23 00:30:00",
+                }
+            ],
+        ]
+    )
 
     res = adapter.explain_risk(88)
     assert res["status"] == "ok"
@@ -172,10 +193,9 @@ def test_heatwave_ml_shap_explain_risk_native():
     assert res["orgId"] == 88
     assert res["orgName"] == "天府创新示范基地"
     assert len(res["topAttributions"]) == 3
-    shap_call = conn.execute.call_args
-    assert "MAX_EXECUTION_TIME(10000)" in str(shap_call.args[0])
-    assert "CAST(:feats AS JSON)" in str(shap_call.args[0])
-    assert shap_call.args[1]["model_handle"] == "MOD_RISK_CLASSIFIER"
+    assert res["explanationGeneratedAt"] == "2026-09-23 00:30:00"
+    assert "ml_risk_explanation" in str(adapter._safe_query.call_args_list[1].args[0])
+    conn.execute.assert_not_called()
 
     top1 = res["topAttributions"][0]
     top2 = res["topAttributions"][1]
@@ -192,14 +212,9 @@ def test_heatwave_ml_shap_explain_risk_native():
     total_pct = top1["weightPct"] + top2["weightPct"] + top3["weightPct"]
     assert total_pct == 100
 
-    cached = adapter.explain_risk(88)
-    assert cached["explanationSource"] == "HEATWAVE_SHAP"
-    assert cached["explanationCached"] is True
-    assert conn.execute.call_count == 1
 
-
-def test_heatwave_ml_shap_explain_risk_fallback_on_db_error():
-    """If HeatWave native SHAP call fails, it must fallback to deterministic business rules gracefully."""
+def test_heatwave_ml_shap_explain_risk_fallback_when_snapshot_missing():
+    """A missing persisted snapshot falls back without calling a sys routine."""
     conn = MagicMock()
     adapter = HeatWaveMLAdapter(conn)
 
@@ -217,8 +232,7 @@ def test_heatwave_ml_shap_explain_risk_fallback_on_db_error():
         "training_error_scissors": 18.0,
         "handler_concentration": 0.70,
     }
-    adapter._safe_query = MagicMock(return_value=[mock_org_row])
-    conn.execute.side_effect = Exception("HeatWave sys.ML_EXPLAIN_ROW unavailable in test mock")
+    adapter._safe_query = MagicMock(side_effect=[[mock_org_row], []])
 
     res = adapter.explain_risk(99)
     assert res["status"] == "ok"
@@ -227,13 +241,151 @@ def test_heatwave_ml_shap_explain_risk_fallback_on_db_error():
     assert len(res["topAttributions"]) == 3
     assert sum(a["weightPct"] for a in res["topAttributions"]) == 100
     valid_factors = {
-        "unresolved_issues", "high_risk_issues", "stagnant_days",
-        "progress_slope_14d", "training_error_scissors",
-        "handler_concentration", "construction_pct", "integration_success_pct"
+        "unresolved_issues",
+        "high_risk_issues",
+        "stagnant_days",
+        "progress_slope_14d",
+        "training_error_scissors",
+        "handler_concentration",
+        "construction_pct",
+        "integration_success_pct",
     }
     for a in res["topAttributions"]:
         assert a["factor"] in valid_factors
         assert a["weightPct"] > 0
+    conn.execute.assert_not_called()
+
+
+def test_heatwave_ml_shap_rejects_stale_feature_snapshot():
+    conn = MagicMock()
+    adapter = HeatWaveMLAdapter(conn)
+    current_row = {
+        "org_id": 7,
+        "construction_pct": 70.0,
+        "stagnant_days": 15,
+        "model_trained_at": "2026-09-23 00:08:00",
+    }
+    stale_result = {
+        "attributions": {"stagnant_days_attribution": 0.5},
+    }
+    adapter._safe_query = MagicMock(
+        side_effect=[
+            [current_row],
+            [
+                {
+                    "ml_results": json.dumps(stale_result),
+                    "model_trained_at": "2026-09-22 00:08:00",
+                    "feature_fingerprint": "0" * 64,
+                    "generated_at": "2026-09-22 00:30:00",
+                }
+            ],
+        ]
+    )
+
+    result = adapter.explain_risk(7)
+
+    assert result["explanationSource"] == "RULE_BASED"
+    assert result["explanationGeneratedAt"] is None
+    conn.execute.assert_not_called()
+
+
+def test_parse_shap_attributions_supports_row_and_table_shapes():
+    table_shape = {"attributions": {"stagnant_days_attribution": 0.4}}
+    row_shape = {"ml_results": {"attributions": {"stagnant_days": 0.4}}}
+    assert parse_shap_attributions(table_shape) == {"stagnant_days": 0.4}
+    assert parse_shap_attributions(row_shape) == {"stagnant_days": 0.4}
+
+
+class _FakeResult:
+    def __init__(self, *, scalar=None, rows=None):
+        self._scalar = scalar
+        self._rows = rows or []
+
+    def scalar(self):
+        return self._scalar
+
+    def mappings(self):
+        return self
+
+    def all(self):
+        return self._rows
+
+
+class _FakeShapConnection:
+    def __init__(self, ids, *, output_count=None, invalid_count=0):
+        self.ids = ids
+        self.output_count = output_count
+        self.invalid_count = invalid_count
+        self.statements = []
+        self.commits = 0
+        self.current_batch_size = 0
+        self.current_batch_ids = []
+
+    def execute(self, statement, params=None):
+        sql = str(statement)
+        self.statements.append((sql, params or {}))
+        if "FROM `mod`.`ml_feat_risk` ORDER BY `id`" in sql:
+            return _FakeResult(
+                rows=[
+                    {"id": value, "org_id": value, "region": "测试区域", "batch_id": 1}
+                    for value in self.ids
+                ]
+            )
+        if "INSERT INTO `mod`.`ml_risk_explanation_batch_input`" in sql:
+            self.current_batch_size = len(params or {})
+            self.current_batch_ids = list((params or {}).values())
+        if "FROM `mod`.`ml_risk_explanation_batch_output` ORDER BY `org_id`" in sql:
+            expected = self.output_count
+            if expected is None:
+                expected = self.current_batch_size
+            return _FakeResult(
+                rows=[
+                    {
+                        "org_id": value,
+                        "ml_results": json.dumps(
+                            {"attributions": {"stagnant_days_attribution": 0.4}}
+                        ),
+                    }
+                    for value in self.current_batch_ids[:expected]
+                ]
+            )
+        if "COUNT(*) FROM `mod`.`ml_risk_explanation_next`" in sql:
+            if "JSON_TYPE" in sql:
+                return _FakeResult(scalar=self.invalid_count)
+            return _FakeResult(scalar=len(self.ids))
+        return _FakeResult()
+
+    def commit(self):
+        self.commits += 1
+
+
+def test_refresh_persisted_shap_uses_ten_row_batches_and_atomic_swap():
+    conn = _FakeShapConnection(list(range(1, 13)))
+
+    result = refresh_persisted_shap_explanations(
+        conn,
+        model_trained_at=datetime(2026, 9, 23, 0, 8),
+    )
+
+    sql = "\n".join(statement for statement, _ in conn.statements)
+    assert result["status"] == "published"
+    assert result["rows"] == 12
+    assert result["batches"] == 2
+    assert sql.count("CALL sys.ML_EXPLAIN_TABLE") == 2
+    assert "RENAME TABLE" in sql
+    assert "ml_risk_explanation_previous" in sql
+
+
+def test_refresh_persisted_shap_does_not_swap_incomplete_snapshot():
+    conn = _FakeShapConnection([1, 2], output_count=1)
+
+    with pytest.raises(RuntimeError, match="batch row mismatch"):
+        refresh_persisted_shap_explanations(
+            conn,
+            model_trained_at=datetime(2026, 9, 23, 0, 8),
+        )
+
+    assert not any("RENAME TABLE" in statement for statement, _ in conn.statements)
 
 
 def test_insights_risk_explanation_api_endpoint(client):

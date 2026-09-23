@@ -1,8 +1,15 @@
 # MOD V2 AutoML 与 Cloudflare AI 最小数据边界与授权清单
 
-更新日期：2026-09-21
+更新日期：2026-09-23
 状态：现行
 适用范围：MySQL HeatWave AutoML、Cloudflare Workers AI、大模型研判适配器与配额熔断看门狗
+
+## 2026-09-23 修正 · KI-107 只读 API 与 SHAP 预生成
+
+API 数据库身份不再执行 `sys.ML_EXPLAIN_ROW`，也不授予 `sys` schema 的额外权限。每日重训的既有管理员
+任务在同一 `mod_ml_retrain` 锁内以最多 10 行小批次预生成 SHAP，仅在全量完整时原子发布。
+预生成失败不覆盖已发布快照；API 快照缺失或内容无效时返回 `RULE_BASED`，不得伪装为 SHAP。
+生产首轮 DDL 和生成仍须通过数据库变更授权；下述 2026-09-21 段落保留已部署历史边界。
 
 ## 2026-09-21 修正 · 解释、配额与运行协调边界
 

@@ -18,7 +18,9 @@
 
 ## 活跃问题（OPEN / IN-PROGRESS）
 
-当前无活跃 KI。
+| 编号 | 标题 | 状态 | 优先级 | 链接 |
+|---|---|---|---|---|
+| KI-107 | HeatWave 原生 SHAP 权限边界与预生成缺口 | IN-PROGRESS | P1 | [详情](issues/KI-107-HeatWave原生SHAP权限边界与预生成缺口.md) |
 
 ## 已关闭问题（DONE）
 

@@ -38,8 +38,6 @@ import math
 import os
 import re
 from datetime import datetime
-from threading import Lock
-from time import monotonic
 from typing import Any
 
 from sqlalchemy import text
@@ -65,41 +63,15 @@ from .heatwave_sql import (
     _TRAIN_CLASSIFIER_SQL,
     _TRAIN_REGRESSION_SQL,
 )
+from .heatwave_explanations import (
+    RISK_EXPLANATION_TABLE,
+    parse_shap_attributions,
+    risk_feature_fingerprint,
+    top_risk_attributions,
+)
 
 logger = logging.getLogger(__name__)
 
-_SHAP_CACHE_TTL_SECONDS = 15 * 60
-_SHAP_CACHE_MAX_ENTRIES = 512
-_shap_cache: dict[str, tuple[float, dict[str, float]]] = {}
-_shap_cache_lock = Lock()
-
-
-def _shap_cache_get(key: str) -> dict[str, float] | None:
-    now = monotonic()
-    with _shap_cache_lock:
-        cached = _shap_cache.get(key)
-        if cached is None:
-            return None
-        cached_at, attributions = cached
-        if now - cached_at > _SHAP_CACHE_TTL_SECONDS:
-            _shap_cache.pop(key, None)
-            return None
-        return dict(attributions)
-
-
-def _shap_cache_put(key: str, attributions: dict[str, float]) -> None:
-    with _shap_cache_lock:
-        if len(_shap_cache) >= _SHAP_CACHE_MAX_ENTRIES:
-            oldest_key = min(_shap_cache, key=lambda item: _shap_cache[item][0])
-            _shap_cache.pop(oldest_key, None)
-        _shap_cache[key] = (monotonic(), dict(attributions))
-
-
-def _db_error_code(exc: Exception) -> str:
-    """Return a safe database error code without logging SQL or feature data."""
-    original = getattr(exc, "orig", exc)
-    args = getattr(original, "args", ())
-    return str(args[0]) if args else type(exc).__name__
 
 class HeatWaveMLAdapter:
     """
@@ -200,7 +172,9 @@ class HeatWaveMLAdapter:
             if meta_rows:
                 m = meta_rows[0]
                 is_verified = bool(m.get("verified"))
-                quality_val = float(m["test_score"]) if (is_verified and m.get("test_score") is not None) else None
+                quality_val = (
+                    float(m["test_score"]) if (is_verified and m.get("test_score") is not None) else None
+                )
                 return {
                     "model": model_name,
                     "status": "ready" if (is_verified and m.get("status") == "ready") else "not_evaluated",
@@ -221,9 +195,10 @@ class HeatWaveMLAdapter:
             row = None
             if self._ml_schema and re.fullmatch(r"[A-Za-z0-9_]+", self._ml_schema):
                 try:
-                    row = self.conn.execute(
-                        text(
-                            f"""
+                    row = (
+                        self.conn.execute(
+                            text(
+                                f"""
                             SELECT
                                 model_id,
                                 model_handle,
@@ -237,9 +212,12 @@ class HeatWaveMLAdapter:
                             ORDER BY model_id DESC
                             LIMIT 1
                             """
-                        ),
-                        {"name": model_name},
-                    ).mappings().first()
+                            ),
+                            {"name": model_name},
+                        )
+                        .mappings()
+                        .first()
+                    )
                 except Exception:
                     row = None
 
@@ -265,7 +243,9 @@ class HeatWaveMLAdapter:
 
                 return {
                     "model": model_name,
-                    "status": "ready" if (is_verified and str(status_val).lower() == "ready") else "not_evaluated",
+                    "status": "ready"
+                    if (is_verified and str(status_val).lower() == "ready")
+                    else "not_evaluated",
                     "verified": is_verified,
                     "model_id": str(row["model_id"]),
                     "task_type": str(row.get("task") or meta.get("task") or ""),
@@ -308,12 +288,8 @@ class HeatWaveMLAdapter:
         reg_status = self.get_model_status(MODEL_REGRESSION)
         cls_status = self.get_model_status(MODEL_CLASSIFIER)
 
-        any_ready = (
-            reg_status["status"] == "ready" or cls_status["status"] == "ready"
-        )
-        both_verified = (
-            bool(reg_status.get("verified")) and bool(cls_status.get("verified"))
-        )
+        any_ready = reg_status["status"] == "ready" or cls_status["status"] == "ready"
+        both_verified = bool(reg_status.get("verified")) and bool(cls_status.get("verified"))
 
         return {
             "status": "ready" if any_ready else "not_trained",
@@ -355,7 +331,7 @@ class HeatWaveMLAdapter:
             return {
                 "status": "plan",
                 "message": "plan 模式：以下 SQL 已生成但未执行。"
-                           "需 execute=True 且 MOD_HW_ML_ENABLED=true 才写入。",
+                "需 execute=True 且 MOD_HW_ML_ENABLED=true 才写入。",
                 "sql": self.get_feature_build_sql(),
             }
 
@@ -528,9 +504,10 @@ class HeatWaveMLAdapter:
 
         if cls_exists:
             try:
-                rows = self.conn.execute(
-                    text(
-                        f"""
+                rows = (
+                    self.conn.execute(
+                        text(
+                            f"""
                         SELECT
                             s.org_id,
                             o.name                           AS org_name,
@@ -551,8 +528,11 @@ class HeatWaveMLAdapter:
                         ORDER BY s.high_risk_issues DESC, s.unresolved_issues DESC
                         LIMIT 200
                         """
+                        )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
 
                 for r in rows:
                     pred_flag = int(r["pred_value"]) if r["pred_value"] is not None else 0
@@ -560,7 +540,9 @@ class HeatWaveMLAdapter:
                     pred_json_raw = r.get("prediction_json")
                     if pred_json_raw:
                         try:
-                            pj = json.loads(pred_json_raw) if isinstance(pred_json_raw, str) else pred_json_raw
+                            pj = (
+                                json.loads(pred_json_raw) if isinstance(pred_json_raw, str) else pred_json_raw
+                            )
                             probs = pj.get("probabilities", {})
                             value = probs.get("1")
                             if value is not None and not isinstance(value, bool):
@@ -596,9 +578,10 @@ class HeatWaveMLAdapter:
 
         if reg_exists:
             try:
-                rows = self.conn.execute(
-                    text(
-                        f"""
+                rows = (
+                    self.conn.execute(
+                        text(
+                            f"""
                         SELECT
                             s.org_id,
                             o.name                           AS org_name,
@@ -612,8 +595,11 @@ class HeatWaveMLAdapter:
                         ORDER BY s.Prediction DESC
                         LIMIT 100
                         """
+                        )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
 
                 for r in rows:
                     pred_delta = float(r["pred_value"]) if r["pred_value"] is not None else 0.0
@@ -639,11 +625,10 @@ class HeatWaveMLAdapter:
 
     def explain_risk(self, org_id: int) -> dict:
         """
-        对指定单位调用 sys.ML_EXPLAIN_ROW 或本地特征贡献计算，
+        对指定单位读取预生成 HeatWave SHAP 或执行本地特征贡献计算，
         输出 Top 3 致险因子及归因权重百分比。
-        严格遵循 KI-034 任务 3：
-        - 优先调用 sys.ML_EXPLAIN_ROW (shap)
-        - 若数据库不支持或未训练，安全降级至基于真实特征偏离度的归因计算，不崩溃
+        API 账号始终只读 `mod` 业务表，不调用 `sys` ML 例程。
+        若预生成快照不可用，安全降级至确定性特征偏离归因。
         """
         if self.conn is None:
             return {
@@ -671,13 +656,19 @@ class HeatWaveMLAdapter:
                 f.stagnant_days,
                 f.training_error_scissors,
                 f.handler_concentration,
-                f.risk_flag
+                f.risk_flag,
+                (
+                    SELECT m.trained_at
+                    FROM `mod`.`ml_model_metadata` m
+                    WHERE m.model_handle = :model_handle
+                    LIMIT 1
+                ) AS model_trained_at
             FROM `{FEAT_TABLE_CLASSIFIER}` f
             LEFT JOIN org_unit o ON o.id = f.org_id
             WHERE f.org_id = :oid
             LIMIT 1
             """,
-            {"oid": org_id},
+            {"oid": org_id, "model_handle": MODEL_CLASSIFIER},
         )
 
         if not feat_rows:
@@ -690,76 +681,31 @@ class HeatWaveMLAdapter:
             }
 
         row = feat_rows[0]
-        factor_defs = {
-            "unresolved_issues": ("未解决问题积压", "当前存在未闭环业务与数据问题工单"),
-            "high_risk_issues": ("高危风险阻断", "存在阻断系统正常推进的重大缺陷事项"),
-            "stagnant_days": ("工期停滞过久", "近期缺乏持续推进记录，任务长时间未更新"),
-            "progress_slope_14d": ("推进速度滞后", "近14天施工推进斜率落后于全网批次基线"),
-            "training_error_scissors": ("培训与上线报错剪刀差", "全员考核通过但实际系统运行接口报错率偏高"),
-            "handler_concentration": ("经办人单点集中瓶颈", "单人集中承揽绝大部分单据，推广覆盖面不足"),
-            "construction_pct": ("建设任务完成度偏低", "基础任务总体完成率显著落后于批次门禁"),
-            "integration_success_pct": ("凭证入账集成受阻", "双轨财务凭证自动集成成功率偏离达标线"),
-            "doc_success_pct": ("业务单据处理流转异常", "单据审批流转与凭证闭环率偏低"),
-            "days_since_start": ("启动入池耗时过长", "自批次启动以来持续时间较长未达成跃迁"),
-        }
-
         attributions: dict[str, float] = {}
         explanation_source = "UNAVAILABLE"
-        explanation_cached = False
+        explanation_generated_at = None
 
-        # 2. 尝试调用 HeatWave sys.ML_EXPLAIN_ROW
-        try:
-            feats_dict = {
-                "region": str(row.get("region") or ""),
-                "batch_id": int(row.get("batch_id") or 1),
-                "construction_pct": float(row.get("construction_pct") or 0.0),
-                "unresolved_issues": int(row.get("unresolved_issues") or 0),
-                "high_risk_issues": int(row.get("high_risk_issues") or 0),
-                "doc_success_pct": float(row["doc_success_pct"] if row.get("doc_success_pct") is not None else 100.0),
-                "integration_success_pct": float(row["integration_success_pct"] if row.get("integration_success_pct") is not None else 100.0),
-                "days_since_start": int(row.get("days_since_start") or 0),
-                "progress_slope_14d": float(row.get("progress_slope_14d") or 0.0),
-                "stagnant_days": int(row.get("stagnant_days") or 0),
-                "training_error_scissors": float(row.get("training_error_scissors") or 0.0),
-                "handler_concentration": float(row.get("handler_concentration") or 0.0),
-            }
-            features_json = json.dumps(feats_dict, sort_keys=True, separators=(",", ":"))
-            cache_key = f"{org_id}:{features_json}"
-            cached_attributions = _shap_cache_get(cache_key)
-            if cached_attributions is not None:
-                attributions = cached_attributions
-                explanation_source = "HEATWAVE_SHAP"
-                explanation_cached = True
-            else:
-                explain_res = self.conn.execute(
-                    text(
-                        "SELECT /*+ MAX_EXECUTION_TIME(10000) */ "
-                        "sys.ML_EXPLAIN_ROW("
-                        "CAST(:feats AS JSON), :model_handle, "
-                        "JSON_OBJECT('prediction_explainer', 'shap'))"
-                    ),
-                    {"feats": features_json, "model_handle": MODEL_CLASSIFIER},
-                ).scalar()
-
-                if explain_res:
-                    parsed = json.loads(explain_res) if isinstance(explain_res, str) else explain_res
-                    raw_attrs = parsed.get("ml_results", {}).get("attributions", {})
-                    if not raw_attrs:
-                        raw_attrs = {k: v for k, v in parsed.items() if k.endswith("_attribution")}
-
-                    for k, v in raw_attrs.items():
-                        col = k.replace("_attribution", "")
-                        if col in factor_defs and v is not None and math.isfinite(float(v)):
-                            attributions[col] = float(v)
-                    if attributions:
-                        explanation_source = "HEATWAVE_SHAP"
-                        _shap_cache_put(cache_key, attributions)
-        except Exception as ex:
-            logger.warning(
-                "HeatWave SHAP 归因查询失败，降级为确定性偏离度: %s (code=%s)",
-                type(ex).__name__,
-                _db_error_code(ex),
+        # 2. 读取每日重训任务预生成的 HeatWave SHAP 快照。
+        persisted_rows = self._safe_query(
+            f"""
+            SELECT ml_results, model_trained_at, feature_fingerprint, generated_at
+            FROM `mod`.`{RISK_EXPLANATION_TABLE}`
+            WHERE org_id = :oid AND model_handle = :model_handle
+            LIMIT 1
+            """,
+            {"oid": org_id, "model_handle": MODEL_CLASSIFIER},
+        )
+        if persisted_rows:
+            persisted = persisted_rows[0]
+            fingerprint_matches = persisted.get("feature_fingerprint") == risk_feature_fingerprint(row)
+            model_matches = str(persisted.get("model_trained_at") or "") == str(
+                row.get("model_trained_at") or ""
             )
+            if fingerprint_matches and model_matches:
+                attributions = parse_shap_attributions(persisted.get("ml_results"))
+            if attributions:
+                explanation_source = "HEATWAVE_SHAP"
+                explanation_generated_at = str(persisted.get("generated_at") or "") or None
 
         # 3. 若 HeatWave 原生 SHAP 未产生有效归因，执行确定性因果偏离度降级计算
         if not attributions:
@@ -770,7 +716,9 @@ class HeatWaveMLAdapter:
             slope = float(row.get("progress_slope_14d") or 0.0)
             scissors = float(row.get("training_error_scissors") or 0.0)
             conc = float(row.get("handler_concentration") or 0.0)
-            integ_pct = float(row["integration_success_pct"] if row.get("integration_success_pct") is not None else 100.0)
+            integ_pct = float(
+                row["integration_success_pct"] if row.get("integration_success_pct") is not None else 100.0
+            )
 
             attributions = {
                 "high_risk_issues": high_r * 0.35,
@@ -785,32 +733,13 @@ class HeatWaveMLAdapter:
             explanation_source = "RULE_BASED"
 
         # 4. 提取对风险正向贡献最大的 Top 3 因子并归一化为百分比
-        sorted_factors = sorted(attributions.items(), key=lambda x: x[1], reverse=True)
-        top3 = [(k, v) for k, v in sorted_factors[:3] if v > 0]
-
-        total_weight = sum(w for _, w in top3)
-        top_attributions = []
-        for feat_name, weight in top3:
-            name, desc = factor_defs.get(feat_name, (feat_name, "业务指标偏离"))
-            weight_pct = round((weight / total_weight) * 100)
-            top_attributions.append({
-                "factor": feat_name,
-                "factorName": name,
-                "attribution": round(weight, 4),
-                "weightPct": weight_pct,
-                "description": desc,
-            })
-
-        # 确保三项权重和恰好等于 100%
-        if top_attributions:
-            curr_sum = sum(a["weightPct"] for a in top_attributions)
-            if curr_sum != 100:
-                top_attributions[0]["weightPct"] += (100 - curr_sum)
+        top_attributions = top_risk_attributions(attributions)
 
         return {
             "status": "ok",
             "explanationSource": explanation_source,
-            "explanationCached": explanation_cached,
+            "explanationCached": False,
+            "explanationGeneratedAt": explanation_generated_at,
             "weightBasis": "positive_top3_relative",
             "predictionPurpose": "synthetic_rule_fit",
             "orgId": org_id,

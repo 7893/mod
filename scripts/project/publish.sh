@@ -124,7 +124,7 @@ else
     ssh "$REMOTE_HOST" "cd $REMOTE_ROOT/backend && cp -f releases/$TS/pyproject.toml releases/$TS/uv.lock . 2>/dev/null || true; ([ -x /home/ubuntu/.cargo/bin/uv ] && /home/ubuntu/.cargo/bin/uv sync --frozen --all-extras) || true"
 
     echo "[5/8] 远程 reload Nginx + reload/restart mod.service on USA..."
-    ssh "$REMOTE_HOST" "sudo systemctl reload nginx && (sudo systemctl reload mod.service || sudo systemctl restart mod.service)"
+    ssh "$REMOTE_HOST" "sudo install -m 0644 $REMOTE_ROOT/deploy/mod-ml-retrain.service /etc/systemd/system/mod-ml-retrain.service && sudo systemctl daemon-reload && sudo systemctl reload nginx && (sudo systemctl reload mod.service || sudo systemctl restart mod.service)"
     sleep 8  # 等待 SWR 缓存预热
 fi
 
