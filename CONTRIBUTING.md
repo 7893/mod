@@ -19,7 +19,7 @@ MOD 当前公开源码并接受符合质量要求的 Pull Request，但不提供
    git clone https://github.com/<your-username>/mod.git
    cd mod
    ```
-   开发前置要求：Python 3.12+、[`uv`](https://docs.astral.sh/uv/)、Node.js 20+、`pnpm` 与 `make`。
+   开发前置要求：Python 3.13.15、[`uv`](https://docs.astral.sh/uv/) 0.12.5、Node.js 26.10.0、pnpm 12.6.0 与 `make`。
 3. **本地离线启动（无需数据库）**：
    项目内置了高保真合成数据快照（Fallback Snapshot），无需安装或连接任何数据库即可完整体验与开发前端六屏及后端 API：
    ```bash
@@ -70,7 +70,7 @@ MOD 当前公开源码并接受符合质量要求的 Pull Request，但不提供
 
 - **开发工作区机（JPA）**：承载源码、完整开发工具链与本地测试库；
 - **生产宿主机（USA）**：不初始化 Git 仓库的独立生产部署节点，核心服务由 systemd 托管；
-- **发布机制**：标准发布由 GitHub Actions CI/CD 流水线在 push 至 `main` 分支并通过 Quality Gates 后自动触发；本地 `scripts/project/publish.sh` 保留为直连应急通道，必须获得显式授权方可运行。
+- **发布机制**：标准发布由 GitHub Actions CI/CD 流水线仅在手动运行 Quality gates 并显式选择 `deploy`、检查通过后触发；push/PR 只运行检查；本地 `scripts/project/publish.sh` 保留为直连应急通道，必须获得显式授权方可运行。
 
 ### 2. 核心维护者红线与约束
 
