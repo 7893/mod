@@ -70,7 +70,7 @@ MOD 当前公开源码并接受符合质量要求的 Pull Request，但不提供
 
 - **开发工作区机（JPA）**：承载源码、完整开发工具链与本地测试库；
 - **生产宿主机（USA）**：不初始化 Git 仓库的独立生产部署节点，核心服务由 systemd 托管；
-- **发布机制**：标准发布由 GitHub Actions CI/CD 流水线仅在手动运行 Quality gates 并显式选择 `deploy`、检查通过后触发；push/PR 只运行检查；本地 `scripts/project/publish.sh` 保留为直连应急通道，必须获得显式授权方可运行。
+- **发布机制**：标准发布由 GitHub Actions CI/CD 流水线在 push 至 `main` 分支并通过 Quality Gates 后自动触发；本地 `scripts/project/publish.sh` 保留为直连应急通道，必须获得显式授权方可运行。
 
 ### 2. 核心维护者红线与约束
 

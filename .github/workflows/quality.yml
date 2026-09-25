@@ -4,11 +4,6 @@ on:
   pull_request:
   push:
   workflow_dispatch:
-    inputs:
-      deploy:
-        description: Deploy production after checks
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -92,7 +87,7 @@ jobs:
   deploy:
     name: Deploy
     needs: check
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.deploy
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
