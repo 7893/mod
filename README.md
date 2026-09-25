@@ -119,14 +119,14 @@ MOD 将跨 34 个省级行政区、数千家分级单位、多批次推进的大
 | 架构层级 | 核心技术选型 |
 |---|---|
 | **前端大屏 (Frontend)** | Vue 3.5、TypeScript 5.9、Pinia、ECharts 6.1、Tailwind CSS、Vite |
-| **后端接口 (Backend)** | FastAPI、Python 3.12+、SQLAlchemy 2.0、Uvicorn、Pydantic |
+| **后端接口 (Backend)** | FastAPI、Python 3.13.15、SQLAlchemy 2.0、Uvicorn、Pydantic |
 | **数据与湖仓加速 (Data)** | MySQL 8.4 HeatWave、HeatWave In-Memory Cluster、AutoML |
 | **质量与安全保障 (QA)** | Pytest、Vitest、Playwright、Ruff、vue-tsc、ESLint、Stylelint、pre-commit、detect-secrets、gitlint、Lychee 与 MOD 专有契约 |
 | **部署与交付运维 (Ops)** | Nginx、systemd、原子版本软链切换、GitHub Actions、Fail2ban 防护 |
 
 ### 六、本地快速启动
 
-前置开发环境：Python 3.12+、[`uv`](https://docs.astral.sh/uv/)、Node.js 26.10.0、pnpm 12.6.0 与 Make。
+前置开发环境：Python 3.13.15、[`uv`](https://docs.astral.sh/uv/)、Node.js 26.10.0、pnpm 12.6.0 与 Make。
 Node 与 pnpm 版本的仓库级事实源为 `.tool-versions`；asdf 用户可在仓库根目录运行 `asdf install`。
 
 ```bash
@@ -261,14 +261,14 @@ Standard production delivery runs through GitHub Actions CI/CD upon push to `mai
 | Layer | Core Technologies |
 |---|---|
 | **Frontend** | Vue 3.5, TypeScript 5.9, Pinia, ECharts 6.1, Tailwind CSS, Vite |
-| **Backend** | FastAPI, Python 3.12+, SQLAlchemy 2.0, Uvicorn, Pydantic |
+| **Backend** | FastAPI, Python 3.13.15, SQLAlchemy 2.0, Uvicorn, Pydantic |
 | **Data & Acceleration** | MySQL 8.4 HeatWave, HeatWave In-Memory Cluster, AutoML |
 | **Quality & Assurance** | Pytest, Vitest, Playwright, Ruff, vue-tsc, ESLint, Stylelint, pre-commit, detect-secrets, gitlint, Lychee, and MOD-specific contracts |
 | **Operations & Delivery** | Nginx, systemd, atomic release symlinks, GitHub Actions, Fail2ban |
 
 ### 6. Local Quick Start
 
-Prerequisites: Python 3.12+, [`uv`](https://docs.astral.sh/uv/), Node.js 26.10.0, pnpm 12.6.0, and Make.
+Prerequisites: Python 3.13.15, [`uv`](https://docs.astral.sh/uv/), Node.js 26.10.0, pnpm 12.6.0, and Make.
 The repository-level Node and pnpm version source is `.tool-versions`; asdf users can run `asdf install` from the repository root.
 
 ```bash
