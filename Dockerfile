@@ -12,7 +12,7 @@ COPY frontend/ ./
 RUN pnpm build
 
 # --- Stage 2: Production Runtime with Nginx & Python FastAPI ---
-FROM python:3.12-slim AS runner
+FROM python:3.13.15-slim AS runner
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

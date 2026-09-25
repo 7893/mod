@@ -40,6 +40,7 @@ class PortabilityContractTests(unittest.TestCase):
             f"FROM node:{versions['nodejs']}-alpine AS frontend-builder", dockerfile
         )
         self.assertIn(f"RUN npm install --global pnpm@{versions['pnpm']}\n", dockerfile)
+        self.assertIn(f"FROM python:{versions['python']}-slim AS runner", dockerfile)
         self.assertNotIn("corepack", dockerfile)
         self.assertIn("RUN pnpm install --frozen-lockfile", dockerfile)
 
@@ -51,7 +52,9 @@ class PortabilityContractTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertEqual(tool_versions, "nodejs 26.10.0\npnpm 12.6.0\n")
+        self.assertEqual(tool_versions, "nodejs 26.10.0\npnpm 12.6.0\npython 3.13.15\n")
+        self.assertEqual((ROOT / ".python-version").read_text().strip(), "3.13.15")
+        self.assertIn('python-version: "3.13.15"', quality)
         self.assertEqual(package["packageManager"], "pnpm@12.6.0")
         self.assertEqual(package["engines"]["node"], ">=26.10.0 <27")
         self.assertEqual(package["engines"]["pnpm"], "12.6.0")
