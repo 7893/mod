@@ -26,7 +26,8 @@ doc-check:
 	python3 scripts/project/sanitize_history.py --check
 	python3 scripts/project/check_history_integrity.py
 	python3 scripts/project/check_semantic_contracts.py
-	uv run --project backend pre-commit run lychee --all-files
+	# Linked-worktree hooks export Git paths; lychee inspects its own cached repository.
+	env -u GIT_DIR -u GIT_WORK_TREE -u GIT_COMMON_DIR uv run --project backend pre-commit run lychee --all-files
 	python3 scripts/project/check_document_governance.py
 	python3 scripts/project/check_doc_sync.py
 	python3 scripts/project/check_changelog.py
