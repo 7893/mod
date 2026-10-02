@@ -2,10 +2,10 @@
   "name": "mod-dashboard",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "pnpm@12.6.0",
+  "packageManager": "pnpm@12.8.1",
   "engines": {
     "node": ">=26.10.0 <27",
-    "pnpm": "12.6.0"
+    "pnpm": "12.8.1"
   },
   "type": "module",
   "scripts": {

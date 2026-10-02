@@ -19,7 +19,7 @@ MOD 当前公开源码并接受符合质量要求的 Pull Request，但不提供
    git clone https://github.com/<your-username>/mod.git
    cd mod
    ```
-   开发前置要求：Python 3.13.15、[`uv`](https://docs.astral.sh/uv/) 0.12.5、Node.js 26.10.0、pnpm 12.6.0 与 `make`。
+   开发前置要求：Python 3.13.16、[`uv`](https://docs.astral.sh/uv/) 0.12.22、Node.js 26.10.0、pnpm 12.8.1 与 `make`。
 3. **本地离线启动（无需数据库）**：
    项目内置了高保真合成数据快照（Fallback Snapshot），无需安装或连接任何数据库即可完整体验与开发前端六屏及后端 API：
    ```bash

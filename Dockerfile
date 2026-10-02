@@ -5,14 +5,14 @@ FROM node:26.10.0-alpine AS frontend-builder
 WORKDIR /app/frontend
 ARG VITE_CHINA_MAP_GEOJSON_URL=
 ENV VITE_CHINA_MAP_GEOJSON_URL=$VITE_CHINA_MAP_GEOJSON_URL
-RUN npm install --global pnpm@12.6.0
+RUN npm install --global pnpm@12.8.1
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
 RUN pnpm build
 
 # --- Stage 2: Production Runtime with Nginx & Python FastAPI ---
-FROM python:3.13.15-slim AS runner
+FROM python:3.13.16-slim AS runner
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for fast, reliable Python dependency installation
-COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.12.22 /uv /bin/uv
 
 # Copy backend dependencies
 COPY backend/pyproject.toml backend/uv.lock backend/

@@ -52,18 +52,18 @@ class PortabilityContractTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertEqual(tool_versions, "nodejs 26.10.0\npnpm 12.6.0\npython 3.13.15\n")
-        self.assertEqual((ROOT / ".python-version").read_text().strip(), "3.13.15")
-        self.assertIn('python-version: "3.13.15"', quality)
-        self.assertEqual(package["packageManager"], "pnpm@12.6.0")
+        self.assertEqual(tool_versions, "nodejs 26.10.0\npnpm 12.8.1\npython 3.13.16\n")
+        self.assertEqual((ROOT / ".python-version").read_text().strip(), "3.13.16")
+        self.assertIn('python-version: "3.13.16"', quality)
+        self.assertEqual(package["packageManager"], "pnpm@12.8.1")
         self.assertEqual(package["engines"]["node"], ">=26.10.0 <27")
-        self.assertEqual(package["engines"]["pnpm"], "12.6.0")
+        self.assertEqual(package["engines"]["pnpm"], "12.8.1")
         self.assertEqual(package["devDependencies"]["@types/node"], "^26.6.2")
         self.assertEqual(quality.count('node-version-file: ".tool-versions"'), 2)
-        self.assertEqual(quality.count('version: "12.6.0"'), 2)
+        self.assertEqual(quality.count('version: "12.8.1"'), 2)
         lockfile = (ROOT / "frontend/pnpm-lock.yaml").read_text(encoding="utf-8")
         self.assertIn("packageManagerDependencies:", lockfile)
-        self.assertIn("specifier: 12.6.0", lockfile)
+        self.assertIn("specifier: 12.8.1", lockfile)
         self.assertIn("'@types/node@26.6.2':", lockfile)
         for action in (
             "actions/checkout@v7.0.1",
