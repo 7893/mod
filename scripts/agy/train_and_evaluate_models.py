@@ -1045,6 +1045,8 @@ def run_full_pipeline(run_type: str = "manual") -> dict[str, Any]:
 
 
 def main() -> None:
+    if os.getenv("MOD_DEMO_MODE", "false").lower() in {"true", "1", "yes", "on"}:
+        raise SystemExit("Training is disabled in demo mode")
     parser = argparse.ArgumentParser(
         description="KI-015 HeatWave Model Real Training & Evaluation"
     )

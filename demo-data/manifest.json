@@ -1,0 +1,1357 @@
+{
+  "format_version": 3,
+  "purpose": "full_simulation_demo_seed",
+  "source_snapshot": "single_read_only_consistent_snapshot",
+  "preserves": "all tables and rows, IDs, amounts, dates, simulation names and text",
+  "redacts": "real infrastructure, credentials, email addresses and host paths",
+  "model_results": "frozen_synthetic_experiment",
+  "tables": {
+    "rollout_batch": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 0,
+      "compressed_bytes": 800,
+      "columnar_bytes": 1471,
+      "raw_bytes": 501,
+      "data_sha256": "9c0134604a3d6373f2ba83fd5c72b323899d423ff117eaf792f53b8b17e07de5",
+      "columns": [
+        "id",
+        "name",
+        "start_date",
+        "end_date",
+        "status"
+      ],
+      "rows": 9
+    },
+    "org_unit": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 800,
+      "compressed_bytes": 47384,
+      "columnar_bytes": 186188,
+      "raw_bytes": 294920,
+      "data_sha256": "40351c27ce114a8bdccd78eb368e3a97bf018584ce2b25aa7a457221b9faeb3b",
+      "columns": [
+        "id",
+        "name",
+        "batch_id",
+        "status",
+        "region",
+        "start_date",
+        "end_date"
+      ],
+      "rows": 3211
+    },
+    "sys_user": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 48184,
+      "compressed_bytes": 147164,
+      "columnar_bytes": 1089741,
+      "raw_bytes": 2106408,
+      "data_sha256": "32d909a0d6be55bc836413a456cd869af7bf86336bf1af27ca5a8534b163de4d",
+      "columns": [
+        "id",
+        "name",
+        "org_id",
+        "role",
+        "job"
+      ],
+      "rows": 41137
+    },
+    "construction_task": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 195348,
+      "compressed_bytes": 624416,
+      "columnar_bytes": 5156473,
+      "raw_bytes": 10075938,
+      "data_sha256": "980fad05b23417cf2fa57ab83629d22c7b5e8f21004a2f4ead94c7315fdd4eb1",
+      "columns": [
+        "id",
+        "org_id",
+        "name",
+        "type",
+        "owner",
+        "plan_time",
+        "actual_time",
+        "status",
+        "progress",
+        "update_time"
+      ],
+      "rows": 72404
+    },
+    "training": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 819764,
+      "compressed_bytes": 33308,
+      "columnar_bytes": 175097,
+      "raw_bytes": 501446,
+      "data_sha256": "32a99283bd3aa9a32c153108ca06efaa6baf46a9d07052487cc2ec813e89d687",
+      "columns": [
+        "id",
+        "org_id",
+        "batch_id",
+        "type",
+        "date",
+        "mode",
+        "expected",
+        "actual",
+        "absent",
+        "passed",
+        "makeup",
+        "cert_count"
+      ],
+      "rows": 5520
+    },
+    "data_readiness": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 853072,
+      "compressed_bytes": 16520,
+      "columnar_bytes": 60085,
+      "raw_bytes": 209112,
+      "data_sha256": "c185a6fb795df9c6a9a443c1f5e2109d506caff0195ed76b8a764d4d9dd6bd5b",
+      "columns": [
+        "org_id",
+        "batch_id",
+        "static_total",
+        "static_completed",
+        "static_rate",
+        "opening_total",
+        "opening_completed",
+        "opening_rate",
+        "opening_diff_amount",
+        "dynamic_total",
+        "dynamic_completed",
+        "dynamic_sync_success",
+        "dynamic_sync_fail",
+        "dynamic_sync_pending",
+        "dynamic_rate",
+        "last_sync_time",
+        "overall_status"
+      ],
+      "rows": 2024
+    },
+    "dual_run_result": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 869592,
+      "compressed_bytes": 55456,
+      "columnar_bytes": 352862,
+      "raw_bytes": 703400,
+      "data_sha256": "192d315d30ba23bda1c7a90f89216e9d4bb7733a5d2f1f45017053606fc21d00",
+      "columns": [
+        "id",
+        "org_id",
+        "check_type",
+        "v1_amount",
+        "v2_amount",
+        "diff_amount",
+        "result",
+        "check_date"
+      ],
+      "rows": 7530
+    },
+    "business_document": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 925048,
+      "compressed_bytes": 107563388,
+      "columnar_bytes": 330858395,
+      "raw_bytes": 852935676,
+      "data_sha256": "288326583feeee38fddb9b6ce07989d559a250d2f6685c3b89b49c4f832bc314",
+      "columns": [
+        "id",
+        "org_id",
+        "type",
+        "doc_no",
+        "applicant",
+        "nature",
+        "amount",
+        "submit_time",
+        "approve_time",
+        "status"
+      ],
+      "rows": 5847279
+    },
+    "business_document_line": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 108488436,
+      "compressed_bytes": 44673072,
+      "columnar_bytes": 187354304,
+      "raw_bytes": 475456982,
+      "data_sha256": "8d20ca499ca7a14be6098850f48f981d040739aa76c92e10f759b737f4a81ef1",
+      "columns": [
+        "id",
+        "doc_id",
+        "item_name",
+        "amount",
+        "quantity"
+      ],
+      "rows": 10078875
+    },
+    "accounting_voucher": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 153161508,
+      "compressed_bytes": 60579304,
+      "columnar_bytes": 228118805,
+      "raw_bytes": 589539871,
+      "data_sha256": "44f66e0260bd309249eb58464dbb2259755bc664e8b1d826e949351bb99ab131",
+      "columns": [
+        "id",
+        "org_id",
+        "voucher_no",
+        "type",
+        "gen_time",
+        "int_time",
+        "status",
+        "debit",
+        "credit"
+      ],
+      "rows": 4972010
+    },
+    "accounting_voucher_line": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 213740812,
+      "compressed_bytes": 84310312,
+      "columnar_bytes": 641057573,
+      "raw_bytes": 1136424782,
+      "data_sha256": "6a95abd5e5056355d973ae04994e57c80429e39be41640d7c8aec34f4915e3b6",
+      "columns": [
+        "id",
+        "voucher_id",
+        "subject_code",
+        "subject_name",
+        "debit",
+        "credit"
+      ],
+      "rows": 15895851
+    },
+    "document_voucher_link": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 298051124,
+      "compressed_bytes": 408800,
+      "columnar_bytes": 955867,
+      "raw_bytes": 88661263,
+      "data_sha256": "d022b28b3f00881eee2e6332bda04922ccbb744c3603d49835386eb95277bdef",
+      "columns": [
+        "doc_id",
+        "voucher_id"
+      ],
+      "rows": 4972012
+    },
+    "integration_result": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 298459924,
+      "compressed_bytes": 21125320,
+      "columnar_bytes": 85702357,
+      "raw_bytes": 318102993,
+      "data_sha256": "f2c66708c4491f024da3a901afe5e6d592256d82e10029fbb5680657d58daec1",
+      "columns": [
+        "id",
+        "voucher_id",
+        "status",
+        "retry_count",
+        "error_code",
+        "error_message",
+        "integration_time"
+      ],
+      "rows": 4884829
+    },
+    "rollout_status_snapshot": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 319585244,
+      "compressed_bytes": 9184,
+      "columnar_bytes": 472252,
+      "raw_bytes": 2572235,
+      "data_sha256": "468cc61f9370d83b1926e4f024faf8a9ecc38f654204f637eb467bb2df8f7f31",
+      "columns": [
+        "org_id",
+        "snapshot_date",
+        "status"
+      ],
+      "rows": 79695
+    },
+    "issue_metric_snapshot": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 319594428,
+      "compressed_bytes": 1060512,
+      "columnar_bytes": 2102390,
+      "raw_bytes": 16728861,
+      "data_sha256": "f0e4c3197bf1b532f415ed56e0ee66592fb3b0f77a3250fdf01323d98d4111a9",
+      "columns": [
+        "org_id",
+        "batch_id",
+        "date",
+        "stage",
+        "bug",
+        "req",
+        "conf",
+        "data",
+        "integ",
+        "op",
+        "total",
+        "resolved",
+        "unresolved"
+      ],
+      "rows": 293328
+    },
+    "risk_metric_snapshot": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 320654940,
+      "compressed_bytes": 383736,
+      "columnar_bytes": 1308504,
+      "raw_bytes": 13182381,
+      "data_sha256": "4fcfe22c51c2a40b1eaecee567a50e4d6b383e985c2a579c5dae302d6b458011",
+      "columns": [
+        "org_id",
+        "batch_id",
+        "date",
+        "stage",
+        "high",
+        "medium",
+        "low"
+      ],
+      "rows": 293328
+    },
+    "governance_issue": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321038676,
+      "compressed_bytes": 8408,
+      "columnar_bytes": 63321,
+      "raw_bytes": 77800,
+      "data_sha256": "efe153986c32f57dbfcc60406014aeeedec285e527dcf86c7c844dc2e0800cb9",
+      "columns": [
+        "id",
+        "unit_id",
+        "unit_name",
+        "province",
+        "batch_id",
+        "issue_type",
+        "severity",
+        "status",
+        "owner",
+        "title",
+        "description",
+        "ai_enriched",
+        "rework_count",
+        "created_at",
+        "updated_at",
+        "resolved_at"
+      ],
+      "rows": 63
+    },
+    "issue_timeline": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321047084,
+      "compressed_bytes": 10308,
+      "columnar_bytes": 104281,
+      "raw_bytes": 135361,
+      "data_sha256": "66ca78b722eed56db2baaf01d5e7b4ca38b22706efb1e05145604b3bf7e69b4a",
+      "columns": [
+        "id",
+        "issue_id",
+        "action",
+        "actor",
+        "detail",
+        "occurred_at"
+      ],
+      "rows": 477
+    },
+    "daily_stats": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321057392,
+      "compressed_bytes": 11096,
+      "columnar_bytes": 25173,
+      "raw_bytes": 144305,
+      "data_sha256": "ff38e41da69031b17787db98e23ef2b2b1813b2ce207a1235b1623c5f0dead3b",
+      "columns": [
+        "stat_date",
+        "org_count",
+        "user_count",
+        "doc_count",
+        "doc_today",
+        "voucher_count",
+        "voucher_today",
+        "integration_count",
+        "integration_success",
+        "updated_at",
+        "doc_line_count",
+        "voucher_line_count",
+        "link_count",
+        "dual_run_count",
+        "snapshot_count"
+      ],
+      "rows": 1157
+    },
+    "monthly_stats": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321068488,
+      "compressed_bytes": 1972,
+      "columnar_bytes": 3935,
+      "raw_bytes": 3733,
+      "data_sha256": "0f3b19af259d5d53888ba9ee5139f06b9a7fdebfe08d021710a8fe33cb9b0cec",
+      "columns": [
+        "month_key",
+        "doc_count",
+        "doc_amount",
+        "voucher_count",
+        "voucher_amount",
+        "integration_count",
+        "integration_success",
+        "org_count",
+        "updated_at"
+      ],
+      "rows": 39
+    },
+    "province_stats": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321070460,
+      "compressed_bytes": 1888,
+      "columnar_bytes": 3729,
+      "raw_bytes": 2963,
+      "data_sha256": "12f4bca043ccd9123ec600d25b0e2b1f93d09bd5b2bca74e034f9e79a8a5cf8b",
+      "columns": [
+        "region",
+        "org_count",
+        "user_count",
+        "doc_count",
+        "doc_amount",
+        "voucher_count",
+        "integration_count",
+        "integration_success",
+        "updated_at"
+      ],
+      "rows": 34
+    },
+    "metric_snapshot": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321072348,
+      "compressed_bytes": 2420,
+      "columnar_bytes": 5473,
+      "raw_bytes": 12504,
+      "data_sha256": "75d8a4cc45e6697f3e6f681aec1f7fc01068fd4599491ee1f086ba52ad112644",
+      "columns": [
+        "snapshot_date",
+        "target_units",
+        "online_units",
+        "dual_run_units",
+        "online_rate",
+        "voucher_generate_success_rate",
+        "integration_success_rate"
+      ],
+      "rows": 231
+    },
+    "daily_briefing": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321074768,
+      "compressed_bytes": 5244,
+      "columnar_bytes": 22810,
+      "raw_bytes": 24264,
+      "data_sha256": "d2373064ca3a135cb5fc48a33b0dbb53cde715fd3cb0f4401120e2a33217bebb",
+      "columns": [
+        "briefing_date",
+        "content",
+        "model",
+        "source",
+        "metrics_fingerprint",
+        "generated_at"
+      ],
+      "rows": 25
+    },
+    "ml_feat_doc_delta": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321080012,
+      "compressed_bytes": 36632,
+      "columnar_bytes": 106110,
+      "raw_bytes": 187929,
+      "data_sha256": "9da5491ef73a486b6cf797dc299b771b4ff7ff3af05af3eca26251e2e690f083",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "days_since_go_live",
+        "launched_flag",
+        "doc_count_prev30",
+        "voucher_count_prev30",
+        "integration_fail_cnt",
+        "handler_count",
+        "handler_concentration",
+        "avg_daily_doc_prev7",
+        "daily_doc_delta"
+      ],
+      "rows": 3211
+    },
+    "ml_feat_risk": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321116644,
+      "compressed_bytes": 72576,
+      "columnar_bytes": 206420,
+      "raw_bytes": 235436,
+      "data_sha256": "fe8d0778fb456e419b50ddfadc1a726a2ad558a8489f092de90220b9e3b54da8",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "construction_pct",
+        "unresolved_issues",
+        "high_risk_issues",
+        "doc_success_pct",
+        "integration_success_pct",
+        "days_since_start",
+        "progress_slope_14d",
+        "stagnant_days",
+        "training_error_scissors",
+        "handler_concentration",
+        "risk_flag"
+      ],
+      "rows": 3211
+    },
+    "ml_score_doc_delta": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321189220,
+      "compressed_bytes": 61168,
+      "columnar_bytes": 162747,
+      "raw_bytes": 376748,
+      "data_sha256": "49df341e97ab651219fd530d5f26ff3b97952fdb7c72534609e15d5499f39fb4",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "days_since_go_live",
+        "launched_flag",
+        "doc_count_prev30",
+        "voucher_count_prev30",
+        "integration_fail_cnt",
+        "handler_count",
+        "handler_concentration",
+        "avg_daily_doc_prev7",
+        "daily_doc_delta",
+        "Prediction",
+        "ml_results"
+      ],
+      "rows": 3210
+    },
+    "ml_score_risk": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321250388,
+      "compressed_bytes": 89224,
+      "columnar_bytes": 290666,
+      "raw_bytes": 510236,
+      "data_sha256": "91af7431dcfc05a230a7b9245ee1b72b08f00d6cef185336a3a13595707394a6",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "construction_pct",
+        "unresolved_issues",
+        "high_risk_issues",
+        "doc_success_pct",
+        "integration_success_pct",
+        "days_since_start",
+        "progress_slope_14d",
+        "stagnant_days",
+        "training_error_scissors",
+        "handler_concentration",
+        "risk_flag",
+        "Prediction",
+        "ml_results"
+      ],
+      "rows": 3210
+    },
+    "ml_model_metadata": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321339612,
+      "compressed_bytes": 1680,
+      "columnar_bytes": 4014,
+      "raw_bytes": 865,
+      "data_sha256": "25859e6a8601e35b1b34d8920c54f749a8a9f5c4ee60a0bc97861f588c311080",
+      "columns": [
+        "model_handle",
+        "model_name",
+        "task_type",
+        "target_column",
+        "algorithm",
+        "split_method",
+        "train_rows",
+        "test_rows",
+        "train_score",
+        "test_score",
+        "train_metrics",
+        "test_metrics",
+        "verified",
+        "status",
+        "trained_at",
+        "verified_at"
+      ],
+      "rows": 2
+    },
+    "ml_risk_explanation": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321341292,
+      "compressed_bytes": 353248,
+      "columnar_bytes": 1730843,
+      "raw_bytes": 2267109,
+      "data_sha256": "48b4ab58482f131f52b679c31e797314c6faa5dd9d5621b513f99efc2bea9900",
+      "columns": [
+        "org_id",
+        "model_handle",
+        "model_trained_at",
+        "feature_fingerprint",
+        "ml_results",
+        "generated_at"
+      ],
+      "rows": 3210
+    },
+    "ml_eval_doc_delta_test": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321694540,
+      "compressed_bytes": 9008,
+      "columnar_bytes": 31219,
+      "raw_bytes": 70757,
+      "data_sha256": "2a71ce979afcb947763bedfd207e3af5d02a481e3230a1638323f27d2907b976",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "days_since_go_live",
+        "launched_flag",
+        "doc_count_prev30",
+        "voucher_count_prev30",
+        "integration_fail_cnt",
+        "handler_count",
+        "handler_concentration",
+        "avg_daily_doc_prev7",
+        "daily_doc_delta",
+        "Prediction",
+        "ml_results"
+      ],
+      "rows": 642
+    },
+    "ml_eval_doc_delta_train": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321703548,
+      "compressed_bytes": 54376,
+      "columnar_bytes": 135179,
+      "raw_bytes": 305991,
+      "data_sha256": "cb154fe82f6f57faef8f625462225d5c3e1a6ab45dead814623e3c6bfc8e0d32",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "days_since_go_live",
+        "launched_flag",
+        "doc_count_prev30",
+        "voucher_count_prev30",
+        "integration_fail_cnt",
+        "handler_count",
+        "handler_concentration",
+        "avg_daily_doc_prev7",
+        "daily_doc_delta",
+        "Prediction",
+        "ml_results"
+      ],
+      "rows": 2568
+    },
+    "ml_eval_risk_test": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321757924,
+      "compressed_bytes": 21628,
+      "columnar_bytes": 62052,
+      "raw_bytes": 102109,
+      "data_sha256": "9ef2d3ae4fcb15c3f016ff84ddb8f10268c85013358bf46ced2970babe2b5076",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "construction_pct",
+        "unresolved_issues",
+        "high_risk_issues",
+        "doc_success_pct",
+        "integration_success_pct",
+        "days_since_start",
+        "progress_slope_14d",
+        "stagnant_days",
+        "training_error_scissors",
+        "handler_concentration",
+        "risk_flag",
+        "Prediction",
+        "ml_results"
+      ],
+      "rows": 642
+    },
+    "ml_eval_risk_train": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321779552,
+      "compressed_bytes": 72136,
+      "columnar_bytes": 234539,
+      "raw_bytes": 408127,
+      "data_sha256": "e8773d6449f0c21e3972c24c4c9129355d01f2f71e155e14cf43961de0f5f6df",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "construction_pct",
+        "unresolved_issues",
+        "high_risk_issues",
+        "doc_success_pct",
+        "integration_success_pct",
+        "days_since_start",
+        "progress_slope_14d",
+        "stagnant_days",
+        "training_error_scissors",
+        "handler_concentration",
+        "risk_flag",
+        "Prediction",
+        "ml_results"
+      ],
+      "rows": 2568
+    },
+    "ml_feat_doc_delta_test": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321851688,
+      "compressed_bytes": 6140,
+      "columnar_bytes": 22470,
+      "raw_bytes": 35920,
+      "data_sha256": "a2254fc361afffbc07d8db98d99caee423063969dfe84c2eb27b37ada66d6a1d",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "days_since_go_live",
+        "launched_flag",
+        "doc_count_prev30",
+        "voucher_count_prev30",
+        "integration_fail_cnt",
+        "handler_count",
+        "handler_concentration",
+        "avg_daily_doc_prev7",
+        "daily_doc_delta"
+      ],
+      "rows": 643
+    },
+    "ml_feat_doc_delta_train": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321857828,
+      "compressed_bytes": 32432,
+      "columnar_bytes": 86840,
+      "raw_bytes": 152009,
+      "data_sha256": "f0078b2216f0206f57313e3d2bea9a912a8a0a197597155e835f41c423814c7b",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "days_since_go_live",
+        "launched_flag",
+        "doc_count_prev30",
+        "voucher_count_prev30",
+        "integration_fail_cnt",
+        "handler_count",
+        "handler_concentration",
+        "avg_daily_doc_prev7",
+        "daily_doc_delta"
+      ],
+      "rows": 2568
+    },
+    "ml_feat_risk_test": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321890260,
+      "compressed_bytes": 17900,
+      "columnar_bytes": 45304,
+      "raw_bytes": 47281,
+      "data_sha256": "b8c1a7ef1ca6c013ff3e910afe8b78261464e28202ca79a8c9ea93eedac13fee",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "construction_pct",
+        "unresolved_issues",
+        "high_risk_issues",
+        "doc_success_pct",
+        "integration_success_pct",
+        "days_since_start",
+        "progress_slope_14d",
+        "stagnant_days",
+        "training_error_scissors",
+        "handler_concentration",
+        "risk_flag"
+      ],
+      "rows": 643
+    },
+    "ml_feat_risk_train": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321908160,
+      "compressed_bytes": 59240,
+      "columnar_bytes": 167100,
+      "raw_bytes": 188155,
+      "data_sha256": "337085f2867320df665c8621a5c3f3aaaff8535feba654d28be3fe308a76f6be",
+      "columns": [
+        "id",
+        "org_id",
+        "region",
+        "batch_id",
+        "construction_pct",
+        "unresolved_issues",
+        "high_risk_issues",
+        "doc_success_pct",
+        "integration_success_pct",
+        "days_since_start",
+        "progress_slope_14d",
+        "stagnant_days",
+        "training_error_scissors",
+        "handler_concentration",
+        "risk_flag"
+      ],
+      "rows": 2568
+    },
+    "ml_risk_explanation_previous": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 321967400,
+      "compressed_bytes": 294888,
+      "columnar_bytes": 1368331,
+      "raw_bytes": 1892206,
+      "data_sha256": "b1633af98a4ea27eaa3908a994f0cc31fc718b690cce1832c4384c0d96b85db1",
+      "columns": [
+        "org_id",
+        "model_handle",
+        "model_trained_at",
+        "feature_fingerprint",
+        "ml_results",
+        "generated_at"
+      ],
+      "rows": 3210
+    },
+    "ml_training_log": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 322262288,
+      "compressed_bytes": 4940,
+      "columnar_bytes": 21166,
+      "raw_bytes": 27467,
+      "data_sha256": "2c1fcfc0e7689331d0d781c61bc9dd328d0732c4989c9d83efd63b45af1f79f8",
+      "columns": [
+        "id",
+        "model_handle",
+        "run_type",
+        "train_rows",
+        "test_rows",
+        "train_score",
+        "test_score",
+        "metrics",
+        "status",
+        "error_message",
+        "duration_seconds",
+        "created_at"
+      ],
+      "rows": 68
+    },
+    "sim_ai_quota_ledger": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 322267228,
+      "compressed_bytes": 696,
+      "columnar_bytes": 1228,
+      "raw_bytes": 135,
+      "data_sha256": "f180f364069b65575271573fcd61dcb59c37a5773c614d4db01ec29f331be6c5",
+      "columns": [
+        "stat_date",
+        "call_count",
+        "neurons_used",
+        "status",
+        "updated_at"
+      ],
+      "rows": 2
+    },
+    "sim_event_outbox": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 322267924,
+      "compressed_bytes": 1908252,
+      "columnar_bytes": 29561788,
+      "raw_bytes": 38317265,
+      "data_sha256": "d75febc858881accd1a31b8d0dc2c7e5a62a82bbddbe49ea63c396d3ad9bdaf3",
+      "columns": [
+        "sequence",
+        "event_id",
+        "payload",
+        "created_at",
+        "documents",
+        "vouchers",
+        "integrations"
+      ],
+      "rows": 68376
+    },
+    "sim_event_outbox_state": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 324176176,
+      "compressed_bytes": 784,
+      "columnar_bytes": 1582,
+      "raw_bytes": 69,
+      "data_sha256": "26f91dd2e9dfc5fbfcf3279968540715bedd4e870ea235fc7c56008766360300",
+      "columns": [
+        "singleton_id",
+        "stream_id",
+        "last_sequence",
+        "pruned_through",
+        "documents",
+        "vouchers",
+        "integrations"
+      ],
+      "rows": 1
+    },
+    "test_doc": {
+      "encoding": "parquet-xz",
+      "parts": [
+        "simulation.pack.0000",
+        "simulation.pack.0001",
+        "simulation.pack.0002",
+        "simulation.pack.0003",
+        "simulation.pack.0004",
+        "simulation.pack.0005",
+        "simulation.pack.0006"
+      ],
+      "compressed_offset": 324176960,
+      "compressed_bytes": 556,
+      "columnar_bytes": 1042,
+      "raw_bytes": 0,
+      "data_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "columns": [
+        "id",
+        "org_id",
+        "type",
+        "doc_no",
+        "applicant",
+        "nature",
+        "amount",
+        "submit_time",
+        "approve_time",
+        "status"
+      ],
+      "rows": 0
+    }
+  },
+  "files": {
+    "schema.json": {
+      "bytes": 121329,
+      "sha256": "04ac41b255264f8f42d0e91c7bbcb92b75593e24c72095f0713ac3f53bcb1ecf"
+    },
+    "simulation.pack.0006": {
+      "bytes": 27177516,
+      "sha256": "b37ba3e31fefd3f5ceef58292f3635b4c8a8dc8c4133d16cca3e87a5bf37056e"
+    },
+    "simulation.pack.0005": {
+      "bytes": 49500000,
+      "sha256": "56140b31c798fb39c3d97c2f4fb858e0cb7bd4bab27fb2ecc60968615fd51f4f"
+    },
+    "simulation.pack.0004": {
+      "bytes": 49500000,
+      "sha256": "d5a188eafa12bf7ac562d7ecfda22316ed43bc3858442844bc4610647e93e269"
+    },
+    "simulation.pack.0003": {
+      "bytes": 49500000,
+      "sha256": "e490fec1115a26ef15d039033080e772fc615a553a558f308e095be9399e0772"
+    },
+    "simulation.pack.0002": {
+      "bytes": 49500000,
+      "sha256": "ba04f99472e26020edbfcec0d20ffb87dbd9503fc6500b4b554e997af475ef0e"
+    },
+    "simulation.pack.0001": {
+      "bytes": 49500000,
+      "sha256": "fb24c7e55c6a6334bdc85e587f3b4725219349352125fc634f68a5b43746cb76"
+    },
+    "simulation.pack.0000": {
+      "bytes": 49500000,
+      "sha256": "581bec0818aea8e006d61ffc6dca8651ca4b43211944f73ef3eb098322fef868"
+    }
+  },
+  "business_as_of_date": "2026-09-30",
+  "redacted_text_values": 7,
+  "compression": {
+    "columnar": "parquet_delta",
+    "codec": "xz",
+    "preset": "9e",
+    "dictionary_bytes": 536870912,
+    "nice_length": 273
+  },
+  "shard_maximum_bytes": 49500000
+}

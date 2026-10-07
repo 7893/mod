@@ -15,8 +15,13 @@ def prop(name, value):
     return item
 
 
-source = Path('${HOME}/build_dashboard_requirement_short.html').resolve()
-output_dir = Path('/tmp/dashboard_requirement').resolve()
+import argparse
+parser = argparse.ArgumentParser(description='Export a supplied dashboard requirement HTML file')
+parser.add_argument('source', type=Path)
+parser.add_argument('--output', type=Path, required=True)
+args = parser.parse_args()
+source = args.source.resolve()
+output_dir = args.output.resolve()
 output_dir.mkdir(parents=True, exist_ok=True)
 docx_output = output_dir / '新一代数智财务运营管控平台全周期领导驾驶舱展示需求（精简稿）.docx'
 pdf_output = output_dir / '新一代数智财务运营管控平台全周期领导驾驶舱展示需求（精简稿）.pdf'

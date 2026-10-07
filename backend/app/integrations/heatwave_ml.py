@@ -94,7 +94,8 @@ class HeatWaveMLAdapter:
     ) -> None:
         self.conn = conn
         self._execute_requested = execute
-        self._hw_enabled = os.getenv("MOD_HW_ML_ENABLED", "false").lower() == "true"
+        demo = os.getenv("MOD_DEMO_MODE", "false").lower() in {"true", "1", "yes", "on"}
+        self._hw_enabled = not demo and os.getenv("MOD_HW_ML_ENABLED", "false").lower() == "true"
         db_user = os.getenv("MOD_DB_USER", "admin")
         user_prefix = db_user.split("@")[0] if db_user else "admin"
         self._ml_schema = os.getenv("MOD_HW_ML_SCHEMA") or f"ML_SCHEMA_{user_prefix}"
@@ -164,7 +165,7 @@ class HeatWaveMLAdapter:
                     status,
                     trained_at,
                     verified_at
-                FROM `mod`.`ml_model_metadata`
+                FROM `ml_model_metadata`
                 WHERE model_handle = :handle
                 LIMIT 1
                 """,
@@ -660,7 +661,7 @@ class HeatWaveMLAdapter:
                 f.risk_flag,
                 (
                     SELECT m.trained_at
-                    FROM `mod`.`ml_model_metadata` m
+                    FROM `ml_model_metadata` m
                     WHERE m.model_handle = :model_handle
                     LIMIT 1
                 ) AS model_trained_at
@@ -690,7 +691,7 @@ class HeatWaveMLAdapter:
         persisted_rows = self._safe_query(
             f"""
             SELECT ml_results, model_trained_at, feature_fingerprint, generated_at
-            FROM `mod`.`{RISK_EXPLANATION_TABLE}`
+            FROM `{RISK_EXPLANATION_TABLE}`
             WHERE org_id = :oid AND model_handle = :model_handle
             LIMIT 1
             """,

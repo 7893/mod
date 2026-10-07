@@ -9,6 +9,9 @@
   云资源标识、已登记生产域名及维护者私有资产清单命中；诊断不回显真实值。默认由
   pre-commit、`make doc-check` 和 CI 执行。维护者发布审计可通过未跟踪文件
   `MOD_SENSITIVE_ASSET_FILE=/secure/path/assets.txt` 注入精确资产清单。
+  同时阻断宿主机 home 路径及非示例邮箱；例外仅限测试目录中登记的模拟用户名。
+  共享脱敏器保留项目/部署/备份角色及相对文件名，不输出匹配原值；
+  `scripts/project/tests/test_public_sanitization.py` 验证规则和重复脱敏的一致性。
 - `pre_flight.sh`：本机公共 harness 存在时委托其按变更领域检查，返回摘要与日志路径；
   缺失时以非零状态提示改用公共 `make check`，避免把“未执行”误报成成功。检查写入本地
   测试/构建产物，不发布或查库。
@@ -59,3 +62,35 @@ Linux aarch64 官方 `2.13.1` 压缩包 SHA-256 为
 `9619b7f0c584229f8a2331c1905afe88bd938bdc9102926c2073836a42f02455`；其他架构必须以同版本官方 Release 列出的校验值为准。
 
 版本 tag 或人工触发的 `.github/workflows/changelog.yml` 使用同一基线和 git-cliff 2.13.1，仅上传可下载产物，不提交、推送、打标签或创建 Release。
+
+## 全量模拟演示数据
+
+`demo_seed.py` 支持只读全量导出、列式编码加 XZ 极限压缩、49.5 MB 共享分卷核验和显式空库初始化。
+源环境与导入目标分离，不推送、不部署、不写生产库。参数、风险、恢复及验证见
+[全量演示数据规范](../../docs/development/DEMO-DATA.md)。
+
+## 演示运行与部署配置（2026-10-07）
+
+- `run_unified.py`：从脚本位置推导项目根目录；支持 `MOD_API_ENV_FILE`、
+  `MOD_SIM_ENV_FILE`、`MOD_OUTPUT_DIR`。显式进程环境优先于 env 文件。
+  演示模式必须指定独立 `MOD_DEMO_DATABASE_URL`，只启动 API，关闭模拟写入及外部 AI。
+- `demo_container.py init|serve`：仅用于 Compose 的独立演示库，要求新建的
+  `MOD_DEMO_DB_PASSWORD`，不读取生产连接。`init` 写入全量演示数据；`serve` 启动
+  Nginx 与只读 API。失败只显示异常类型。重复初始化沿用数据清单核验规则。
+- `render_deploy_config.py`：通过 `--root`、`--user`、`--env-file`、`--python`、
+  `--output` 在新目录生成权限受限的 systemd 配置，拒绝覆盖。路径须为绝对路径，
+  不允许父目录跳转或 shell 语法。默认演示模式阻断三个后台任务；
+  `--enable-background-jobs` 仅改变模板，既不启用服务，也不授权操作生产。
+  生成 Nginx 配置还须同时明确传入 `--public-domain`、`--frontend-root`、
+  `--ssl-cert-path`、`--ssl-key-path`、`--nginx-snippets`、`--acme-root`。
+- `publish.sh`：缺少 `--apply` 时退出且不部署。执行时要求
+  `MOD_DEPLOY_ROOT`、`MOD_DEPLOY_USER`、`MOD_DEPLOY_ENV_FILE`；远程还要求
+  `MOD_DEPLOY_HOST`。`--local` 选择本机。该脚本会测试、构建、写入新 release、
+  切换 current 并通过 sudo 重启 `mod.service`，必须另行获得部署授权。
+  目标需已有 uv、独立演示库、私有 env 文件与 Nginx 配置；不会初始化数据库、
+  启用定时器、清理旧 release 或修改 Nginx。健康检查失败时恢复已有的上一版本链接；
+  首次部署没有上一版本，失败需人工处理。CI 仅运行检查，不调用发布脚本。
+
+以上契约由 `scripts/project/tests/test_demo_deployment.py` 和
+`backend/tests/test_demo_runtime.py` 验证；Compose 可用临时测试口令执行
+`docker compose config --quiet` 核验配置。真实口令只放未跟踪环境文件，不能写进示例或参数。

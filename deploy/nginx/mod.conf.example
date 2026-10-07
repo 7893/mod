@@ -1,5 +1,5 @@
 # Nginx template for the MOD dashboard host.
-# Copy to mod.conf and replace __PUBLIC_DOMAIN__ and __CLOUDFRONT_ORIGIN_SECRET__ with real credentials.
+# Copy to mod.conf and render explicit host, asset, certificate and snippet paths.
 # The real mod.conf is gitignored (carries real domain, origin secrets, and cert paths).
 
 # HTTP -> HTTPS redirect & ACME challenge
@@ -11,7 +11,7 @@ server {
 
     # ACME challenge for automatic certificate renewal
     location /.well-known/acme-challenge/ {
-        root /var/www/html;
+        root __ACME_ROOT__;
     }
 
     location / {
@@ -26,7 +26,7 @@ server {
     server_name __PUBLIC_DOMAIN__;
     server_tokens off;
 
-    include /etc/nginx/snippets/cloudflare-realip.conf;
+    include __NGINX_SNIPPETS__/cloudflare-realip.conf;
 
     ssl_certificate __SSL_CERT_PATH__;
     ssl_certificate_key __SSL_KEY_PATH__;
@@ -37,8 +37,8 @@ server {
     add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
 
     # CloudFront 回源密钥校验 (KI-078)：仅放行携带正确 X-Origin-Secret 的 CDN 回源流量
-    # 真实密钥文件由运维独立部署至 /etc/nginx/snippets/mod-origin-secret.conf，不进入 git 代码库
-    include /etc/nginx/snippets/mod-origin-secret.conf;
+    # 真实密钥文件由运维独立部署至 __NGINX_SNIPPETS__/mod-origin-secret.conf，不进入 git 代码库
+    include __NGINX_SNIPPETS__/mod-origin-secret.conf;
 
     # 硬拦截：AI/LLM 训练爬虫与全网检索爬虫，按 User-Agent 直接 403，阻断一切非授权抓取。
     if ($http_user_agent ~* "(GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-Web|anthropic-ai|Google-Extended|GoogleOther|PerplexityBot|Perplexity-User|CCBot|Bytespider|Amazonbot|Applebot-Extended|Meta-ExternalAgent|FacebookBot|cohere-ai|Diffbot|ImagesiftBot|Timpibot|Omgilibot|YouBot|Baiduspider|YandexBot|Sogou|360Spider|DotBot|MJ12bot|AhrefsBot|SemrushBot|DataForSeoBot)") {
@@ -99,7 +99,7 @@ server {
 
     # 前端带 Hash 静态资源：长效强缓存
     location ^~ /assets/ {
-        root ${MOD_PROJECT_ROOT}/frontend/current;
+        root __FRONTEND_ROOT__;
         expires 30d;
         add_header Cache-Control "public, max-age=2592000, immutable";
         add_header X-Content-Type-Options nosniff always;
@@ -109,7 +109,7 @@ server {
 
     # HTML 入口文件强缓存防御 (KI-085)：杜绝客户端缓存 index.html 导致的发版 ChunkLoadError
     location ~* \.html$ {
-        root ${MOD_PROJECT_ROOT}/frontend/current;
+        root __FRONTEND_ROOT__;
         add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0" always;
         add_header Pragma "no-cache" always;
         add_header Expires "0" always;
@@ -120,7 +120,7 @@ server {
 
     # 前端 SPA 页面路由（基于发布软链 current 目录）
     location / {
-        root ${MOD_PROJECT_ROOT}/frontend/current;
+        root __FRONTEND_ROOT__;
         try_files $uri $uri/ /index.html;
         add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0" always;
         add_header Pragma "no-cache" always;

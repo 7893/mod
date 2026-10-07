@@ -25,8 +25,11 @@ def _on_connect(dbapi_conn: object, connection_record: ConnectionPoolEntry) -> N
         cursor.execute("SET time_zone = '+08:00'")
         # Only an explicit opt-in may activate HeatWave RAPID. Configuration or
         # server errors must surface instead of silently changing execution mode.
+        demo = os.getenv("MOD_DEMO_MODE", "false").lower() in {"true", "1", "yes", "on"}
+        if demo:
+            cursor.execute("SET SESSION TRANSACTION READ ONLY")
         hw_flag = os.getenv("MOD_HW_ENABLED", "false").strip().lower()
-        if hw_flag in {"1", "true", "yes", "on"}:
+        if not demo and hw_flag in {"1", "true", "yes", "on"}:
             cursor.execute("SET use_secondary_engine = ON")
     finally:
         cursor.close()

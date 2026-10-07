@@ -124,10 +124,10 @@ def validate_contracts(root: Path = ROOT) -> list[str]:
     disaster_recovery = _read(root, "docs/runbooks/DISASTER-RECOVERY-RUNBOOK.md")
     deployment_layout = _read(root, "docs/operations/USA-DEPLOYMENT-LAYOUT.md")
 
-    if "  deploy:" not in workflow or "needs: check" not in workflow:
-        errors.append("CI/CD drift: quality workflow must deploy only after checks")
-    if "不包含部署或生产访问" in current_state:
-        errors.append("CI/CD documentation drift: CURRENT-STATE denies the deploy job")
+    if "  deploy:" in workflow or "secrets." in workflow or "ssh " in workflow:
+        errors.append("CI drift: backup workflow must have no deployment or production access")
+    if "CI 仅执行质量检查" not in current_state:
+        errors.append("CI documentation drift: CURRENT-STATE must document check-only CI")
     if "生产与工作区分离" not in enforcement:
         errors.append("deployment topology drift: ENFORCEMENT lacks JPA/USA separation")
 

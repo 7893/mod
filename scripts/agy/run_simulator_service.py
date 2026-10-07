@@ -46,7 +46,6 @@ logger = logging.getLogger("mod-simulator")
 def load_environment() -> None:
     env_candidates = [
         os.getenv("MOD_ENV_FILE"),
-        Path("${MOD_PROJECT_ROOT}/.env.systemd"),
         BASE_DIR / ".env.systemd",
         BASE_DIR / ".env.local",
         BASE_DIR / ".env",
@@ -137,6 +136,9 @@ def main() -> int:
 
     args = parser.parse_args()
     load_environment()
+    if os.getenv("MOD_DEMO_MODE", "false").lower() in {"true", "1", "yes", "on"}:
+        logger.error("Simulator execution is disabled in demo mode")
+        return 2
 
     output_dir = Path(os.getenv("MOD_OUTPUT_DIR") or (BASE_DIR / "output")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)

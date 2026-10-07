@@ -8,6 +8,15 @@
 
 ## 一、 治理目标与双层保全原则
 
+2026-10-07 所有者授权的归档整理补充：公开文档中的宿主机 home 路径改为
+`${MOD_PROJECT_ROOT}`、`${MOD_DEPLOY_ROOT}`、`${MOD_BACKUP_ROOT}`、`${MOD_ARCHIVE_ROOT}`
+或 `${HOME}`，保留后续相对路径和技术事实；非示例邮箱改为占位符。
+共享脱敏器和公开扫描器覆盖这两类信息，测试中明确登记的模拟路径可保留。
+本地受限原件、冻结业务数据和全量演示包不改写；公开副本摘要同步完整性清单。
+所有旧分支和标签的历史正文及提交身份在本地脱敏，391 个历史提交的日期、顺序与拓扑保留。
+旧签名因提交内容改变而失效，按所有者授权移除；此后新增工作提交必须签名，
+提交信息采用不超过七个单词的英语。本轮不推送，不操作生产资源。
+
 依据 [ADR-0004 废弃内容归档不删除](../decisions/0004-废弃内容归档不删除.md)、[文档生命周期规范](DOCUMENTATION-LIFECYCLE.md) 与 [KI-074 治理方案](../issues/KI-074-历史文档未版本化保全与语义治理闸门缺失.md)，历史资料的保全与公开安全必须实行**双层保全架构**：
 
 1. **原件绝对不删除、不就地覆盖**：
@@ -36,8 +45,8 @@
 | **内网 IP (IPv4)** | `10.0.10.x` / `10.0.0.x` | `10.0.x.x (内网地址，已脱敏)` 或 `<internal-ip>` | 保护私有子网拓扑 |
 | **公网 IP (IPv4)** | `193.122.x.x` | `193.122.x.x (USA公网地址，已脱敏)` 或 `<public-ip>` | 隐藏生产宿主机真实外网 IP |
 | **私网 IPv6** | `2603:c020:...` | `<ipv6-address (已脱敏)>` | 隐藏 IPv6 分配明细 |
-| **OCI 租户 OCID** | `<cloud-resource-id>` | `<tenancy-ocid>` | 隐藏 OCI 租户唯一标识 |
-| **OCI 子网 OCID** | `<cloud-resource-id>` | `<subnet-ocid>` | 隐藏 OCI 私有子网标识 |
+| **OCI 租户 OCID** | `ocid1.tenancy.oc1...` | `<tenancy-ocid>` | 隐藏 OCI 租户唯一标识 |
+| **OCI 子网 OCID** | `ocid1.subnet.oc1...` | `<subnet-ocid>` | 隐藏 OCI 私有子网标识 |
 | **Compute 实例名** | `<usa-vm-instance-id>` | `<usa-vm-instance-id>` | 隐藏具体计算节点名称 |
 | **MySQL 实例名** | `<mysql-instance-name>` | `<mysql-instance-name>` | 隐藏云数据库实例真实命名 |
 | **MySQL 备份标识** | `<mysql-backup-id>` | `<mysql-backup-id>` | 隐藏云备份任务内部标识 |

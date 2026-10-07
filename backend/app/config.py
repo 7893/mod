@@ -26,6 +26,15 @@ class Settings:
 
     @property
     def database_url(self) -> str:
+        if os.getenv("MOD_DEMO_MODE", "false").lower() in {"true", "1", "yes", "on"}:
+            from sqlalchemy.engine import make_url
+            target = os.getenv("MOD_DEMO_DATABASE_URL", "")
+            if not target:
+                raise ValueError("MOD_DEMO_DATABASE_URL is required in demo mode")
+            url = make_url(target)
+            if url.drivername != "mysql+pymysql" or not url.database:
+                raise ValueError("Demo mode requires an explicitly named MySQL database")
+            return target
         password = quote_plus(self.db_password)
         return (
             f"mysql+pymysql://{self.db_user}:{password}@{self.db_host}:{self.db_port}/"

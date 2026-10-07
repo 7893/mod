@@ -59,8 +59,8 @@ class PortabilityContractTests(unittest.TestCase):
         self.assertEqual(package["engines"]["node"], ">=26.10.0 <27")
         self.assertEqual(package["engines"]["pnpm"], "12.8.1")
         self.assertEqual(package["devDependencies"]["@types/node"], "^26.6.2")
-        self.assertEqual(quality.count('node-version-file: ".tool-versions"'), 2)
-        self.assertEqual(quality.count('version: "12.8.1"'), 2)
+        self.assertEqual(quality.count('node-version-file: ".tool-versions"'), 1)
+        self.assertEqual(quality.count('version: "12.8.1"'), 1)
         lockfile = (ROOT / "frontend/pnpm-lock.yaml").read_text(encoding="utf-8")
         self.assertIn("packageManagerDependencies:", lockfile)
         self.assertIn("specifier: 12.8.1", lockfile)
@@ -106,12 +106,9 @@ class PortabilityContractTests(unittest.TestCase):
         self.assertIn("fetchChinaMapGeoJson", component)
         self.assertIn("FeatureCollection", source)
         self.assertRegex(env_example, r"(?m)^VITE_CHINA_MAP_GEOJSON_URL=$")
-        self.assertIn("Validate deployment configuration", deploy_workflow)
-        self.assertIn(
-            "VITE_CHINA_MAP_GEOJSON_URL is required for a configured production deployment",
-            deploy_workflow,
-        )
-        self.assertIn("frontend/shared/china.geojson", deploy_workflow)
+        self.assertNotIn("  deploy:", deploy_workflow)
+        self.assertNotIn("secrets.", deploy_workflow)
+        self.assertIn("VITE_CHINA_MAP_GEOJSON_URL", (ROOT / "docker-compose.yml").read_text())
         self.assertIn("VITE_CHINA_MAP_GEOJSON_URL", readme)
         self.assertGreaterEqual(readme.count("THIRD_PARTY_NOTICES.md"), 3)
         self.assertIn("Apache ECharts", notices)
@@ -167,10 +164,11 @@ class PortabilityContractTests(unittest.TestCase):
         publish = (ROOT / "scripts/project/publish.sh").read_text(encoding="utf-8")
         self.assertIn("TimeoutStartSec=10800", service)
         self.assertNotIn("TimeoutStartSec=600\n", service)
-        for deploy_path in (workflow, publish):
-            self.assertIn("install -m 0644", deploy_path)
-            self.assertIn("mod-ml-retrain.service", deploy_path)
-            self.assertIn("systemctl daemon-reload", deploy_path)
+        self.assertNotIn("systemctl", workflow)
+        self.assertIn("install -m 0644", publish)
+        self.assertIn("systemctl daemon-reload", publish)
+        self.assertNotIn("systemctl enable", publish)
+        self.assertIn("ExecCondition=", service)
 
 
 if __name__ == "__main__":

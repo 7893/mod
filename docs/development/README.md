@@ -29,3 +29,5 @@
 - [GOVERNANCE-AND-COLLABORATION.md](GOVERNANCE-AND-COLLABORATION.md)：协作机制与文档治理的架构阐释。
 
 新增规范必须放在本目录并同步 `docs/INDEX.md`。不要在根目录创建零散开发说明。
+
+- [DEMO-DATA.md](DEMO-DATA.md)：全量模拟数据压缩、环境脱敏与空库初始化。

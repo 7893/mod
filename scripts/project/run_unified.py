@@ -45,27 +45,32 @@ def main() -> int:
     logger.info("Starting MOD unified core supervisor from %s", BASE_DIR)
 
     # API environment
-    api_env_file = Path(os.getenv("MOD_API_ENV_FILE", "${MOD_PROJECT_ROOT}/.env.api.systemd"))
+    api_env_file = Path(os.getenv("MOD_API_ENV_FILE") or str(BASE_DIR / ".env.api.systemd"))
     if not api_env_file.exists():
         api_env_file = BASE_DIR / ".env.api.systemd"
-    api_env = os.environ.copy()
-    api_env.update(load_env_file(api_env_file))
-    api_env["PYTHONPATH"] = str(BASE_DIR)
+    api_env = {**load_env_file(api_env_file), **os.environ}
+    api_env["PYTHONPATH"] = os.pathsep.join((str(BASE_DIR / "backend"), str(BASE_DIR)))
     api_env["PYTHONUNBUFFERED"] = "1"
     api_env["PYTHONDONTWRITEBYTECODE"] = "1"
-    api_env.setdefault("MOD_SIMULATOR_STATUS_PATH", "${MOD_PROJECT_ROOT}/output/simulator_status.json")
+    api_env.setdefault("MOD_SIMULATOR_STATUS_PATH", str(BASE_DIR / "output/simulator_status.json"))
 
     # Simulator environment
-    sim_env_file = Path(os.getenv("MOD_SIM_ENV_FILE", "${MOD_PROJECT_ROOT}/.env.systemd"))
+    sim_env_file = Path(os.getenv("MOD_SIM_ENV_FILE") or str(BASE_DIR / ".env.systemd"))
     if not sim_env_file.exists():
         sim_env_file = BASE_DIR / ".env.systemd"
-    sim_env = os.environ.copy()
-    sim_env.update(load_env_file(sim_env_file))
+    sim_env = {**load_env_file(sim_env_file), **os.environ}
     sim_env["PYTHONPATH"] = str(BASE_DIR)
     sim_env["PYTHONUNBUFFERED"] = "1"
     sim_env["PYTHONDONTWRITEBYTECODE"] = "1"
-    sim_env.setdefault("MOD_OUTPUT_DIR", "${MOD_PROJECT_ROOT}/output")
+    sim_env.setdefault("MOD_OUTPUT_DIR", str(BASE_DIR / "output"))
 
+    demo = api_env.get("MOD_DEMO_MODE", "false").lower() in {"true", "1", "yes", "on"}
+    if demo:
+        if not api_env.get("MOD_DEMO_DATABASE_URL"):
+            logger.error("Demo startup requires an explicit MOD_DEMO_DATABASE_URL")
+            return 2
+        for flag in ("MOD_SIMULATION_ENGINE_ENABLED", "MOD_CF_AI_ENABLED", "MOD_HW_ENABLED", "MOD_HW_ML_ENABLED", "MOD_LIVE_PROJECTION_ENABLED"):
+            api_env[flag] = "false"
     api_workers = os.getenv("MOD_API_WORKERS", "2")
     api_cmd = [
         sys.executable,
@@ -73,9 +78,9 @@ def main() -> int:
         "uvicorn",
         "app.main:app",
         "--host",
-        "127.0.0.1",
+        api_env.get("MOD_HOST", "127.0.0.1"),
         "--port",
-        "8100",
+        api_env.get("MOD_PORT", "8100"),
         "--proxy-headers",
         "--workers",
         str(api_workers),
@@ -123,7 +128,8 @@ def main() -> int:
         return subprocess.Popen(sim_cmd, cwd=str(BASE_DIR), env=sim_env)
 
     procs["api"] = start_api()
-    procs["sim"] = start_sim()
+    if not demo and sim_env.get("MOD_SIMULATION_ENGINE_ENABLED", "false").lower() in {"true", "1", "yes", "on"}:
+        procs["sim"] = start_sim()
 
     while not shutting_down:
         time.sleep(1)

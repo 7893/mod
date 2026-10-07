@@ -1,0 +1,4927 @@
+{
+  "columns": [
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_default": null,
+      "column_key": "UNI",
+      "column_name": "voucher_no",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "type",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "gen_time",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "int_time",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "status",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "debit",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "credit",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher_line"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "voucher_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher_line"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "subject_code",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher_line"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "subject_name",
+      "column_type": "varchar(100)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher_line"
+    },
+    {
+      "column_default": "0.00",
+      "column_key": "",
+      "column_name": "debit",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher_line"
+    },
+    {
+      "column_default": "0.00",
+      "column_key": "",
+      "column_name": "credit",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "accounting_voucher_line"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "type",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document"
+    },
+    {
+      "column_default": null,
+      "column_key": "UNI",
+      "column_name": "doc_no",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "applicant",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "nature",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "amount",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "submit_time",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "approve_time",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "business_document"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "status",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document_line"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "doc_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document_line"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "item_name",
+      "column_type": "varchar(100)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document_line"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "amount",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document_line"
+    },
+    {
+      "column_default": "1",
+      "column_key": "",
+      "column_name": "quantity",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "business_document_line"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "construction_task"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "construction_task"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "name",
+      "column_type": "varchar(255)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "construction_task"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "type",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "construction_task"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "owner",
+      "column_type": "varchar(255)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "construction_task"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "plan_time",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "construction_task"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "actual_time",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "construction_task"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "status",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "construction_task"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "progress",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "construction_task"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "update_time",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "construction_task"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "briefing_date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_briefing"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "content",
+      "column_type": "mediumtext",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_briefing"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "model",
+      "column_type": "varchar(128)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "daily_briefing"
+    },
+    {
+      "column_default": "llm",
+      "column_key": "",
+      "column_name": "source",
+      "column_type": "varchar(32)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_briefing"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "metrics_fingerprint",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "daily_briefing"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "generated_at",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_briefing"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "stat_date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "org_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "user_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "doc_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "doc_today",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "voucher_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "voucher_today",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "integration_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "integration_success",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "CURRENT_TIMESTAMP",
+      "column_key": "",
+      "column_name": "updated_at",
+      "column_type": "timestamp",
+      "extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP",
+      "is_nullable": "YES",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "doc_line_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "voucher_line_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "link_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "dual_run_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "snapshot_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "daily_stats"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "static_total",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "static_completed",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "static_rate",
+      "column_type": "varchar(20)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "opening_total",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "opening_completed",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "opening_rate",
+      "column_type": "varchar(20)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": "0.00",
+      "column_key": "",
+      "column_name": "opening_diff_amount",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "dynamic_total",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "dynamic_completed",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "dynamic_sync_success",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "dynamic_sync_fail",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "dynamic_sync_pending",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "dynamic_rate",
+      "column_type": "varchar(20)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "last_sync_time",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "overall_status",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "doc_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "document_voucher_link"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "voucher_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "document_voucher_link"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "check_type",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "v1_amount",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "v2_amount",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "diff_amount",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "result",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "check_date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "unit_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "unit_name",
+      "column_type": "varchar(128)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "province",
+      "column_type": "varchar(32)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": "7",
+      "column_key": "MUL",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "issue_type",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": "MEDIUM",
+      "column_key": "",
+      "column_name": "severity",
+      "column_type": "varchar(16)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": "DISCOVERED",
+      "column_key": "MUL",
+      "column_name": "status",
+      "column_type": "varchar(32)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "owner",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "title",
+      "column_type": "varchar(255)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "description",
+      "column_type": "text",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "ai_enriched",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "rework_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "created_at",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "updated_at",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "resolved_at",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "governance_issue"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "integration_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "voucher_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "integration_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "status",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "integration_result"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "retry_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "integration_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "error_code",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "integration_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "error_message",
+      "column_type": "varchar(255)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "integration_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_time",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "integration_result"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "stage",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "bug",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "req",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "conf",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "data",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "integ",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "op",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "total",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "resolved",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "unresolved",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "auto_increment",
+      "is_nullable": "NO",
+      "table_name": "issue_timeline"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "issue_id",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_timeline"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "action",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_timeline"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "actor",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_timeline"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "detail",
+      "column_type": "text",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_timeline"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "occurred_at",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "issue_timeline"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "snapshot_date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "target_units",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "online_units",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "dual_run_units",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "online_rate",
+      "column_type": "varchar(20)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "voucher_generate_success_rate",
+      "column_type": "varchar(20)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_success_rate",
+      "column_type": "varchar(20)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_go_live",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "launched_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "voucher_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_fail_cnt",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "avg_daily_doc_prev7",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "daily_doc_delta",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "Prediction",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "ml_results",
+      "column_type": "text",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_default": "0",
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_go_live",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "launched_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "voucher_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_fail_cnt",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "avg_daily_doc_prev7",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "daily_doc_delta",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "Prediction",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "ml_results",
+      "column_type": "text",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_default": "0",
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "construction_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "unresolved_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "high_risk_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_start",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "progress_slope_14d",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "stagnant_days",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "training_error_scissors",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "risk_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "Prediction",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "ml_results",
+      "column_type": "text",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_default": "0",
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "construction_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "unresolved_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "high_risk_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_start",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "progress_slope_14d",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "stagnant_days",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "training_error_scissors",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "risk_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "Prediction",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "ml_results",
+      "column_type": "text",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "auto_increment",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_go_live",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "launched_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "voucher_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_fail_cnt",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "avg_daily_doc_prev7",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "daily_doc_delta",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "auto_increment",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_go_live",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "launched_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "voucher_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_fail_cnt",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "avg_daily_doc_prev7",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "daily_doc_delta",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "auto_increment",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_go_live",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "launched_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "voucher_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_fail_cnt",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "avg_daily_doc_prev7",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "daily_doc_delta",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "auto_increment",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "construction_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "unresolved_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "high_risk_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_start",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "progress_slope_14d",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "stagnant_days",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "training_error_scissors",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "risk_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "auto_increment",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "construction_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "unresolved_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "high_risk_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_start",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "progress_slope_14d",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "stagnant_days",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "training_error_scissors",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "risk_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "auto_increment",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "construction_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "unresolved_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "high_risk_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_start",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "progress_slope_14d",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "stagnant_days",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "training_error_scissors",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "risk_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "model_handle",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "model_name",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "task_type",
+      "column_type": "varchar(32)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "target_column",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "algorithm",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "split_method",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "train_rows",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "test_rows",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "train_score",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "test_score",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "train_metrics",
+      "column_type": "json",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "test_metrics",
+      "column_type": "json",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": "1",
+      "column_key": "",
+      "column_name": "verified",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": "ready",
+      "column_key": "",
+      "column_name": "status",
+      "column_type": "varchar(32)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "trained_at",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "verified_at",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "model_handle",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "model_trained_at",
+      "column_type": "datetime(6)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "feature_fingerprint",
+      "column_type": "char(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "ml_results",
+      "column_type": "json",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "generated_at",
+      "column_type": "datetime(6)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation_previous"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "model_handle",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation_previous"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "model_trained_at",
+      "column_type": "datetime(6)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation_previous"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "feature_fingerprint",
+      "column_type": "char(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation_previous"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "ml_results",
+      "column_type": "json",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation_previous"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "generated_at",
+      "column_type": "datetime(6)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_risk_explanation_previous"
+    },
+    {
+      "column_default": "0",
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_go_live",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "launched_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "voucher_count_prev30",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_fail_cnt",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "avg_daily_doc_prev7",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "daily_doc_delta",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "Prediction",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "ml_results",
+      "column_type": "text",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_default": "0",
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "construction_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "unresolved_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "high_risk_issues",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "doc_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integration_success_pct",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "days_since_start",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "progress_slope_14d",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "stagnant_days",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "training_error_scissors",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "handler_concentration",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "risk_flag",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "Prediction",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "ml_results",
+      "column_type": "text",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "bigint",
+      "extra": "auto_increment",
+      "is_nullable": "NO",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "model_handle",
+      "column_type": "varchar(64)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": "manual",
+      "column_key": "",
+      "column_name": "run_type",
+      "column_type": "varchar(32)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "train_rows",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "test_rows",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "train_score",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "test_score",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "metrics",
+      "column_type": "json",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": "success",
+      "column_key": "",
+      "column_name": "status",
+      "column_type": "varchar(32)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "error_message",
+      "column_type": "text",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "duration_seconds",
+      "column_type": "float",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": "CURRENT_TIMESTAMP",
+      "column_key": "",
+      "column_name": "created_at",
+      "column_type": "datetime",
+      "extra": "DEFAULT_GENERATED",
+      "is_nullable": "NO",
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "month_key",
+      "column_type": "char(7)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "doc_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_default": "0.00",
+      "column_key": "",
+      "column_name": "doc_amount",
+      "column_type": "decimal(18,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "voucher_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_default": "0.00",
+      "column_key": "",
+      "column_name": "voucher_amount",
+      "column_type": "decimal(18,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "integration_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "integration_success",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "org_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_default": "CURRENT_TIMESTAMP",
+      "column_key": "",
+      "column_name": "updated_at",
+      "column_type": "timestamp",
+      "extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP",
+      "is_nullable": "YES",
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "org_unit"
+    },
+    {
+      "column_default": null,
+      "column_key": "UNI",
+      "column_name": "name",
+      "column_type": "varchar(255)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "org_unit"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "org_unit"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "status",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "org_unit"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "region",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "org_unit"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "start_date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "org_unit"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "end_date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "org_unit"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "region",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "province_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "org_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "province_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "user_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "province_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "doc_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "province_stats"
+    },
+    {
+      "column_default": "0.00",
+      "column_key": "",
+      "column_name": "doc_amount",
+      "column_type": "decimal(18,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "province_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "voucher_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "province_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "integration_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "province_stats"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "integration_success",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "province_stats"
+    },
+    {
+      "column_default": "CURRENT_TIMESTAMP",
+      "column_key": "",
+      "column_name": "updated_at",
+      "column_type": "timestamp",
+      "extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP",
+      "is_nullable": "YES",
+      "table_name": "province_stats"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "stage",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "high",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "medium",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "low",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "rollout_batch"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "name",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "rollout_batch"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "start_date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "rollout_batch"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "end_date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "rollout_batch"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "status",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "rollout_batch"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "rollout_status_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "snapshot_date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "rollout_status_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "status",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "rollout_status_snapshot"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "stat_date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_ai_quota_ledger"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "call_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_ai_quota_ledger"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "neurons_used",
+      "column_type": "double",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_ai_quota_ledger"
+    },
+    {
+      "column_default": "ACTIVE",
+      "column_key": "",
+      "column_name": "status",
+      "column_type": "varchar(16)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_ai_quota_ledger"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "updated_at",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_ai_quota_ledger"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "sequence",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox"
+    },
+    {
+      "column_default": null,
+      "column_key": "UNI",
+      "column_name": "event_id",
+      "column_type": "varchar(128)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "payload",
+      "column_type": "json",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "created_at",
+      "column_type": "datetime(6)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "documents",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "vouchers",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "integrations",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "singleton_id",
+      "column_type": "tinyint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox_state"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "stream_id",
+      "column_type": "varchar(36)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox_state"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "last_sequence",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox_state"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "pruned_through",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox_state"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "documents",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox_state"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "vouchers",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox_state"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "integrations",
+      "column_type": "bigint",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sim_event_outbox_state"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sys_user"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "name",
+      "column_type": "varchar(255)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sys_user"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sys_user"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "role",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sys_user"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "job",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "sys_user"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "test_doc"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "test_doc"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "type",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "test_doc"
+    },
+    {
+      "column_default": null,
+      "column_key": "UNI",
+      "column_name": "doc_no",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "test_doc"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "applicant",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "test_doc"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "nature",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "test_doc"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "amount",
+      "column_type": "decimal(14,2)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "test_doc"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "submit_time",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "test_doc"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "approve_time",
+      "column_type": "datetime",
+      "extra": "",
+      "is_nullable": "YES",
+      "table_name": "test_doc"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "status",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "test_doc"
+    },
+    {
+      "column_default": null,
+      "column_key": "PRI",
+      "column_name": "id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "org_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": null,
+      "column_key": "MUL",
+      "column_name": "batch_id",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "type",
+      "column_type": "varchar(100)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "date",
+      "column_type": "date",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "mode",
+      "column_type": "varchar(50)",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "expected",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "actual",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "absent",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "passed",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": null,
+      "column_key": "",
+      "column_name": "makeup",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    },
+    {
+      "column_default": "0",
+      "column_key": "",
+      "column_name": "cert_count",
+      "column_type": "int",
+      "extra": "",
+      "is_nullable": "NO",
+      "table_name": "training"
+    }
+  ],
+  "foreign_keys": [
+    {
+      "column_name": "org_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "org_unit",
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_name": "voucher_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "accounting_voucher",
+      "table_name": "accounting_voucher_line"
+    },
+    {
+      "column_name": "org_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "org_unit",
+      "table_name": "business_document"
+    },
+    {
+      "column_name": "doc_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "business_document",
+      "table_name": "business_document_line"
+    },
+    {
+      "column_name": "org_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "org_unit",
+      "table_name": "construction_task"
+    },
+    {
+      "column_name": "org_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "org_unit",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_name": "batch_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "rollout_batch",
+      "table_name": "data_readiness"
+    },
+    {
+      "column_name": "doc_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "business_document",
+      "table_name": "document_voucher_link"
+    },
+    {
+      "column_name": "voucher_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "accounting_voucher",
+      "table_name": "document_voucher_link"
+    },
+    {
+      "column_name": "org_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "org_unit",
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_name": "voucher_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "accounting_voucher",
+      "table_name": "integration_result"
+    },
+    {
+      "column_name": "org_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "org_unit",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_name": "batch_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "rollout_batch",
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_name": "batch_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "rollout_batch",
+      "table_name": "org_unit"
+    },
+    {
+      "column_name": "org_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "org_unit",
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_name": "batch_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "rollout_batch",
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_name": "org_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "org_unit",
+      "table_name": "rollout_status_snapshot"
+    },
+    {
+      "column_name": "org_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "org_unit",
+      "table_name": "sys_user"
+    },
+    {
+      "column_name": "org_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "org_unit",
+      "table_name": "training"
+    },
+    {
+      "column_name": "batch_id",
+      "referenced_column_name": "id",
+      "referenced_table_name": "rollout_batch",
+      "table_name": "training"
+    }
+  ],
+  "indexes": [
+    {
+      "column_name": "gen_time",
+      "index_name": "idx_voucher_gen_time",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "idx_voucher_org_status_time",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_voucher_org_status_time",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_name": "gen_time",
+      "index_name": "idx_voucher_org_status_time",
+      "non_unique": 1,
+      "seq_in_index": 3,
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_name": "voucher_no",
+      "index_name": "voucher_no",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "accounting_voucher"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "accounting_voucher_line"
+    },
+    {
+      "column_name": "voucher_id",
+      "index_name": "voucher_id",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "accounting_voucher_line"
+    },
+    {
+      "column_name": "doc_no",
+      "index_name": "doc_no",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "business_document"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "idx_doc_org_nature_status_time",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "business_document"
+    },
+    {
+      "column_name": "nature",
+      "index_name": "idx_doc_org_nature_status_time",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "business_document"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_doc_org_nature_status_time",
+      "non_unique": 1,
+      "seq_in_index": 3,
+      "table_name": "business_document"
+    },
+    {
+      "column_name": "submit_time",
+      "index_name": "idx_doc_org_nature_status_time",
+      "non_unique": 1,
+      "seq_in_index": 4,
+      "table_name": "business_document"
+    },
+    {
+      "column_name": "submit_time",
+      "index_name": "idx_doc_submit_time",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "business_document"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "business_document"
+    },
+    {
+      "column_name": "doc_id",
+      "index_name": "doc_id",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "business_document_line"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "business_document_line"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "idx_task_org_type_status_owner",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "construction_task"
+    },
+    {
+      "column_name": "type",
+      "index_name": "idx_task_org_type_status_owner",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "construction_task"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_task_org_type_status_owner",
+      "non_unique": 1,
+      "seq_in_index": 3,
+      "table_name": "construction_task"
+    },
+    {
+      "column_name": "owner",
+      "index_name": "idx_task_org_type_status_owner",
+      "non_unique": 1,
+      "seq_in_index": 4,
+      "table_name": "construction_task"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "construction_task"
+    },
+    {
+      "column_name": "briefing_date",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "daily_briefing"
+    },
+    {
+      "column_name": "stat_date",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "daily_stats"
+    },
+    {
+      "column_name": "batch_id",
+      "index_name": "batch_id",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "data_readiness"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "data_readiness"
+    },
+    {
+      "column_name": "voucher_id",
+      "index_name": "idx_link_voucher_doc",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "document_voucher_link"
+    },
+    {
+      "column_name": "doc_id",
+      "index_name": "idx_link_voucher_doc",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "document_voucher_link"
+    },
+    {
+      "column_name": "doc_id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "document_voucher_link"
+    },
+    {
+      "column_name": "voucher_id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 2,
+      "table_name": "document_voucher_link"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "org_id",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "dual_run_result"
+    },
+    {
+      "column_name": "batch_id",
+      "index_name": "idx_batch_status",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "governance_issue"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_batch_status",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "governance_issue"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_status_created",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "governance_issue"
+    },
+    {
+      "column_name": "created_at",
+      "index_name": "idx_status_created",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "governance_issue"
+    },
+    {
+      "column_name": "unit_id",
+      "index_name": "idx_unit_status",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "governance_issue"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_unit_status",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "governance_issue"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "governance_issue"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_int_status",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "integration_result"
+    },
+    {
+      "column_name": "voucher_id",
+      "index_name": "idx_integ_voucher_status_time",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "integration_result"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_integ_voucher_status_time",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "integration_result"
+    },
+    {
+      "column_name": "integration_time",
+      "index_name": "idx_integ_voucher_status_time",
+      "non_unique": 1,
+      "seq_in_index": 3,
+      "table_name": "integration_result"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "integration_result"
+    },
+    {
+      "column_name": "batch_id",
+      "index_name": "batch_id",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_name": "date",
+      "index_name": "idx_issue_date_org_batch_stage",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "idx_issue_date_org_batch_stage",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_name": "batch_id",
+      "index_name": "idx_issue_date_org_batch_stage",
+      "non_unique": 1,
+      "seq_in_index": 3,
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_name": "stage",
+      "index_name": "idx_issue_date_org_batch_stage",
+      "non_unique": 1,
+      "seq_in_index": 4,
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_name": "date",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 2,
+      "table_name": "issue_metric_snapshot"
+    },
+    {
+      "column_name": "issue_id",
+      "index_name": "idx_issue_time",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "issue_timeline"
+    },
+    {
+      "column_name": "occurred_at",
+      "index_name": "idx_issue_time",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "issue_timeline"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "issue_timeline"
+    },
+    {
+      "column_name": "snapshot_date",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "metric_snapshot"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_eval_doc_delta_test"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_eval_doc_delta_train"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_eval_risk_test"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_eval_risk_train"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_feat_doc_delta"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_feat_doc_delta_test"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_feat_doc_delta_train"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_feat_risk"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_feat_risk_test"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_feat_risk_train"
+    },
+    {
+      "column_name": "model_handle",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_model_metadata"
+    },
+    {
+      "column_name": "model_handle",
+      "index_name": "idx_risk_explanation_model",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "ml_risk_explanation"
+    },
+    {
+      "column_name": "generated_at",
+      "index_name": "idx_risk_explanation_model",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "ml_risk_explanation"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_risk_explanation"
+    },
+    {
+      "column_name": "model_handle",
+      "index_name": "idx_risk_explanation_model",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "ml_risk_explanation_previous"
+    },
+    {
+      "column_name": "generated_at",
+      "index_name": "idx_risk_explanation_model",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "ml_risk_explanation_previous"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_risk_explanation_previous"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_score_doc_delta"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_score_risk"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "ml_training_log"
+    },
+    {
+      "column_name": "month_key",
+      "index_name": "idx_month",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_name": "month_key",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "monthly_stats"
+    },
+    {
+      "column_name": "batch_id",
+      "index_name": "idx_org_batch_status_region",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "org_unit"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_org_batch_status_region",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "org_unit"
+    },
+    {
+      "column_name": "region",
+      "index_name": "idx_org_batch_status_region",
+      "non_unique": 1,
+      "seq_in_index": 3,
+      "table_name": "org_unit"
+    },
+    {
+      "column_name": "name",
+      "index_name": "name",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "org_unit"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "org_unit"
+    },
+    {
+      "column_name": "region",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "province_stats"
+    },
+    {
+      "column_name": "batch_id",
+      "index_name": "batch_id",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_name": "date",
+      "index_name": "idx_risk_date_org_batch_stage",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "idx_risk_date_org_batch_stage",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_name": "batch_id",
+      "index_name": "idx_risk_date_org_batch_stage",
+      "non_unique": 1,
+      "seq_in_index": 3,
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_name": "stage",
+      "index_name": "idx_risk_date_org_batch_stage",
+      "non_unique": 1,
+      "seq_in_index": 4,
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_name": "date",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 2,
+      "table_name": "risk_metric_snapshot"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "rollout_batch"
+    },
+    {
+      "column_name": "snapshot_date",
+      "index_name": "idx_snap_date_status_org",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "rollout_status_snapshot"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_snap_date_status_org",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "rollout_status_snapshot"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "idx_snap_date_status_org",
+      "non_unique": 1,
+      "seq_in_index": 3,
+      "table_name": "rollout_status_snapshot"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "rollout_status_snapshot"
+    },
+    {
+      "column_name": "snapshot_date",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 2,
+      "table_name": "rollout_status_snapshot"
+    },
+    {
+      "column_name": "stat_date",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "sim_ai_quota_ledger"
+    },
+    {
+      "column_name": "event_id",
+      "index_name": "event_id",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "sim_event_outbox"
+    },
+    {
+      "column_name": "created_at",
+      "index_name": "idx_outbox_created",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "sim_event_outbox"
+    },
+    {
+      "column_name": "sequence",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "sim_event_outbox"
+    },
+    {
+      "column_name": "singleton_id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "sim_event_outbox_state"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "org_id",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "sys_user"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "sys_user"
+    },
+    {
+      "column_name": "doc_no",
+      "index_name": "doc_no",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "test_doc"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "idx_doc_org_nature_status_time",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "test_doc"
+    },
+    {
+      "column_name": "nature",
+      "index_name": "idx_doc_org_nature_status_time",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "test_doc"
+    },
+    {
+      "column_name": "status",
+      "index_name": "idx_doc_org_nature_status_time",
+      "non_unique": 1,
+      "seq_in_index": 3,
+      "table_name": "test_doc"
+    },
+    {
+      "column_name": "submit_time",
+      "index_name": "idx_doc_org_nature_status_time",
+      "non_unique": 1,
+      "seq_in_index": 4,
+      "table_name": "test_doc"
+    },
+    {
+      "column_name": "submit_time",
+      "index_name": "idx_doc_submit_time",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "test_doc"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "test_doc"
+    },
+    {
+      "column_name": "batch_id",
+      "index_name": "idx_training_batch_org_type_date",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "training"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "idx_training_batch_org_type_date",
+      "non_unique": 1,
+      "seq_in_index": 2,
+      "table_name": "training"
+    },
+    {
+      "column_name": "type",
+      "index_name": "idx_training_batch_org_type_date",
+      "non_unique": 1,
+      "seq_in_index": 3,
+      "table_name": "training"
+    },
+    {
+      "column_name": "date",
+      "index_name": "idx_training_batch_org_type_date",
+      "non_unique": 1,
+      "seq_in_index": 4,
+      "table_name": "training"
+    },
+    {
+      "column_name": "org_id",
+      "index_name": "org_id",
+      "non_unique": 1,
+      "seq_in_index": 1,
+      "table_name": "training"
+    },
+    {
+      "column_name": "id",
+      "index_name": "PRIMARY",
+      "non_unique": 0,
+      "seq_in_index": 1,
+      "table_name": "training"
+    }
+  ]
+}

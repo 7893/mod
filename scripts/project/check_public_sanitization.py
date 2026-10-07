@@ -42,6 +42,9 @@ DOMAIN_RE = re.compile(
     re.IGNORECASE,
 )
 OCI_RE = re.compile(r"\bocid1\.[a-z0-9_.-]+", re.IGNORECASE)
+HOME_PATH_RE = re.compile(r"/(?:home|Users)/([A-Za-z0-9_.-]+)(?=/|[^A-Za-z0-9_.-]|$)")
+EMAIL_RE = re.compile(r"\b[A-Za-z0-9_.+%-]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b")
+EXAMPLE_EMAIL_DOMAINS = frozenset({"example.com", "example.org", "example.net", "example.invalid", "example.test"})
 RESOURCE_PATTERNS = (
     ("cloud-instance-name", re.compile(r"\binstance-\d{8}-\d+\b", re.IGNORECASE)),
     ("cloud-database-name", re.compile(r"\bmysqldbsystem\d{10,}\b", re.IGNORECASE)),
@@ -110,6 +113,14 @@ def scan_text(path: str, text: str, private_assets: Sequence[str] = ()) -> list[
         folded = line.casefold()
         if any(asset in folded for asset in normalized_assets):
             findings.add(Finding(path, line_number, "private-asset-inventory-match"))
+
+        for match in HOME_PATH_RE.finditer(line):
+            synthetic_fixture = "/tests/" in path and match[1] in {"operator", "example", "demo-user"}
+            if not synthetic_fixture:
+                findings.add(Finding(path, line_number, "host-specific-home-path"))
+        for match in EMAIL_RE.finditer(line):
+            if match[1].casefold() not in EXAMPLE_EMAIL_DOMAINS:
+                findings.add(Finding(path, line_number, "non-example-email"))
 
         for match in IPV4_RE.finditer(line):
             try:
@@ -185,6 +196,17 @@ def redact_sensitive_text(text: str, private_assets: Sequence[str] = ()) -> str:
     redacted = OCI_RE.sub("<cloud-resource-id>", redacted)
     for category, pattern in RESOURCE_PATTERNS:
         redacted = pattern.sub(f"<{category}>", redacted)
+    for directory, variable in (
+        ("mod-runtime", "MOD_DEPLOY_ROOT"), ("mod-backups", "MOD_BACKUP_ROOT"),
+        ("mod-archive", "MOD_ARCHIVE_ROOT"), ("mod", "MOD_PROJECT_ROOT"),
+    ):
+        pattern = r"/(?:home|Users)/[A-Za-z0-9_.-]+/" + re.escape(directory) + r"(?=/|[^A-Za-z0-9_.-]|$)"
+        redacted = re.sub(pattern, lambda _: "${" + variable + "}", redacted)
+    redacted = HOME_PATH_RE.sub("${HOME}", redacted)
+    redacted = EMAIL_RE.sub(
+        lambda match: match[0] if match[1].casefold() in EXAMPLE_EMAIL_DOMAINS else "<redacted-email>",
+        redacted,
+    )
     return redacted
 
 

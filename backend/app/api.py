@@ -1,5 +1,6 @@
 from contextlib import suppress
 import logging
+import os
 import threading
 from datetime import datetime
 from threading import Lock
@@ -154,7 +155,8 @@ def _get_dedicated_connection() -> Connection | None:
     try:
         conn = get_engine().connect()
         conn.execute(text("SET time_zone = '+08:00'"))
-        conn.execute(text("SET use_secondary_engine = ON"))
+        if os.getenv("MOD_DEMO_MODE", "false").lower() not in {"true", "1", "yes", "on"} and os.getenv("MOD_HW_ENABLED", "false").lower() in {"true", "1", "yes", "on"}:
+            conn.execute(text("SET use_secondary_engine = ON"))
         conn.execute(text("SET SESSION max_execution_time = 15000"))
         return conn
     except Exception as e:
@@ -274,7 +276,10 @@ def dashboard_snapshot_endpoint(conn: Connection | None = Depends(connection)) -
     前端据此决定数据源徽标，而不是把任何 200 响应都当作真库数据。
     """
     snap = dashboard_snapshot(conn)
-    return {**snap, "meta": {**snap.get("meta", {}), "source": _snapshot_source}}
+    meta = {**snap.get("meta", {}), "source": _snapshot_source}
+    if os.getenv("MOD_DEMO_MODE", "false").lower() == "true":
+        meta.update(demo=True, notice="全量模拟演示数据；模型结果为冻结实验资料。")
+    return {**snap, "meta": meta}
 
 
 def dashboard_snapshot(conn: Connection | None) -> dict:
@@ -437,6 +442,8 @@ def insights_status(conn: Connection | None = Depends(connection)) -> dict:
         base_insights["trainingAuthorized"] = False
         base_insights["predictionPurpose"] = "synthetic_rule_fit"
         base_insights["businessValidated"] = False
+        if os.getenv("MOD_DEMO_MODE", "false").lower() == "true":
+            base_insights["modelResultSource"] = "demo_frozen"
         base_insights["notice"] = "当前模型拟合合成标签；测试分不证明未来单量或延期预测能力。风险名单由业务规则产生。"
         base_insights["summary"] = "规则预警与模型实验分开展示，尚无经业务结果验证的未来预测。"
 

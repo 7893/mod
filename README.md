@@ -27,6 +27,12 @@
   </p>
 </div>
 
+2026-10-07 部署方式补充：CI 仅执行质量检查。全量演示数据随 Git 分卷保存，
+通过独立本地 MySQL 初始化后只读运行；不需要旧生产环境。
+启动步骤见 [演示部署](docs/development/DEMO-DATA.md)。以下自动部署描述保留为历史说明，已被本条取代。
+
+Deployment update: CI runs checks only. The bundled full demo seed initializes an independent local MySQL database; see the demo guide above. Earlier automatic deployment descriptions are historical.
+
 > [!IMPORTANT]
 > MOD 是用于演示验证、业务仿真与工程研究的完整系统。大屏展示的 3,200+ 机构单位、41,000+ 人员、490 万财务凭证及全业务流转事件，均为自主拟真引擎生成的合规合成数据，全程不使用任何真实企业敏感数据。
 

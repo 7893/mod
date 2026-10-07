@@ -26,11 +26,13 @@ COPY --from=ghcr.io/astral-sh/uv:0.12.22 /uv /bin/uv
 # Copy backend dependencies
 COPY backend/pyproject.toml backend/uv.lock backend/
 WORKDIR /app/backend
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --extra demo --no-install-project
 
 # Copy backend source
 COPY backend/app ./app
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --extra demo
+COPY scripts/project/ /app/scripts/project/
+COPY demo-data/ /app/demo-data/
 
 # Copy built frontend assets
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
@@ -39,6 +41,8 @@ COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 RUN rm -f /etc/nginx/sites-enabled/default && echo 'server { \
     listen 80 default_server; \
     server_name localhost; \
+    add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always; \
+    location = /robots.txt { return 200 "User-agent: *\\nDisallow: /\\n"; } \
     location / { \
         root /usr/share/nginx/html; \
         try_files $uri $uri/ /index.html; \
@@ -57,4 +61,4 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl --fail --silent http://127.0.0.1/api/health >/dev/null || exit 1
 
-CMD ["sh", "-c", "nginx && exec /app/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8100"]
+CMD ["backend/.venv/bin/python", "scripts/project/demo_container.py", "serve"]

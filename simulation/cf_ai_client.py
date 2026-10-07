@@ -18,7 +18,6 @@ import urllib.error
 import urllib.request
 from typing import Dict, Optional
 
-from dotenv import load_dotenv
 
 from .governance_state_machine import LocalNarrativeLibrary
 from .quota_watchdog import QuotaWatchdog
@@ -48,10 +47,9 @@ class CloudflareAIClient:
         watchdog: Optional[QuotaWatchdog] = None,
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
     ):
-        load_dotenv("${MOD_PROJECT_ROOT}/.env.systemd", override=True)
         self.account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
         self.api_token = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
-        self.enabled = os.getenv("MOD_CF_AI_ENABLED", "true").lower() == "true"
+        self.enabled = os.getenv("MOD_CF_AI_ENABLED", "false").lower() == "true"
         self.model = os.getenv("MOD_CF_AI_MODEL", DEFAULT_MODEL).strip()
         self.gateway = os.getenv("MOD_CF_AI_GATEWAY", "").strip()
         self.timeout = timeout
@@ -61,7 +59,7 @@ class CloudflareAIClient:
         self.watchdog = watchdog or QuotaWatchdog()
 
     def is_configured(self) -> bool:
-        return bool(self.account_id and self.api_token and self.enabled)
+        return bool(self.account_id and self.api_token and self.enabled) and os.getenv("MOD_DEMO_MODE", "false").lower() not in {"true", "1", "yes", "on"}
 
     def _get_api_url(self) -> str:
         if self.gateway:

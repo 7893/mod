@@ -167,6 +167,7 @@ class CloudflareAIAdapter:
     def __init__(self) -> None:
         self._enabled: bool = (
             os.getenv("MOD_CF_AI_ENABLED", "false").strip().lower() == "true"
+            and os.getenv("MOD_DEMO_MODE", "false").lower() not in {"true", "1", "yes", "on"}
         )
         self._model: str = os.getenv(
             "MOD_CF_AI_MODEL", "@cf/meta/llama-3.1-8b-instruct"

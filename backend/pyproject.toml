@@ -21,6 +21,10 @@ include = ["app*"]
 exclude = ["current*", "releases*", "tests*"]
 
 [project.optional-dependencies]
+demo = [
+  "pyarrow==25.0.1",
+  "python-dotenv==1.2.3",
+]
 dev = [
   "httpx2==2.12.0",
   "pytest>=9.0.3",

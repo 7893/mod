@@ -1,274 +1,110 @@
 #!/usr/bin/env bash
-# publish.sh — 前后端统一原子发布脚本（备用直连发布渠道）
-#
-# 现行发布标准：默认通过 GitHub Actions CI/CD 流水线（push 至 main 分支自动触发 Quality gates 门禁与 USA 生产机自动化部署）。
-# 本脚本保留作为本地 JPA 开发机直连 USA 生产机的应急/备用发布通道（或通过 --local 本地模式测试）。
-#
-# 用法：bash scripts/project/publish.sh [--local]
-#
-# 执行步骤：
-#   1. 构建前端到 frontend/releases/<ts>/
-#   2. 复制后端 app/ 到 backend/releases/<ts>/
-#   3. 运行 make check（全绿才继续）
-#   4. 推送打包产物至 USA 生产机（或本地切换，若指定 --local）
-#   5. 原子切换前后端软链
-#   6. reload Nginx + restart mod.service
-#   7. 验证线上 HTTP 200 + 核心健康探针（/api/health, /api/simulator/status, /api/dashboard/snapshot）
-#   8. 失败时自动回滚到上一版本
-#   9. 清理旧 release（保留最近 5 个）
-#
-# 回滚命令（USA 生产机）：
-#   后端：ssh usa "ln -sfn ${MOD_PROJECT_ROOT}/backend/releases/<prev_ts> ${MOD_PROJECT_ROOT}/backend/current && sudo systemctl restart mod.service"
-#   前端：ssh usa "ln -sfn ${MOD_PROJECT_ROOT}/frontend/releases/<prev_ts> ${MOD_PROJECT_ROOT}/frontend/current && sudo systemctl reload nginx"
-#
-# 本脚本必须由项目 Owner（用户）或主控 Agent 运行，或在其明确授权下由被授权的 Agent（如执行 Agent）调用。
-# 未获得项目 Owner 或主控 Agent 显式授权时，任何 Agent 严禁擅自调用本脚本。
-
+# Explicit portable release publisher. Owner: project.
+# Input: MOD_DEPLOY_ROOT, MOD_DEPLOY_USER, MOD_DEPLOY_HOST (remote), target env file.
+# Default: no changes. --apply authorizes deployment; --local selects this host.
+# GitHub CI never calls this script. Review rendered configuration before publishing.
+# Failed health probes restore the prior current symlink; no releases are deleted.
 set -euo pipefail
-
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TS="$(date +%Y%m%d-%H%M%S)"
-
 LOCAL_MODE=false
-if [[ "${1:-}" == "--local" ]]; then
-    LOCAL_MODE=true
-fi
-
-REMOTE_HOST="usa"
-REMOTE_ROOT="${MOD_PROJECT_ROOT}"
-
-BE_RELEASES="$REPO_ROOT/backend/releases"
-BE_CURRENT="$REPO_ROOT/backend/current"
-BE_RELEASE_DIR="$BE_RELEASES/$TS"
-
-FE_RELEASES="$REPO_ROOT/frontend/releases"
-FE_CURRENT="$REPO_ROOT/frontend/current"
-FE_RELEASE_DIR="$FE_RELEASES/$TS"
-
+APPLY=false
+for arg in "$@"; do
+    case "$arg" in
+        --local) LOCAL_MODE=true ;;
+        --apply) APPLY=true ;;
+        --help) echo 'Usage: publish.sh [--local] --apply; set MOD_DEPLOY_ROOT/USER/HOST and MOD_DEPLOY_ENV_FILE'; exit 0 ;;
+        *) echo '[Error] Unknown option'; exit 2 ;;
+    esac
+done
 ORIGIN_SECRET="${CLOUDFRONT_ORIGIN_SECRET:-}"
 ORIGIN_HOST="${MOD_ORIGIN_HOST:-${MOD_PUBLIC_HOST:-}}"
-
 if [ -n "$ORIGIN_SECRET" ] && [ -z "$ORIGIN_HOST" ]; then
-    echo "[Error] CLOUDFRONT_ORIGIN_SECRET requires MOD_ORIGIN_HOST (or MOD_PUBLIC_HOST)."
+    echo '[Error] CLOUDFRONT_ORIGIN_SECRET requires MOD_ORIGIN_HOST (or MOD_PUBLIC_HOST).'
     exit 1
 fi
 if [ -n "$ORIGIN_HOST" ] && [[ ! "$ORIGIN_HOST" =~ ^[A-Za-z0-9.-]+$ ]]; then
-    echo "[Error] Origin host contains unsupported characters."
-    exit 1
+    echo '[Error] Invalid origin host'; exit 1
 fi
-
-echo "=========================================="
-if [ "$LOCAL_MODE" = true ]; then
-    echo "  统一发布（本地模式）  $TS"
-else
-    echo "  统一发布（JPA 开发机 -> USA 生产机）  $TS"
+if [ "$APPLY" = false ]; then
+    echo 'No deployment performed. Supply --apply and explicit deployment parameters.'
+    exit 2
 fi
-echo "=========================================="
-
-# 1. 构建前端
-echo "[1/8] 构建前端..."
-cd "$REPO_ROOT/frontend"
-pnpm build 2>&1 | tail -3
-mkdir -p "$FE_RELEASE_DIR"
-cp -r "$REPO_ROOT/frontend/dist/." "$FE_RELEASE_DIR/"
-echo "  前端 release: $FE_RELEASE_DIR"
-
-# 2. 复制后端及后台服务
-echo "[2/8] 打包后端及后台常驻写服务 release..."
-mkdir -p "$BE_RELEASE_DIR"
-cp -r "$REPO_ROOT/backend/app/." "$BE_RELEASE_DIR/"
-ln -s . "$BE_RELEASE_DIR/app"
-cp -r "$REPO_ROOT/simulation" "$BE_RELEASE_DIR/"
-cp -r "$REPO_ROOT/scripts" "$BE_RELEASE_DIR/"
-cp "$REPO_ROOT/backend/pyproject.toml" "$REPO_ROOT/backend/uv.lock" "$BE_RELEASE_DIR/" 2>/dev/null || true
-echo "  后端与后台写服务 release: $BE_RELEASE_DIR"
-
-# 3. make check
-echo "[3/8] 运行 make check..."
-cd "$REPO_ROOT"
-make check
-
-if [ "$LOCAL_MODE" = true ]; then
-    # 本地切换软链
-    echo "[4/8] 切换本地软链..."
-    PREV_FE=$(readlink "$FE_CURRENT" 2>/dev/null || echo "")
-    PREV_BE=$(readlink "$BE_CURRENT" 2>/dev/null || echo "")
-    ln -sfn "$FE_RELEASE_DIR" "$FE_CURRENT"
-    ln -sfn "$BE_RELEASE_DIR" "$BE_CURRENT"
-    echo "  前端: $FE_CURRENT -> $FE_RELEASE_DIR"
-    echo "  后端: $BE_CURRENT -> $BE_RELEASE_DIR"
-
-    echo "[5/8] reload Nginx + restart mod-api + restart mod-simulator..."
-    sudo systemctl reload nginx
-    sudo systemctl restart mod-api
-    sudo systemctl restart mod-simulator
-    sleep 4
-else
-    # 远程同步与发布至 USA
-    echo "[4/8] 同步产物至 USA 生产机..."
-    ssh "$REMOTE_HOST" "mkdir -p $REMOTE_ROOT/backend/releases/$TS $REMOTE_ROOT/frontend/releases/$TS $REMOTE_ROOT/deploy"
-    rsync -az --exclude='output/' --exclude='tmp/' --exclude='*.csv' --exclude='*.tsv' --exclude='*.sql*' --exclude='*.enc' --exclude='*.gz' "$BE_RELEASE_DIR/" "$REMOTE_HOST:$REMOTE_ROOT/backend/releases/$TS/"
-    rsync -az "$FE_RELEASE_DIR/" "$REMOTE_HOST:$REMOTE_ROOT/frontend/releases/$TS/"
-    rsync -az "$REPO_ROOT/deploy/" "$REMOTE_HOST:$REMOTE_ROOT/deploy/"
-
-    echo "  切换 USA 远程软链..."
-    PREV_FE=$(ssh "$REMOTE_HOST" "readlink $REMOTE_ROOT/frontend/current 2>/dev/null || echo ''")
-    PREV_BE=$(ssh "$REMOTE_HOST" "readlink $REMOTE_ROOT/backend/current 2>/dev/null || echo ''")
-    ssh "$REMOTE_HOST" "ln -sfn $REMOTE_ROOT/frontend/releases/$TS $REMOTE_ROOT/frontend/current && ln -sfn $REMOTE_ROOT/backend/releases/$TS $REMOTE_ROOT/backend/current"
-
-    # 同时更新本地软链保持开发机工作区与最新 release 对齐
-    ln -sfn "$FE_RELEASE_DIR" "$FE_CURRENT"
-    ln -sfn "$BE_RELEASE_DIR" "$BE_CURRENT"
-
-    echo "  对齐 USA 生产后端 Python 运行时依赖 (uv sync)..."
-    ssh "$REMOTE_HOST" "cd $REMOTE_ROOT/backend && cp -f releases/$TS/pyproject.toml releases/$TS/uv.lock . 2>/dev/null || true; ([ -x ${HOME}/.cargo/bin/uv ] && ${HOME}/.cargo/bin/uv sync --frozen --all-extras) || true"
-
-    echo "[5/8] 远程 reload Nginx + reload/restart mod.service on USA..."
-    ssh "$REMOTE_HOST" "sudo install -m 0644 $REMOTE_ROOT/deploy/mod-ml-retrain.service /etc/systemd/system/mod-ml-retrain.service && sudo systemctl daemon-reload && sudo systemctl reload nginx && (sudo systemctl reload mod.service || sudo systemctl restart mod.service)"
-    sleep 8  # 等待 SWR 缓存预热
-fi
-
-# 6. 验证
-echo "[6/8] 验证线上服务与接口健康探针..."
-
-fetch_probe() {
-    local endpoint="$1"
-    if [ -n "$ORIGIN_SECRET" ]; then
-        if [ "$LOCAL_MODE" = true ]; then
-            curl -s -k -H "Host: $ORIGIN_HOST" -H "X-Origin-Secret: $ORIGIN_SECRET" "https://127.0.0.1$endpoint"
-        else
-            ssh "$REMOTE_HOST" "curl -s -k -H 'Host: $ORIGIN_HOST' -H 'X-Origin-Secret: $ORIGIN_SECRET' 'https://127.0.0.1$endpoint'"
-        fi
-    else
-        if [ "$LOCAL_MODE" = true ]; then
-            curl -s "http://127.0.0.1:8100$endpoint"
-        else
-            ssh "$REMOTE_HOST" "curl -s 'http://127.0.0.1:8100$endpoint'"
-        fi
+TARGET_ROOT="${MOD_DEPLOY_ROOT:?Set MOD_DEPLOY_ROOT explicitly}"
+TARGET_USER="${MOD_DEPLOY_USER:?Set MOD_DEPLOY_USER explicitly}"
+TARGET_ENV="${MOD_DEPLOY_ENV_FILE:?Set MOD_DEPLOY_ENV_FILE explicitly}"
+TARGET_HOST="${MOD_DEPLOY_HOST:-}"
+for path in "$TARGET_ROOT" "$TARGET_ENV"; do
+    if [[ ! "$path" =~ ^/[A-Za-z0-9_./-]+$ ]] || [[ "$path" == / ]] || [[ "/$path/" == *'/../'* ]]; then
+        echo '[Error] Target paths must be absolute without parent traversal or shell syntax'; exit 2
     fi
-}
-
-rollback() {
-    echo "ERROR: 探针验证失败，自动回滚..."
-    if [ "$LOCAL_MODE" = true ]; then
-        [ -n "$PREV_FE" ] && ln -sfn "$PREV_FE" "$FE_CURRENT"
-        [ -n "$PREV_BE" ] && ln -sfn "$PREV_BE" "$BE_CURRENT"
-        sudo systemctl reload nginx
-        sudo systemctl restart mod-api mod-simulator
-    else
-        ssh "$REMOTE_HOST" "
-            [ -n '$PREV_FE' ] && ln -sfn '$PREV_FE' '$REMOTE_ROOT/frontend/current'
-            [ -n '$PREV_BE' ] && ln -sfn '$PREV_BE' '$REMOTE_ROOT/backend/current'
-            sudo systemctl reload nginx
-            sudo systemctl restart mod.service
-        "
-    fi
-    echo "已回滚到: 前端=$PREV_FE  后端=$PREV_BE"
-    exit 1
-}
-
-# 探针 1: KI-046 验证 /api/health (HTTP 200 + DB 连接健康)
-HEALTH_BODY=$(fetch_probe "/api/health" || echo "")
-if ! echo "$HEALTH_BODY" | python3 -c '
-import sys, json
-raw = sys.stdin.read()
-if not raw.strip():
-    sys.exit(1)
-data = json.loads(raw)
-if data.get("status") != "ok":
-    sys.exit(1)
-db = data.get("database")
-tz = data.get("session_timezone")
-now = data.get("now_cst")
-hw = data.get("heatwave", {}).get("status")
-if not db or not now:
-    sys.exit(1)
-print(f"  Health probe OK: DB={db} tz={tz} now={now} HeatWave={hw}")
-'; then
-    echo "ERROR: /api/health 数据库探针返回异常或非健康状态，触发回滚..."
-    rollback
-fi
-
-# 探针 2: KI-039 验证 /api/simulator/status
-STATUS_BODY=$(fetch_probe "/api/simulator/status" || echo "")
-if ! echo "$STATUS_BODY" | python3 -c '
-import sys, json
-raw = sys.stdin.read()
-if not raw.strip():
-    sys.exit(1)
-data = json.loads(raw)
-required = ["service", "status", "fresh", "enabled", "last_cycle_status", "fail_closed_tripped"]
-if not all(k in data for k in required):
-    sys.exit(1)
-if "Internal Server Error" in json.dumps(data):
-    sys.exit(1)
-svc = data.get("service")
-st = data.get("status")
-fr = data.get("fresh")
-print(f"  Simulator probe OK: service={svc} status={st} fresh={fr}")
-if not (
-    svc == "mod-simulator"
-    and st == "RUNNING"
-    and fr is True
-    and data.get("enabled") is True
-    and data.get("last_cycle_status") == "SUCCESS"
-    and data.get("fail_closed_tripped") is False
-):
-    sys.exit(1)
-'; then
-    echo "ERROR: 模拟器非新鲜可写 SUCCESS 状态（含 dry-run/限流/熔断），触发回滚..."
-    rollback
-fi
-
-# 探针 3: KI-061 验证 /api/dashboard/snapshot 字段契约 (C3/D3/D6 字段完整)
-SNAPSHOT_BODY=$(fetch_probe "/api/dashboard/snapshot" || echo "")
-if ! echo "$SNAPSHOT_BODY" | python3 -c '
-import sys, json
-raw = sys.stdin.read()
-if not raw.strip():
-    sys.exit(1)
-data = json.loads(raw)
-if not data.get("rolloutTrend"):
-    sys.exit(1)
-if not data.get("operationsTrend"):
-    sys.exit(1)
-ops = data.get("operations", {})
-if "dualRunConsistent" not in ops or "dualRunInconsistent" not in ops:
-    sys.exit(1)
-print("  Snapshot contract OK: rolloutTrend=%d opsTrend=%d" % (len(data["rolloutTrend"]), len(data["operationsTrend"])))
-'; then
-    echo "ERROR: /api/dashboard/snapshot 契约缺失 (C3/D3/D6 缺失)，触发回滚..."
-    rollback
-fi
-
-# 7. 清理旧 release（保留最近 5 个）
-echo "[7/8] 清理旧 release（保留最近 5 个）..."
-for dir in "$FE_RELEASES" "$BE_RELEASES"; do
-    ls -1t "$dir" | tail -n +6 | while read -r old; do
-        echo "  删除本地旧 release: $dir/$old"
-        rm -rf "${dir:?}/$old"
-    done
 done
-
+if [[ ! "$TARGET_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]; then echo '[Error] Invalid target user'; exit 2; fi
 if [ "$LOCAL_MODE" = false ]; then
-    ssh "$REMOTE_HOST" "
-        for dir in '$REMOTE_ROOT/frontend/releases' '$REMOTE_ROOT/backend/releases'; do
-            ls -1t \"\$dir\" | tail -n +6 | while read -r old; do
-                echo \"  删除 USA 旧 release: \$dir/\$old\"
-                rm -rf \"\${dir:?}/\$old\"
-            done
-        done
-    "
+    if [[ ! "$TARGET_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]; then echo '[Error] Set a valid MOD_DEPLOY_HOST explicitly'; exit 2; fi
 fi
-
-echo "[8/8] 完成"
-echo "=========================================="
-echo "  发布成功: $TS"
+TARGET_ROOT="${TARGET_ROOT%/}"
+TS="$(date +%Y%m%d-%H%M%S)"
+RELEASE="$TARGET_ROOT/releases/$TS"
+DESTINATION="$TARGET_USER@$TARGET_HOST"
+run_target() {
+    if [ "$LOCAL_MODE" = true ]; then bash -c "$1"; else ssh -o StrictHostKeyChecking=yes "$DESTINATION" "$1"; fi
+}
+# Existing target configuration and tools are required; nothing fetches old credentials.
+run_target "test -f '$TARGET_ENV' && command -v uv >/dev/null && test ! -e '$RELEASE'"
+(cd "$REPO_ROOT" && make check)
+(cd "$REPO_ROOT/frontend" && pnpm build)
+STAGING="$(mktemp -d)"
+trap 'rm -rf -- "$STAGING"' EXIT
+mkdir -p "$STAGING/backend" "$STAGING/frontend" "$STAGING/scripts"
+cp -R "$REPO_ROOT/backend/app" "$STAGING/backend/"
+cp "$REPO_ROOT/backend/pyproject.toml" "$REPO_ROOT/backend/uv.lock" "$STAGING/backend/"
+cp -R "$REPO_ROOT/frontend/dist" "$STAGING/frontend/"
+cp -R "$REPO_ROOT/simulation" "$REPO_ROOT/demo-data" "$STAGING/"
+for owner in project agy kiro; do cp -R "$REPO_ROOT/scripts/$owner" "$STAGING/scripts/"; done
+python3 "$REPO_ROOT/scripts/project/render_deploy_config.py" \
+    --root "$TARGET_ROOT/current" --user "$TARGET_USER" --env-file "$TARGET_ENV" \
+    --python "$TARGET_ROOT/current/backend/.venv/bin/python" --output "$STAGING/deploy"
+run_target "mkdir -p '$RELEASE'"
 if [ "$LOCAL_MODE" = true ]; then
-    echo "  回滚命令（前端）: ln -sfn $FE_RELEASES/<prev_ts> $FE_CURRENT && sudo systemctl reload nginx"
-    echo "  回滚命令（后端及常驻）: ln -sfn $BE_RELEASES/<prev_ts> $BE_CURRENT && sudo systemctl restart mod-api mod-simulator"
+    rsync -a --exclude='__pycache__/' --exclude='output/' --exclude='tmp/' --exclude='.env*' "$STAGING/" "$RELEASE/"
 else
-    echo "  回滚命令（前端）: ssh usa 'ln -sfn $REMOTE_ROOT/frontend/releases/<prev_ts> $REMOTE_ROOT/frontend/current && sudo systemctl reload nginx'"
-    echo "  回滚命令（后端及常驻）: ssh usa 'ln -sfn $REMOTE_ROOT/backend/releases/<prev_ts> $REMOTE_ROOT/backend/current && sudo systemctl restart mod.service'"
+    rsync -az -e 'ssh -o StrictHostKeyChecking=yes' --exclude='__pycache__/' --exclude='output/' --exclude='tmp/' --exclude='.env*' "$STAGING/" "$DESTINATION:$RELEASE/"
 fi
-echo "=========================================="
+run_target "uv sync --project '$RELEASE/backend' --frozen --no-dev"
+PREVIOUS="$(run_target "readlink '$TARGET_ROOT/current' || true")"
+if [ -n "$PREVIOUS" ] && [[ ! "$PREVIOUS" =~ ^/[A-Za-z0-9_./-]+$ ]]; then
+    echo '[Error] Existing current symlink target is unsafe'; exit 2
+fi
+run_target "ln -sfn '$RELEASE' '$TARGET_ROOT/current' && sudo install -m 0644 '$RELEASE/deploy/mod.service' /etc/systemd/system/mod.service && sudo systemctl daemon-reload && sudo systemctl restart mod.service"
+fetch_probe() {
+    # Credential headers travel via stdin, never as process command arguments.
+    python3 -c 'import json,os,sys
+endpoint=sys.argv[1]
+secret=os.getenv("CLOUDFRONT_ORIGIN_SECRET", "")
+host=os.getenv("MOD_ORIGIN_HOST") or os.getenv("MOD_PUBLIC_HOST", "")
+print("silent\nshow-error\nfail\nmax-time = 30")
+print("url = " + json.dumps(("https://127.0.0.1" if secret else "http://127.0.0.1:8100") + endpoint))
+if secret:
+    print("insecure")
+    print("header = " + json.dumps("Host: " + host))
+    print("header = " + json.dumps("X-Origin-Secret: " + secret))' "$1" |
+        run_target 'curl --config -'
+}
+rollback() {
+    if [ -n "$PREVIOUS" ]; then
+        run_target "ln -sfn '$PREVIOUS' '$TARGET_ROOT/current' && sudo systemctl restart mod.service"
+    fi
+    echo '[Error] Release verification failed; prior symlink restored when available.'
+    exit 1
+}
+# Allow background cache refresh to complete; require the restored demo DB, not fallback.
+READY=false
+for attempt in $(seq 1 12); do
+    if fetch_probe /api/health | python3 -c 'import json,sys;d=json.load(sys.stdin);sys.exit(0 if d.get("status")=="ok" else 1)' && \
+        fetch_probe /api/dashboard/snapshot | python3 -c 'import json,sys;d=json.load(sys.stdin);m=d.get("meta",{});sys.exit(0 if m.get("demo") and m.get("source")=="live" and d.get("entities") else 1)'; then
+        READY=true; break
+    fi
+    sleep 5
+done
+if [ "$READY" = false ]; then rollback; fi
+echo 'Release verified. No timers enabled and no previous releases removed.'

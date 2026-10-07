@@ -139,6 +139,8 @@ def execute_retrain(run_type: str = "scheduled") -> int:
 
 
 def main() -> None:
+    if os.getenv("MOD_DEMO_MODE", "false").lower() in {"true", "1", "yes", "on"}:
+        raise SystemExit("Training is disabled in demo mode")
     parser = argparse.ArgumentParser(description="HeatWave AutoML Daily Retraining Runner")
     parser.add_argument("--status", action="store_true", help="Print model metadata and audit logs")
     parser.add_argument("--dry-run", action="store_true", help="Verify features and print retrain plan")

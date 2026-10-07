@@ -7,6 +7,11 @@
 !backend/uv.lock
 !backend/app/
 !backend/app/**
+!scripts/
+!scripts/project/
+!scripts/project/**
+!demo-data/
+!demo-data/**
 
 # Never import host dependencies, local configuration or generated output.
 **/node_modules

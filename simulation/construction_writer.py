@@ -44,6 +44,8 @@ _TRUE_VALUES = frozenset({"true", "1", "yes"})
 
 def is_construction_writer_enabled() -> bool:
     """Strictly verify if simulation engine writes are allowed by environment."""
+    if os.getenv("MOD_DEMO_MODE", "false").lower() in {"true", "1", "yes", "on"}:
+        return False
     val = os.environ.get("MOD_SIMULATION_ENGINE_ENABLED", "").strip().lower()
     return val in _TRUE_VALUES
 

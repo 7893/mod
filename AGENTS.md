@@ -8,7 +8,8 @@ Do not load that historical snapshot at task startup.
 - Inspect git status and relevant diffs. Preserve existing work and all historical content.
 - Work within the requested scope. Database writes, service/cloud changes and production publishing require explicit authority.
 - Credentials stay in approved environment mechanisms; never print or commit secrets.
-- Default CI/CD deploys via GitHub Actions workflow upon push to main; manual publish.sh is direct fallback and needs authorization.
+- Current (2026-10-07): CI checks only; no automatic deployment. Manual publish.sh needs --apply, explicit target parameters and owner authority.
+- Historical, superseded 2026-10-07: Default CI/CD deploys via GitHub Actions workflow upon push to main; manual publish.sh is direct fallback and needs authorization.
 - Do not modify frozen artifacts or other projects unless the user explicitly places them in scope.
 - Temporary scripts belong in your CLI's scripts/<owner>/ directory; stable shared scripts in scripts/project/ need documentation.
 - Preserve tracked docs. Superseded text stays marked or archived intact; never silently discard it.

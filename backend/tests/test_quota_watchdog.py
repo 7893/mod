@@ -165,6 +165,9 @@ def test_cf_ai_client_quota_fuse_fallback():
     mock_watchdog.try_reserve.return_value = (False, "Quota exhausted: 3000.0/3000.0")
 
     client = CloudflareAIClient(watchdog=mock_watchdog)
+    client.enabled = True
+    client.account_id = "fixture-account"
+    client.api_token = "fixture-token"
     res = client.enrich_issue(
         issue_id="ISS-TEST-001",
         issue_type="期初数据校验失败",
@@ -185,7 +188,7 @@ def test_cf_ai_client_quota_ledger_error_fails_closed_to_local():
     mock_watchdog = MagicMock(spec=QuotaWatchdog)
     mock_watchdog.try_reserve.side_effect = RuntimeError("ledger unavailable")
     # CI 环境无凭据；注入虚拟环境变量使客户端认为已配置，从而走到 watchdog 逻辑
-    with patch.dict(os.environ, {"CLOUDFLARE_ACCOUNT_ID": "test_acc", "CLOUDFLARE_API_TOKEN": "test_tok"}):
+    with patch.dict(os.environ, {"CLOUDFLARE_ACCOUNT_ID": "test_acc", "CLOUDFLARE_API_TOKEN": "test_tok", "MOD_CF_AI_ENABLED": "true"}):
         client = CloudflareAIClient(watchdog=mock_watchdog)
         result = client.enrich_issue(
             issue_id="ISS-TEST-QUOTA",
@@ -209,6 +212,7 @@ def test_cf_ai_client_network_error_resilience():
     client.account_id = "test_acc"
     client.api_token = "dummy_token"
     client.model = "test_model"
+    client.enabled = True
 
     with patch("urllib.request.urlopen", side_effect=TimeoutError("Connection timed out")):
         res = client.enrich_issue(

@@ -1,3 +1,4 @@
+# Template: render with scripts/project/render_deploy_config.py before installation.
 [Unit]
 Description=MOD HeatWave AutoML Daily Retraining and Verification Service
 After=network-online.target
@@ -5,12 +6,15 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-WorkingDirectory=${MOD_PROJECT_ROOT}/backend/current
-EnvironmentFile=${MOD_PROJECT_ROOT}/.env.systemd
+User=__RUN_USER__
+WorkingDirectory=__PROJECT_ROOT__
+EnvironmentFile=__ENV_FILE__
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONUNBUFFERED=1
-Environment=PYTHONPATH=${MOD_PROJECT_ROOT}/backend/current
-ExecStart=${MOD_PROJECT_ROOT}/backend/.venv/bin/python ${MOD_PROJECT_ROOT}/backend/current/scripts/agy/run_ml_retrain.py --once --run-type scheduled
+Environment=MOD_DEMO_MODE=__DEMO_MODE__
+Environment=PYTHONPATH=__PROJECT_ROOT__/backend:__PROJECT_ROOT__
+ExecCondition=__PYTHON__ -c "import sys;sys.exit(1 if '__DEMO_MODE__' == 'true' else 0)"
+ExecStart=/usr/bin/env MOD_DEMO_MODE=__DEMO_MODE__ PYTHONPATH=__PROJECT_ROOT__/backend:__PROJECT_ROOT__ __PYTHON__ __PROJECT_ROOT__/scripts/agy/run_ml_retrain.py --once --run-type scheduled
 NoNewPrivileges=true
 PrivateTmp=true
 TimeoutStartSec=10800

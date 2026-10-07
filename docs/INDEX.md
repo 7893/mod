@@ -153,3 +153,5 @@ Worker 均已退出当前运行架构。
 - [KI-080 · AI 输出可信度与能力边界失真](issues/KI-080-AI-OUTPUT-TRUST.md)：本地修复与验收记录。
 
 - [实时投影 outbox 切换与恢复步骤](operations/PROJECTION-OUTBOX-MIGRATION.md)：KI-081 待执行的 schema、权限和生产验收。
+
+- [全量模拟演示数据](development/DEMO-DATA.md)：全量压缩、环境脱敏和空库初始化。

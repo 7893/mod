@@ -128,3 +128,6 @@ backend/current
 .codegraph/
 graphify-out/
 .graphify*
+
+# Rendered deployment configuration is host-owned, never part of the backup.
+deploy/generated/

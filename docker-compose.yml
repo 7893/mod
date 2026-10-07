@@ -1,19 +1,50 @@
 services:
-  mod-app:
-    init: true
+  demo-db:
+    image: mysql:8.4.11
+    command: ["--local-infile=ON", "--character-set-server=utf8mb4"]
+    environment:
+      MYSQL_DATABASE: mod_demo
+      MYSQL_USER: mod_demo
+      MYSQL_PASSWORD: ${MOD_DEMO_DB_PASSWORD:?Supply a new local demo database password}
+      MYSQL_ROOT_PASSWORD: ${MOD_DEMO_ROOT_PASSWORD:?Supply a new local demo root password}
+    volumes:
+      - demo-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$${MYSQL_PASSWORD}\" mysql -h 127.0.0.1 -u mod_demo -D mod_demo -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    restart: unless-stopped
+
+  demo-init:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         VITE_CHINA_MAP_GEOJSON_URL: ${VITE_CHINA_MAP_GEOJSON_URL:-}
-    container_name: mod-dashboard
-    ports:
-      - "8080:80"
+    command: ["backend/.venv/bin/python", "scripts/project/demo_container.py", "init"]
     environment:
-      - MOD_ENV=production
-      - MOD_HOST=127.0.0.1
-      - MOD_PORT=8100
-      - MOD_FALLBACK_SNAPSHOT_PATH=/app/backend/app/v2-sim-snapshot.json
-      - MOD_LIVE_PROJECTION_ENABLED=false
-      - MOD_HW_ENABLED=false
+      MOD_DEMO_DB_PASSWORD: ${MOD_DEMO_DB_PASSWORD:?Supply a new local demo database password}
+    depends_on:
+      demo-db:
+        condition: service_healthy
+    restart: "no"
+
+  mod-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_CHINA_MAP_GEOJSON_URL: ${VITE_CHINA_MAP_GEOJSON_URL:-}
+    ports:
+      - "127.0.0.1:${MOD_DEMO_HTTP_PORT:-8080}:80"
+    environment:
+      MOD_ENV: production
+      MOD_DEMO_DB_PASSWORD: ${MOD_DEMO_DB_PASSWORD:?Supply a new local demo database password}
+    depends_on:
+      demo-init:
+        condition: service_completed_successfully
     restart: unless-stopped
+
+volumes:
+  demo-db:
