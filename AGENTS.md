@@ -8,6 +8,7 @@ Do not load that historical snapshot at task startup.
 - Inspect git status and relevant diffs. Preserve existing work and all historical content.
 - Work within the requested scope. Database writes, service/cloud changes and production publishing require explicit authority.
 - Credentials stay in approved environment mechanisms; never print or commit secrets.
+- Current (2026-10-08): New work commits use the account-associated GitHub noreply email and local SSH signing key. The six repaired commits are GitHub Verified; confirm remote verification before claiming it for later commits. Never publish the signing private key or a personal email.
 - Current (2026-10-08): The owner cancelled source deletion. Preserve production data, accounts, models and deployment files for future use. Keep the simulator and MOD HeatWave automatic loading/retraining disabled; no in-memory unload has been performed. Shared MySQL/HeatWave and MODO stay active.
 - Current (2026-10-07): MOD production service, timers and Nginx entry are disabled; source data and deployment files remain. Shared MySQL and MODO stay active. Source deletion needs separate explicit authority.
 - Current (2026-10-07): CI checks only; no automatic deployment. Manual publish.sh needs --apply, explicit target parameters and owner authority.

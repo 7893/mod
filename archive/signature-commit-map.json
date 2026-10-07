@@ -1,0 +1,29 @@
+{
+  "description": "Six authorized work commits re-signed with a GitHub noreply identity; file trees unchanged.",
+  "commits": [
+    {
+      "old": "cedb39e161f13e7b0da55736faa20bc9e6d0048f",
+      "new": "c6e0735903ac5926aa943eaea12ac0d348472346"
+    },
+    {
+      "old": "fee5bce45dc8f0c57c81d44bd6a462886e451762",
+      "new": "ca2855ca1b3bf5847497b1757354367962307918"
+    },
+    {
+      "old": "653aac088f5f39a511751908fbb95bcb793455f3",
+      "new": "be0e57ef7af42bcc2ae69ee51c0674ff05ba6dd2"
+    },
+    {
+      "old": "c93b614b0a839869118ba85f7eb93c200c33e24c",
+      "new": "6a1f9ddfb23fadcbf684c893e95b2169afe1cc44"
+    },
+    {
+      "old": "3988d0364511c664335387f50219066e0cd05cdb",
+      "new": "1b8d8580735be3f57962f4f599a6b2754f5179b6"
+    },
+    {
+      "old": "bbceff1006b00881cebdef532cea01bb0c78bc7f",
+      "new": "d33c8585d1e37a82d5be85679a65c9b8ab5287e3"
+    }
+  ]
+}

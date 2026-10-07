@@ -49,6 +49,11 @@ Retirement update: MOD production services, scheduled jobs and its Nginx entry a
 
 Retention update: Production data remains available for future use. Source deletion is cancelled; the simulator and MOD HeatWave automatic loading/retraining remain disabled. Already loaded tables have not been unloaded, and the shared database remains active.
 
+2026-10-08 签名修复：六个新增工作提交已用 GitHub 隐私邮箱重新签名，全部通过 GitHub Verified；
+代码、数据与两个既有标签未改。以上匿名邮箱验证限制属于修复前阶段，映射及验收见 [当前状态](docs/CURRENT-STATE.md)。
+
+Signature update: All six recent work commits were re-signed using the GitHub noreply email and are GitHub Verified. Code, data and the two existing tags are unchanged; the earlier email verification limitation is historical.
+
 > [!IMPORTANT]
 > MOD 是用于演示验证、业务仿真与工程研究的完整系统。大屏展示的 3,200+ 机构单位、41,000+ 人员、490 万财务凭证及全业务流转事件，均为自主拟真引擎生成的合规合成数据，全程不使用任何真实企业敏感数据。
 
