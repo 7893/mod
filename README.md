@@ -39,6 +39,11 @@ Deployment update: CI runs checks only. The bundled full demo seed initializes a
 
 Backup update: GitHub now contains the cleaned history and verified full demo package. Deployment Secrets remain in GitHub configuration; production retirement is pending. See the current state above for verification limits.
 
+2026-10-07 停用补充：MOD 生产服务、定时任务和专属 Nginx 入口已关闭；源库与部署文件保留。
+共享数据库和 MODO 未停用，GitHub Secrets 保留备用。以上“生产尚未停用”说明属于此前阶段。
+
+Retirement update: MOD production services, scheduled jobs and its Nginx entry are disabled. Source data and deployment files remain; the shared database, MODO and GitHub Secrets are preserved.
+
 > [!IMPORTANT]
 > MOD 是用于演示验证、业务仿真与工程研究的完整系统。大屏展示的 3,200+ 机构单位、41,000+ 人员、490 万财务凭证及全业务流转事件，均为自主拟真引擎生成的合规合成数据，全程不使用任何真实企业敏感数据。
 

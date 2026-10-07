@@ -8,6 +8,7 @@ Do not load that historical snapshot at task startup.
 - Inspect git status and relevant diffs. Preserve existing work and all historical content.
 - Work within the requested scope. Database writes, service/cloud changes and production publishing require explicit authority.
 - Credentials stay in approved environment mechanisms; never print or commit secrets.
+- Current (2026-10-07): MOD production service, timers and Nginx entry are disabled; source data and deployment files remain. Shared MySQL and MODO stay active. Source deletion needs separate explicit authority.
 - Current (2026-10-07): CI checks only; no automatic deployment. Manual publish.sh needs --apply, explicit target parameters and owner authority.
 - Historical, superseded 2026-10-07: Default CI/CD deploys via GitHub Actions workflow upon push to main; manual publish.sh is direct fallback and needs authorization.
 - Do not modify frozen artifacts or other projects unless the user explicitly places them in scope.
