@@ -33,6 +33,12 @@
 
 Deployment update: CI runs checks only. The bundled full demo seed initializes an independent local MySQL database; see the demo guide above. Earlier automatic deployment descriptions are historical.
 
+2026-10-07 备份迁移补充：GitHub 主线与两个标签已同步清理后的历史，全量数据包通过远端克隆校验。
+部署 Secrets 保留在 GitHub 的机密配置中，未导出入库；生产服务与源数据库尚未停用。
+详细验收与匿名签名的 GitHub 验证限制见 [当前状态](docs/CURRENT-STATE.md)。
+
+Backup update: GitHub now contains the cleaned history and verified full demo package. Deployment Secrets remain in GitHub configuration; production retirement is pending. See the current state above for verification limits.
+
 > [!IMPORTANT]
 > MOD 是用于演示验证、业务仿真与工程研究的完整系统。大屏展示的 3,200+ 机构单位、41,000+ 人员、490 万财务凭证及全业务流转事件，均为自主拟真引擎生成的合规合成数据，全程不使用任何真实企业敏感数据。
 
