@@ -54,6 +54,12 @@ Retention update: Production data remains available for future use. Source delet
 
 Signature update: All six recent work commits were re-signed using the GitHub noreply email and are GitHub Verified. Code, data and the two existing tags are unchanged; the earlier email verification limitation is historical.
 
+2026-10-08 云端停用补充：MOD 的 12 张 HeatWave 表已卸载，源库数据保留。
+专属 CloudFront 分发已停用但未删除；其他项目与共享服务未改。
+单条 MOD 域名解析删除等待 GCP 重新认证，当前记录仍保留。以上“尚未卸载”说明属于此前阶段。
+
+Cloud retirement update: MOD's 12 HeatWave tables are unloaded and source data is retained. Its CloudFront distribution is disabled and preserved. Removal of the single MOD DNS record is pending GCP reauthentication; other resources remain unchanged.
+
 > [!IMPORTANT]
 > MOD 是用于演示验证、业务仿真与工程研究的完整系统。大屏展示的 3,200+ 机构单位、41,000+ 人员、490 万财务凭证及全业务流转事件，均为自主拟真引擎生成的合规合成数据，全程不使用任何真实企业敏感数据。
 
