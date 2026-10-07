@@ -44,6 +44,11 @@ Backup update: GitHub now contains the cleaned history and verified full demo pa
 
 Retirement update: MOD production services, scheduled jobs and its Nginx entry are disabled. Source data and deployment files remain; the shared database, MODO and GitHub Secrets are preserved.
 
+2026-10-08 保留方案：按所有者决定，生产数据保留备用，取消删库提议。
+模拟器和 MOD HeatWave 自动加载、重训保持停用；未卸载已加载表，不停止共享数据库。
+
+Retention update: Production data remains available for future use. Source deletion is cancelled; the simulator and MOD HeatWave automatic loading/retraining remain disabled. Already loaded tables have not been unloaded, and the shared database remains active.
+
 > [!IMPORTANT]
 > MOD 是用于演示验证、业务仿真与工程研究的完整系统。大屏展示的 3,200+ 机构单位、41,000+ 人员、490 万财务凭证及全业务流转事件，均为自主拟真引擎生成的合规合成数据，全程不使用任何真实企业敏感数据。
 
