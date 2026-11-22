@@ -8,7 +8,7 @@
 已于 2026-09-17 经授权删除；其演进事实由 Git 和冻结历史文档保留，不再驱动开发流程。
 
 2026-11-22 安全与稳定性审计修复（本地验证并推送主线，未改动生产服务）：
-- **依赖漏洞清零**：升级 `backend/uv.lock`（`certifi` 2026.11.20、`filelock` 4.3.0、`virtualenv` 21.15.12）与 `frontend`（`happy-dom` 21.0.4），清零全部 32 条 Dependabot 安全告警。
+- **依赖漏洞清零**：升级 `backend/uv.lock`（`certifi` 2026.11.20、`filelock` 4.3.0、`virtualenv` 21.15.12）与 `frontend`（`happy-dom` 21.0.4、`vite` 7.3.8、`vitest` 5.1.1 及 `pnpm-workspace.yaml` 传递依赖安全覆盖），清零全部 Dependabot 安全告警。
 - **截图代理与网关加固**：`workers/mod-browser/src/index.ts` 强制 Bearer Token 常时校验（`MOD_BROWSER_TOKEN`）、`https:` 与 `ALLOWED_HOSTS` 白名单及视口尺寸钳位；`deploy/nginx/conf.d/mod_ratelimit.conf` 改用受信任 realip 还原后的 `$binary_remote_addr`（取代可伪造的最左 `X-Forwarded-For`），`deploy/nginx/mod.conf.example` 移除已退役的 `/(dispatch|enrich)$` 写入路由并在所有含 `add_header` 的 `location` 补齐 HSTS / `X-Content-Type-Options` / `X-Frame-Options` 安全头。
 - **后端快照、权限隔离与稳定性**：`build_dashboard_snapshot` 不再静默吞掉真库查询异常冒充 `live` 覆盖健康缓存；`scripts/project/run_unified.py` 修正环境变量优先级使独立服务 env 文件覆盖继承的 `EnvironmentFile`（保留读写账号隔离且维持显式演示模式权威）；`simulation/runtime_service.py` 在 `prune_outbox_deferred` 删除行后显式提交并将 `MOD_CF_AI_ENABLED` 默认值收敛为 `false`；`/api/governance/issues` 增加分页边界校验；`LiveProjectionBroker._read` 使用 `asyncio.shield` 防止单客户端断开取消共享读取，且关闭实时投影时 `/api/live-projection/events` 返回 `204 No Content` 并通知前端停止重连；`get_ai_quota_status` 改用 `Asia/Hong_Kong` 业务日与 `QuotaWatchdog` 对齐。
 - **前端、容器与 CI 收敛**：`frontend/index.html` 移除无条件 `upgrade-insecure-requests` 以保障本地 HTTP Docker 演示；ECharts 自定义 Tooltip 统一通过 `escapeHtml` 转义动态字符串；`Dockerfile` 运行阶段补齐 `fallback-snapshot.json`，移除无引用的 `frontend/d-diff-latest.png` 与死文件 `backend/app/v2-sim-snapshot.json`；`.github/workflows/quality.yml` 收敛 `push` 至 `main` 并配置 `concurrency`。
