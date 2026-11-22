@@ -61,7 +61,14 @@ export function useLiveProjection(onEvent: ProjectionHandler) {
     if (eventSource) return
     eventSource = new EventSource(`${import.meta.env.BASE_URL}api/live-projection/events`)
     eventSource.onopen = () => { connected.value = true }
-    eventSource.onerror = () => { connected.value = false }
+    eventSource.onerror = () => {
+      connected.value = false
+      // HTTP 204 No Content transitions EventSource to CLOSED (2); release handle cleanly.
+      if (eventSource?.readyState === 2) {
+        disconnect()
+      }
+    }
+    eventSource.addEventListener('projection_disabled', () => { disconnect() })
     eventSource.addEventListener('source_unavailable', () => { connected.value = false })
     eventSource.onmessage = (message) => {
       try {

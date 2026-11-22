@@ -285,7 +285,7 @@ def dashboard_snapshot_endpoint(conn: Connection | None = Depends(connection)) -
 def dashboard_snapshot(conn: Connection | None) -> dict:
     """SWR 缓存的快照读取：热缓存直接返回，过期则后台刷新，冷启动同步构建。"""
     global _snapshot_cache, _snapshot_cached_at, _snapshot_refreshing, _snapshot_refresh_started_at
-    global _snapshot_source
+    global _snapshot_source, _snapshot_last_failed_at, _snapshot_consecutive_failures, _snapshot_last_error
     now = monotonic()
 
     # 1. 命中热缓存且未过期：极速微秒级返回 (~0.05ms)
@@ -320,10 +320,25 @@ def dashboard_snapshot(conn: Connection | None) -> dict:
     with _snapshot_lock:
         if _snapshot_cache is not None:
             return _snapshot_cache
-        snap = build_dashboard_snapshot(conn)
+        if conn is None:
+            _snapshot_cache = load_fallback_snapshot()
+            _snapshot_cached_at = monotonic()
+            _snapshot_source = "fallback"
+            return _snapshot_cache
+        try:
+            snap = build_dashboard_snapshot(conn)
+        except Exception as e:
+            logger.warning("冷启动构建真库快照失败，降级使用内置兜底快照: %s", type(e).__name__)
+            _snapshot_cache = load_fallback_snapshot()
+            _snapshot_cached_at = monotonic()
+            _snapshot_source = "fallback"
+            _snapshot_last_failed_at = monotonic()
+            _snapshot_consecutive_failures += 1
+            _snapshot_last_error = f"{type(e).__name__}: 快照冷启动执行异常"
+            return _snapshot_cache
         _snapshot_cache = snap
         _snapshot_cached_at = monotonic()
-        _snapshot_source = "live" if conn is not None else "fallback"
+        _snapshot_source = "live"
         return _snapshot_cache
 
 
@@ -526,8 +541,8 @@ def governance_issues_list(
     batch_id: int | None = None,
     issue_type: str | None = None,
     unit_id: int | None = None,
-    page: int = 1,
-    page_size: int = 20,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
     conn: Connection | None = Depends(connection),
 ) -> dict:
     if conn is None:

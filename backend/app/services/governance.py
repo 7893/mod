@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
+
+HK_TZ = ZoneInfo("Asia/Hong_Kong")
 
 
 def list_governance_issues(
@@ -102,8 +105,8 @@ def get_issue_timeline(conn: Connection, issue_id: str) -> List[Dict[str, Any]]:
 
 
 def get_ai_quota_status(conn: Connection) -> Dict[str, Any]:
-    """Retrieve today's AI quota ledger and status."""
-    today = datetime.now(timezone.utc).date()
+    """Retrieve today's AI quota ledger and status (Asia/Hong_Kong business day)."""
+    today = datetime.now(HK_TZ).date()
     sql = """
         SELECT stat_date, call_count, neurons_used, status, updated_at
         FROM sim_ai_quota_ledger

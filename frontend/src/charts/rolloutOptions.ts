@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts'
 import { formatCount } from '../formatters/metrics'
+import { escapeHtml } from './escapeHtml'
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from './theme'
 import { CHART_FONT } from './tokens'
 
@@ -36,7 +37,7 @@ export function createRolloutTrendMatrixOption(points: RolloutTrendPoint[]) {
       formatter: (params: any) => {
         const point = params.data?.point as RolloutTrendPoint | undefined
         return point
-          ? `${point.date} · ${point.name}<br/>上线率 <b>${point.launchedPct}%</b><br/>双轨率 <b>${point.dualPct}%</b> · ${formatCount(point.total)} 家`
+          ? `${escapeHtml(point.date)} · ${escapeHtml(point.name)}<br/>上线率 <b>${escapeHtml(point.launchedPct)}%</b><br/>双轨率 <b>${escapeHtml(point.dualPct)}%</b> · ${formatCount(point.total)} 家`
           : ''
       },
     },

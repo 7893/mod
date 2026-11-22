@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts'
 import { formatCount } from '../formatters/metrics'
+import { escapeHtml } from './escapeHtml'
 import {
   calmAnimation,
   chartInk,
@@ -51,7 +52,7 @@ export function createLaunchGateOption(items: GateStageItem[]) {
       formatter: (params: any) => {
         const item = reversed[params?.[0]?.dataIndex]
         return item
-          ? `${item.name}<br/>完成 <b>${formatCount(item.completed)}</b> · 进行中 ${formatCount(item.inProgress)} · 待启动 ${formatCount(item.notStarted)}<br/>总体完成率 <b>${item.progress}%</b>`
+          ? `${escapeHtml(item.name)}<br/>完成 <b>${formatCount(item.completed)}</b> · 进行中 ${formatCount(item.inProgress)} · 待启动 ${formatCount(item.notStarted)}<br/>总体完成率 <b>${escapeHtml(item.progress)}%</b>`
           : ''
       },
     },
@@ -118,7 +119,7 @@ export function createTaskStageMatrixOption(list: StageSeriesItem[]) {
         const stage = list[columnIndex]
         const status = statuses[rowIndex]
         return stage && status
-          ? `${stage.name} · ${status.name}<br/><b>${formatCount(count)}</b> 项 · ${params.data.percentage}%`
+          ? `${escapeHtml(stage.name)} · ${escapeHtml(status.name)}<br/><b>${formatCount(count)}</b> 项 · ${escapeHtml(params.data.percentage)}%`
           : ''
       },
     },
@@ -168,7 +169,7 @@ export function createTrainingConversionOption(items: TrainingTypeItem[]) {
         const item = items[params?.[0]?.dataIndex]
         if (!item) return ''
         const rate = item.actual > 0 ? percent(item.passed, item.actual) : 0
-        return `${item.type}<br/>培训场次 <b>${formatCount(item.count)}</b><br/>实到 / 应到 <b>${formatCount(item.actual)} / ${formatCount(item.expected)}</b><br/>考核通过 <b>${formatCount(item.passed)}</b> · ${rate}%`
+        return `${escapeHtml(item.type)}<br/>培训场次 <b>${formatCount(item.count)}</b><br/>实到 / 应到 <b>${formatCount(item.actual)} / ${formatCount(item.expected)}</b><br/>考核通过 <b>${formatCount(item.passed)}</b> · ${rate}%`
       },
     },
     grid: { left: 42, right: 12, top: 8, bottom: 38 },
@@ -203,7 +204,7 @@ export function createTrainingMixOption(items: TrainingTypeItem[]) {
     tooltip: {
       trigger: 'item',
       ...chartTooltip,
-      formatter: (params: any) => `${params.name}<br/>培训场次 <b>${formatCount(params.value)}</b> · ${params.percent}%`,
+      formatter: (params: any) => `${escapeHtml(params.name)}<br/>培训场次 <b>${formatCount(params.value)}</b> · ${escapeHtml(params.percent)}%`,
     },
     series: [{
       type: 'pie',

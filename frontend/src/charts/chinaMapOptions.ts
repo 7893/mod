@@ -1,4 +1,5 @@
 import type { EChartsOption } from 'echarts'
+import { escapeHtml } from './escapeHtml'
 import { chartInk, chartPalette, mapRamp } from './theme'
 import { CHART_FONT } from './tokens'
 
@@ -139,17 +140,17 @@ export function createChinaMapOption(
         if (params.componentType === 'series' && params.seriesType === 'effectScatter') {
           const point = params.data as ChinaMapScatterPoint
           return `<div class="map-tip">
-            <b>${point.unitName}</b>
-            <span style="color:${chartPalette.accent}">${point.actionText}</span>
-            <i>所属省份：${point.province}</i>
+            <b>${escapeHtml(point.unitName)}</b>
+            <span style="color:${chartPalette.accent}">${escapeHtml(point.actionText)}</span>
+            <i>所属省份：${escapeHtml(point.province)}</i>
           </div>`
         }
         const item = data.find((value) => value.name === params.name)
-        if (!item) return `<div class="map-tip"><b>${params.name}</b><span>暂无纳管单位</span></div>`
+        if (!item) return `<div class="map-tip"><b>${escapeHtml(params.name)}</b><span>暂无纳管单位</span></div>`
         return `<div class="map-tip">
-          <b>${params.name}</b>
-          <span>建设完成度 ${item.value || item.constructionPct || 0}%</span>
-          <i>纳管 ${item.total} 家 · 上线 ${item.launched} 家 · 双轨 ${item.dual} 家</i>
+          <b>${escapeHtml(params.name)}</b>
+          <span>建设完成度 ${escapeHtml(item.value || item.constructionPct || 0)}%</span>
+          <i>纳管 ${escapeHtml(item.total)} 家 · 上线 ${escapeHtml(item.launched)} 家 · 双轨 ${escapeHtml(item.dual)} 家</i>
         </div>`
       },
     },

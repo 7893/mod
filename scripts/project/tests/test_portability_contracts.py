@@ -26,6 +26,10 @@ class PortabilityContractTests(unittest.TestCase):
             "COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./",
             dockerfile,
         )
+        self.assertIn(
+            "COPY frontend/src/data/fallback-snapshot.json ./app/fallback-snapshot.json",
+            dockerfile,
+        )
         self.assertIn("rm -f /etc/nginx/sites-enabled/default &&", dockerfile)
         self.assertIn("listen 80 default_server;", dockerfile)
         self.assertIn("/etc/nginx/conf.d/default.conf && nginx -t", dockerfile)

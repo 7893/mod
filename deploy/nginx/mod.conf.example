@@ -68,23 +68,13 @@ server {
         proxy_cache off;
         proxy_read_timeout 3600s;
         add_header Cache-Control "no-cache, no-transform" always;
+        add_header Strict-Transport-Security "max-age=31536000; preload" always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
         add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
     }
 
-    # 治理工单流转等敏感写入接口频控保护 (KI-078)
-    location ~ ^/api/governance/issues/[^/]+/(dispatch|enrich)$ {
-        limit_req zone=mod_write_limit burst=5 nodelay;
-        proxy_pass http://127.0.0.1:8100;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_read_timeout 30s;
-        add_header Cache-Control "no-store" always;
-        add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
-    }
-
-    # REST API 反向代理（带 IP 频控防刷）
+    # REST API 反向代理（只读接口，带 IP 频控防刷）
     location ^~ /api/ {
         limit_req zone=mod_api_limit burst=50 nodelay;
         proxy_pass http://127.0.0.1:8100/api/;
@@ -94,6 +84,9 @@ server {
         proxy_set_header X-Forwarded-Proto https;
         proxy_read_timeout 30s;
         add_header Cache-Control "no-store" always;
+        add_header Strict-Transport-Security "max-age=31536000; preload" always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
         add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
     }
 
@@ -102,7 +95,9 @@ server {
         root __FRONTEND_ROOT__;
         expires 30d;
         add_header Cache-Control "public, max-age=2592000, immutable";
+        add_header Strict-Transport-Security "max-age=31536000; preload" always;
         add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
         add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;
         try_files $uri =404;
     }
@@ -113,6 +108,7 @@ server {
         add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0" always;
         add_header Pragma "no-cache" always;
         add_header Expires "0" always;
+        add_header Strict-Transport-Security "max-age=31536000; preload" always;
         add_header X-Content-Type-Options nosniff always;
         add_header X-Frame-Options SAMEORIGIN always;
         add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex" always;

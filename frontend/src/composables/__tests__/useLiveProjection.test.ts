@@ -83,3 +83,50 @@ it('marks a source outage disconnected and does not show rejected duplicate even
     vi.unstubAllGlobals()
   }
 })
+
+it('closes the EventSource cleanly when live projection is disabled or permanently closed', () => {
+  class FakeSource {
+    static latest: FakeSource
+    readyState = 1
+    onopen?: () => void
+    onerror?: () => void
+    onmessage?: (event: { data: string }) => void
+    listeners = new Map<string, () => void>()
+    close = vi.fn()
+    constructor() { FakeSource.latest = this }
+    addEventListener(name: string, callback: () => void) { this.listeners.set(name, callback) }
+  }
+  vi.stubGlobal('EventSource', FakeSource)
+  let projection!: ReturnType<typeof useLiveProjection>
+  const wrapper = mount(defineComponent({ setup() {
+    projection = useLiveProjection(vi.fn())
+    return () => h('div')
+  } }))
+  try {
+    const source = FakeSource.latest
+    source.onopen?.()
+    expect(projection.connected.value).toBe(true)
+    source.listeners.get('projection_disabled')?.()
+    expect(source.close).toHaveBeenCalledTimes(1)
+    expect(projection.connected.value).toBe(false)
+  } finally {
+    wrapper.unmount()
+    vi.unstubAllGlobals()
+  }
+
+  vi.stubGlobal('EventSource', FakeSource)
+  const wrapper2 = mount(defineComponent({ setup() {
+    projection = useLiveProjection(vi.fn())
+    return () => h('div')
+  } }))
+  try {
+    const source = FakeSource.latest
+    source.readyState = 2
+    source.onerror?.()
+    expect(source.close).toHaveBeenCalledTimes(1)
+    expect(projection.connected.value).toBe(false)
+  } finally {
+    wrapper2.unmount()
+    vi.unstubAllGlobals()
+  }
+})

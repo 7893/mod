@@ -70,19 +70,18 @@ def append_outbox(conn, records: list[dict], *, now: datetime | None = None) -> 
         _deferred_prune_cutoff = created_at - timedelta(days=RETENTION_DAYS)
 
 
-def prune_outbox_deferred(conn, *, auto_commit: bool = False) -> int:
+def prune_outbox_deferred(conn) -> int:
     """Execute deferred outbox pruning outside the critical transaction path.
 
-    Call this after the main business transaction commits, ideally in a
-    background thread or at the end of a cycle. Returns count of pruned rows.
+    Call this after the main business transaction commits. The caller owns the
+    DB transaction lifecycle and MUST commit the connection after pruning when
+    rows are deleted (this module never issues commits directly).
 
     KI-085 #3: This separates the expensive DELETE operation from the hot
     write path, eliminating lock contention on the business-critical transaction.
 
     Args:
         conn: Database connection (caller owns transaction lifecycle)
-        auto_commit: If True, commit after pruning (use only when caller
-                     explicitly delegates transaction control for this operation)
     """
     global _deferred_prune_floor, _deferred_prune_cutoff
 

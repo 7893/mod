@@ -196,3 +196,34 @@ def test_construction_propeller_advancement():
     assert res is not None
     assert isinstance(res.issues_advanced, int)
     assert isinstance(res.units_advanced, int)
+
+
+def test_get_ai_quota_status_uses_hong_kong_business_date(monkeypatch):
+    """Quota query date must use Asia/Hong_Kong to match QuotaWatchdog across UTC midnight."""
+    from datetime import date
+    from app.services import governance as governance_service
+
+    class FakeDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            # 2026-09-08 18:00 UTC == 2026-09-09 02:00 Asia/Hong_Kong
+            base = datetime(2026, 9, 8, 18, 0, 0, tzinfo=timezone.utc)
+            return base.astimezone(tz) if tz else base.replace(tzinfo=None)
+
+    monkeypatch.setattr(governance_service, "datetime", FakeDateTime)
+
+    captured_params = {}
+    mock_conn = MagicMock()
+
+    def fake_execute(_stmt, params=None):
+        if params:
+            captured_params.update(params)
+        result = MagicMock()
+        result.mappings.return_value.first.return_value = None
+        return result
+
+    mock_conn.execute.side_effect = fake_execute
+    status = governance_service.get_ai_quota_status(mock_conn)
+
+    assert captured_params["today"] == date(2026, 9, 9)
+    assert status["statDate"] == "2026-09-09"

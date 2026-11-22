@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts'
 import { formatCount } from '../formatters/metrics'
+import { escapeHtml } from './escapeHtml'
 import {
   calmAnimation,
   categoryAxis,
@@ -60,7 +61,7 @@ export function createOverviewCompositionOption(parts: CompositionPart[], total:
       formatter: (params: any) => {
         const part = parts[params?.seriesIndex]
         if (!part) return ''
-        return `${part.label}<br/><b>${formatCount(part.value)}</b> · ${part.percentage}%`
+        return `${escapeHtml(part.label)}<br/><b>${formatCount(part.value)}</b> · ${escapeHtml(part.percentage)}%`
       },
     },
     grid: { left: 0, right: 0, top: 0, bottom: 0 },
@@ -95,7 +96,7 @@ export function createCoverageOption(coverage: CoverageSeriesItem | null) {
       formatter: (params: any) => {
         if (!coverage) return '暂无数据'
         const val = params.value != null ? formatCount(params.value) : ''
-        return `单位覆盖率 <b>${coverage.rate}%</b><br/>${params.name}: <b>${val}</b> (${params.percent}%)`
+        return `单位覆盖率 <b>${escapeHtml(coverage.rate)}%</b><br/>${escapeHtml(params.name)}: <b>${escapeHtml(val)}</b> (${escapeHtml(params.percent)}%)`
       },
     },
     series: [{
@@ -157,7 +158,7 @@ export function createBatchProgressOption(list: BatchProgressItem[]) {
         const points = Array.isArray(params) ? params : [params]
         const item = list[points[0]?.dataIndex]
         if (!item) return ''
-        return `${item.name}<br/>建设完成度 <b>${item.construction}%</b><br/>上线率 <b>${item.launched}%</b>`
+        return `${escapeHtml(item.name)}<br/>建设完成度 <b>${escapeHtml(item.construction)}%</b><br/>上线率 <b>${escapeHtml(item.launched)}%</b>`
       },
       ...chartTooltip,
     },
@@ -208,7 +209,7 @@ export function createOperationsQualityOption(list: QualityRateItem[]) {
         const item = reversed[points[0]?.dataIndex]
         if (!item) return ''
         const value = item.value === null ? '—' : `${item.value}%`
-        return `${item.name}<br/><b>${value}</b> · ${item.detail}`
+        return `${escapeHtml(item.name)}<br/><b>${escapeHtml(value)}</b> · ${escapeHtml(item.detail)}`
       },
       ...chartTooltip,
     },

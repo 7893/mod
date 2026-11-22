@@ -44,11 +44,16 @@ def load_env_file(filepath: Path) -> dict[str, str]:
 def main() -> int:
     logger.info("Starting MOD unified core supervisor from %s", BASE_DIR)
 
-    # API environment
+    explicit_demo = os.environ.get("MOD_DEMO_MODE", "").lower() in {"true", "1", "yes", "on"}
+
+    # API environment: per-service env file overrides inherited systemd EnvironmentFile
+    # so API/Simulator keep isolated RO/RW DB credentials; explicit demo mode remains authoritative.
     api_env_file = Path(os.getenv("MOD_API_ENV_FILE") or str(BASE_DIR / ".env.api.systemd"))
     if not api_env_file.exists():
         api_env_file = BASE_DIR / ".env.api.systemd"
-    api_env = {**load_env_file(api_env_file), **os.environ}
+    api_env = {**os.environ, **load_env_file(api_env_file)}
+    if explicit_demo:
+        api_env["MOD_DEMO_MODE"] = os.environ["MOD_DEMO_MODE"]
     api_env["PYTHONPATH"] = os.pathsep.join((str(BASE_DIR / "backend"), str(BASE_DIR)))
     api_env["PYTHONUNBUFFERED"] = "1"
     api_env["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -58,7 +63,9 @@ def main() -> int:
     sim_env_file = Path(os.getenv("MOD_SIM_ENV_FILE") or str(BASE_DIR / ".env.systemd"))
     if not sim_env_file.exists():
         sim_env_file = BASE_DIR / ".env.systemd"
-    sim_env = {**load_env_file(sim_env_file), **os.environ}
+    sim_env = {**os.environ, **load_env_file(sim_env_file)}
+    if explicit_demo:
+        sim_env["MOD_DEMO_MODE"] = os.environ["MOD_DEMO_MODE"]
     sim_env["PYTHONPATH"] = str(BASE_DIR)
     sim_env["PYTHONUNBUFFERED"] = "1"
     sim_env["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -71,7 +78,7 @@ def main() -> int:
             return 2
         for flag in ("MOD_SIMULATION_ENGINE_ENABLED", "MOD_CF_AI_ENABLED", "MOD_HW_ENABLED", "MOD_HW_ML_ENABLED", "MOD_LIVE_PROJECTION_ENABLED"):
             api_env[flag] = "false"
-    api_workers = os.getenv("MOD_API_WORKERS", "2")
+    api_workers = api_env.get("MOD_API_WORKERS", "2")
     api_cmd = [
         sys.executable,
         "-m",

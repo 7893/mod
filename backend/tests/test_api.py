@@ -834,3 +834,61 @@ def test_interactive_write_routes_are_not_exposed():
     assert client.patch("/api/organizations/1", json={"status": "已上线"}).status_code == 404
     assert client.post("/api/governance/issues/ISSUE-001/dispatch").status_code == 404
     assert client.post("/api/governance/issues/ISSUE-001/enrich").status_code == 404
+
+
+def test_build_dashboard_snapshot_propagates_db_errors_and_preserves_live_cache(monkeypatch):
+    """DB failures must propagate so background refresh never overwrites a healthy live cache with fallback."""
+    import time
+    import pytest
+    import app.api as api_mod
+
+    failing_conn = MagicMock()
+    failing_conn.execute.side_effect = RuntimeError("db query timed out")
+    with pytest.raises(RuntimeError, match="db query timed out"):
+        build_dashboard_snapshot(failing_conn)
+
+    saved_cache = api_mod._snapshot_cache
+    saved_source = api_mod._snapshot_source
+    saved_cached_at = api_mod._snapshot_cached_at
+    saved_failures = api_mod._snapshot_consecutive_failures
+    saved_error = api_mod._snapshot_last_error
+    try:
+        healthy_live = {"meta": {"asOfDate": "2026-11-22"}, "overview": {"orgTotal": 3200}, "entities": []}
+        api_mod._snapshot_cache = healthy_live
+        api_mod._snapshot_source = "live"
+        api_mod._snapshot_cached_at = time.monotonic()
+        api_mod._snapshot_consecutive_failures = 0
+        api_mod._snapshot_last_error = None
+
+        monkeypatch.setattr(api_mod, "_get_dedicated_connection", lambda: failing_conn)
+        monkeypatch.setattr(api_mod, "_is_ml_retrain_active", lambda _conn: False)
+
+        api_mod._snapshot_refreshing = True
+        api_mod._background_refresh_snapshot()
+
+        assert api_mod._snapshot_cache is healthy_live
+        assert api_mod._snapshot_source == "live"
+        assert api_mod._snapshot_consecutive_failures == 1
+        assert api_mod._snapshot_last_error is not None
+
+        # Cold-start DB failure must fall back and explicitly report fallback, not live.
+        api_mod._snapshot_cache = None
+        api_mod._snapshot_source = "none"
+        cold_snap = api_mod.dashboard_snapshot(failing_conn)
+        assert "overview" in cold_snap
+        assert api_mod._snapshot_source == "fallback"
+        assert api_mod._snapshot_consecutive_failures == 2
+    finally:
+        api_mod._snapshot_cache = saved_cache
+        api_mod._snapshot_source = saved_source
+        api_mod._snapshot_cached_at = saved_cached_at
+        api_mod._snapshot_consecutive_failures = saved_failures
+        api_mod._snapshot_last_error = saved_error
+        api_mod._snapshot_refreshing = False
+
+
+def test_governance_issues_pagination_bounds():
+    """Pagination parameters on /api/governance/issues must reject invalid page and page_size bounds."""
+    assert client.get("/api/governance/issues?page=0").status_code == 422
+    assert client.get("/api/governance/issues?page_size=0").status_code == 422
+    assert client.get("/api/governance/issues?page_size=201").status_code == 422

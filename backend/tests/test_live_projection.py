@@ -175,3 +175,55 @@ def test_concurrent_reads_coalesce_single_flight():
         assert len(reader.requests) <= 2
 
     asyncio.run(exercise())
+
+
+def test_cancelling_one_subscriber_does_not_cancel_shared_inflight_read():
+    """Shielded single-flight read must survive one disconnecting subscriber."""
+    async def exercise():
+        import time
+
+        class SlowReader(MemoryReader):
+            def read_page(self, after, limit=100):
+                time.sleep(0.08)
+                return super().read_page(after, limit)
+
+        reader = SlowReader(count=5)
+        broker = LiveProjectionBroker(reader=reader)
+
+        first = asyncio.create_task(broker._read(2))
+        second = asyncio.create_task(broker._read(2))
+        await asyncio.sleep(0.01)
+        first.cancel()
+
+        with pytest.raises(asyncio.CancelledError):
+            await first
+        page = await second
+        assert page.head == 5
+        assert len(reader.requests) == 1
+
+    asyncio.run(exercise())
+
+
+def test_disabled_live_projection_returns_204_and_stops_stream(monkeypatch):
+    """When live projection is disabled, HTTP returns 204 and direct stream emits projection_disabled."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.live_projection import api as projection_api
+
+    reader = MemoryReader(count=3)
+    disabled_broker = LiveProjectionBroker(reader=reader)
+    disabled_broker.configured = False
+
+    async def read_disabled_stream():
+        events = []
+        async for chunk in disabled_broker.stream():
+            events.append(chunk)
+        return events
+
+    chunks = asyncio.run(read_disabled_stream())
+    assert len(chunks) == 1
+    assert 'event: projection_disabled' in chunks[0]
+
+    monkeypatch.setattr(projection_api, 'get_live_projection_broker', lambda: disabled_broker)
+    res = TestClient(app).get('/api/live-projection/events')
+    assert res.status_code == 204

@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts'
 import { formatCount } from '../formatters/metrics'
+import { escapeHtml } from './escapeHtml'
 import { parsePercentage } from './panelData'
 import { calmAnimation, chartInk, chartPalette, chartTooltip } from './theme'
 import { CHART_FONT } from './tokens'
@@ -84,7 +85,7 @@ export function createQualityAuditVolumeOption(items: QualityVolumeItem[]) {
       formatter: (params: any) => {
         const item = reversed[params?.[0]?.dataIndex]
         if (!item) return ''
-        return `${item.rule}<br/>核验规模 <b>${formatCount(item.total)} ${item.unit}</b><br/>检出异常 <b>${formatCount(item.errors)}</b> · 合规率 ${item.rate == null ? '—' : `${item.rate}%`}<br/><span style="color:${chartInk.textMuted}">柱长为对数尺度，仅比较数量级</span>`
+        return `${escapeHtml(item.rule)}<br/>核验规模 <b>${formatCount(item.total)} ${escapeHtml(item.unit)}</b><br/>检出异常 <b>${formatCount(item.errors)}</b> · 合规率 ${item.rate == null ? '—' : `${escapeHtml(item.rate)}%`}<br/><span style="color:${chartInk.textMuted}">柱长为对数尺度，仅比较数量级</span>`
       },
     },
     grid: { left: 78, right: 84, top: 8, bottom: 8 },
@@ -154,7 +155,7 @@ export function createVoucherQualityOption(
       ...chartTooltip,
       formatter: (params: any) => {
         const item = volumes[params?.[0]?.dataIndex]
-        return item ? `${item.name}<br/><b>${formatCount(item.value)}</b>` : ''
+        return item ? `${escapeHtml(item.name)}<br/><b>${formatCount(item.value)}</b>` : ''
       },
     },
     grid: { left: '35%', right: 66, top: 16, bottom: 16, containLabel: true },

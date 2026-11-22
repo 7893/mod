@@ -58,6 +58,16 @@ class DemoDeploymentTests(unittest.TestCase):
         self.assertIn('root /srv/demo/web;', nginx)
         self.assertIn('noindex, nofollow', nginx)
         self.assertNotIn('__', nginx)
+        self.assertNotIn('(dispatch|enrich)', nginx)
+        self.assertNotIn('mod_write_limit', nginx)
+        # Every location block with add_header must repeat security headers to avoid Nginx drop.
+        self.assertGreaterEqual(nginx.count('Strict-Transport-Security'), 6)
+        self.assertGreaterEqual(nginx.count('X-Content-Type-Options nosniff always;'), 6)
+        self.assertGreaterEqual(nginx.count('X-Frame-Options SAMEORIGIN always;'), 6)
+        ratelimit = (ROOT / 'deploy/nginx/conf.d/mod_ratelimit.conf').read_text(encoding='utf-8')
+        self.assertIn('$binary_remote_addr', ratelimit)
+        self.assertNotIn('$http_x_forwarded_for', ratelimit)
+        self.assertNotIn('mod_write_limit', ratelimit)
 
     def test_publish_without_apply_has_no_external_effect(self):
         with patch.dict(os.environ, {}, clear=True):
@@ -87,3 +97,32 @@ class DemoDeploymentTests(unittest.TestCase):
         with patch.dict(os.environ, {'MOD_DEMO_MODE': 'true'}, clear=True), patch.object(supervisor, 'load_env_file', return_value={}), patch.object(supervisor.subprocess, 'Popen') as popen:
             self.assertEqual(supervisor.main(), 2)
         popen.assert_not_called()
+
+    def test_supervisor_per_service_env_file_overrides_inherited_credentials(self):
+        supervisor = load_script('run_unified')
+        handlers = {}
+        child = MagicMock()
+        child.poll.return_value = None
+
+        def stop(_):
+            handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+        def fake_load_env(path):
+            if str(path).endswith('.env.api.systemd'):
+                return {'MOD_DB_USER': 'mod_ro', 'MOD_DB_PASSWORD': 'ro_value'}  # pragma: allowlist secret
+            return {'MOD_DB_USER': 'mod_rw', 'MOD_DB_PASSWORD': 'rw_value', 'MOD_SIMULATION_ENGINE_ENABLED': 'true'}  # pragma: allowlist secret
+
+        inherited = {'MOD_DB_USER': 'mod_rw', 'MOD_DB_PASSWORD': 'rw_value', 'MOD_DEMO_MODE': 'false'}  # pragma: allowlist secret
+        with (
+            patch.dict(os.environ, inherited, clear=True),
+            patch.object(supervisor, 'load_env_file', side_effect=fake_load_env),
+            patch.object(supervisor.signal, 'signal', side_effect=lambda sig, fn: handlers.update({sig: fn})),
+            patch.object(supervisor.time, 'sleep', side_effect=stop),
+            patch.object(supervisor.subprocess, 'Popen', return_value=child) as popen,
+        ):
+            self.assertEqual(supervisor.main(), 0)
+        self.assertEqual(popen.call_count, 2)
+        api_env = popen.call_args_list[0].kwargs['env']
+        sim_env = popen.call_args_list[1].kwargs['env']
+        self.assertEqual(api_env['MOD_DB_USER'], 'mod_ro')
+        self.assertEqual(sim_env['MOD_DB_USER'], 'mod_rw')

@@ -833,3 +833,74 @@ def test_cycle_error_resets_fast_baseline_and_allocator(tmp_path, monkeypatch):
     assert result.status == 'ERROR'
     assert service._fast_baseline is None
     assert service._fast_allocator is None
+
+
+def test_runtime_service_commits_deferred_outbox_prune(tmp_path, monkeypatch):
+    """When prune_outbox_deferred deletes rows, runtime service must commit the prune transaction."""
+    monkeypatch.setenv("MOD_SIMULATION_ENGINE_ENABLED", "true")
+    config = SimulatorRuntimeConfig(
+        fail_closed_flag_path=tmp_path / "flag.flag",
+        fuse_state_path=tmp_path / "fuse.json",
+        status_file_path=tmp_path / "status.json",
+        audit_log_path=tmp_path / "audit.log",
+    )
+    conn = _mock_conn_with_lock()
+    service = SimulatorRuntimeService(
+        config=config,
+        conn=conn,
+        projection_writer=lambda _conn, _records: None,
+        seed=42,
+    )
+    service._fast_baseline = _mock_fast_baseline()
+    service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
+    service._construction_baseline = _mock_construction_baseline()
+    service._construction_allocator = IdAllocator(service._construction_baseline.next_ids)
+    monkeypatch.setattr(
+        "simulation.runtime_service.SimulationWriter.write_events",
+        lambda self, events, **kwargs: MagicMock(success=True),
+    )
+    monkeypatch.setattr(PostCycleSelfChecker, "check_fast_movie_events", lambda c, evts: (True, ""))
+    monkeypatch.setattr("simulation.runtime_service.prune_outbox_deferred", lambda _conn: 3)
+
+    result = service.step_cycle(datetime(2026, 9, 7, 10, tzinfo=HK_TZ))
+    assert result.status == "SUCCESS"
+    # 1 commit for business + outbox write, 1 commit for deferred prune
+    assert conn.commit.call_count == 2
+
+
+def test_runtime_service_cf_ai_defaults_fail_closed(tmp_path, monkeypatch):
+    """When MOD_CF_AI_ENABLED is unset, slow-movie cycle must default to disabled."""
+    monkeypatch.setenv("MOD_SIMULATION_ENGINE_ENABLED", "true")
+    monkeypatch.delenv("MOD_CF_AI_ENABLED", raising=False)
+
+    config = SimulatorRuntimeConfig(
+        slow_movie_interval_cycles=1,
+        fail_closed_flag_path=tmp_path / "flag.flag",
+        fuse_state_path=tmp_path / "fuse.json",
+        status_file_path=tmp_path / "status.json",
+        audit_log_path=tmp_path / "audit.log",
+    )
+    conn = _mock_conn_with_lock()
+    propeller = MagicMock()
+    backfiller = MagicMock()
+    service = SimulatorRuntimeService(
+        config=config,
+        conn=conn,
+        propeller=propeller,
+        backfiller=backfiller,
+        seed=42,
+    )
+    service._fast_baseline = _mock_fast_baseline()
+    service._fast_allocator = IdAllocator(service._fast_baseline.next_ids)
+    service._construction_baseline = _mock_construction_baseline()
+    service._construction_allocator = IdAllocator(service._construction_baseline.next_ids)
+    monkeypatch.setattr(service, "_generate_slow_movie_events", lambda _d: [MagicMock()])
+    monkeypatch.setattr(
+        "simulation.runtime_service.ConstructionWriter.write_construction_events",
+        lambda self, events, **kwargs: MagicMock(success=True),
+    )
+    monkeypatch.setattr(PostCycleSelfChecker, "check_construction_events", lambda c, evts: (True, ""))
+
+    result = service.step_cycle(datetime(2026, 9, 7, 10, tzinfo=HK_TZ))
+    assert result.status == "SUCCESS"
+    backfiller.run_cycle.assert_not_called()

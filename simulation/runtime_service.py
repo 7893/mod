@@ -675,7 +675,7 @@ class SimulatorRuntimeService:
                     )
 
                 # KI-062: Trickle backfill AI narrative (guarded by 3,000 neurons/day QuotaWatchdog)
-                if os.getenv("MOD_CF_AI_ENABLED", "true").lower() == "true":
+                if os.getenv("MOD_CF_AI_ENABLED", "false").lower() == "true":
                     if self.backfiller is not None:
                         self.backfiller.run_cycle(batch_size=1, auto_commit=False)
                     elif not (type(conn).__name__ == "MagicMock" or type(conn).__name__ == "Mock"):
@@ -724,8 +724,12 @@ class SimulatorRuntimeService:
 
             # KI-085 #3: Execute deferred outbox prune outside the critical transaction path
             try:
-                prune_outbox_deferred(conn)
+                pruned = prune_outbox_deferred(conn)
+                if pruned > 0:
+                    conn.commit()
             except Exception as prune_ex:
+                with suppress(Exception):
+                    conn.rollback()
                 logger.warning("Deferred outbox prune failed (non-fatal): %s", prune_ex)
             if not lifecycle_state_saved:
                 err_msg = "Committed lifecycle events but failed to persist restart state; service halted"

@@ -211,147 +211,164 @@ def load_fallback_snapshot() -> dict:
 def build_dashboard_snapshot(conn: Connection | None) -> dict:
     if conn is None:
         return load_fallback_snapshot()
-    try:
-        # 1. 确定基准业务日期锚点（严格锁定在今日或 daily_stats 最新日期，彻底杜绝 2027 年未来模拟穿越）
-        anchor_row = conn.execute(text("SELECT MAX(stat_date) AS stat_date FROM daily_stats")).mappings().one()
-        today_display_date = datetime.now(get_display_timezone()).date()
-        anchor_date = anchor_row["stat_date"] or today_display_date
-        anchor_date_str = str(anchor_date)
-        sql_params = {"anchor_date": anchor_date}
+    # 1. 确定基准业务日期锚点（严格锁定在今日或 daily_stats 最新日期，彻底杜绝 2027 年未来模拟穿越）
+    anchor_row = conn.execute(text("SELECT MAX(stat_date) AS stat_date FROM daily_stats")).mappings().one()
+    today_display_date = datetime.now(get_display_timezone()).date()
+    anchor_date = anchor_row["stat_date"] or today_display_date
+    anchor_date_str = str(anchor_date)
+    sql_params = {"anchor_date": anchor_date}
 
-        # Overview - 优化版：使用 daily_stats 汇总表 + 简化查询
-        overview_sql = f"""
-        SELECT
-            ds.org_count AS org_total,
-            ds.user_count AS contacts_total,
-            (SELECT COUNT(DISTINCT org_id) FROM sys_user) AS contacts_covered_orgs,
-            ds.doc_count AS docs_total,
-            ds.doc_today AS docs_today_added,
-            ds.stat_date AS docs_as_of_date,
-            ds.doc_line_count,
-            ds.voucher_count AS vouchers_total,
-            ds.voucher_today AS vouchers_today_added,
-            ds.stat_date AS vouchers_as_of_date,
-            ds.voucher_line_count,
-            ds.link_count,
-            ds.integration_count,
-            ds.integration_success,
-            ds.dual_run_count,
-            ds.snapshot_count,
-            (SELECT COUNT(*) FROM org_unit WHERE status IN {SQL_LAUNCHED_STATUSES}) AS launched,
-            (SELECT COUNT(*) FROM org_unit WHERE status = '{ORG_STATUS_DUAL_RUNNING}') AS dual_run,
-            (SELECT ROUND(AVG(progress), 1) FROM construction_task) AS construction_pct,
-            (SELECT CAST(REPLACE(voucher_generate_success_rate, '%', '') AS DECIMAL(10, 2))
-             FROM metric_snapshot WHERE snapshot_date <= :anchor_date ORDER BY snapshot_date DESC LIMIT 1) AS voucher_success_pct,
-            ROUND(100.0 * ds.integration_success / NULLIF(ds.integration_count, 0), 2) AS integration_success_pct,
-            (SELECT SUM(unresolved) FROM issue_metric_snapshot WHERE date = (SELECT MAX(date) FROM issue_metric_snapshot WHERE date <= :anchor_date)) AS unresolved_issues,
-            (SELECT SUM(high) FROM risk_metric_snapshot WHERE date = (SELECT MAX(date) FROM risk_metric_snapshot WHERE date <= :anchor_date)) AS high_risk,
-            (SELECT COUNT(*) FROM org_unit WHERE start_date = :anchor_date AND batch_id = 8) AS org_today_added,
-            (SELECT COUNT(DISTINCT region) FROM org_unit) AS regions,
-            :anchor_date AS as_of_date
-        FROM daily_stats ds
-        WHERE ds.stat_date = :anchor_date
-        """
-        ov_row = dict(conn.execute(text(overview_sql), sql_params).mappings().one())
-        org_total = ov_row["org_total"]
-        contacts_covered_orgs = ov_row["contacts_covered_orgs"]
-        contacts_coverage_pct = round(contacts_covered_orgs * 100.0 / org_total, 2) if org_total else 0.0
-        launched = ov_row["launched"]
-        launched_pct = round(launched * 100.0 / org_total, 2) if org_total else 0.0
-        today_display = datetime.now(get_display_timezone()).strftime("%Y-%m-%d")
-        docs_as_of_date = str(ov_row.get("docs_as_of_date") or today_display)
-        vouchers_as_of_date = str(ov_row.get("vouchers_as_of_date") or today_display)
-        as_of_date = str(ov_row["as_of_date"])
+    # Overview - 优化版：使用 daily_stats 汇总表 + 简化查询
+    overview_sql = f"""
+    SELECT
+        ds.org_count AS org_total,
+        ds.user_count AS contacts_total,
+        (SELECT COUNT(DISTINCT org_id) FROM sys_user) AS contacts_covered_orgs,
+        ds.doc_count AS docs_total,
+        ds.doc_today AS docs_today_added,
+        ds.stat_date AS docs_as_of_date,
+        ds.doc_line_count,
+        ds.voucher_count AS vouchers_total,
+        ds.voucher_today AS vouchers_today_added,
+        ds.stat_date AS vouchers_as_of_date,
+        ds.voucher_line_count,
+        ds.link_count,
+        ds.integration_count,
+        ds.integration_success,
+        ds.dual_run_count,
+        ds.snapshot_count,
+        (SELECT COUNT(*) FROM org_unit WHERE status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+        (SELECT COUNT(*) FROM org_unit WHERE status = '{ORG_STATUS_DUAL_RUNNING}') AS dual_run,
+        (SELECT ROUND(AVG(progress), 1) FROM construction_task) AS construction_pct,
+        (SELECT CAST(REPLACE(voucher_generate_success_rate, '%', '') AS DECIMAL(10, 2))
+         FROM metric_snapshot WHERE snapshot_date <= :anchor_date ORDER BY snapshot_date DESC LIMIT 1) AS voucher_success_pct,
+        ROUND(100.0 * ds.integration_success / NULLIF(ds.integration_count, 0), 2) AS integration_success_pct,
+        (SELECT SUM(unresolved) FROM issue_metric_snapshot WHERE date = (SELECT MAX(date) FROM issue_metric_snapshot WHERE date <= :anchor_date)) AS unresolved_issues,
+        (SELECT SUM(high) FROM risk_metric_snapshot WHERE date = (SELECT MAX(date) FROM risk_metric_snapshot WHERE date <= :anchor_date)) AS high_risk,
+        (SELECT COUNT(*) FROM org_unit WHERE start_date = :anchor_date AND batch_id = 8) AS org_today_added,
+        (SELECT COUNT(DISTINCT region) FROM org_unit) AS regions,
+        :anchor_date AS as_of_date
+    FROM daily_stats ds
+    WHERE ds.stat_date = :anchor_date
+    """
+    ov_row = dict(conn.execute(text(overview_sql), sql_params).mappings().one())
+    org_total = ov_row["org_total"]
+    contacts_covered_orgs = ov_row["contacts_covered_orgs"]
+    contacts_coverage_pct = round(contacts_covered_orgs * 100.0 / org_total, 2) if org_total else 0.0
+    launched = ov_row["launched"]
+    launched_pct = round(launched * 100.0 / org_total, 2) if org_total else 0.0
+    today_display = datetime.now(get_display_timezone()).strftime("%Y-%m-%d")
+    docs_as_of_date = str(ov_row.get("docs_as_of_date") or today_display)
+    vouchers_as_of_date = str(ov_row.get("vouchers_as_of_date") or today_display)
+    as_of_date = str(ov_row["as_of_date"])
 
-        # Batches (pre-aggregate standard 8-batch rollout matrix)
-        rollout_rows = mappings(conn, f"""
-        WITH batch_mapped AS (
-            SELECT 
-                o.id,
-                o.status,
-                {SQL_INFERRED_BATCH_ID} AS batchId
-            FROM org_unit o
-        ),
-        task_agg AS (
-            SELECT org_id, ROUND(AVG(progress), 1) AS construction_pct
-            FROM construction_task
-            GROUP BY org_id
-        ),
-        batch_names AS (
-            SELECT 1 AS id, '第一批' AS name UNION ALL
-            SELECT 2, '第二批' UNION ALL
-            SELECT 3, '第三批' UNION ALL
-            SELECT 4, '第四批' UNION ALL
-            SELECT 5, '第五批' UNION ALL
-            SELECT 6, '第六批' UNION ALL
-            SELECT 7, '第七批' UNION ALL
-            SELECT 8, '第八批'
-        )
-        SELECT
-            bn.id AS batchId,
-            bn.name AS name,
-            COUNT(bm.id) AS total,
-            SUM(bm.status IN {SQL_LAUNCHED_STATUSES}) AS launched,
-            SUM(bm.status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`,
-            ROUND(100.0 * SUM(bm.status IN {SQL_LAUNCHED_STATUSES}) / NULLIF(COUNT(bm.id), 0), 1) AS launchedPct,
-            ROUND(AVG(COALESCE(t.construction_pct, 0)), 1) AS constructionPct
-        FROM batch_names bn
-        LEFT JOIN batch_mapped bm ON bm.batchId = bn.id
-        LEFT JOIN task_agg t ON t.org_id = bm.id
-        GROUP BY bn.id, bn.name
-        ORDER BY bn.id
-        """)
-        stage_labels = {
-            1: "工序7 · 标杆示范",
-            2: "工序6 · 稳态优化",
-            3: "工序5 · 季结巡检",
-            4: "工序4 · 首月巩固",
-            5: "工序3 · 脱轨初投",
-            6: "工序2 · 双轨冲刺",
-            7: "工序1 · 联调赋能",
-            8: "工序0 · 动态储备",
-        }
-        for b in rollout_rows:
-            bid = b["batchId"]
-            b["stageLabel"] = stage_labels.get(bid, "建设推进")
-            b["total"] = numeric(b["total"]) or 0
-            if bid == 8:
-                b["launched"] = 0
-                b["dual"] = 0
-                b["launchedPct"] = 0.0
-                b["constructionPct"] = 0.0
-            else:
-                b["launched"] = numeric(b["launched"]) or 0
-                b["dual"] = numeric(b["dual"]) or 0
-                b["launchedPct"] = numeric(b["launchedPct"]) or 0.0
-                b["constructionPct"] = numeric(b["constructionPct"]) or 0.0
+    # Batches (pre-aggregate standard 8-batch rollout matrix)
+    rollout_rows = mappings(conn, f"""
+    WITH batch_mapped AS (
+        SELECT 
+            o.id,
+            o.status,
+            {SQL_INFERRED_BATCH_ID} AS batchId
+        FROM org_unit o
+    ),
+    task_agg AS (
+        SELECT org_id, ROUND(AVG(progress), 1) AS construction_pct
+        FROM construction_task
+        GROUP BY org_id
+    ),
+    batch_names AS (
+        SELECT 1 AS id, '第一批' AS name UNION ALL
+        SELECT 2, '第二批' UNION ALL
+        SELECT 3, '第三批' UNION ALL
+        SELECT 4, '第四批' UNION ALL
+        SELECT 5, '第五批' UNION ALL
+        SELECT 6, '第六批' UNION ALL
+        SELECT 7, '第七批' UNION ALL
+        SELECT 8, '第八批'
+    )
+    SELECT
+        bn.id AS batchId,
+        bn.name AS name,
+        COUNT(bm.id) AS total,
+        SUM(bm.status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+        SUM(bm.status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`,
+        ROUND(100.0 * SUM(bm.status IN {SQL_LAUNCHED_STATUSES}) / NULLIF(COUNT(bm.id), 0), 1) AS launchedPct,
+        ROUND(AVG(COALESCE(t.construction_pct, 0)), 1) AS constructionPct
+    FROM batch_names bn
+    LEFT JOIN batch_mapped bm ON bm.batchId = bn.id
+    LEFT JOIN task_agg t ON t.org_id = bm.id
+    GROUP BY bn.id, bn.name
+    ORDER BY bn.id
+    """)
+    stage_labels = {
+        1: "工序7 · 标杆示范",
+        2: "工序6 · 稳态优化",
+        3: "工序5 · 季结巡检",
+        4: "工序4 · 首月巩固",
+        5: "工序3 · 脱轨初投",
+        6: "工序2 · 双轨冲刺",
+        7: "工序1 · 联调赋能",
+        8: "工序0 · 动态储备",
+    }
+    for b in rollout_rows:
+        bid = b["batchId"]
+        b["stageLabel"] = stage_labels.get(bid, "建设推进")
+        b["total"] = numeric(b["total"]) or 0
+        if bid == 8:
+            b["launched"] = 0
+            b["dual"] = 0
+            b["launchedPct"] = 0.0
+            b["constructionPct"] = 0.0
+        else:
+            b["launched"] = numeric(b["launched"]) or 0
+            b["dual"] = numeric(b["dual"]) or 0
+            b["launchedPct"] = numeric(b["launchedPct"]) or 0.0
+            b["constructionPct"] = numeric(b["constructionPct"]) or 0.0
 
-        # KI-065 / KI-079: A4 走势以今日为中心构建对称时间窗（前3节点 + 今日居中 + 后3节点，共7节点）
-        # 过滤 COUNT(*) >= 1000 剔除单次试点/增量入库噪声，确保各节点为全量快照
-        past_trend_rows = mappings(conn, f"""
-        SELECT
-            DATE_FORMAT(snapshot_date, '%m-%d') AS date,
-            DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
-            SUM(status IN {SQL_LAUNCHED_STATUSES}) AS launched,
-            SUM(status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`
-        FROM rollout_status_snapshot
-        WHERE snapshot_date < :center_date
-        GROUP BY snapshot_date
-        HAVING COUNT(*) >= 1000
-        ORDER BY snapshot_date DESC
-        LIMIT 3
-        """, {"center_date": today_display_date})
-        past_trend_rows.reverse()
+    # KI-065 / KI-079: A4 走势以今日为中心构建对称时间窗（前3节点 + 今日居中 + 后3节点，共7节点）
+    # 过滤 COUNT(*) >= 1000 剔除单次试点/增量入库噪声，确保各节点为全量快照
+    past_trend_rows = mappings(conn, f"""
+    SELECT
+        DATE_FORMAT(snapshot_date, '%m-%d') AS date,
+        DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
+        SUM(status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+        SUM(status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`
+    FROM rollout_status_snapshot
+    WHERE snapshot_date < :center_date
+    GROUP BY snapshot_date
+    HAVING COUNT(*) >= 1000
+    ORDER BY snapshot_date DESC
+    LIMIT 3
+    """, {"center_date": today_display_date})
+    past_trend_rows.reverse()
 
-        # 今日居中基准点：与总盘 KPI 卡片（launched 与 dual_run）100% 严丝合缝
-        today_trend_row = {
-            "date": today_display_date.strftime("%m-%d"),
-            "fullDate": str(today_display_date),
-            "launched": launched,
-            "dual": ov_row["dual_run"],
-        }
+    # 今日居中基准点：与总盘 KPI 卡片（launched 与 dual_run）100% 严丝合缝
+    today_trend_row = {
+        "date": today_display_date.strftime("%m-%d"),
+        "fullDate": str(today_display_date),
+        "launched": launched,
+        "dual": ov_row["dual_run"],
+    }
 
-        future_trend_rows = mappings(conn, f"""
+    future_trend_rows = mappings(conn, f"""
+    SELECT
+        DATE_FORMAT(snapshot_date, '%m-%d') AS date,
+        DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
+        SUM(status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+        SUM(status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`
+    FROM rollout_status_snapshot
+    WHERE snapshot_date > :center_date
+    GROUP BY snapshot_date
+    HAVING COUNT(*) >= 1000
+    ORDER BY snapshot_date ASC
+    LIMIT 3
+    """, {"center_date": today_display_date})
+
+    # 若过去或未来快照不足3个，向另一侧补充以保障共计7个走势节点
+    needed_past = 3 - len(past_trend_rows)
+    needed_future = 3 - len(future_trend_rows)
+    if needed_past > 0 and len(future_trend_rows) == 3:
+        extra_future = mappings(conn, f"""
         SELECT
             DATE_FORMAT(snapshot_date, '%m-%d') AS date,
             DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
@@ -362,409 +379,388 @@ def build_dashboard_snapshot(conn: Connection | None) -> dict:
         GROUP BY snapshot_date
         HAVING COUNT(*) >= 1000
         ORDER BY snapshot_date ASC
-        LIMIT 3
-        """, {"center_date": today_display_date})
-
-        # 若过去或未来快照不足3个，向另一侧补充以保障共计7个走势节点
-        needed_past = 3 - len(past_trend_rows)
-        needed_future = 3 - len(future_trend_rows)
-        if needed_past > 0 and len(future_trend_rows) == 3:
-            extra_future = mappings(conn, f"""
-            SELECT
-                DATE_FORMAT(snapshot_date, '%m-%d') AS date,
-                DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
-                SUM(status IN {SQL_LAUNCHED_STATUSES}) AS launched,
-                SUM(status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`
-            FROM rollout_status_snapshot
-            WHERE snapshot_date > :center_date
-            GROUP BY snapshot_date
-            HAVING COUNT(*) >= 1000
-            ORDER BY snapshot_date ASC
-            LIMIT :extra_limit OFFSET 3
-            """, {"center_date": today_display_date, "extra_limit": needed_past})
-            future_trend_rows.extend(extra_future)
-        elif needed_future > 0 and len(past_trend_rows) == 3:
-            extra_past = mappings(conn, f"""
-            SELECT
-                DATE_FORMAT(snapshot_date, '%m-%d') AS date,
-                DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
-                SUM(status IN {SQL_LAUNCHED_STATUSES}) AS launched,
-                SUM(status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`
-            FROM rollout_status_snapshot
-            WHERE snapshot_date < :center_date
-            GROUP BY snapshot_date
-            HAVING COUNT(*) >= 1000
-            ORDER BY snapshot_date DESC
-            LIMIT :extra_limit OFFSET 3
-            """, {"center_date": today_display_date, "extra_limit": needed_future})
-            past_trend_rows = list(reversed(extra_past)) + past_trend_rows
-
-        trend_rows = past_trend_rows + [today_trend_row] + future_trend_rows
-        for r in trend_rows:
-            r["launched"] = numeric(r["launched"])
-            r["dual"] = numeric(r["dual"])
-
-        rollout_trend_rows = mappings(conn, f"""
-        WITH recent_dates AS (
-            SELECT snapshot_date
-            FROM rollout_status_snapshot
-            WHERE snapshot_date <= :anchor_date
-            GROUP BY snapshot_date
-            HAVING COUNT(*) >= 1000
-            ORDER BY snapshot_date DESC
-            LIMIT 7
-        ),
-        batch_mapped AS (
-            SELECT
-                o.id,
-                {SQL_INFERRED_BATCH_ID} AS batchId
-            FROM org_unit o
-        ),
-        batch_names AS (
-            SELECT 1 AS id, '第一批' AS name UNION ALL
-            SELECT 2, '第二批' UNION ALL SELECT 3, '第三批' UNION ALL
-            SELECT 4, '第四批' UNION ALL SELECT 5, '第五批' UNION ALL
-            SELECT 6, '第六批' UNION ALL SELECT 7, '第七批' UNION ALL
-            SELECT 8, '第八批'
-        )
+        LIMIT :extra_limit OFFSET 3
+        """, {"center_date": today_display_date, "extra_limit": needed_past})
+        future_trend_rows.extend(extra_future)
+    elif needed_future > 0 and len(past_trend_rows) == 3:
+        extra_past = mappings(conn, f"""
         SELECT
-            DATE_FORMAT(r.snapshot_date, '%m-%d') AS date,
-            DATE_FORMAT(r.snapshot_date, '%Y-%m-%d') AS fullDate,
-            bm.batchId AS batchId,
-            bn.name AS name,
-            COUNT(*) AS total,
-            ROUND(100.0 * SUM(r.status IN {SQL_LAUNCHED_STATUSES}) / COUNT(*), 1) AS launchedPct,
-            ROUND(100.0 * SUM(r.status = '{ORG_STATUS_DUAL_RUNNING}') / COUNT(*), 1) AS dualPct
-        FROM rollout_status_snapshot r
-        JOIN recent_dates d ON d.snapshot_date = r.snapshot_date
-        JOIN batch_mapped bm ON bm.id = r.org_id
-        JOIN batch_names bn ON bn.id = bm.batchId
-        GROUP BY r.snapshot_date, bm.batchId, bn.name
-        ORDER BY r.snapshot_date, bm.batchId
-        """, {"anchor_date": anchor_date})
-        for row in rollout_trend_rows:
-            for key in ("batchId", "total", "launchedPct", "dualPct"):
-                row[key] = numeric(row[key])
+            DATE_FORMAT(snapshot_date, '%m-%d') AS date,
+            DATE_FORMAT(snapshot_date, '%Y-%m-%d') AS fullDate,
+            SUM(status IN {SQL_LAUNCHED_STATUSES}) AS launched,
+            SUM(status = '{ORG_STATUS_DUAL_RUNNING}') AS `dual`
+        FROM rollout_status_snapshot
+        WHERE snapshot_date < :center_date
+        GROUP BY snapshot_date
+        HAVING COUNT(*) >= 1000
+        ORDER BY snapshot_date DESC
+        LIMIT :extra_limit OFFSET 3
+        """, {"center_date": today_display_date, "extra_limit": needed_future})
+        past_trend_rows = list(reversed(extra_past)) + past_trend_rows
 
-        # KI-079: 若今日尚未生成全量快照，从当前 org_unit 批次聚合结果（rollout_rows）补充今日数据点
-        existing_trend_dates = {r["fullDate"] for r in rollout_trend_rows}
-        today_full_date = str(today_display_date)
-        if today_full_date not in existing_trend_dates:
-            today_date_str = today_display_date.strftime("%m-%d")
-            for b in rollout_rows:
-                tot = numeric(b.get("total", 0)) or 0
-                dl = numeric(b.get("dual", 0)) or 0
-                rollout_trend_rows.append({
-                    "date": today_date_str,
-                    "fullDate": today_full_date,
-                    "batchId": b["batchId"],
-                    "name": b["name"],
-                    "total": tot,
-                    "launchedPct": numeric(b.get("launchedPct", 0.0)) or 0.0,
-                    "dualPct": round(100.0 * dl / tot, 1) if tot > 0 else 0.0,
-                })
+    trend_rows = past_trend_rows + [today_trend_row] + future_trend_rows
+    for r in trend_rows:
+        r["launched"] = numeric(r["launched"])
+        r["dual"] = numeric(r["dual"])
 
-        # 保留最近 7 个日期的批次推进数据，并按日期和批次排序
-        distinct_dates = sorted(list({r["fullDate"] for r in rollout_trend_rows}))[-7:]
-        rollout_trend_rows = [r for r in rollout_trend_rows if r["fullDate"] in distinct_dates]
-        rollout_trend_rows.sort(key=lambda r: (r["fullDate"], r["batchId"]))
+    rollout_trend_rows = mappings(conn, f"""
+    WITH recent_dates AS (
+        SELECT snapshot_date
+        FROM rollout_status_snapshot
+        WHERE snapshot_date <= :anchor_date
+        GROUP BY snapshot_date
+        HAVING COUNT(*) >= 1000
+        ORDER BY snapshot_date DESC
+        LIMIT 7
+    ),
+    batch_mapped AS (
+        SELECT
+            o.id,
+            {SQL_INFERRED_BATCH_ID} AS batchId
+        FROM org_unit o
+    ),
+    batch_names AS (
+        SELECT 1 AS id, '第一批' AS name UNION ALL
+        SELECT 2, '第二批' UNION ALL SELECT 3, '第三批' UNION ALL
+        SELECT 4, '第四批' UNION ALL SELECT 5, '第五批' UNION ALL
+        SELECT 6, '第六批' UNION ALL SELECT 7, '第七批' UNION ALL
+        SELECT 8, '第八批'
+    )
+    SELECT
+        DATE_FORMAT(r.snapshot_date, '%m-%d') AS date,
+        DATE_FORMAT(r.snapshot_date, '%Y-%m-%d') AS fullDate,
+        bm.batchId AS batchId,
+        bn.name AS name,
+        COUNT(*) AS total,
+        ROUND(100.0 * SUM(r.status IN {SQL_LAUNCHED_STATUSES}) / COUNT(*), 1) AS launchedPct,
+        ROUND(100.0 * SUM(r.status = '{ORG_STATUS_DUAL_RUNNING}') / COUNT(*), 1) AS dualPct
+    FROM rollout_status_snapshot r
+    JOIN recent_dates d ON d.snapshot_date = r.snapshot_date
+    JOIN batch_mapped bm ON bm.id = r.org_id
+    JOIN batch_names bn ON bn.id = bm.batchId
+    GROUP BY r.snapshot_date, bm.batchId, bn.name
+    ORDER BY r.snapshot_date, bm.batchId
+    """, {"anchor_date": anchor_date})
+    for row in rollout_trend_rows:
+        for key in ("batchId", "total", "launchedPct", "dualPct"):
+            row[key] = numeric(row[key])
 
-        # 34 Provinces - aggregate the same business day used by the overview metrics.
-        region_rows = mappings(conn, REGION_SUMMARY_SQL, sql_params)
-
-        NATIONAL_PROVINCE_ORDER = [
-            # 华北
-            "北京", "天津", "河北", "山西", "内蒙古",
-            # 东北
-            "辽宁", "吉林", "黑龙江",
-            # 华东
-            "上海", "江苏", "浙江", "安徽", "福建", "江西", "山东",
-            # 中南
-            "河南", "湖北", "湖南", "广东", "广西", "海南",
-            # 西南
-            "重庆", "四川", "贵州", "云南", "西藏",
-            # 西北
-            "陕西", "甘肃", "青海", "宁夏", "新疆",
-            # 港澳台（置于末尾）
-            "香港", "澳门", "台湾",
-        ]
-
-        provinces = []
-        for r in region_rows:
-            disp = normalize_region(r["region"])
-            t_added = int(numeric(r.get("todayAdded", 0)) or 0)
-            tot = int(numeric(r.get("total", 0)) or 0)
-            lnch = int(numeric(r.get("launched", 0)) or 0)
-            dl = int(numeric(r.get("dual", 0)) or 0)
-            cpct = numeric(r.get("constructionPct", 0)) or 0.0
-            provinces.append({
-                "name": disp,
-                "region": r["region"],
-                "regionDisplay": disp,
-                "value": cpct,
+    # KI-079: 若今日尚未生成全量快照，从当前 org_unit 批次聚合结果（rollout_rows）补充今日数据点
+    existing_trend_dates = {r["fullDate"] for r in rollout_trend_rows}
+    today_full_date = str(today_display_date)
+    if today_full_date not in existing_trend_dates:
+        today_date_str = today_display_date.strftime("%m-%d")
+        for b in rollout_rows:
+            tot = numeric(b.get("total", 0)) or 0
+            dl = numeric(b.get("dual", 0)) or 0
+            rollout_trend_rows.append({
+                "date": today_date_str,
+                "fullDate": today_full_date,
+                "batchId": b["batchId"],
+                "name": b["name"],
                 "total": tot,
-                "launched": lnch,
-                "dual": dl,
-                "constructionPct": cpct,
-                "todayAdded": t_added,
-                "docsTodayAdded": t_added,
-                "docsAddedAsOfDate": docs_as_of_date,
-                "vouchersAddedAsOfDate": vouchers_as_of_date,
+                "launchedPct": numeric(b.get("launchedPct", 0.0)) or 0.0,
+                "dualPct": round(100.0 * dl / tot, 1) if tot > 0 else 0.0,
             })
 
-        def _prov_order_key(item: dict) -> int:
-            p_name = item.get("name", "")
-            try:
-                return NATIONAL_PROVINCE_ORDER.index(p_name)
-            except ValueError:
-                return 999
+    # 保留最近 7 个日期的批次推进数据，并按日期和批次排序
+    distinct_dates = sorted(list({r["fullDate"] for r in rollout_trend_rows}))[-7:]
+    rollout_trend_rows = [r for r in rollout_trend_rows if r["fullDate"] in distinct_dates]
+    rollout_trend_rows.sort(key=lambda r: (r["fullDate"], r["batchId"]))
 
-        provinces.sort(key=_prov_order_key)
+    # 34 Provinces - aggregate the same business day used by the overview metrics.
+    region_rows = mappings(conn, REGION_SUMMARY_SQL, sql_params)
 
-        # Overview and operations reuse the same daily_stats row so one API payload is internally consistent.
-        ops = ov_row
-        operations = {
-            "businessDocument": ops["docs_total"],
-            "businessDocumentLine": ops["doc_line_count"],
-            "accountingVoucher": ops["vouchers_total"],
-            "accountingVoucherLine": ops["voucher_line_count"],
-            "documentVoucherLink": ops["link_count"],
-            "integrationResult": ops["integration_count"],
-            "integrationSuccess": ops["integration_success"],
-            "integrationFailed": max(0, ops["integration_count"] - ops["integration_success"]),
-            "dualRunResult": ops["dual_run_count"],
+    NATIONAL_PROVINCE_ORDER = [
+        # 华北
+        "北京", "天津", "河北", "山西", "内蒙古",
+        # 东北
+        "辽宁", "吉林", "黑龙江",
+        # 华东
+        "上海", "江苏", "浙江", "安徽", "福建", "江西", "山东",
+        # 中南
+        "河南", "湖北", "湖南", "广东", "广西", "海南",
+        # 西南
+        "重庆", "四川", "贵州", "云南", "西藏",
+        # 西北
+        "陕西", "甘肃", "青海", "宁夏", "新疆",
+        # 港澳台（置于末尾）
+        "香港", "澳门", "台湾",
+    ]
+
+    provinces = []
+    for r in region_rows:
+        disp = normalize_region(r["region"])
+        t_added = int(numeric(r.get("todayAdded", 0)) or 0)
+        tot = int(numeric(r.get("total", 0)) or 0)
+        lnch = int(numeric(r.get("launched", 0)) or 0)
+        dl = int(numeric(r.get("dual", 0)) or 0)
+        cpct = numeric(r.get("constructionPct", 0)) or 0.0
+        provinces.append({
+            "name": disp,
+            "region": r["region"],
+            "regionDisplay": disp,
+            "value": cpct,
+            "total": tot,
+            "launched": lnch,
+            "dual": dl,
+            "constructionPct": cpct,
+            "todayAdded": t_added,
+            "docsTodayAdded": t_added,
+            "docsAddedAsOfDate": docs_as_of_date,
+            "vouchersAddedAsOfDate": vouchers_as_of_date,
+        })
+
+    def _prov_order_key(item: dict) -> int:
+        p_name = item.get("name", "")
+        try:
+            return NATIONAL_PROVINCE_ORDER.index(p_name)
+        except ValueError:
+            return 999
+
+    provinces.sort(key=_prov_order_key)
+
+    # Overview and operations reuse the same daily_stats row so one API payload is internally consistent.
+    ops = ov_row
+    operations = {
+        "businessDocument": ops["docs_total"],
+        "businessDocumentLine": ops["doc_line_count"],
+        "accountingVoucher": ops["vouchers_total"],
+        "accountingVoucherLine": ops["voucher_line_count"],
+        "documentVoucherLink": ops["link_count"],
+        "integrationResult": ops["integration_count"],
+        "integrationSuccess": ops["integration_success"],
+        "integrationFailed": max(0, ops["integration_count"] - ops["integration_success"]),
+        "dualRunResult": ops["dual_run_count"],
+    }
+    operation_trend_source = mappings(conn, """
+    SELECT
+        DATE_FORMAT(stat_date, '%m-%d') AS date,
+        DATE_FORMAT(stat_date, '%Y-%m-%d') AS fullDate,
+        doc_today AS documents,
+        voucher_today AS vouchers,
+        integration_count AS integrationTotal,
+        integration_success AS integrationSuccess
+    FROM daily_stats
+    WHERE stat_date <= :anchor_date
+    ORDER BY stat_date DESC
+    LIMIT 8
+    """, {"anchor_date": anchor_date})
+    for row in operation_trend_source:
+        if str(row["fullDate"]) == anchor_date_str:
+            row.update({
+                "documents": ov_row["docs_today_added"],
+                "vouchers": ov_row["vouchers_today_added"],
+                "integrationTotal": ov_row["integration_count"],
+                "integrationSuccess": ov_row["integration_success"],
+            })
+    operations_trend = build_operations_trend(operation_trend_source)
+    dual_type_rows = mappings(conn, """
+    SELECT check_type, result, COUNT(*) AS count
+    FROM dual_run_result
+    WHERE check_date <= :anchor_date
+    GROUP BY check_type, result
+    """, {"anchor_date": anchor_date})
+    dual_consistent = 0
+    dual_inconsistent = 0
+    breakdown_by_type = {}
+    for r in dual_type_rows:
+        ct = r["check_type"]
+        res = r["result"]
+        cnt = int(r["count"])
+        if ct not in breakdown_by_type:
+            breakdown_by_type[ct] = {"consistent": 0, "inconsistent": 0, "total": 0}
+        if res == "一致":
+            dual_consistent += cnt
+            breakdown_by_type[ct]["consistent"] += cnt
+        else:
+            dual_inconsistent += cnt
+            breakdown_by_type[ct]["inconsistent"] += cnt
+        breakdown_by_type[ct]["total"] += cnt
+
+    # KI-069: 分子与分母严格同源（均来自 dual_run_result 实时聚合统计），
+    # 杜绝分母使用 daily_stats 滞后快照导致的分子 > 分母从而一致率超过 100%（如 102.65%）
+    dual_total = dual_consistent + dual_inconsistent
+    if dual_total > 0:
+        operations["dualRunResult"] = dual_total
+    operations["dualRunConsistent"] = dual_consistent
+    operations["dualRunInconsistent"] = dual_inconsistent
+    operations["dualRunConsistencyPct"] = (
+        round(dual_consistent * 100.0 / dual_total, 2) if dual_total else 0.0
+    )
+    operations["dualRunBreakdown"] = [
+        {
+            "type": ct,
+            "consistent": data["consistent"],
+            "inconsistent": data["inconsistent"],
+            "total": data["total"],
+            "rate": round(data["consistent"] * 100.0 / data["total"], 1) if data["total"] else 0.0,
         }
-        operation_trend_source = mappings(conn, """
-        SELECT
-            DATE_FORMAT(stat_date, '%m-%d') AS date,
-            DATE_FORMAT(stat_date, '%Y-%m-%d') AS fullDate,
-            doc_today AS documents,
-            voucher_today AS vouchers,
-            integration_count AS integrationTotal,
-            integration_success AS integrationSuccess
-        FROM daily_stats
-        WHERE stat_date <= :anchor_date
-        ORDER BY stat_date DESC
-        LIMIT 8
-        """, {"anchor_date": anchor_date})
-        for row in operation_trend_source:
-            if str(row["fullDate"]) == anchor_date_str:
-                row.update({
-                    "documents": ov_row["docs_today_added"],
-                    "vouchers": ov_row["vouchers_today_added"],
-                    "integrationTotal": ov_row["integration_count"],
-                    "integrationSuccess": ov_row["integration_success"],
-                })
-        operations_trend = build_operations_trend(operation_trend_source)
-        dual_type_rows = mappings(conn, """
-        SELECT check_type, result, COUNT(*) AS count
-        FROM dual_run_result
-        WHERE check_date <= :anchor_date
-        GROUP BY check_type, result
-        """, {"anchor_date": anchor_date})
-        dual_consistent = 0
-        dual_inconsistent = 0
-        breakdown_by_type = {}
-        for r in dual_type_rows:
-            ct = r["check_type"]
-            res = r["result"]
-            cnt = int(r["count"])
-            if ct not in breakdown_by_type:
-                breakdown_by_type[ct] = {"consistent": 0, "inconsistent": 0, "total": 0}
-            if res == "一致":
-                dual_consistent += cnt
-                breakdown_by_type[ct]["consistent"] += cnt
-            else:
-                dual_inconsistent += cnt
-                breakdown_by_type[ct]["inconsistent"] += cnt
-            breakdown_by_type[ct]["total"] += cnt
+        for ct, data in sorted(breakdown_by_type.items())
+    ]
 
-        # KI-069: 分子与分母严格同源（均来自 dual_run_result 实时聚合统计），
-        # 杜绝分母使用 daily_stats 滞后快照导致的分子 > 分母从而一致率超过 100%（如 102.65%）
-        dual_total = dual_consistent + dual_inconsistent
-        if dual_total > 0:
-            operations["dualRunResult"] = dual_total
-        operations["dualRunConsistent"] = dual_consistent
-        operations["dualRunInconsistent"] = dual_inconsistent
-        operations["dualRunConsistencyPct"] = (
-            round(dual_consistent * 100.0 / dual_total, 2) if dual_total else 0.0
+    flow_params = {
+        "anchor_date": anchor_date,
+        "flow_nature": SIMULATED_FLOW_NATURE,
+        "pending_approval": DOC_STATUS_PENDING_APPROVAL,
+        "pending_voucher": DOC_STATUS_PENDING_VOUCHER,
+        "rejected": DOC_STATUS_REJECTED,
+    }
+    flow_document = dict(conn.execute(text("""
+    SELECT
+        COALESCE(SUM(status = :pending_approval), 0) AS pendingApproval,
+        COALESCE(SUM(status = :pending_voucher), 0) AS pendingVoucher,
+        COALESCE(SUM(
+            status = :rejected
+            AND approve_time >= :anchor_date
+            AND approve_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
+        ), 0) AS rejectedToday,
+        ROUND(AVG(CASE
+            WHEN approve_time >= :anchor_date
+             AND approve_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
+            THEN TIMESTAMPDIFF(SECOND, submit_time, approve_time) / 60.0
+        END), 1) AS avgApprovalMinutes
+    FROM business_document
+    WHERE submit_time >= DATE_SUB(:anchor_date, INTERVAL 30 DAY)
+      AND submit_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
+      AND nature = :flow_nature
+    """), flow_params).mappings().one())
+    flow_voucher = dict(conn.execute(text("""
+    SELECT
+        COUNT(*) AS voucherizedDocumentsToday,
+        COALESCE(SUM(DATE(submit_time) < :anchor_date), 0) AS backlogClearedToday,
+        ROUND(AVG(TIMESTAMPDIFF(SECOND, approve_time, first_voucher_time) / 60.0), 1)
+            AS avgVoucherMinutes
+    FROM (
+        SELECT d.id, d.submit_time, d.approve_time, MIN(v.gen_time) AS first_voucher_time
+        FROM accounting_voucher v
+        JOIN document_voucher_link l ON l.voucher_id = v.id
+        JOIN business_document d ON d.id = l.doc_id
+        WHERE v.gen_time >= :anchor_date
+          AND v.gen_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
+          AND d.submit_time >= DATE_SUB(:anchor_date, INTERVAL 30 DAY)
+          AND d.nature = :flow_nature
+        GROUP BY d.id, d.submit_time, d.approve_time
+    ) AS voucherized
+    """), flow_params).mappings().one())
+    operations_lifecycle = {
+        "pendingApproval": int(flow_document["pendingApproval"] or 0),
+        "pendingVoucher": int(flow_document["pendingVoucher"] or 0),
+        "rejectedToday": int(flow_document["rejectedToday"] or 0),
+        "voucherizedDocumentsToday": int(flow_voucher["voucherizedDocumentsToday"] or 0),
+        "backlogClearedToday": int(flow_voucher["backlogClearedToday"] or 0),
+        "avgApprovalMinutes": numeric(flow_document["avgApprovalMinutes"]),
+        "avgVoucherMinutes": numeric(flow_voucher["avgVoucherMinutes"]),
+        "windowDays": 30,
+    }
+    
+    # 小表行数（快速查询）
+    small_tables_sql = """
+    SELECT 
+        (SELECT COUNT(*) FROM rollout_batch) +
+        (SELECT COUNT(*) FROM org_unit) +
+        (SELECT COUNT(*) FROM sys_user) +
+        (SELECT COUNT(*) FROM training) +
+        (SELECT COUNT(*) FROM construction_task) +
+        (SELECT COUNT(*) FROM data_readiness) +
+        (SELECT COUNT(*) FROM metric_snapshot) +
+        (SELECT COUNT(*) FROM issue_metric_snapshot) +
+        (SELECT COUNT(*) FROM risk_metric_snapshot) as small_total
+    """
+    small_total = conn.execute(text(small_tables_sql)).scalar_one()
+    
+    full_rows = sum(
+        ops[key]
+        for key in (
+            "docs_total", "doc_line_count", "vouchers_total", "voucher_line_count",
+            "link_count", "integration_count", "snapshot_count",
         )
-        operations["dualRunBreakdown"] = [
-            {
-                "type": ct,
-                "consistent": data["consistent"],
-                "inconsistent": data["inconsistent"],
-                "total": data["total"],
-                "rate": round(data["consistent"] * 100.0 / data["total"], 1) if data["total"] else 0.0,
-            }
-            for ct, data in sorted(breakdown_by_type.items())
-        ]
+    ) + operations["dualRunResult"] + small_total
 
-        flow_params = {
-            "anchor_date": anchor_date,
-            "flow_nature": SIMULATED_FLOW_NATURE,
-            "pending_approval": DOC_STATUS_PENDING_APPROVAL,
-            "pending_voucher": DOC_STATUS_PENDING_VOUCHER,
-            "rejected": DOC_STATUS_REJECTED,
-        }
-        flow_document = dict(conn.execute(text("""
-        SELECT
-            COALESCE(SUM(status = :pending_approval), 0) AS pendingApproval,
-            COALESCE(SUM(status = :pending_voucher), 0) AS pendingVoucher,
-            COALESCE(SUM(
-                status = :rejected
-                AND approve_time >= :anchor_date
-                AND approve_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
-            ), 0) AS rejectedToday,
-            ROUND(AVG(CASE
-                WHEN approve_time >= :anchor_date
-                 AND approve_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
-                THEN TIMESTAMPDIFF(SECOND, submit_time, approve_time) / 60.0
-            END), 1) AS avgApprovalMinutes
-        FROM business_document
-        WHERE submit_time >= DATE_SUB(:anchor_date, INTERVAL 30 DAY)
-          AND submit_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
-          AND nature = :flow_nature
-        """), flow_params).mappings().one())
-        flow_voucher = dict(conn.execute(text("""
-        SELECT
-            COUNT(*) AS voucherizedDocumentsToday,
-            COALESCE(SUM(DATE(submit_time) < :anchor_date), 0) AS backlogClearedToday,
-            ROUND(AVG(TIMESTAMPDIFF(SECOND, approve_time, first_voucher_time) / 60.0), 1)
-                AS avgVoucherMinutes
-        FROM (
-            SELECT d.id, d.submit_time, d.approve_time, MIN(v.gen_time) AS first_voucher_time
-            FROM accounting_voucher v
-            JOIN document_voucher_link l ON l.voucher_id = v.id
-            JOIN business_document d ON d.id = l.doc_id
-            WHERE v.gen_time >= :anchor_date
-              AND v.gen_time < DATE_ADD(:anchor_date, INTERVAL 1 DAY)
-              AND d.submit_time >= DATE_SUB(:anchor_date, INTERVAL 30 DAY)
-              AND d.nature = :flow_nature
-            GROUP BY d.id, d.submit_time, d.approve_time
-        ) AS voucherized
-        """), flow_params).mappings().one())
-        operations_lifecycle = {
-            "pendingApproval": int(flow_document["pendingApproval"] or 0),
-            "pendingVoucher": int(flow_document["pendingVoucher"] or 0),
-            "rejectedToday": int(flow_document["rejectedToday"] or 0),
-            "voucherizedDocumentsToday": int(flow_voucher["voucherizedDocumentsToday"] or 0),
-            "backlogClearedToday": int(flow_voucher["backlogClearedToday"] or 0),
-            "avgApprovalMinutes": numeric(flow_document["avgApprovalMinutes"]),
-            "avgVoucherMinutes": numeric(flow_voucher["avgVoucherMinutes"]),
-            "windowDays": 30,
-        }
-        
-        # 小表行数（快速查询）
-        small_tables_sql = """
-        SELECT 
-            (SELECT COUNT(*) FROM rollout_batch) +
-            (SELECT COUNT(*) FROM org_unit) +
-            (SELECT COUNT(*) FROM sys_user) +
-            (SELECT COUNT(*) FROM training) +
-            (SELECT COUNT(*) FROM construction_task) +
-            (SELECT COUNT(*) FROM data_readiness) +
-            (SELECT COUNT(*) FROM metric_snapshot) +
-            (SELECT COUNT(*) FROM issue_metric_snapshot) +
-            (SELECT COUNT(*) FROM risk_metric_snapshot) as small_total
-        """
-        small_total = conn.execute(text(small_tables_sql)).scalar_one()
-        
-        full_rows = sum(
-            ops[key]
-            for key in (
-                "docs_total", "doc_line_count", "vouchers_total", "voucher_line_count",
-                "link_count", "integration_count", "snapshot_count",
-            )
-        ) + operations["dualRunResult"] + small_total
+    construction = build_construction_summary(conn)
+    issues_summary, issues = build_issue_sections(conn, anchor_date_str)
+    entities = build_entities(conn, as_of_date, anchor_date_str)
 
-        construction = build_construction_summary(conn)
-        issues_summary, issues = build_issue_sections(conn, anchor_date_str)
-        entities = build_entities(conn, as_of_date, anchor_date_str)
+    # KI-066 / KI-023 诚实性原则：借贷平衡、时序逻辑、孤儿链路未做离线全表稽核时如实传 None，
+    # 避免将未核验误报为 0 异常（前端已支持 unknown 灰态与 "—" 优雅降级展示）。
+    # 第四项组织状态演进追踪已由真库每日全量纳管校验覆盖，如实上报 org_total。
+    quality = {
+        "voucherBalanceErrors": None,
+        "timeOrderErrors": None,
+        "orphanLinkErrors": None,
+        "organizationsWithStatusProgression": int(ov_row["org_total"]),
+    }
 
-        # KI-066 / KI-023 诚实性原则：借贷平衡、时序逻辑、孤儿链路未做离线全表稽核时如实传 None，
-        # 避免将未核验误报为 0 异常（前端已支持 unknown 灰态与 "—" 优雅降级展示）。
-        # 第四项组织状态演进追踪已由真库每日全量纳管校验覆盖，如实上报 org_total。
-        quality = {
-            "voucherBalanceErrors": None,
-            "timeOrderErrors": None,
-            "orphanLinkErrors": None,
-            "organizationsWithStatusProgression": int(ov_row["org_total"]),
-        }
+    voucher_success_pct = numeric(ov_row["voucher_success_pct"])
+    integration_success_pct = numeric(ov_row["integration_success_pct"])
 
-        voucher_success_pct = numeric(ov_row["voucher_success_pct"])
-        integration_success_pct = numeric(ov_row["integration_success_pct"])
+    insights_data = {"ruleBasedAlerts": compose_rule_based_alerts(rollout_rows, voucher_success_pct)}
 
-        insights_data = {"ruleBasedAlerts": compose_rule_based_alerts(rollout_rows, voucher_success_pct)}
+    org_today_added = int(ov_row.get("org_today_added") or 0)
+    org_added_note = (
+        f"当日新增 {org_today_added} 家单位入池第八批动态储备池"
+        if org_today_added > 0
+        else "储备池动态待命"
+    )
 
-        org_today_added = int(ov_row.get("org_today_added") or 0)
-        org_added_note = (
-            f"当日新增 {org_today_added} 家单位入池第八批动态储备池"
-            if org_today_added > 0
-            else "储备池动态待命"
-        )
-
-        return {
-            "businessRules": public_business_rules(),
-            "meta": {
-                "mode": "S",
-                "notice": "全部为虚构模拟数据",
-                "seed": 42,
-                "fullRows": full_rows,
-                "sampleRows": full_rows,
-                "period": [docs_as_of_date, docs_as_of_date],
-                "asOfDate": str(ov_row["as_of_date"]),
-                "sourceTimezone": "UTC",
-                "displayTimezone": get_settings().display_timezone,
-                "generatedAt": datetime.now(get_display_timezone()).isoformat(),
-            },
-            "overview": {
-                "orgTotal": ov_row["org_total"],
-                "orgTodayAdded": org_today_added,
-                "orgAddedAsOfDate": as_of_date,
-                "orgAddedNote": org_added_note,
-                "contactsTotal": ov_row["contacts_total"],
-                "contactsCoveredOrgs": contacts_covered_orgs,
-                "contactsCoveragePct": contacts_coverage_pct,
-                "contactsTodayAdded": 0,
-                "contactsAddedAsOfDate": "无可追溯",
-                "contactsAddedNote": "当前封版无可追溯新增人员",
-                "docsTotal": ov_row["docs_total"],
-                "docsTodayAdded": ov_row["docs_today_added"],
-                "docsAddedAsOfDate": docs_as_of_date,
-                "vouchersTotal": ov_row["vouchers_total"],
-                "voucherTotal": ov_row["vouchers_total"],
-                "vouchersTodayAdded": ov_row["vouchers_today_added"],
-                "vouchersAddedAsOfDate": vouchers_as_of_date,
-                "voucherSuccessPct": voucher_success_pct,
-                "integrationSuccessPct": integration_success_pct,
-                "batches": len(rollout_rows),
-                "asOfDate": as_of_date,
-                "launched": launched,
-                "launchedPct": launched_pct,
-                "dual": ov_row["dual_run"],
-                "constructionPct": ov_row["construction_pct"],
-                "unresolvedIssues": issues_summary["totalUnresolved"],
-                "highRisk": issues_summary["highRisk"],
-                "issuesSummaryText": (
-                    f"{issues_summary['totalUnresolved']} 项未解决 / {issues_summary['highRisk']} 项高风险"
-                ),
-                "regions": ov_row["regions"],
-            },
-            "rollout": rollout_rows,
-            "trend": trend_rows,
-            "rolloutTrend": rollout_trend_rows,
-            "provinces": provinces,
-            "entities": entities,
-            "issues": issues,
-            "issuesSummary": issues_summary,
-            "operations": operations,
-            "operationsLifecycle": operations_lifecycle,
-            "operationsTrend": operations_trend,
-            "quality": quality,
-            "construction": construction,
-            "insights": insights_data,
-        }
-    except Exception as e:
-        print(f"Warning: DB query failed ({e}), using fallback snapshot.")
-        return load_fallback_snapshot()
+    return {
+        "businessRules": public_business_rules(),
+        "meta": {
+            "mode": "S",
+            "notice": "全部为虚构模拟数据",
+            "seed": 42,
+            "fullRows": full_rows,
+            "sampleRows": full_rows,
+            "period": [docs_as_of_date, docs_as_of_date],
+            "asOfDate": str(ov_row["as_of_date"]),
+            "sourceTimezone": "UTC",
+            "displayTimezone": get_settings().display_timezone,
+            "generatedAt": datetime.now(get_display_timezone()).isoformat(),
+        },
+        "overview": {
+            "orgTotal": ov_row["org_total"],
+            "orgTodayAdded": org_today_added,
+            "orgAddedAsOfDate": as_of_date,
+            "orgAddedNote": org_added_note,
+            "contactsTotal": ov_row["contacts_total"],
+            "contactsCoveredOrgs": contacts_covered_orgs,
+            "contactsCoveragePct": contacts_coverage_pct,
+            "contactsTodayAdded": 0,
+            "contactsAddedAsOfDate": "无可追溯",
+            "contactsAddedNote": "当前封版无可追溯新增人员",
+            "docsTotal": ov_row["docs_total"],
+            "docsTodayAdded": ov_row["docs_today_added"],
+            "docsAddedAsOfDate": docs_as_of_date,
+            "vouchersTotal": ov_row["vouchers_total"],
+            "voucherTotal": ov_row["vouchers_total"],
+            "vouchersTodayAdded": ov_row["vouchers_today_added"],
+            "vouchersAddedAsOfDate": vouchers_as_of_date,
+            "voucherSuccessPct": voucher_success_pct,
+            "integrationSuccessPct": integration_success_pct,
+            "batches": len(rollout_rows),
+            "asOfDate": as_of_date,
+            "launched": launched,
+            "launchedPct": launched_pct,
+            "dual": ov_row["dual_run"],
+            "constructionPct": ov_row["construction_pct"],
+            "unresolvedIssues": issues_summary["totalUnresolved"],
+            "highRisk": issues_summary["highRisk"],
+            "issuesSummaryText": (
+                f"{issues_summary['totalUnresolved']} 项未解决 / {issues_summary['highRisk']} 项高风险"
+            ),
+            "regions": ov_row["regions"],
+        },
+        "rollout": rollout_rows,
+        "trend": trend_rows,
+        "rolloutTrend": rollout_trend_rows,
+        "provinces": provinces,
+        "entities": entities,
+        "issues": issues,
+        "issuesSummary": issues_summary,
+        "operations": operations,
+        "operationsLifecycle": operations_lifecycle,
+        "operationsTrend": operations_trend,
+        "quality": quality,
+        "construction": construction,
+        "insights": insights_data,
+    }

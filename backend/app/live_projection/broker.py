@@ -70,22 +70,23 @@ class LiveProjectionBroker:
         self._running = False
 
     async def _read(self, after: int | None) -> OutboxPage:
-        # Single-flight deduplication: reuse concurrent in-flight read for identical cursor
-        if after in self._inflight:
-            return await self._inflight[after]
+        # Single-flight deduplication: reuse concurrent in-flight read for identical cursor.
+        # Shield the shared task so one disconnecting subscriber cannot cancel reads for others.
+        task = self._inflight.get(after)
+        if task is None:
+            async def _do_read() -> OutboxPage:
+                try:
+                    page = await asyncio.to_thread(self.reader.read_page, after)
+                    self._last_page = page
+                    self._available = True
+                    return page
+                finally:
+                    self._inflight.pop(after, None)
 
-        async def _do_read() -> OutboxPage:
-            try:
-                page = await asyncio.to_thread(self.reader.read_page, after)
-                self._last_page = page
-                self._available = True
-                return page
-            finally:
-                self._inflight.pop(after, None)
-
-        task = asyncio.create_task(_do_read())
-        self._inflight[after] = task
-        return await task
+            task = asyncio.create_task(_do_read())
+            task.add_done_callback(lambda done: None if done.cancelled() else done.exception())
+            self._inflight[after] = task
+        return await asyncio.shield(task)
 
     def state_payload(self, page: OutboxPage | None = None, *, reset_reason: str | None = None) -> dict:
         page = page or self._last_page
@@ -111,6 +112,9 @@ class LiveProjectionBroker:
         return {'enabled': self.enabled, **self.state_payload()}
 
     async def stream(self, last_event_id: str | None = None):
+        if not self.configured:
+            yield 'event: projection_disabled\ndata: {"reason":"disabled"}\n\n'
+            return
         position: int | None = None
         stream_id: str | None = None
         recovering = False

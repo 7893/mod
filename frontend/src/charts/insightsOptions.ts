@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts'
 import type { RiskDimensionSummary } from '../utils/qualityMetrics'
+import { escapeHtml } from './escapeHtml'
 import { calmAnimation, chartInk, chartPalette, chartTooltip, valueAxis } from './theme'
 import { CHART_FONT } from './tokens'
 
@@ -31,15 +32,15 @@ export function createRiskDimensionOption(items: RiskDimensionSummary[], total: 
         const percent = total > 0 ? ((raw.count / total) * 100).toFixed(1) : '0.0'
         const batchKeys = Object.keys(raw.batchDistribution)
         const batchDetails = batchKeys.length
-          ? batchKeys.map((key) => `${key} (${raw.batchDistribution[key]}家)`).join('、')
+          ? batchKeys.map((key) => `${escapeHtml(key)} (${escapeHtml(raw.batchDistribution[key])}家)`).join('、')
           : '暂无集中批次'
 
         return `
           <div style="font-size: 12px; line-height: 1.6;">
-            <div style="font-weight: 600; color: ${chartInk.textPrimary}; margin-bottom: 4px;">${raw.type} · 高危 ${raw.highCount} / 关注 ${raw.count - raw.highCount}</div>
-            <div style="color: ${chartInk.textMuted};">预警规模: <b style="color: ${chartInk.textPrimary}; font-family: monospace;">${raw.count} 家</b> (${percent}%)</div>
+            <div style="font-weight: 600; color: ${chartInk.textPrimary}; margin-bottom: 4px;">${escapeHtml(raw.type)} · 高危 ${escapeHtml(raw.highCount)} / 关注 ${escapeHtml(raw.count - raw.highCount)}</div>
+            <div style="color: ${chartInk.textMuted};">预警规模: <b style="color: ${chartInk.textPrimary}; font-family: monospace;">${escapeHtml(raw.count)} 家</b> (${percent}%)</div>
             <div style="color: ${chartInk.textMuted};">集中批次: <span style="color: ${chartInk.textPrimary};">${batchDetails}</span></div>
-            <div style="color: ${chartInk.textMuted}; margin-top: 4px; border-top: 1px dashed ${chartInk.borderSoft}; padding-top: 4px;">门禁规则: ${raw.gate}</div>
+            <div style="color: ${chartInk.textMuted}; margin-top: 4px; border-top: 1px dashed ${chartInk.borderSoft}; padding-top: 4px;">门禁规则: ${escapeHtml(raw.gate)}</div>
           </div>
         `
       },

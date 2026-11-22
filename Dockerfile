@@ -30,6 +30,7 @@ RUN uv sync --frozen --no-dev --extra demo --no-install-project
 
 # Copy backend source
 COPY backend/app ./app
+COPY frontend/src/data/fallback-snapshot.json ./app/fallback-snapshot.json
 RUN uv sync --frozen --no-dev --extra demo
 COPY scripts/project/ /app/scripts/project/
 COPY demo-data/ /app/demo-data/
